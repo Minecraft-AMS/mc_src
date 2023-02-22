@@ -19,32 +19,31 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import net.minecraft.block.Block;
+import net.minecraft.structure.StructureSet;
 import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.noise.DoublePerlinNoiseSampler;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.MutableRegistry;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.registry.SimpleRegistry;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeAccessType;
-import net.minecraft.world.biome.source.HorizontalVoronoiBiomeAccessType;
+import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.biome.source.MultiNoiseBiomeSource;
 import net.minecraft.world.biome.source.TheEndBiomeSource;
-import net.minecraft.world.biome.source.VoronoiBiomeAccessType;
 import net.minecraft.world.dimension.DimensionOptions;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
 import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
 
@@ -54,21 +53,23 @@ public class DimensionType {
     public static final int MAX_HEIGHT = (1 << SIZE_BITS_Y) - 32;
     public static final int MAX_COLUMN_HEIGHT = (MAX_HEIGHT >> 1) - 1;
     public static final int MIN_HEIGHT = MAX_COLUMN_HEIGHT - MAX_HEIGHT + 1;
+    public static final int field_35478 = MAX_COLUMN_HEIGHT << 4;
+    public static final int field_35479 = MIN_HEIGHT << 4;
     public static final Identifier OVERWORLD_ID = new Identifier("overworld");
     public static final Identifier THE_NETHER_ID = new Identifier("the_nether");
     public static final Identifier THE_END_ID = new Identifier("the_end");
-    public static final Codec<DimensionType> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.LONG.optionalFieldOf("fixed_time").xmap(optional -> optional.map(OptionalLong::of).orElseGet(OptionalLong::empty), optionalLong -> optionalLong.isPresent() ? Optional.of(optionalLong.getAsLong()) : Optional.empty()).forGetter(dimensionType -> dimensionType.fixedTime), (App)Codec.BOOL.fieldOf("has_skylight").forGetter(DimensionType::hasSkyLight), (App)Codec.BOOL.fieldOf("has_ceiling").forGetter(DimensionType::hasCeiling), (App)Codec.BOOL.fieldOf("ultrawarm").forGetter(DimensionType::isUltrawarm), (App)Codec.BOOL.fieldOf("natural").forGetter(DimensionType::isNatural), (App)Codec.doubleRange((double)1.0E-5f, (double)3.0E7).fieldOf("coordinate_scale").forGetter(DimensionType::getCoordinateScale), (App)Codec.BOOL.fieldOf("piglin_safe").forGetter(DimensionType::isPiglinSafe), (App)Codec.BOOL.fieldOf("bed_works").forGetter(DimensionType::isBedWorking), (App)Codec.BOOL.fieldOf("respawn_anchor_works").forGetter(DimensionType::isRespawnAnchorWorking), (App)Codec.BOOL.fieldOf("has_raids").forGetter(DimensionType::hasRaids), (App)Codec.intRange((int)MIN_HEIGHT, (int)MAX_COLUMN_HEIGHT).fieldOf("min_y").forGetter(DimensionType::getMinimumY), (App)Codec.intRange((int)16, (int)MAX_HEIGHT).fieldOf("height").forGetter(DimensionType::getHeight), (App)Codec.intRange((int)0, (int)MAX_HEIGHT).fieldOf("logical_height").forGetter(DimensionType::getLogicalHeight), (App)Identifier.CODEC.fieldOf("infiniburn").forGetter(dimensionType -> dimensionType.infiniburn), (App)Identifier.CODEC.fieldOf("effects").orElse((Object)OVERWORLD_ID).forGetter(dimensionType -> dimensionType.effects), (App)Codec.FLOAT.fieldOf("ambient_light").forGetter(dimensionType -> Float.valueOf(dimensionType.ambientLight))).apply((Applicative)instance, DimensionType::new)).comapFlatMap(DimensionType::checkHeight, Function.identity());
+    public static final Codec<DimensionType> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.LONG.optionalFieldOf("fixed_time").xmap(optional -> optional.map(OptionalLong::of).orElseGet(OptionalLong::empty), optionalLong -> optionalLong.isPresent() ? Optional.of(optionalLong.getAsLong()) : Optional.empty()).forGetter(dimensionType -> dimensionType.fixedTime), (App)Codec.BOOL.fieldOf("has_skylight").forGetter(DimensionType::hasSkyLight), (App)Codec.BOOL.fieldOf("has_ceiling").forGetter(DimensionType::hasCeiling), (App)Codec.BOOL.fieldOf("ultrawarm").forGetter(DimensionType::isUltrawarm), (App)Codec.BOOL.fieldOf("natural").forGetter(DimensionType::isNatural), (App)Codec.doubleRange((double)1.0E-5f, (double)3.0E7).fieldOf("coordinate_scale").forGetter(DimensionType::getCoordinateScale), (App)Codec.BOOL.fieldOf("piglin_safe").forGetter(DimensionType::isPiglinSafe), (App)Codec.BOOL.fieldOf("bed_works").forGetter(DimensionType::isBedWorking), (App)Codec.BOOL.fieldOf("respawn_anchor_works").forGetter(DimensionType::isRespawnAnchorWorking), (App)Codec.BOOL.fieldOf("has_raids").forGetter(DimensionType::hasRaids), (App)Codec.intRange((int)MIN_HEIGHT, (int)MAX_COLUMN_HEIGHT).fieldOf("min_y").forGetter(DimensionType::getMinimumY), (App)Codec.intRange((int)16, (int)MAX_HEIGHT).fieldOf("height").forGetter(DimensionType::getHeight), (App)Codec.intRange((int)0, (int)MAX_HEIGHT).fieldOf("logical_height").forGetter(DimensionType::getLogicalHeight), (App)TagKey.stringCodec(Registry.BLOCK_KEY).fieldOf("infiniburn").forGetter(dimensionType -> dimensionType.infiniburn), (App)Identifier.CODEC.fieldOf("effects").orElse((Object)OVERWORLD_ID).forGetter(dimensionType -> dimensionType.effects), (App)Codec.FLOAT.fieldOf("ambient_light").forGetter(dimensionType -> Float.valueOf(dimensionType.ambientLight))).apply((Applicative)instance, DimensionType::new)).comapFlatMap(DimensionType::checkHeight, Function.identity());
     private static final int field_31440 = 8;
     public static final float[] MOON_SIZES = new float[]{1.0f, 0.75f, 0.5f, 0.25f, 0.0f, 0.25f, 0.5f, 0.75f};
     public static final RegistryKey<DimensionType> OVERWORLD_REGISTRY_KEY = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, new Identifier("overworld"));
     public static final RegistryKey<DimensionType> THE_NETHER_REGISTRY_KEY = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, new Identifier("the_nether"));
     public static final RegistryKey<DimensionType> THE_END_REGISTRY_KEY = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, new Identifier("the_end"));
-    protected static final DimensionType OVERWORLD = DimensionType.create(OptionalLong.empty(), true, false, false, true, 1.0, false, false, true, false, true, 0, 256, 256, HorizontalVoronoiBiomeAccessType.INSTANCE, BlockTags.INFINIBURN_OVERWORLD.getId(), OVERWORLD_ID, 0.0f);
-    protected static final DimensionType THE_NETHER = DimensionType.create(OptionalLong.of(18000L), false, true, true, false, 8.0, false, true, false, true, false, 0, 256, 128, VoronoiBiomeAccessType.INSTANCE, BlockTags.INFINIBURN_NETHER.getId(), THE_NETHER_ID, 0.1f);
-    protected static final DimensionType THE_END = DimensionType.create(OptionalLong.of(6000L), false, false, false, false, 1.0, true, false, false, false, true, 0, 256, 256, VoronoiBiomeAccessType.INSTANCE, BlockTags.INFINIBURN_END.getId(), THE_END_ID, 0.0f);
+    protected static final DimensionType OVERWORLD = DimensionType.create(OptionalLong.empty(), true, false, false, true, 1.0, false, false, true, false, true, -64, 384, 384, BlockTags.INFINIBURN_OVERWORLD, OVERWORLD_ID, 0.0f);
+    protected static final DimensionType THE_NETHER = DimensionType.create(OptionalLong.of(18000L), false, true, true, false, 8.0, false, true, false, true, false, 0, 256, 128, BlockTags.INFINIBURN_NETHER, THE_NETHER_ID, 0.1f);
+    protected static final DimensionType THE_END = DimensionType.create(OptionalLong.of(6000L), false, false, false, false, 1.0, true, false, false, false, true, 0, 256, 256, BlockTags.INFINIBURN_END, THE_END_ID, 0.0f);
     public static final RegistryKey<DimensionType> OVERWORLD_CAVES_REGISTRY_KEY = RegistryKey.of(Registry.DIMENSION_TYPE_KEY, new Identifier("overworld_caves"));
-    protected static final DimensionType OVERWORLD_CAVES = DimensionType.create(OptionalLong.empty(), true, true, false, true, 1.0, false, false, true, false, true, 0, 256, 256, HorizontalVoronoiBiomeAccessType.INSTANCE, BlockTags.INFINIBURN_OVERWORLD.getId(), OVERWORLD_ID, 0.0f);
-    public static final Codec<Supplier<DimensionType>> REGISTRY_CODEC = RegistryElementCodec.of(Registry.DIMENSION_TYPE_KEY, CODEC);
+    protected static final DimensionType OVERWORLD_CAVES = DimensionType.create(OptionalLong.empty(), true, true, false, true, 1.0, false, false, true, false, true, -64, 384, 384, BlockTags.INFINIBURN_OVERWORLD, OVERWORLD_ID, 0.0f);
+    public static final Codec<RegistryEntry<DimensionType>> REGISTRY_CODEC = RegistryElementCodec.of(Registry.DIMENSION_TYPE_KEY, CODEC);
     private final OptionalLong fixedTime;
     private final boolean hasSkyLight;
     private final boolean hasCeiling;
@@ -83,8 +84,7 @@ public class DimensionType {
     private final int minimumY;
     private final int height;
     private final int logicalHeight;
-    private final BiomeAccessType biomeAccessType;
-    private final Identifier infiniburn;
+    private final TagKey<Block> infiniburn;
     private final Identifier effects;
     private final float ambientLight;
     private final transient float[] brightnessByLightLevel;
@@ -108,12 +108,12 @@ public class DimensionType {
         return DataResult.success((Object)type);
     }
 
-    private DimensionType(OptionalLong fixedTime, boolean hasSkylight, boolean hasCeiling, boolean ultrawarm, boolean natural, double coordinateScale, boolean piglinSafe, boolean bedWorks, boolean respawnAnchorWorks, boolean hasRaids, int minimumY, int height, int logicalHeight, Identifier infiniburn, Identifier effects, float ambientLight) {
-        this(fixedTime, hasSkylight, hasCeiling, ultrawarm, natural, coordinateScale, false, piglinSafe, bedWorks, respawnAnchorWorks, hasRaids, minimumY, height, logicalHeight, VoronoiBiomeAccessType.INSTANCE, infiniburn, effects, ambientLight);
+    private DimensionType(OptionalLong fixedTime, boolean hasSkylight, boolean hasCeiling, boolean ultrawarm, boolean natural, double coordinateScale, boolean piglinSafe, boolean bedWorks, boolean respawnAnchorWorks, boolean hasRaids, int minimumY, int height, int logicalHeight, TagKey<Block> tagKey, Identifier effects, float ambientLight) {
+        this(fixedTime, hasSkylight, hasCeiling, ultrawarm, natural, coordinateScale, false, piglinSafe, bedWorks, respawnAnchorWorks, hasRaids, minimumY, height, logicalHeight, tagKey, effects, ambientLight);
     }
 
-    public static DimensionType create(OptionalLong fixedTime, boolean hasSkylight, boolean hasCeiling, boolean ultrawarm, boolean natural, double coordinateScale, boolean hasEnderDragonFight, boolean piglinSafe, boolean bedWorks, boolean respawnAnchorWorks, boolean hasRaids, int minimumY, int height, int logicalHeight, BiomeAccessType biomeAccessType, Identifier infiniburn, Identifier effects, float ambientLight) {
-        DimensionType dimensionType = new DimensionType(fixedTime, hasSkylight, hasCeiling, ultrawarm, natural, coordinateScale, hasEnderDragonFight, piglinSafe, bedWorks, respawnAnchorWorks, hasRaids, minimumY, height, logicalHeight, biomeAccessType, infiniburn, effects, ambientLight);
+    public static DimensionType create(OptionalLong fixedTime, boolean hasSkylight, boolean hasCeiling, boolean ultrawarm, boolean natural, double coordinateScale, boolean hasEnderDragonFight, boolean piglinSafe, boolean bedWorks, boolean respawnAnchorWorks, boolean hasRaids, int minimumY, int height, int logicalHeight, TagKey<Block> tagKey, Identifier effects, float ambientLight) {
+        DimensionType dimensionType = new DimensionType(fixedTime, hasSkylight, hasCeiling, ultrawarm, natural, coordinateScale, hasEnderDragonFight, piglinSafe, bedWorks, respawnAnchorWorks, hasRaids, minimumY, height, logicalHeight, tagKey, effects, ambientLight);
         DimensionType.checkHeight(dimensionType).error().ifPresent(partialResult -> {
             throw new IllegalStateException(partialResult.message());
         });
@@ -121,7 +121,7 @@ public class DimensionType {
     }
 
     @Deprecated
-    private DimensionType(OptionalLong fixedTime, boolean hasSkylight, boolean hasCeiling, boolean ultrawarm, boolean natural, double coordinateScale, boolean hasEnderDragonFight, boolean piglinSafe, boolean bedWorks, boolean respawnAnchorWorks, boolean hasRaids, int minimumY, int height, int logicalHeight, BiomeAccessType biomeAccessType, Identifier infiniburn, Identifier effects, float ambientLight) {
+    private DimensionType(OptionalLong fixedTime, boolean hasSkylight, boolean hasCeiling, boolean ultrawarm, boolean natural, double coordinateScale, boolean hasEnderDragonFight, boolean piglinSafe, boolean bedWorks, boolean respawnAnchorWorks, boolean hasRaids, int minimumY, int height, int logicalHeight, TagKey<Block> tagKey, Identifier effects, float ambientLight) {
         this.fixedTime = fixedTime;
         this.hasSkyLight = hasSkylight;
         this.hasCeiling = hasCeiling;
@@ -136,8 +136,7 @@ public class DimensionType {
         this.minimumY = minimumY;
         this.height = height;
         this.logicalHeight = logicalHeight;
-        this.biomeAccessType = biomeAccessType;
-        this.infiniburn = infiniburn;
+        this.infiniburn = tagKey;
         this.effects = effects;
         this.ambientLight = ambientLight;
         this.brightnessByLightLevel = DimensionType.computeBrightnessByLightLevel(ambientLight);
@@ -171,7 +170,7 @@ public class DimensionType {
         return World.CODEC.parse(nbt);
     }
 
-    public static DynamicRegistryManager.Impl addRegistryDefaults(DynamicRegistryManager.Impl registryManager) {
+    public static DynamicRegistryManager.Mutable addRegistryDefaults(DynamicRegistryManager.Mutable registryManager) {
         MutableRegistry<DimensionType> mutableRegistry = registryManager.getMutable(Registry.DIMENSION_TYPE_KEY);
         mutableRegistry.add(OVERWORLD_REGISTRY_KEY, OVERWORLD, Lifecycle.stable());
         mutableRegistry.add(OVERWORLD_CAVES_REGISTRY_KEY, OVERWORLD_CAVES, Lifecycle.stable());
@@ -180,19 +179,20 @@ public class DimensionType {
         return registryManager;
     }
 
-    private static ChunkGenerator createEndGenerator(Registry<Biome> biomeRegistry, Registry<ChunkGeneratorSettings> chunkGeneratorSettingsRegistry, long seed) {
-        return new NoiseChunkGenerator(new TheEndBiomeSource(biomeRegistry, seed), seed, () -> chunkGeneratorSettingsRegistry.getOrThrow(ChunkGeneratorSettings.END));
+    public static Registry<DimensionOptions> createDefaultDimensionOptions(DynamicRegistryManager registryManager, long seed) {
+        return DimensionType.createDefaultDimensionOptions(registryManager, seed, true);
     }
 
-    private static ChunkGenerator createNetherGenerator(Registry<Biome> biomeRegistry, Registry<ChunkGeneratorSettings> chunkGeneratorSettingsRegistry, long seed) {
-        return new NoiseChunkGenerator(MultiNoiseBiomeSource.Preset.NETHER.getBiomeSource(biomeRegistry, seed), seed, () -> chunkGeneratorSettingsRegistry.getOrThrow(ChunkGeneratorSettings.NETHER));
-    }
-
-    public static SimpleRegistry<DimensionOptions> createDefaultDimensionOptions(Registry<DimensionType> dimensionRegistry, Registry<Biome> biomeRegistry, Registry<ChunkGeneratorSettings> chunkGeneratorSettingsRegistry, long seed) {
-        SimpleRegistry<DimensionOptions> simpleRegistry = new SimpleRegistry<DimensionOptions>(Registry.DIMENSION_KEY, Lifecycle.experimental());
-        simpleRegistry.add(DimensionOptions.NETHER, new DimensionOptions(() -> dimensionRegistry.getOrThrow(THE_NETHER_REGISTRY_KEY), DimensionType.createNetherGenerator(biomeRegistry, chunkGeneratorSettingsRegistry, seed)), Lifecycle.stable());
-        simpleRegistry.add(DimensionOptions.END, new DimensionOptions(() -> dimensionRegistry.getOrThrow(THE_END_REGISTRY_KEY), DimensionType.createEndGenerator(biomeRegistry, chunkGeneratorSettingsRegistry, seed)), Lifecycle.stable());
-        return simpleRegistry;
+    public static Registry<DimensionOptions> createDefaultDimensionOptions(DynamicRegistryManager registryManager, long seed, boolean bl) {
+        SimpleRegistry<DimensionOptions> mutableRegistry = new SimpleRegistry<DimensionOptions>(Registry.DIMENSION_KEY, Lifecycle.experimental(), null);
+        Registry<DimensionType> registry = registryManager.get(Registry.DIMENSION_TYPE_KEY);
+        Registry<Biome> registry2 = registryManager.get(Registry.BIOME_KEY);
+        Registry<StructureSet> registry3 = registryManager.get(Registry.STRUCTURE_SET_KEY);
+        Registry<ChunkGeneratorSettings> registry4 = registryManager.get(Registry.CHUNK_GENERATOR_SETTINGS_KEY);
+        Registry<DoublePerlinNoiseSampler.NoiseParameters> registry5 = registryManager.get(Registry.NOISE_WORLDGEN);
+        ((MutableRegistry)mutableRegistry).add(DimensionOptions.NETHER, new DimensionOptions(registry.getOrCreateEntry(THE_NETHER_REGISTRY_KEY), new NoiseChunkGenerator(registry3, registry5, (BiomeSource)MultiNoiseBiomeSource.Preset.NETHER.getBiomeSource(registry2, bl), seed, registry4.getOrCreateEntry(ChunkGeneratorSettings.NETHER))), Lifecycle.stable());
+        ((MutableRegistry)mutableRegistry).add(DimensionOptions.END, new DimensionOptions(registry.getOrCreateEntry(THE_END_REGISTRY_KEY), new NoiseChunkGenerator(registry3, registry5, (BiomeSource)new TheEndBiomeSource(registry2, seed), seed, registry4.getOrCreateEntry(ChunkGeneratorSettings.END))), Lifecycle.stable());
+        return mutableRegistry;
     }
 
     public static double getCoordinateScaleFactor(DimensionType fromDimension, DimensionType toDimension) {
@@ -201,25 +201,17 @@ public class DimensionType {
         return d / e;
     }
 
-    @Deprecated
-    public String getSuffix() {
-        if (this.equals(THE_END)) {
-            return "_end";
-        }
-        return "";
-    }
-
-    public static File getSaveDirectory(RegistryKey<World> worldRef, File root) {
+    public static Path getSaveDirectory(RegistryKey<World> worldRef, Path worldDirectory) {
         if (worldRef == World.OVERWORLD) {
-            return root;
+            return worldDirectory;
         }
         if (worldRef == World.END) {
-            return new File(root, "DIM1");
+            return worldDirectory.resolve("DIM1");
         }
         if (worldRef == World.NETHER) {
-            return new File(root, "DIM-1");
+            return worldDirectory.resolve("DIM-1");
         }
-        return new File(root, "dimensions/" + worldRef.getValue().getNamespace() + "/" + worldRef.getValue().getPath());
+        return worldDirectory.resolve("dimensions").resolve(worldRef.getValue().getNamespace()).resolve(worldRef.getValue().getPath());
     }
 
     public boolean hasSkyLight() {
@@ -274,10 +266,6 @@ public class DimensionType {
         return this.hasEnderDragonFight;
     }
 
-    public BiomeAccessType getBiomeAccessType() {
-        return this.biomeAccessType;
-    }
-
     public boolean hasFixedTime() {
         return this.fixedTime.isPresent();
     }
@@ -296,20 +284,12 @@ public class DimensionType {
         return this.brightnessByLightLevel[lightLevel];
     }
 
-    public Tag<Block> getInfiniburnBlocks() {
-        Tag<Block> tag = BlockTags.getTagGroup().getTag(this.infiniburn);
-        return tag != null ? tag : BlockTags.INFINIBURN_OVERWORLD;
+    public TagKey<Block> getInfiniburnBlocks() {
+        return this.infiniburn;
     }
 
     public Identifier getEffects() {
         return this.effects;
-    }
-
-    public boolean equals(DimensionType dimensionType) {
-        if (this == dimensionType) {
-            return true;
-        }
-        return this.hasSkyLight == dimensionType.hasSkyLight && this.hasCeiling == dimensionType.hasCeiling && this.ultrawarm == dimensionType.ultrawarm && this.natural == dimensionType.natural && this.coordinateScale == dimensionType.coordinateScale && this.hasEnderDragonFight == dimensionType.hasEnderDragonFight && this.piglinSafe == dimensionType.piglinSafe && this.bedWorks == dimensionType.bedWorks && this.respawnAnchorWorks == dimensionType.respawnAnchorWorks && this.hasRaids == dimensionType.hasRaids && this.minimumY == dimensionType.minimumY && this.height == dimensionType.height && this.logicalHeight == dimensionType.logicalHeight && Float.compare(dimensionType.ambientLight, this.ambientLight) == 0 && this.fixedTime.equals(dimensionType.fixedTime) && this.biomeAccessType.equals(dimensionType.biomeAccessType) && this.infiniburn.equals(dimensionType.infiniburn) && this.effects.equals(dimensionType.effects);
     }
 }
 

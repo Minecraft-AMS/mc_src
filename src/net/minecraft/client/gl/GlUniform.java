@@ -2,16 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.lwjgl.system.MemoryUtil
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gl;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.nio.Buffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -19,18 +20,18 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.GlShader;
 import net.minecraft.client.gl.Uniform;
+import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vector4f;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class GlUniform
 extends Uniform
 implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int field_32038 = 0;
     public static final int field_32039 = 1;
     public static final int field_32040 = 2;
@@ -119,8 +120,8 @@ implements AutoCloseable {
         return i;
     }
 
-    public void setLoc(int loc) {
-        this.location = loc;
+    public void setLocation(int location) {
+        this.location = location;
     }
 
     public String getName() {
@@ -408,6 +409,13 @@ implements AutoCloseable {
     public final void set(Matrix4f values) {
         this.floatData.position(0);
         values.writeColumnMajor(this.floatData);
+        this.markStateDirty();
+    }
+
+    @Override
+    public final void method_39978(Matrix3f matrix3f) {
+        this.floatData.position(0);
+        matrix3f.writeColumnMajor(this.floatData);
         this.markStateDirty();
     }
 

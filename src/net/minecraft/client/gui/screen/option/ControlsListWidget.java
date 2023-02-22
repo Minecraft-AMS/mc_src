@@ -20,7 +20,7 @@ import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
-import net.minecraft.client.gui.screen.option.ControlsOptionsScreen;
+import net.minecraft.client.gui.screen.option.KeybindsScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.option.KeyBinding;
@@ -35,13 +35,13 @@ import org.apache.commons.lang3.ArrayUtils;
 @Environment(value=EnvType.CLIENT)
 public class ControlsListWidget
 extends ElementListWidget<Entry> {
-    final ControlsOptionsScreen parent;
+    final KeybindsScreen parent;
     int maxKeyNameLength;
 
-    public ControlsListWidget(ControlsOptionsScreen parent, MinecraftClient client) {
-        super(client, parent.width + 45, parent.height, 43, parent.height - 32, 20);
+    public ControlsListWidget(KeybindsScreen parent, MinecraftClient client) {
+        super(client, parent.width + 45, parent.height, 20, parent.height - 32, 20);
         this.parent = parent;
-        Object[] keyBindings = (KeyBinding[])ArrayUtils.clone((Object[])client.options.keysAll);
+        Object[] keyBindings = (KeyBinding[])ArrayUtils.clone((Object[])client.options.allKeys);
         Arrays.sort(keyBindings);
         String string = null;
         for (Object keyBinding : keyBindings) {
@@ -124,7 +124,7 @@ extends ElementListWidget<Entry> {
             this.binding = binding;
             this.bindingName = bindingName;
             this.editButton = new ButtonWidget(0, 0, 75, 20, bindingName, button -> {
-                ControlsListWidget.this.parent.focusedBinding = binding;
+                ControlsListWidget.this.parent.selectedKeyBinding = binding;
             }){
 
                 @Override
@@ -149,7 +149,7 @@ extends ElementListWidget<Entry> {
 
         @Override
         public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            boolean bl = ControlsListWidget.this.parent.focusedBinding == this.binding;
+            boolean bl = ControlsListWidget.this.parent.selectedKeyBinding == this.binding;
             ((ControlsListWidget)ControlsListWidget.this).client.textRenderer.draw(matrices, this.bindingName, (float)(x + 90 - ControlsListWidget.this.maxKeyNameLength), (float)(y + entryHeight / 2 - ((ControlsListWidget)ControlsListWidget.this).client.textRenderer.fontHeight / 2), 0xFFFFFF);
             this.resetButton.x = x + 190;
             this.resetButton.y = y;
@@ -160,7 +160,7 @@ extends ElementListWidget<Entry> {
             this.editButton.setMessage(this.binding.getBoundKeyLocalizedText());
             boolean bl2 = false;
             if (!this.binding.isUnbound()) {
-                for (KeyBinding keyBinding : ((ControlsListWidget)ControlsListWidget.this).client.options.keysAll) {
+                for (KeyBinding keyBinding : ((ControlsListWidget)ControlsListWidget.this).client.options.allKeys) {
                     if (keyBinding == this.binding || !this.binding.equals(keyBinding)) continue;
                     bl2 = true;
                     break;

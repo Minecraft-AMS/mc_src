@@ -5,6 +5,7 @@
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.google.common.collect.Queues
  *  it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -15,17 +16,19 @@ package net.minecraft.client.world;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Queues;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.color.world.BiomeColors;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
@@ -38,16 +41,18 @@ import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.world.BiomeColorCache;
 import net.minecraft.client.world.ClientChunkManager;
 import net.minecraft.client.world.ClientEntityManager;
-import net.minecraft.client.world.DummyClientTickScheduler;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
+import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.RecipeManager;
@@ -55,7 +60,6 @@ import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.TagManager;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.CubicSampler;
 import net.minecraft.util.CuboidBlockIterator;
@@ -72,6 +76,7 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.Difficulty;
@@ -81,7 +86,6 @@ import net.minecraft.world.GameRules;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.MutableWorldProperties;
-import net.minecraft.world.TickScheduler;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.Biome;
@@ -94,15 +98,19 @@ import net.minecraft.world.entity.EntityHandler;
 import net.minecraft.world.entity.EntityLookup;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.tick.EmptyTickSchedulers;
+import net.minecraft.world.tick.QueryableTickScheduler;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientWorld
 extends World {
     private static final double PARTICLE_Y_OFFSET = 0.05;
+    private static final int field_34805 = 10;
+    private static final int field_34806 = 1000;
     final EntityList entityList = new EntityList();
     private final ClientEntityManager<Entity> entityManager = new ClientEntityManager<Entity>(Entity.class, new ClientEntityHandler());
-    private final ClientPlayNetworkHandler netHandler;
+    private final ClientPlayNetworkHandler networkHandler;
     private final WorldRenderer worldRenderer;
     private final Properties clientWorldProperties;
     private final DimensionEffects dimensionEffects;
@@ -112,23 +120,44 @@ extends World {
     private final Map<String, MapState> mapStates = Maps.newHashMap();
     private static final long field_32640 = 0xFFFFFFL;
     private int lightningTicksLeft;
-    private final Object2ObjectArrayMap<ColorResolver, BiomeColorCache> colorCache = Util.make(new Object2ObjectArrayMap(3), cache -> {
-        cache.put((Object)BiomeColors.GRASS_COLOR, (Object)new BiomeColorCache());
-        cache.put((Object)BiomeColors.FOLIAGE_COLOR, (Object)new BiomeColorCache());
-        cache.put((Object)BiomeColors.WATER_COLOR, (Object)new BiomeColorCache());
+    private final Object2ObjectArrayMap<ColorResolver, BiomeColorCache> colorCache = Util.make(new Object2ObjectArrayMap(3), map -> {
+        map.put((Object)BiomeColors.GRASS_COLOR, (Object)new BiomeColorCache(pos -> this.calculateColor((BlockPos)pos, BiomeColors.GRASS_COLOR)));
+        map.put((Object)BiomeColors.FOLIAGE_COLOR, (Object)new BiomeColorCache(pos -> this.calculateColor((BlockPos)pos, BiomeColors.FOLIAGE_COLOR)));
+        map.put((Object)BiomeColors.WATER_COLOR, (Object)new BiomeColorCache(pos -> this.calculateColor((BlockPos)pos, BiomeColors.WATER_COLOR)));
     });
     private final ClientChunkManager chunkManager;
+    private final Deque<Runnable> chunkUpdaters = Queues.newArrayDeque();
+    private int simulationDistance;
+    private static final Set<Item> BLOCK_MARKER_ITEMS = Set.of(Items.BARRIER, Items.LIGHT);
 
-    public ClientWorld(ClientPlayNetworkHandler networkHandler, Properties properties, RegistryKey<World> registryRef, DimensionType dimensionType, int loadDistance, Supplier<Profiler> profiler, WorldRenderer worldRenderer, boolean debugWorld, long seed) {
-        super(properties, registryRef, dimensionType, profiler, true, debugWorld, seed);
-        this.netHandler = networkHandler;
+    public ClientWorld(ClientPlayNetworkHandler netHandler, Properties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, int loadDistance, int simulationDistance, Supplier<Profiler> profiler, WorldRenderer worldRenderer, boolean debugWorld, long seed) {
+        super(properties, registryRef, registryEntry, profiler, true, debugWorld, seed);
+        this.networkHandler = netHandler;
         this.chunkManager = new ClientChunkManager(this, loadDistance);
         this.clientWorldProperties = properties;
         this.worldRenderer = worldRenderer;
-        this.dimensionEffects = DimensionEffects.byDimensionType(dimensionType);
+        this.dimensionEffects = DimensionEffects.byDimensionType(registryEntry.value());
         this.setSpawnPos(new BlockPos(8, 64, 8), 0.0f);
+        this.simulationDistance = simulationDistance;
         this.calculateAmbientDarkness();
         this.initWeatherGradients();
+    }
+
+    public void enqueueChunkUpdate(Runnable updater) {
+        this.chunkUpdaters.add(updater);
+    }
+
+    public void runQueuedChunkUpdates() {
+        Runnable runnable;
+        int i = this.chunkUpdaters.size();
+        int j = i < 1000 ? Math.max(10, i / 10) : i;
+        for (int k = 0; k < j && (runnable = this.chunkUpdaters.poll()) != null; ++k) {
+            runnable.run();
+        }
+    }
+
+    public boolean hasNoChunkUpdaters() {
+        return this.chunkUpdaters.isEmpty();
     }
 
     public DimensionEffects getDimensionEffects() {
@@ -139,7 +168,7 @@ extends World {
         this.getWorldBorder().tick();
         this.tickTime();
         this.getProfiler().push("blocks");
-        this.chunkManager.tick(shouldKeepTicking);
+        this.chunkManager.tick(shouldKeepTicking, true);
         this.getProfiler().pop();
     }
 
@@ -181,6 +210,11 @@ extends World {
         this.tickBlockEntities();
     }
 
+    @Override
+    public boolean shouldUpdatePostDeath(Entity entity) {
+        return entity.getChunkPos().getChebyshevDistance(this.client.player.getChunkPos()) <= this.simulationDistance;
+    }
+
     public void tickEntity(Entity entity) {
         entity.resetPosition();
         ++entity.age;
@@ -209,18 +243,18 @@ extends World {
     }
 
     public void unloadBlockEntities(WorldChunk chunk) {
-        chunk.removeAllBlockEntities();
+        chunk.clear();
         this.chunkManager.getLightingProvider().setColumnEnabled(chunk.getPos(), false);
         this.entityManager.stopTicking(chunk.getPos());
     }
 
     public void resetChunkColor(ChunkPos chunkPos) {
-        this.colorCache.forEach((colorResolver, biomeColorCache) -> biomeColorCache.reset(chunkPos.x, chunkPos.z));
+        this.colorCache.forEach((resolver, cache) -> cache.reset(chunkPos.x, chunkPos.z));
         this.entityManager.startTicking(chunkPos);
     }
 
     public void reloadColor() {
-        this.colorCache.forEach((colorResolver, biomeColorCache) -> biomeColorCache.reset());
+        this.colorCache.forEach((resolver, cache) -> cache.reset());
     }
 
     @Override
@@ -265,35 +299,32 @@ extends World {
 
     @Override
     public void disconnect() {
-        this.netHandler.getConnection().disconnect(new TranslatableText("multiplayer.status.quitting"));
+        this.networkHandler.getConnection().disconnect(new TranslatableText("multiplayer.status.quitting"));
     }
 
     public void doRandomBlockDisplayTicks(int centerX, int centerY, int centerZ) {
         int i = 32;
         Random random = new Random();
-        BlockParticle blockParticle = this.getBlockParticle();
+        Block block = this.getBlockParticle();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int j = 0; j < 667; ++j) {
-            this.randomBlockDisplayTick(centerX, centerY, centerZ, 16, random, blockParticle, mutable);
-            this.randomBlockDisplayTick(centerX, centerY, centerZ, 32, random, blockParticle, mutable);
+            this.randomBlockDisplayTick(centerX, centerY, centerZ, 16, random, block, mutable);
+            this.randomBlockDisplayTick(centerX, centerY, centerZ, 32, random, block, mutable);
         }
     }
 
     @Nullable
-    private BlockParticle getBlockParticle() {
-        if (this.client.interactionManager.getCurrentGameMode() == GameMode.CREATIVE) {
-            ItemStack itemStack = this.client.player.getMainHandStack();
-            if (itemStack.getItem() == Items.BARRIER) {
-                return BlockParticle.BARRIER;
-            }
-            if (itemStack.getItem() == Items.LIGHT) {
-                return BlockParticle.LIGHT;
-            }
+    private Block getBlockParticle() {
+        ItemStack itemStack;
+        Item item;
+        if (this.client.interactionManager.getCurrentGameMode() == GameMode.CREATIVE && BLOCK_MARKER_ITEMS.contains(item = (itemStack = this.client.player.getMainHandStack()).getItem()) && item instanceof BlockItem) {
+            BlockItem blockItem = (BlockItem)item;
+            return blockItem.getBlock();
         }
         return null;
     }
 
-    public void randomBlockDisplayTick(int centerX, int centerY, int centerZ, int radius, Random random, @Nullable BlockParticle blockParticle, BlockPos.Mutable pos) {
+    public void randomBlockDisplayTick(int centerX, int centerY, int centerZ, int radius, Random random, @Nullable Block block, BlockPos.Mutable pos) {
         int i = centerX + this.random.nextInt(radius) - this.random.nextInt(radius);
         int j = centerY + this.random.nextInt(radius) - this.random.nextInt(radius);
         int k = centerZ + this.random.nextInt(radius) - this.random.nextInt(radius);
@@ -310,11 +341,11 @@ extends World {
                 this.addParticle((BlockPos)blockPos, this.getBlockState((BlockPos)blockPos), particleEffect, bl);
             }
         }
-        if (blockParticle != null && blockState.getBlock() == blockParticle.block) {
-            this.addParticle(blockParticle.particle, (double)i + 0.5, (double)j + 0.5, (double)k + 0.5, 0.0, 0.0, 0.0);
+        if (block == blockState.getBlock()) {
+            this.addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK_MARKER, blockState), (double)i + 0.5, (double)j + 0.5, (double)k + 0.5, 0.0, 0.0, 0.0);
         }
         if (!blockState.isFullCube(this, pos)) {
-            this.getBiome(pos).getParticleConfig().ifPresent(config -> {
+            this.getBiome(pos).value().getParticleConfig().ifPresent(config -> {
                 if (config.shouldAddParticle(this.random)) {
                     this.addParticle(config.getParticle(), (double)pos.getX() + this.random.nextDouble(), (double)pos.getY() + this.random.nextDouble(), (double)pos.getZ() + this.random.nextDouble(), 0.0, 0.0, 0.0);
                 }
@@ -401,12 +432,12 @@ extends World {
 
     @Override
     public void sendPacket(Packet<?> packet) {
-        this.netHandler.sendPacket(packet);
+        this.networkHandler.sendPacket(packet);
     }
 
     @Override
     public RecipeManager getRecipeManager() {
-        return this.netHandler.getRecipeManager();
+        return this.networkHandler.getRecipeManager();
     }
 
     public void setScoreboard(Scoreboard scoreboard) {
@@ -414,13 +445,13 @@ extends World {
     }
 
     @Override
-    public TickScheduler<Block> getBlockTickScheduler() {
-        return DummyClientTickScheduler.get();
+    public QueryableTickScheduler<Block> getBlockTickScheduler() {
+        return EmptyTickSchedulers.getClientTickScheduler();
     }
 
     @Override
-    public TickScheduler<Fluid> getFluidTickScheduler() {
-        return DummyClientTickScheduler.get();
+    public QueryableTickScheduler<Fluid> getFluidTickScheduler() {
+        return EmptyTickSchedulers.getClientTickScheduler();
     }
 
     @Override
@@ -450,13 +481,8 @@ extends World {
     }
 
     @Override
-    public TagManager getTagManager() {
-        return this.netHandler.getTagManager();
-    }
-
-    @Override
     public DynamicRegistryManager getRegistryManager() {
-        return this.netHandler.getRegistryManager();
+        return this.networkHandler.getRegistryManager();
     }
 
     @Override
@@ -471,6 +497,13 @@ extends World {
 
     public void scheduleBlockRenders(int x, int y, int z) {
         this.worldRenderer.scheduleBlockRenders(x, y, z);
+    }
+
+    public void markChunkRenderability(int chunkX, int chunkZ) {
+        WorldChunk worldChunk = this.chunkManager.getWorldChunk(chunkX, chunkZ, false);
+        if (worldChunk != null) {
+            worldChunk.setShouldRenderOnUpdate(true);
+        }
     }
 
     @Override
@@ -524,57 +557,56 @@ extends World {
     }
 
     @Override
-    public Biome getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
-        return this.getRegistryManager().get(Registry.BIOME_KEY).getOrThrow(BiomeKeys.PLAINS);
+    public RegistryEntry<Biome> getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
+        return this.getRegistryManager().get(Registry.BIOME_KEY).entryOf(BiomeKeys.PLAINS);
     }
 
-    public float method_23783(float f) {
-        float g = this.getSkyAngle(f);
-        float h = 1.0f - (MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.2f);
-        h = MathHelper.clamp(h, 0.0f, 1.0f);
-        h = 1.0f - h;
-        h = (float)((double)h * (1.0 - (double)(this.getRainGradient(f) * 5.0f) / 16.0));
-        h = (float)((double)h * (1.0 - (double)(this.getThunderGradient(f) * 5.0f) / 16.0));
-        return h * 0.8f + 0.2f;
+    public float getStarBrightness(float tickDelta) {
+        float f = this.getSkyAngle(tickDelta);
+        float g = 1.0f - (MathHelper.cos(f * ((float)Math.PI * 2)) * 2.0f + 0.2f);
+        g = MathHelper.clamp(g, 0.0f, 1.0f);
+        g = 1.0f - g;
+        g *= 1.0f - this.getRainGradient(tickDelta) * 5.0f / 16.0f;
+        return (g *= 1.0f - this.getThunderGradient(tickDelta) * 5.0f / 16.0f) * 0.8f + 0.2f;
     }
 
-    public Vec3d getSkyColor(Vec3d vec3d, float f) {
-        float n;
+    public Vec3d getSkyColor(Vec3d cameraPos, float tickDelta) {
         float m;
-        float g = this.getSkyAngle(f);
-        Vec3d vec3d2 = vec3d.subtract(2.0, 2.0, 2.0).multiply(0.25);
+        float l;
+        float f = this.getSkyAngle(tickDelta);
+        Vec3d vec3d = cameraPos.subtract(2.0, 2.0, 2.0).multiply(0.25);
         BiomeAccess biomeAccess = this.getBiomeAccess();
-        Vec3d vec3d3 = CubicSampler.sampleColor(vec3d2, (i, j, k) -> Vec3d.unpackRgb(biomeAccess.getBiomeForNoiseGen(i, j, k).getSkyColor()));
-        float h = MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.5f;
-        h = MathHelper.clamp(h, 0.0f, 1.0f);
-        float i2 = (float)vec3d3.x * h;
-        float j2 = (float)vec3d3.y * h;
-        float k2 = (float)vec3d3.z * h;
-        float l = this.getRainGradient(f);
-        if (l > 0.0f) {
-            m = (i2 * 0.3f + j2 * 0.59f + k2 * 0.11f) * 0.6f;
-            n = 1.0f - l * 0.75f;
-            i2 = i2 * n + m * (1.0f - n);
-            j2 = j2 * n + m * (1.0f - n);
-            k2 = k2 * n + m * (1.0f - n);
+        Vec3d vec3d2 = CubicSampler.sampleColor(vec3d, (x, y, z) -> Vec3d.unpackRgb(biomeAccess.getBiomeForNoiseGen(x, y, z).value().getSkyColor()));
+        float g = MathHelper.cos(f * ((float)Math.PI * 2)) * 2.0f + 0.5f;
+        g = MathHelper.clamp(g, 0.0f, 1.0f);
+        float h = (float)vec3d2.x * g;
+        float i = (float)vec3d2.y * g;
+        float j = (float)vec3d2.z * g;
+        float k = this.getRainGradient(tickDelta);
+        if (k > 0.0f) {
+            l = (h * 0.3f + i * 0.59f + j * 0.11f) * 0.6f;
+            m = 1.0f - k * 0.75f;
+            h = h * m + l * (1.0f - m);
+            i = i * m + l * (1.0f - m);
+            j = j * m + l * (1.0f - m);
         }
-        if ((m = this.getThunderGradient(f)) > 0.0f) {
-            n = (i2 * 0.3f + j2 * 0.59f + k2 * 0.11f) * 0.2f;
-            float o = 1.0f - m * 0.75f;
-            i2 = i2 * o + n * (1.0f - o);
-            j2 = j2 * o + n * (1.0f - o);
-            k2 = k2 * o + n * (1.0f - o);
+        if ((l = this.getThunderGradient(tickDelta)) > 0.0f) {
+            m = (h * 0.3f + i * 0.59f + j * 0.11f) * 0.2f;
+            float n = 1.0f - l * 0.75f;
+            h = h * n + m * (1.0f - n);
+            i = i * n + m * (1.0f - n);
+            j = j * n + m * (1.0f - n);
         }
-        if (this.lightningTicksLeft > 0) {
-            n = (float)this.lightningTicksLeft - f;
-            if (n > 1.0f) {
-                n = 1.0f;
+        if (!this.client.options.hideLightningFlashes && this.lightningTicksLeft > 0) {
+            m = (float)this.lightningTicksLeft - tickDelta;
+            if (m > 1.0f) {
+                m = 1.0f;
             }
-            i2 = i2 * (1.0f - (n *= 0.45f)) + 0.8f * n;
-            j2 = j2 * (1.0f - n) + 0.8f * n;
-            k2 = k2 * (1.0f - n) + 1.0f * n;
+            h = h * (1.0f - (m *= 0.45f)) + 0.8f * m;
+            i = i * (1.0f - m) + 0.8f * m;
+            j = j * (1.0f - m) + 1.0f * m;
         }
-        return new Vec3d(i2, j2, k2);
+        return new Vec3d(h, i, j);
     }
 
     public Vec3d getCloudsColor(float tickDelta) {
@@ -652,13 +684,13 @@ extends World {
     @Override
     public int getColor(BlockPos pos, ColorResolver colorResolver) {
         BiomeColorCache biomeColorCache = (BiomeColorCache)this.colorCache.get((Object)colorResolver);
-        return biomeColorCache.getBiomeColor(pos, () -> this.calculateColor(pos, colorResolver));
+        return biomeColorCache.getBiomeColor(pos);
     }
 
     public int calculateColor(BlockPos pos, ColorResolver colorResolver) {
         int i = MinecraftClient.getInstance().options.biomeBlendRadius;
         if (i == 0) {
-            return colorResolver.getColor(this.getBiome(pos), pos.getX(), pos.getZ());
+            return colorResolver.getColor(this.getBiome(pos).value(), pos.getX(), pos.getZ());
         }
         int j = (i * 2 + 1) * (i * 2 + 1);
         int k = 0;
@@ -668,7 +700,7 @@ extends World {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         while (cuboidBlockIterator.step()) {
             mutable.set(cuboidBlockIterator.getX(), cuboidBlockIterator.getY(), cuboidBlockIterator.getZ());
-            int n = colorResolver.getColor(this.getBiome(mutable), mutable.getX(), mutable.getZ());
+            int n = colorResolver.getColor(this.getBiome(mutable).value(), mutable.getX(), mutable.getZ());
             k += (n & 0xFF0000) >> 16;
             l += (n & 0xFF00) >> 8;
             m += n & 0xFF;
@@ -726,6 +758,14 @@ extends World {
     @Override
     public void addBlockBreakParticles(BlockPos pos, BlockState state) {
         this.client.particleManager.addBlockBreakParticles(pos, state);
+    }
+
+    public void setSimulationDistance(int simulationDistance) {
+        this.simulationDistance = simulationDistance;
+    }
+
+    public int getSimulationDistance() {
+        return this.simulationDistance;
     }
 
     @Override
@@ -875,16 +915,16 @@ extends World {
         }
 
         @Override
-        public void setSpawnAngle(float angle) {
-            this.spawnAngle = angle;
+        public void setSpawnAngle(float spawnAngle) {
+            this.spawnAngle = spawnAngle;
         }
 
-        public void setTime(long difficulty) {
-            this.time = difficulty;
+        public void setTime(long time) {
+            this.time = time;
         }
 
-        public void setTimeOfDay(long time) {
-            this.timeOfDay = time;
+        public void setTimeOfDay(long timeOfDay) {
+            this.timeOfDay = timeOfDay;
         }
 
         @Override
@@ -950,42 +990,11 @@ extends World {
             return 63.0;
         }
 
-        public double getHorizonShadingRatio() {
+        public float getHorizonShadingRatio() {
             if (this.flatWorld) {
-                return 1.0;
+                return 1.0f;
             }
-            return 0.03125;
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    static final class BlockParticle
-    extends Enum<BlockParticle> {
-        public static final /* enum */ BlockParticle BARRIER = new BlockParticle(Blocks.BARRIER, ParticleTypes.BARRIER);
-        public static final /* enum */ BlockParticle LIGHT = new BlockParticle(Blocks.LIGHT, ParticleTypes.LIGHT);
-        final Block block;
-        final ParticleEffect particle;
-        private static final /* synthetic */ BlockParticle[] field_32646;
-
-        public static BlockParticle[] values() {
-            return (BlockParticle[])field_32646.clone();
-        }
-
-        public static BlockParticle valueOf(String string) {
-            return Enum.valueOf(BlockParticle.class, string);
-        }
-
-        private BlockParticle(Block block, ParticleEffect particle) {
-            this.block = block;
-            this.particle = particle;
-        }
-
-        private static /* synthetic */ BlockParticle[] method_36894() {
-            return new BlockParticle[]{BARRIER, LIGHT};
-        }
-
-        static {
-            field_32646 = BlockParticle.method_36894();
+            return 0.03125f;
         }
     }
 }

@@ -89,6 +89,9 @@ implements Packet<ClientPlayPacketListener> {
         return MoreObjects.toStringHelper((Object)this).add("action", (Object)this.action).add("entries", this.entries).toString();
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     public static abstract class Action
     extends Enum<Action> {
         public static final /* enum */ Action ADD_PLAYER = new Action(){

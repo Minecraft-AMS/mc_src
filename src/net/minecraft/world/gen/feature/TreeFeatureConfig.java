@@ -21,46 +21,38 @@ import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.size.FeatureSize;
 import net.minecraft.world.gen.foliage.FoliagePlacer;
 import net.minecraft.world.gen.stateprovider.BlockStateProvider;
-import net.minecraft.world.gen.stateprovider.SimpleBlockStateProvider;
 import net.minecraft.world.gen.treedecorator.TreeDecorator;
 import net.minecraft.world.gen.trunk.TrunkPlacer;
 
 public class TreeFeatureConfig
 implements FeatureConfig {
-    public static final Codec<TreeFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BlockStateProvider.TYPE_CODEC.fieldOf("trunk_provider").forGetter(treeFeatureConfig -> treeFeatureConfig.trunkProvider), (App)TrunkPlacer.TYPE_CODEC.fieldOf("trunk_placer").forGetter(treeFeatureConfig -> treeFeatureConfig.trunkPlacer), (App)BlockStateProvider.TYPE_CODEC.fieldOf("foliage_provider").forGetter(treeFeatureConfig -> treeFeatureConfig.foliageProvider), (App)BlockStateProvider.TYPE_CODEC.fieldOf("sapling_provider").forGetter(treeFeatureConfig -> treeFeatureConfig.saplingProvider), (App)FoliagePlacer.TYPE_CODEC.fieldOf("foliage_placer").forGetter(treeFeatureConfig -> treeFeatureConfig.foliagePlacer), (App)BlockStateProvider.TYPE_CODEC.fieldOf("dirt_provider").forGetter(treeFeatureConfig -> treeFeatureConfig.dirtProvider), (App)FeatureSize.TYPE_CODEC.fieldOf("minimum_size").forGetter(treeFeatureConfig -> treeFeatureConfig.minimumSize), (App)TreeDecorator.TYPE_CODEC.listOf().fieldOf("decorators").forGetter(treeFeatureConfig -> treeFeatureConfig.decorators), (App)Codec.BOOL.fieldOf("ignore_vines").orElse((Object)false).forGetter(treeFeatureConfig -> treeFeatureConfig.ignoreVines), (App)Codec.BOOL.fieldOf("force_dirt").orElse((Object)false).forGetter(treeFeatureConfig -> treeFeatureConfig.forceDirt)).apply((Applicative)instance, TreeFeatureConfig::new));
+    public static final Codec<TreeFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BlockStateProvider.TYPE_CODEC.fieldOf("trunk_provider").forGetter(config -> config.trunkProvider), (App)TrunkPlacer.TYPE_CODEC.fieldOf("trunk_placer").forGetter(config -> config.trunkPlacer), (App)BlockStateProvider.TYPE_CODEC.fieldOf("foliage_provider").forGetter(config -> config.foliageProvider), (App)FoliagePlacer.TYPE_CODEC.fieldOf("foliage_placer").forGetter(config -> config.foliagePlacer), (App)BlockStateProvider.TYPE_CODEC.fieldOf("dirt_provider").forGetter(config -> config.dirtProvider), (App)FeatureSize.TYPE_CODEC.fieldOf("minimum_size").forGetter(config -> config.minimumSize), (App)TreeDecorator.TYPE_CODEC.listOf().fieldOf("decorators").forGetter(config -> config.decorators), (App)Codec.BOOL.fieldOf("ignore_vines").orElse((Object)false).forGetter(config -> config.ignoreVines), (App)Codec.BOOL.fieldOf("force_dirt").orElse((Object)false).forGetter(config -> config.forceDirt)).apply((Applicative)instance, TreeFeatureConfig::new));
     public final BlockStateProvider trunkProvider;
     public final BlockStateProvider dirtProvider;
     public final TrunkPlacer trunkPlacer;
     public final BlockStateProvider foliageProvider;
-    public final BlockStateProvider saplingProvider;
     public final FoliagePlacer foliagePlacer;
     public final FeatureSize minimumSize;
     public final List<TreeDecorator> decorators;
     public final boolean ignoreVines;
     public final boolean forceDirt;
 
-    protected TreeFeatureConfig(BlockStateProvider trunkProvider, TrunkPlacer trunkPlacer, BlockStateProvider foliageProvider, BlockStateProvider saplingProvider, FoliagePlacer foliagePlacer, BlockStateProvider dirtProvider, FeatureSize minimumSize, List<TreeDecorator> decorators, boolean ignoreVines, boolean forceDirt) {
+    protected TreeFeatureConfig(BlockStateProvider trunkProvider, TrunkPlacer trunkPlacer, BlockStateProvider foliageProvider, FoliagePlacer foliagePlacer, BlockStateProvider dirtProvider, FeatureSize minimumSize, List<TreeDecorator> decorators, boolean ignoreVines, boolean forceDirt) {
         this.trunkProvider = trunkProvider;
         this.trunkPlacer = trunkPlacer;
         this.foliageProvider = foliageProvider;
         this.foliagePlacer = foliagePlacer;
         this.dirtProvider = dirtProvider;
-        this.saplingProvider = saplingProvider;
         this.minimumSize = minimumSize;
         this.decorators = decorators;
         this.ignoreVines = ignoreVines;
         this.forceDirt = forceDirt;
     }
 
-    public TreeFeatureConfig setTreeDecorators(List<TreeDecorator> decorators) {
-        return new TreeFeatureConfig(this.trunkProvider, this.trunkPlacer, this.foliageProvider, this.saplingProvider, this.foliagePlacer, this.dirtProvider, this.minimumSize, decorators, this.ignoreVines, this.forceDirt);
-    }
-
     public static class Builder {
         public final BlockStateProvider trunkProvider;
         private final TrunkPlacer trunkPlacer;
         public final BlockStateProvider foliageProvider;
-        public final BlockStateProvider saplingProvider;
         private final FoliagePlacer foliagePlacer;
         private BlockStateProvider dirtProvider;
         private final FeatureSize minimumSize;
@@ -68,12 +60,11 @@ implements FeatureConfig {
         private boolean ignoreVines;
         private boolean forceDirt;
 
-        public Builder(BlockStateProvider trunkProvider, TrunkPlacer trunkPlacer, BlockStateProvider foliageProvider, BlockStateProvider saplingProvider, FoliagePlacer foliagePlacer, FeatureSize minimumSize) {
+        public Builder(BlockStateProvider trunkProvider, TrunkPlacer trunkPlacer, BlockStateProvider foliageProvider, FoliagePlacer foliagePlacer, FeatureSize minimumSize) {
             this.trunkProvider = trunkProvider;
             this.trunkPlacer = trunkPlacer;
             this.foliageProvider = foliageProvider;
-            this.saplingProvider = saplingProvider;
-            this.dirtProvider = new SimpleBlockStateProvider(Blocks.DIRT.getDefaultState());
+            this.dirtProvider = BlockStateProvider.of(Blocks.DIRT);
             this.foliagePlacer = foliagePlacer;
             this.minimumSize = minimumSize;
         }
@@ -99,7 +90,7 @@ implements FeatureConfig {
         }
 
         public TreeFeatureConfig build() {
-            return new TreeFeatureConfig(this.trunkProvider, this.trunkPlacer, this.foliageProvider, this.saplingProvider, this.foliagePlacer, this.dirtProvider, this.minimumSize, this.decorators, this.ignoreVines, this.forceDirt);
+            return new TreeFeatureConfig(this.trunkProvider, this.trunkPlacer, this.foliageProvider, this.foliagePlacer, this.dirtProvider, this.minimumSize, this.decorators, this.ignoreVines, this.forceDirt);
         }
     }
 }

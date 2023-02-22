@@ -19,7 +19,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.Degradable;
 
 public interface Oxidizable
-extends Degradable<OxidizationLevel> {
+extends Degradable<OxidationLevel> {
     public static final Supplier<BiMap<Block, Block>> OXIDATION_LEVEL_INCREASES = Suppliers.memoize(() -> ImmutableBiMap.builder().put((Object)Blocks.COPPER_BLOCK, (Object)Blocks.EXPOSED_COPPER).put((Object)Blocks.EXPOSED_COPPER, (Object)Blocks.WEATHERED_COPPER).put((Object)Blocks.WEATHERED_COPPER, (Object)Blocks.OXIDIZED_COPPER).put((Object)Blocks.CUT_COPPER, (Object)Blocks.EXPOSED_CUT_COPPER).put((Object)Blocks.EXPOSED_CUT_COPPER, (Object)Blocks.WEATHERED_CUT_COPPER).put((Object)Blocks.WEATHERED_CUT_COPPER, (Object)Blocks.OXIDIZED_CUT_COPPER).put((Object)Blocks.CUT_COPPER_SLAB, (Object)Blocks.EXPOSED_CUT_COPPER_SLAB).put((Object)Blocks.EXPOSED_CUT_COPPER_SLAB, (Object)Blocks.WEATHERED_CUT_COPPER_SLAB).put((Object)Blocks.WEATHERED_CUT_COPPER_SLAB, (Object)Blocks.OXIDIZED_CUT_COPPER_SLAB).put((Object)Blocks.CUT_COPPER_STAIRS, (Object)Blocks.EXPOSED_CUT_COPPER_STAIRS).put((Object)Blocks.EXPOSED_CUT_COPPER_STAIRS, (Object)Blocks.WEATHERED_CUT_COPPER_STAIRS).put((Object)Blocks.WEATHERED_CUT_COPPER_STAIRS, (Object)Blocks.OXIDIZED_CUT_COPPER_STAIRS).build());
     public static final Supplier<BiMap<Block, Block>> OXIDATION_LEVEL_DECREASES = Suppliers.memoize(() -> OXIDATION_LEVEL_INCREASES.get().inverse());
 
@@ -56,34 +56,34 @@ extends Degradable<OxidizationLevel> {
 
     @Override
     default public float getDegradationChanceMultiplier() {
-        if (this.getDegradationLevel() == OxidizationLevel.UNAFFECTED) {
+        if (this.getDegradationLevel() == OxidationLevel.UNAFFECTED) {
             return 0.75f;
         }
         return 1.0f;
     }
 
-    public static final class OxidizationLevel
-    extends Enum<OxidizationLevel> {
-        public static final /* enum */ OxidizationLevel UNAFFECTED = new OxidizationLevel();
-        public static final /* enum */ OxidizationLevel EXPOSED = new OxidizationLevel();
-        public static final /* enum */ OxidizationLevel WEATHERED = new OxidizationLevel();
-        public static final /* enum */ OxidizationLevel OXIDIZED = new OxidizationLevel();
-        private static final /* synthetic */ OxidizationLevel[] field_28708;
+    public static final class OxidationLevel
+    extends Enum<OxidationLevel> {
+        public static final /* enum */ OxidationLevel UNAFFECTED = new OxidationLevel();
+        public static final /* enum */ OxidationLevel EXPOSED = new OxidationLevel();
+        public static final /* enum */ OxidationLevel WEATHERED = new OxidationLevel();
+        public static final /* enum */ OxidationLevel OXIDIZED = new OxidationLevel();
+        private static final /* synthetic */ OxidationLevel[] field_28708;
 
-        public static OxidizationLevel[] values() {
-            return (OxidizationLevel[])field_28708.clone();
+        public static OxidationLevel[] values() {
+            return (OxidationLevel[])field_28708.clone();
         }
 
-        public static OxidizationLevel valueOf(String string) {
-            return Enum.valueOf(OxidizationLevel.class, string);
+        public static OxidationLevel valueOf(String string) {
+            return Enum.valueOf(OxidationLevel.class, string);
         }
 
-        private static /* synthetic */ OxidizationLevel[] method_36712() {
-            return new OxidizationLevel[]{UNAFFECTED, EXPOSED, WEATHERED, OXIDIZED};
+        private static /* synthetic */ OxidationLevel[] method_36712() {
+            return new OxidationLevel[]{UNAFFECTED, EXPOSED, WEATHERED, OXIDIZED};
         }
 
         static {
-            field_28708 = OxidizationLevel.method_36712();
+            field_28708 = OxidationLevel.method_36712();
         }
     }
 }

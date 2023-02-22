@@ -6,6 +6,7 @@
  *  com.google.common.collect.Iterables
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
+ *  com.mojang.logging.LogUtils
  *  io.netty.bootstrap.Bootstrap
  *  io.netty.buffer.ByteBuf
  *  io.netty.buffer.Unpooled
@@ -22,9 +23,7 @@
  *  io.netty.util.concurrent.GenericFutureListener
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.lang3.ArrayUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.network;
 
@@ -32,6 +31,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
+import com.mojang.logging.LogUtils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -77,14 +77,12 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class MultiplayerServerListPinger {
     static final Splitter ZERO_SPLITTER = Splitter.on((char)'\u0000').limit(6);
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final Text CANNOT_CONNECT_TEXT = new TranslatableText("multiplayer.status.cannot_connect").formatted(Formatting.DARK_RED);
     private final List<ClientConnection> clientConnections = Collections.synchronizedList(Lists.newArrayList());
 
@@ -125,12 +123,13 @@ public class MultiplayerServerListPinger {
                 if (serverMetadata.getPlayers() != null) {
                     entry.playerCountLabel = MultiplayerServerListPinger.createPlayerCountText(serverMetadata.getPlayers().getOnlinePlayerCount(), serverMetadata.getPlayers().getPlayerLimit());
                     ArrayList list = Lists.newArrayList();
-                    if (ArrayUtils.isNotEmpty((Object[])serverMetadata.getPlayers().getSample())) {
-                        for (GameProfile gameProfile : serverMetadata.getPlayers().getSample()) {
+                    GameProfile[] gameProfiles = serverMetadata.getPlayers().getSample();
+                    if (gameProfiles != null && gameProfiles.length > 0) {
+                        for (GameProfile gameProfile : gameProfiles) {
                             list.add(new LiteralText(gameProfile.getName()));
                         }
-                        if (serverMetadata.getPlayers().getSample().length < serverMetadata.getPlayers().getOnlinePlayerCount()) {
-                            list.add(new TranslatableText("multiplayer.status.and_more", serverMetadata.getPlayers().getOnlinePlayerCount() - serverMetadata.getPlayers().getSample().length));
+                        if (gameProfiles.length < serverMetadata.getPlayers().getOnlinePlayerCount()) {
+                            list.add(new TranslatableText("multiplayer.status.and_more", serverMetadata.getPlayers().getOnlinePlayerCount() - gameProfiles.length));
                         }
                         entry.playerListSummary = list;
                     }
@@ -181,7 +180,7 @@ public class MultiplayerServerListPinger {
             clientConnection.send(new QueryRequestC2SPacket());
         }
         catch (Throwable throwable) {
-            LOGGER.error((Object)throwable);
+            LOGGER.error("Failed to ping server {}", (Object)serverAddress, (Object)throwable);
         }
     }
 

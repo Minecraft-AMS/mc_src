@@ -2,23 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.data.validate;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.data.SnbtProvider;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.datafixer.Schemas;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.structure.Structure;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class StructureValidatorProvider
 implements SnbtProvider.Tweaker {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
     public NbtCompound write(String name, NbtCompound nbt) {
@@ -42,9 +42,9 @@ implements SnbtProvider.Tweaker {
     private static NbtCompound internalUpdate(String name, NbtCompound nbt) {
         Structure structure = new Structure();
         int i = nbt.getInt("DataVersion");
-        int j = 2678;
-        if (i < 2678) {
-            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", (Object)i, (Object)2678, (Object)name);
+        int j = 2965;
+        if (i < 2965) {
+            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", new Object[]{i, 2965, name});
         }
         NbtCompound nbtCompound = NbtHelper.update(Schemas.getFixer(), DataFixTypes.STRUCTURE, nbt, i);
         structure.readNbt(nbtCompound);

@@ -2,37 +2,29 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  it.unimi.dsi.fastutil.ints.IntRBTreeSet
  *  it.unimi.dsi.fastutil.ints.IntSortedSet
  */
 package net.minecraft.util.math.noise;
 
-import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import java.util.List;
-import java.util.stream.IntStream;
-import net.minecraft.util.math.noise.NoiseSampler;
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
-import net.minecraft.world.gen.ChunkRandom;
-import net.minecraft.world.gen.WorldGenRandom;
+import net.minecraft.world.gen.random.AbstractRandom;
+import net.minecraft.world.gen.random.AtomicSimpleRandom;
+import net.minecraft.world.gen.random.ChunkRandom;
 
-public class OctaveSimplexNoiseSampler
-implements NoiseSampler {
+public class OctaveSimplexNoiseSampler {
     private final SimplexNoiseSampler[] octaveSamplers;
     private final double persistence;
     private final double lacunarity;
 
-    public OctaveSimplexNoiseSampler(WorldGenRandom random, IntStream octaves) {
-        this(random, (List)octaves.boxed().collect(ImmutableList.toImmutableList()));
-    }
-
-    public OctaveSimplexNoiseSampler(WorldGenRandom random, List<Integer> octaves) {
+    public OctaveSimplexNoiseSampler(AbstractRandom random, List<Integer> octaves) {
         this(random, (IntSortedSet)new IntRBTreeSet(octaves));
     }
 
-    private OctaveSimplexNoiseSampler(WorldGenRandom random, IntSortedSet octaves) {
+    private OctaveSimplexNoiseSampler(AbstractRandom random, IntSortedSet octaves) {
         int j;
         if (octaves.isEmpty()) {
             throw new IllegalArgumentException("Need some octaves!");
@@ -57,13 +49,13 @@ implements NoiseSampler {
         }
         if (j > 0) {
             long n = (long)(simplexNoiseSampler.sample(simplexNoiseSampler.originX, simplexNoiseSampler.originY, simplexNoiseSampler.originZ) * 9.223372036854776E18);
-            ChunkRandom worldGenRandom = new ChunkRandom(n);
+            ChunkRandom abstractRandom = new ChunkRandom(new AtomicSimpleRandom(n));
             for (int o = l - 1; o >= 0; --o) {
                 if (o < k && octaves.contains(l - o)) {
-                    this.octaveSamplers[o] = new SimplexNoiseSampler(worldGenRandom);
+                    this.octaveSamplers[o] = new SimplexNoiseSampler(abstractRandom);
                     continue;
                 }
-                worldGenRandom.skip(262);
+                abstractRandom.skip(262);
             }
         }
         this.lacunarity = Math.pow(2.0, j);
@@ -82,11 +74,6 @@ implements NoiseSampler {
             f *= 2.0;
         }
         return d;
-    }
-
-    @Override
-    public double sample(double x, double y, double yScale, double yMax) {
-        return this.sample(x, y, true) * 0.55;
     }
 }
 

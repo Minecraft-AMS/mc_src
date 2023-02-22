@@ -110,7 +110,7 @@ implements SidedInventory {
     }
 
     public Box getBoundingBox(BlockState state) {
-        return ShulkerEntity.method_33346(state.get(ShulkerBoxBlock.FACING), 0.5f * this.getAnimationProgress(1.0f));
+        return ShulkerEntity.calculateBoundingBox(state.get(ShulkerBoxBlock.FACING), 0.5f * this.getAnimationProgress(1.0f));
     }
 
     private void pushEntities(World world, BlockPos pos, BlockState state) {
@@ -118,7 +118,7 @@ implements SidedInventory {
             return;
         }
         Direction direction = state.get(ShulkerBoxBlock.FACING);
-        Box box = ShulkerEntity.method_33347(direction, this.prevAnimationProgress, this.animationProgress).offset(pos);
+        Box box = ShulkerEntity.calculateBoundingBox(direction, this.prevAnimationProgress, this.animationProgress).offset(pos);
         List<Entity> list = world.getOtherEntities(null, box);
         if (list.isEmpty()) {
             return;
@@ -195,9 +195,11 @@ implements SidedInventory {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
-        return this.writeInventoryNbt(nbt);
+        if (!this.serializeLootTable(nbt)) {
+            Inventories.writeNbt(nbt, this.inventory, false);
+        }
     }
 
     public void readInventoryNbt(NbtCompound nbt) {
@@ -205,13 +207,6 @@ implements SidedInventory {
         if (!this.deserializeLootTable(nbt) && nbt.contains(ITEMS_KEY, 9)) {
             Inventories.readNbt(nbt, this.inventory);
         }
-    }
-
-    public NbtCompound writeInventoryNbt(NbtCompound nbt) {
-        if (!this.serializeLootTable(nbt)) {
-            Inventories.writeNbt(nbt, this.inventory, false);
-        }
-        return nbt;
     }
 
     @Override

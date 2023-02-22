@@ -60,8 +60,8 @@ implements SoundContainer<Sound> {
         return SoundManager.MISSING_SOUND;
     }
 
-    public void add(SoundContainer<Sound> soundContainer) {
-        this.sounds.add(soundContainer);
+    public void add(SoundContainer<Sound> container) {
+        this.sounds.add(container);
     }
 
     public Identifier getId() {

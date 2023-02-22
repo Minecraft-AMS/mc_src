@@ -44,6 +44,7 @@ import net.minecraft.nbt.NbtString;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.NbtTypes;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
@@ -59,9 +60,9 @@ implements NbtElement {
         }
         return DataResult.error((String)("Not a compound tag: " + nbtElement));
     }, nbt -> new Dynamic((DynamicOps)NbtOps.INSTANCE, nbt));
-    private static final int field_33190 = 384;
+    private static final int SIZE = 384;
     private static final int field_33191 = 256;
-    public static final NbtType<NbtCompound> TYPE = new NbtType<NbtCompound>(){
+    public static final NbtType<NbtCompound> TYPE = new NbtType.OfVariableSize<NbtCompound>(){
 
         @Override
         public NbtCompound read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
@@ -79,6 +80,67 @@ implements NbtElement {
                 nbtTagSizeTracker.add(288L);
             }
             return new NbtCompound(map);
+        }
+
+        @Override
+        public NbtScanner.Result doAccept(DataInput input, NbtScanner visitor) throws IOException {
+            byte b;
+            block13: while ((b = input.readByte()) != 0) {
+                NbtType<?> nbtType = NbtTypes.byId(b);
+                switch (visitor.visitSubNbtType(nbtType)) {
+                    case HALT: {
+                        return NbtScanner.Result.HALT;
+                    }
+                    case BREAK: {
+                        NbtString.skip(input);
+                        nbtType.skip(input);
+                        break block13;
+                    }
+                    case SKIP: {
+                        NbtString.skip(input);
+                        nbtType.skip(input);
+                        continue block13;
+                    }
+                    default: {
+                        String string = input.readUTF();
+                        switch (visitor.startSubNbt(nbtType, string)) {
+                            case HALT: {
+                                return NbtScanner.Result.HALT;
+                            }
+                            case BREAK: {
+                                nbtType.skip(input);
+                                break block13;
+                            }
+                            case SKIP: {
+                                nbtType.skip(input);
+                                continue block13;
+                            }
+                        }
+                        switch (nbtType.doAccept(input, visitor)) {
+                            case HALT: {
+                                return NbtScanner.Result.HALT;
+                            }
+                        }
+                        continue block13;
+                    }
+                }
+            }
+            if (b != 0) {
+                while ((b = input.readByte()) != 0) {
+                    NbtString.skip(input);
+                    NbtTypes.byId(b).skip(input);
+                }
+            }
+            return visitor.endNested();
+        }
+
+        @Override
+        public void skip(DataInput input) throws IOException {
+            byte b;
+            while ((b = input.readByte()) != 0) {
+                NbtString.skip(input);
+                NbtTypes.byId(b).skip(input);
+            }
         }
 
         @Override
@@ -399,8 +461,8 @@ implements NbtElement {
         return this.entries.isEmpty();
     }
 
-    private CrashReport createCrashReport(String key, NbtType<?> reader, ClassCastException classCastException) {
-        CrashReport crashReport = CrashReport.create(classCastException, "Reading NBT data");
+    private CrashReport createCrashReport(String key, NbtType<?> reader, ClassCastException exception) {
+        CrashReport crashReport = CrashReport.create(exception, "Reading NBT data");
         CrashReportSection crashReportSection = crashReport.addElement("Corrupt NBT tag", 1);
         crashReportSection.add("Tag type found", () -> this.entries.get(key).getNbtType().getCrashReportName());
         crashReportSection.add("Tag type expected", reader::getCrashReportName);
@@ -479,6 +541,48 @@ implements NbtElement {
 
     protected Map<String, NbtElement> toMap() {
         return Collections.unmodifiableMap(this.entries);
+    }
+
+    @Override
+    public NbtScanner.Result doAccept(NbtScanner visitor) {
+        block14: for (Map.Entry<String, NbtElement> entry : this.entries.entrySet()) {
+            NbtElement nbtElement = entry.getValue();
+            NbtType<?> nbtType = nbtElement.getNbtType();
+            NbtScanner.NestedResult nestedResult = visitor.visitSubNbtType(nbtType);
+            switch (nestedResult) {
+                case HALT: {
+                    return NbtScanner.Result.HALT;
+                }
+                case BREAK: {
+                    return visitor.endNested();
+                }
+                case SKIP: {
+                    continue block14;
+                }
+            }
+            nestedResult = visitor.startSubNbt(nbtType, entry.getKey());
+            switch (nestedResult) {
+                case HALT: {
+                    return NbtScanner.Result.HALT;
+                }
+                case BREAK: {
+                    return visitor.endNested();
+                }
+                case SKIP: {
+                    continue block14;
+                }
+            }
+            NbtScanner.Result result = nbtElement.doAccept(visitor);
+            switch (result) {
+                case HALT: {
+                    return NbtScanner.Result.HALT;
+                }
+                case BREAK: {
+                    return visitor.endNested();
+                }
+            }
+        }
+        return visitor.endNested();
     }
 
     @Override

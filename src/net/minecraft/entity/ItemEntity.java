@@ -46,7 +46,9 @@ extends Entity {
     private int itemAge;
     private int pickupDelay;
     private int health = 5;
+    @Nullable
     private UUID thrower;
+    @Nullable
     private UUID owner;
     public final float uniqueOffset;
 
@@ -77,7 +79,7 @@ extends Entity {
 
     @Override
     public boolean occludeVibrationSignals() {
-        return ItemTags.OCCLUDES_VIBRATION_SIGNALS.contains(this.getStack().getItem());
+        return this.getStack().isIn(ItemTags.OCCLUDES_VIBRATION_SIGNALS);
     }
 
     @Override
@@ -117,7 +119,7 @@ extends Entity {
         if (this.world.isClient) {
             this.noClip = false;
         } else {
-            boolean bl = this.noClip = !this.world.isSpaceEmpty(this, this.getBoundingBox().contract(1.0E-7), entity -> true);
+            boolean bl = this.noClip = !this.world.isSpaceEmpty(this, this.getBoundingBox().contract(1.0E-7));
             if (this.noClip) {
                 this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().minY + this.getBoundingBox().maxY) / 2.0, this.getZ());
             }
@@ -167,10 +169,10 @@ extends Entity {
         if (!this.canMerge()) {
             return;
         }
-        List<ItemEntity> list = this.world.getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.5, 0.0, 0.5), itemEntity -> itemEntity != this && itemEntity.canMerge());
-        for (ItemEntity itemEntity2 : list) {
-            if (!itemEntity2.canMerge()) continue;
-            this.tryMerge(itemEntity2);
+        List<ItemEntity> list = this.world.getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.5, 0.0, 0.5), otherItemEntity -> otherItemEntity != this && otherItemEntity.canMerge());
+        for (ItemEntity itemEntity : list) {
+            if (!itemEntity.canMerge()) continue;
+            this.tryMerge(itemEntity);
             if (!this.isRemoved()) continue;
             break;
         }
@@ -244,6 +246,9 @@ extends Entity {
         }
         if (!this.getStack().getItem().damage(source)) {
             return false;
+        }
+        if (this.world.isClient) {
+            return true;
         }
         this.scheduleVelocityUpdate();
         this.health = (int)((float)this.health - amount);
@@ -355,8 +360,8 @@ extends Entity {
         return this.owner;
     }
 
-    public void setOwner(@Nullable UUID uuid) {
-        this.owner = uuid;
+    public void setOwner(@Nullable UUID owner) {
+        this.owner = owner;
     }
 
     @Nullable
@@ -364,8 +369,8 @@ extends Entity {
         return this.thrower;
     }
 
-    public void setThrower(@Nullable UUID uuid) {
-        this.thrower = uuid;
+    public void setThrower(@Nullable UUID thrower) {
+        this.thrower = thrower;
     }
 
     public int getItemAge() {

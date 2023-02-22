@@ -29,12 +29,12 @@ implements LandingBlock {
 
     @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
-        world.getBlockTickScheduler().schedule(pos, this, this.getFallDelay());
+        world.createAndScheduleBlockTick(pos, this, this.getFallDelay());
     }
 
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-        world.getBlockTickScheduler().schedule(pos, this, this.getFallDelay());
+        world.createAndScheduleBlockTick(pos, this, this.getFallDelay());
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
@@ -43,9 +43,8 @@ implements LandingBlock {
         if (!FallingBlock.canFallThrough(world.getBlockState(pos.down())) || pos.getY() < world.getBottomY()) {
             return;
         }
-        FallingBlockEntity fallingBlockEntity = new FallingBlockEntity(world, (double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5, world.getBlockState(pos));
+        FallingBlockEntity fallingBlockEntity = FallingBlockEntity.spawnFromBlock(world, pos, state);
         this.configureFallingBlockEntity(fallingBlockEntity);
-        world.spawnEntity(fallingBlockEntity);
     }
 
     protected void configureFallingBlockEntity(FallingBlockEntity entity) {

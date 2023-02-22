@@ -1,8 +1,14 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity;
 
+import com.mojang.logging.LogUtils;
 import java.util.function.Predicate;
 import net.minecraft.block.AnvilBlock;
 import net.minecraft.block.Block;
@@ -23,7 +29,6 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.item.AutomaticItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
@@ -43,9 +48,12 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class FallingBlockEntity
 extends Entity {
+    private static final Logger field_36333 = LogUtils.getLogger();
     private BlockState block = Blocks.SAND.getDefaultState();
     public int timeFalling;
     public boolean dropItem = true;
@@ -53,6 +61,7 @@ extends Entity {
     private boolean hurtEntities;
     private int fallHurtMax = 40;
     private float fallHurtAmount;
+    @Nullable
     public NbtCompound blockEntityData;
     protected static final TrackedData<BlockPos> BLOCK_POS = DataTracker.registerData(FallingBlockEntity.class, TrackedDataHandlerRegistry.BLOCK_POS);
 
@@ -60,16 +69,23 @@ extends Entity {
         super(entityType, world);
     }
 
-    public FallingBlockEntity(World world, double x, double y, double z, BlockState block) {
+    private FallingBlockEntity(World world, double x, double y, double z, BlockState block) {
         this((EntityType<? extends FallingBlockEntity>)EntityType.FALLING_BLOCK, world);
         this.block = block;
-        this.inanimate = true;
-        this.setPosition(x, y + (double)((1.0f - this.getHeight()) / 2.0f), z);
+        this.intersectionChecked = true;
+        this.setPosition(x, y, z);
         this.setVelocity(Vec3d.ZERO);
         this.prevX = x;
         this.prevY = y;
         this.prevZ = z;
         this.setFallingBlockPos(this.getBlockPos());
+    }
+
+    public static FallingBlockEntity spawnFromBlock(World world, BlockPos pos, BlockState state) {
+        FallingBlockEntity fallingBlockEntity = new FallingBlockEntity(world, (double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5, state.contains(Properties.WATERLOGGED) ? (BlockState)state.with(Properties.WATERLOGGED, false) : state);
+        world.setBlockState(pos, state.getFluidState().getBlockState(), 3);
+        world.spawnEntity(fallingBlockEntity);
+        return fallingBlockEntity;
     }
 
     @Override
@@ -102,28 +118,19 @@ extends Entity {
 
     @Override
     public void tick() {
-        BlockPos blockPos;
         if (this.block.isAir()) {
             this.discard();
             return;
         }
         Block block = this.block.getBlock();
-        if (this.timeFalling++ == 0) {
-            blockPos = this.getBlockPos();
-            if (this.world.getBlockState(blockPos).isOf(block)) {
-                this.world.removeBlock(blockPos, false);
-            } else if (!this.world.isClient) {
-                this.discard();
-                return;
-            }
-        }
+        ++this.timeFalling;
         if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
         }
         this.move(MovementType.SELF, this.getVelocity());
         if (!this.world.isClient) {
             BlockHitResult blockHitResult;
-            blockPos = this.getBlockPos();
+            BlockPos blockPos = this.getBlockPos();
             boolean bl = this.block.getBlock() instanceof ConcretePowderBlock;
             boolean bl2 = bl && this.world.getFluidState(blockPos).isIn(FluidTags.WATER);
             double d = this.getVelocity().lengthSquared();
@@ -152,17 +159,15 @@ extends Entity {
                                     ((LandingBlock)((Object)block)).onLanding(this.world, blockPos, this.block, blockState, this);
                                 }
                                 if (this.blockEntityData != null && this.block.hasBlockEntity() && (blockEntity = this.world.getBlockEntity(blockPos)) != null) {
-                                    NbtCompound nbtCompound = blockEntity.writeNbt(new NbtCompound());
+                                    NbtCompound nbtCompound = blockEntity.createNbt();
                                     for (String string : this.blockEntityData.getKeys()) {
-                                        NbtElement nbtElement = this.blockEntityData.get(string);
-                                        if ("x".equals(string) || "y".equals(string) || "z".equals(string)) continue;
-                                        nbtCompound.put(string, nbtElement.copy());
+                                        nbtCompound.put(string, this.blockEntityData.get(string).copy());
                                     }
                                     try {
                                         blockEntity.readNbt(nbtCompound);
                                     }
                                     catch (Exception exception) {
-                                        LOGGER.error("Failed to load block entity from falling block", (Throwable)exception);
+                                        field_36333.error("Failed to load block entity from falling block", (Throwable)exception);
                                     }
                                     blockEntity.markDirty();
                                 }
@@ -267,10 +272,6 @@ extends Entity {
         }
     }
 
-    public World getWorldClient() {
-        return this.world;
-    }
-
     public void setHurtEntities(float fallHurtAmount, int fallHurtMax) {
         this.hurtEntities = true;
         this.fallHurtAmount = fallHurtAmount;
@@ -306,11 +307,11 @@ extends Entity {
     public void onSpawnPacket(EntitySpawnS2CPacket packet) {
         super.onSpawnPacket(packet);
         this.block = Block.getStateFromRawId(packet.getEntityData());
-        this.inanimate = true;
+        this.intersectionChecked = true;
         double d = packet.getX();
         double e = packet.getY();
         double f = packet.getZ();
-        this.setPosition(d, e + (double)((1.0f - this.getHeight()) / 2.0f), f);
+        this.setPosition(d, e, f);
         this.setFallingBlockPos(this.getBlockPos());
     }
 }

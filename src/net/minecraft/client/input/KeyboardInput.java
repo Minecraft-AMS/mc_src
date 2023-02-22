@@ -16,25 +16,32 @@ import net.minecraft.client.option.GameOptions;
 public class KeyboardInput
 extends Input {
     private final GameOptions settings;
-    private static final double field_32670 = 0.3;
+    private static final float field_32670 = 0.3f;
 
     public KeyboardInput(GameOptions settings) {
         this.settings = settings;
     }
 
+    private static float getMovementMultiplier(boolean positive, boolean negative) {
+        if (positive == negative) {
+            return 0.0f;
+        }
+        return positive ? 1.0f : -1.0f;
+    }
+
     @Override
     public void tick(boolean slowDown) {
-        this.pressingForward = this.settings.keyForward.isPressed();
-        this.pressingBack = this.settings.keyBack.isPressed();
-        this.pressingLeft = this.settings.keyLeft.isPressed();
-        this.pressingRight = this.settings.keyRight.isPressed();
-        float f = this.pressingForward == this.pressingBack ? 0.0f : (this.movementForward = this.pressingForward ? 1.0f : -1.0f);
-        this.movementSideways = this.pressingLeft == this.pressingRight ? 0.0f : (this.pressingLeft ? 1.0f : -1.0f);
-        this.jumping = this.settings.keyJump.isPressed();
-        this.sneaking = this.settings.keySneak.isPressed();
+        this.pressingForward = this.settings.forwardKey.isPressed();
+        this.pressingBack = this.settings.backKey.isPressed();
+        this.pressingLeft = this.settings.leftKey.isPressed();
+        this.pressingRight = this.settings.rightKey.isPressed();
+        this.movementForward = KeyboardInput.getMovementMultiplier(this.pressingForward, this.pressingBack);
+        this.movementSideways = KeyboardInput.getMovementMultiplier(this.pressingLeft, this.pressingRight);
+        this.jumping = this.settings.jumpKey.isPressed();
+        this.sneaking = this.settings.sneakKey.isPressed();
         if (slowDown) {
-            this.movementSideways = (float)((double)this.movementSideways * 0.3);
-            this.movementForward = (float)((double)this.movementForward * 0.3);
+            this.movementSideways *= 0.3f;
+            this.movementForward *= 0.3f;
         }
     }
 }

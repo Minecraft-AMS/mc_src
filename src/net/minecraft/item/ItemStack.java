@@ -5,27 +5,28 @@
  *  com.google.common.collect.HashMultimap
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Multimap
- *  com.google.gson.JsonParseException
+ *  com.google.common.collect.Streams
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.item;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.gson.JsonParseException;
+import com.google.common.collect.Streams;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.text.DecimalFormat;
@@ -35,12 +36,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -48,7 +48,6 @@ import net.minecraft.block.pattern.CachedBlockPosition;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.item.TooltipData;
 import net.minecraft.command.argument.BlockArgumentParser;
-import net.minecraft.command.argument.BlockPredicateArgumentType;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
@@ -64,6 +63,7 @@ import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.StackReference;
+import net.minecraft.item.BlockPredicatesChecker;
 import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
@@ -76,9 +76,7 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stats;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.Tag;
-import net.minecraft.tag.TagManager;
+import net.minecraft.tag.TagKey;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
@@ -97,14 +95,14 @@ import net.minecraft.util.UseAction;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public final class ItemStack {
-    public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.ITEM.fieldOf("id").forGetter(stack -> stack.item), (App)Codec.INT.fieldOf("Count").forGetter(stack -> stack.count), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.nbt))).apply((Applicative)instance, ItemStack::new));
-    private static final Logger LOGGER = LogManager.getLogger();
+    public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.ITEM.getCodec().fieldOf("id").forGetter(stack -> stack.item), (App)Codec.INT.fieldOf("Count").forGetter(stack -> stack.count), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.nbt))).apply((Applicative)instance, ItemStack::new));
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final ItemStack EMPTY = new ItemStack((ItemConvertible)null);
     public static final DecimalFormat MODIFIER_FORMAT = Util.make(new DecimalFormat("#.##"), decimalFormat -> decimalFormat.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.ROOT)));
     public static final String ENCHANTMENTS_KEY = "Enchantments";
@@ -121,16 +119,18 @@ public final class ItemStack {
     private static final int field_30903 = 0;
     private static final Style LORE_STYLE = Style.EMPTY.withColor(Formatting.DARK_PURPLE).withItalic(true);
     private int count;
-    private int cooldown;
+    private int bobbingAnimationTime;
     @Deprecated
     private final Item item;
+    @Nullable
     private NbtCompound nbt;
     private boolean empty;
+    @Nullable
     private Entity holder;
-    private CachedBlockPosition lastDestroyPos;
-    private boolean lastDestroyResult;
-    private CachedBlockPosition lastPlaceOnPos;
-    private boolean lastPlaceOnResult;
+    @Nullable
+    private BlockPredicatesChecker destroyChecker;
+    @Nullable
+    private BlockPredicatesChecker placeChecker;
 
     public Optional<TooltipData> getTooltipData() {
         return this.getItem().getTooltipData(this);
@@ -138,6 +138,10 @@ public final class ItemStack {
 
     public ItemStack(ItemConvertible item) {
         this(item, 1);
+    }
+
+    public ItemStack(RegistryEntry<Item> entry) {
+        this(entry.value(), 1);
     }
 
     private ItemStack(ItemConvertible item, int count, Optional<NbtCompound> nbt) {
@@ -204,19 +208,23 @@ public final class ItemStack {
         return this.empty ? Items.AIR : this.item;
     }
 
-    public boolean isIn(Tag<Item> tag) {
-        return tag.contains(this.getItem());
+    public boolean isIn(TagKey<Item> tag) {
+        return this.getItem().getRegistryEntry().isIn(tag);
     }
 
     public boolean isOf(Item item) {
         return this.getItem() == item;
     }
 
+    public Stream<TagKey<Item>> streamTags() {
+        return this.getItem().getRegistryEntry().streamTags();
+    }
+
     public ActionResult useOnBlock(ItemUsageContext context) {
         PlayerEntity playerEntity = context.getPlayer();
         BlockPos blockPos = context.getBlockPos();
         CachedBlockPosition cachedBlockPosition = new CachedBlockPosition(context.getWorld(), blockPos, false);
-        if (playerEntity != null && !playerEntity.getAbilities().allowModifyWorld && !this.canPlaceOn(context.getWorld().getTagManager(), cachedBlockPosition)) {
+        if (playerEntity != null && !playerEntity.getAbilities().allowModifyWorld && !this.canPlaceOn(context.getWorld().getRegistryManager().get(Registry.BLOCK_KEY), cachedBlockPosition)) {
             return ActionResult.PASS;
         }
         Item item = this.getItem();
@@ -370,7 +378,7 @@ public final class ItemStack {
             return EMPTY;
         }
         ItemStack itemStack = new ItemStack(this.getItem(), this.count);
-        itemStack.setCooldown(this.getCooldown());
+        itemStack.setBobbingAnimationTime(this.getBobbingAnimationTime());
         if (this.nbt != null) {
             itemStack.nbt = this.nbt.copy();
         }
@@ -457,8 +465,8 @@ public final class ItemStack {
     }
 
     public void inventoryTick(World world, Entity entity, int slot, boolean selected) {
-        if (this.cooldown > 0) {
-            --this.cooldown;
+        if (this.bobbingAnimationTime > 0) {
+            --this.bobbingAnimationTime;
         }
         if (this.getItem() != null) {
             this.getItem().inventoryTick(this, world, entity, slot, selected);
@@ -555,7 +563,7 @@ public final class ItemStack {
                 }
                 nbtCompound.remove(NAME_KEY);
             }
-            catch (JsonParseException jsonParseException) {
+            catch (Exception exception) {
                 nbtCompound.remove(NAME_KEY);
             }
         }
@@ -628,7 +636,7 @@ public final class ItemStack {
                             list.add(Texts.setStyleIfAbsent(mutableText2, LORE_STYLE));
                             continue;
                         }
-                        catch (JsonParseException jsonParseException) {
+                        catch (Exception exception) {
                             nbtCompound.remove(LORE_KEY);
                         }
                     }
@@ -726,21 +734,18 @@ public final class ItemStack {
 
     private static Collection<Text> parseBlockTag(String tag) {
         try {
+            List<Text> list;
             boolean bl2;
             BlockArgumentParser blockArgumentParser = new BlockArgumentParser(new StringReader(tag), true).parse(true);
             BlockState blockState = blockArgumentParser.getBlockState();
-            Identifier identifier = blockArgumentParser.getTagId();
+            TagKey<Block> tagKey = blockArgumentParser.getTagId();
             boolean bl = blockState != null;
-            boolean bl3 = bl2 = identifier != null;
-            if (bl || bl2) {
-                List<Block> collection;
-                if (bl) {
-                    return Lists.newArrayList((Object[])new Text[]{blockState.getBlock().getName().formatted(Formatting.DARK_GRAY)});
-                }
-                Tag<Block> tag2 = BlockTags.getTagGroup().getTag(identifier);
-                if (tag2 != null && !(collection = tag2.values()).isEmpty()) {
-                    return collection.stream().map(Block::getName).map(text -> text.formatted(Formatting.DARK_GRAY)).collect(Collectors.toList());
-                }
+            boolean bl3 = bl2 = tagKey != null;
+            if (bl) {
+                return Lists.newArrayList((Object[])new Text[]{blockState.getBlock().getName().formatted(Formatting.DARK_GRAY)});
+            }
+            if (bl2 && !(list = Streams.stream(Registry.BLOCK.iterateEntries(tagKey)).map(entry -> ((Block)entry.value()).getName()).map(text -> text.formatted(Formatting.DARK_GRAY)).collect(Collectors.toList())).isEmpty()) {
+                return list;
             }
         }
         catch (CommandSyntaxException commandSyntaxException) {
@@ -857,77 +862,26 @@ public final class ItemStack {
         return mutableText2;
     }
 
-    private static boolean areBlocksEqual(CachedBlockPosition first, @Nullable CachedBlockPosition second) {
-        if (second == null || first.getBlockState() != second.getBlockState()) {
-            return false;
+    public boolean canPlaceOn(Registry<Block> blockRegistry, CachedBlockPosition pos) {
+        if (this.placeChecker == null) {
+            this.placeChecker = new BlockPredicatesChecker(CAN_PLACE_ON_KEY);
         }
-        if (first.getBlockEntity() == null && second.getBlockEntity() == null) {
-            return true;
-        }
-        if (first.getBlockEntity() == null || second.getBlockEntity() == null) {
-            return false;
-        }
-        return Objects.equals(first.getBlockEntity().writeNbt(new NbtCompound()), second.getBlockEntity().writeNbt(new NbtCompound()));
+        return this.placeChecker.check(this, blockRegistry, pos);
     }
 
-    public boolean canDestroy(TagManager tagManager, CachedBlockPosition pos) {
-        if (ItemStack.areBlocksEqual(pos, this.lastDestroyPos)) {
-            return this.lastDestroyResult;
+    public boolean canDestroy(Registry<Block> blockRegistry, CachedBlockPosition pos) {
+        if (this.destroyChecker == null) {
+            this.destroyChecker = new BlockPredicatesChecker(CAN_DESTROY_KEY);
         }
-        this.lastDestroyPos = pos;
-        if (this.hasNbt() && this.nbt.contains(CAN_DESTROY_KEY, 9)) {
-            NbtList nbtList = this.nbt.getList(CAN_DESTROY_KEY, 8);
-            for (int i = 0; i < nbtList.size(); ++i) {
-                String string = nbtList.getString(i);
-                try {
-                    Predicate<CachedBlockPosition> predicate = BlockPredicateArgumentType.blockPredicate().parse(new StringReader(string)).create(tagManager);
-                    if (predicate.test(pos)) {
-                        this.lastDestroyResult = true;
-                        return true;
-                    }
-                    continue;
-                }
-                catch (CommandSyntaxException commandSyntaxException) {
-                    // empty catch block
-                }
-            }
-        }
-        this.lastDestroyResult = false;
-        return false;
+        return this.destroyChecker.check(this, blockRegistry, pos);
     }
 
-    public boolean canPlaceOn(TagManager tagManager, CachedBlockPosition pos) {
-        if (ItemStack.areBlocksEqual(pos, this.lastPlaceOnPos)) {
-            return this.lastPlaceOnResult;
-        }
-        this.lastPlaceOnPos = pos;
-        if (this.hasNbt() && this.nbt.contains(CAN_PLACE_ON_KEY, 9)) {
-            NbtList nbtList = this.nbt.getList(CAN_PLACE_ON_KEY, 8);
-            for (int i = 0; i < nbtList.size(); ++i) {
-                String string = nbtList.getString(i);
-                try {
-                    Predicate<CachedBlockPosition> predicate = BlockPredicateArgumentType.blockPredicate().parse(new StringReader(string)).create(tagManager);
-                    if (predicate.test(pos)) {
-                        this.lastPlaceOnResult = true;
-                        return true;
-                    }
-                    continue;
-                }
-                catch (CommandSyntaxException commandSyntaxException) {
-                    // empty catch block
-                }
-            }
-        }
-        this.lastPlaceOnResult = false;
-        return false;
+    public int getBobbingAnimationTime() {
+        return this.bobbingAnimationTime;
     }
 
-    public int getCooldown() {
-        return this.cooldown;
-    }
-
-    public void setCooldown(int cooldown) {
-        this.cooldown = cooldown;
+    public void setBobbingAnimationTime(int bobbingAnimationTime) {
+        this.bobbingAnimationTime = bobbingAnimationTime;
     }
 
     public int getCount() {

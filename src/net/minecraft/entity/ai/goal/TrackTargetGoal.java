@@ -27,6 +27,7 @@ extends Goal {
     private int canNavigateFlag;
     private int checkCanNavigateCooldown;
     private int timeWithoutVisibility;
+    @Nullable
     protected LivingEntity target;
     protected int maxTimeWithoutVisibility = 60;
 
@@ -64,7 +65,7 @@ extends Goal {
         if (this.checkVisibility) {
             if (this.mob.getVisibilityCache().canSee(livingEntity)) {
                 this.timeWithoutVisibility = 0;
-            } else if (++this.timeWithoutVisibility > this.maxTimeWithoutVisibility) {
+            } else if (++this.timeWithoutVisibility > TrackTargetGoal.toGoalTicks(this.maxTimeWithoutVisibility)) {
                 return false;
             }
         }
@@ -115,7 +116,7 @@ extends Goal {
 
     private boolean canNavigateToEntity(LivingEntity entity) {
         int j;
-        this.checkCanNavigateCooldown = 10 + this.mob.getRandom().nextInt(5);
+        this.checkCanNavigateCooldown = TrackTargetGoal.toGoalTicks(10 + this.mob.getRandom().nextInt(5));
         Path path = this.mob.getNavigation().findPathTo(entity, 0);
         if (path == null) {
             return false;

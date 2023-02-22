@@ -2,21 +2,20 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.bridge.game.GameVersion
  *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.level.storage;
 
-import com.mojang.bridge.game.GameVersion;
 import java.io.File;
+import net.minecraft.GameVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.StringHelper;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.storage.SaveVersionInfo;
@@ -91,7 +90,7 @@ implements Comparable<LevelSummary> {
     }
 
     public MutableText getVersion() {
-        if (ChatUtil.isEmpty(this.versionInfo.getVersionName())) {
+        if (StringHelper.isEmpty(this.versionInfo.getVersionName())) {
             return new TranslatableText("selectWorld.versionUnknown");
         }
         return new LiteralText(this.versionInfo.getVersionName());
@@ -106,13 +105,13 @@ implements Comparable<LevelSummary> {
     }
 
     public boolean isFutureLevel() {
-        return this.versionInfo.getVersionId() > SharedConstants.getGameVersion().getWorldVersion();
+        return this.versionInfo.getVersion().getId() > SharedConstants.getGameVersion().getSaveVersion().getId();
     }
 
     public ConversionWarning getConversionWarning() {
         GameVersion gameVersion = SharedConstants.getGameVersion();
-        int i = gameVersion.getWorldVersion();
-        int j = this.versionInfo.getVersionId();
+        int i = gameVersion.getSaveVersion().getId();
+        int j = this.versionInfo.getVersion().getId();
         if (!gameVersion.isStable() && j < i) {
             return ConversionWarning.UPGRADE_TO_SNAPSHOT;
         }
@@ -126,14 +125,15 @@ implements Comparable<LevelSummary> {
         return this.locked;
     }
 
-    public boolean isPreWorldHeightChangeVersion() {
-        int i = this.versionInfo.getVersionId();
-        boolean bl = i > 2692 && i <= 2706;
-        return false != bl;
+    public boolean isUnavailable() {
+        if (this.isLocked() || this.requiresConversion()) {
+            return true;
+        }
+        return !this.isVersionAvailable();
     }
 
-    public boolean isUnavailable() {
-        return this.isLocked() || this.isPreWorldHeightChangeVersion();
+    public boolean isVersionAvailable() {
+        return SharedConstants.getGameVersion().getSaveVersion().isAvailableTo(this.versionInfo.getVersion());
     }
 
     public Text getDetails() {
@@ -148,11 +148,11 @@ implements Comparable<LevelSummary> {
         if (this.isLocked()) {
             return new TranslatableText("selectWorld.locked").formatted(Formatting.RED);
         }
-        if (this.isPreWorldHeightChangeVersion()) {
-            return new TranslatableText("selectWorld.pre_worldheight").formatted(Formatting.RED);
-        }
         if (this.requiresConversion()) {
-            return new TranslatableText("selectWorld.conversion");
+            return new TranslatableText("selectWorld.conversion").formatted(Formatting.RED);
+        }
+        if (!this.isVersionAvailable()) {
+            return new TranslatableText("selectWorld.incompatible_series").formatted(Formatting.RED);
         }
         MutableText mutableText2 = mutableText = this.isHardcore() ? new LiteralText("").append(new TranslatableText("gameMode.hardcore").formatted(Formatting.DARK_RED)) : new TranslatableText("gameMode." + this.getGameMode().getName());
         if (this.hasCheats()) {

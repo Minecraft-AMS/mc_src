@@ -71,8 +71,8 @@ extends PathNodeMaker {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         int i = this.entity.getBlockY();
         BlockState blockState = this.cachedWorld.getBlockState(mutable.set(this.entity.getX(), (double)i, this.entity.getZ()));
-        if (this.entity.canWalkOnFluid(blockState.getFluidState().getFluid())) {
-            while (this.entity.canWalkOnFluid(blockState.getFluidState().getFluid())) {
+        if (this.entity.canWalkOnFluid(blockState.getFluidState())) {
+            while (this.entity.canWalkOnFluid(blockState.getFluidState())) {
                 blockState = this.cachedWorld.getBlockState(mutable.set(this.entity.getX(), (double)(++i), this.entity.getZ()));
             }
             --i;
@@ -135,7 +135,7 @@ extends PathNodeMaker {
         if (this.entity.getPathfindingPenalty(pathNodeType) >= 0.0f && pathNodeType2 != PathNodeType.STICKY_HONEY) {
             j = MathHelper.floor(Math.max(1.0f, this.entity.stepHeight));
         }
-        if (this.isValidAdjacentSuccessor(pathNode = this.getPathNode(node.x, node.y, node.z + 1, j, d = this.method_37003(new BlockPos(node.x, node.y, node.z)), Direction.SOUTH, pathNodeType2), node)) {
+        if (this.isValidAdjacentSuccessor(pathNode = this.getPathNode(node.x, node.y, node.z + 1, j, d = this.getFeetY(new BlockPos(node.x, node.y, node.z)), Direction.SOUTH, pathNodeType2), node)) {
             successors[i++] = pathNode;
         }
         if (this.isValidAdjacentSuccessor(pathNode2 = this.getPathNode(node.x - 1, node.y, node.z, j, d, Direction.WEST, pathNodeType2), node)) {
@@ -195,8 +195,8 @@ extends PathNodeMaker {
         return true;
     }
 
-    protected double method_37003(BlockPos blockPos) {
-        return LandPathNodeMaker.getFeetY(this.cachedWorld, blockPos);
+    protected double getFeetY(BlockPos pos) {
+        return LandPathNodeMaker.getFeetY(this.cachedWorld, pos);
     }
 
     public static double getFeetY(BlockView world, BlockPos pos) {
@@ -216,7 +216,7 @@ extends PathNodeMaker {
         Box box;
         PathNode pathNode = null;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        double d = this.method_37003(mutable.set(x, y, z));
+        double d = this.getFeetY(mutable.set(x, y, z));
         if (d - prevFeetY > 1.125) {
             return null;
         }
@@ -292,7 +292,7 @@ extends PathNodeMaker {
     }
 
     private boolean checkBoxCollision(Box box) {
-        return (Boolean)this.collidedBoxes.computeIfAbsent((Object)box, box2 -> !this.cachedWorld.isSpaceEmpty(this.entity, box));
+        return this.collidedBoxes.computeIfAbsent((Object)box, object -> !this.cachedWorld.isSpaceEmpty(this.entity, box));
     }
 
     @Override
@@ -388,6 +388,9 @@ extends PathNodeMaker {
             }
             if (pathNodeType2 == PathNodeType.STICKY_HONEY) {
                 pathNodeType = PathNodeType.STICKY_HONEY;
+            }
+            if (pathNodeType2 == PathNodeType.POWDER_SNOW) {
+                pathNodeType = PathNodeType.DANGER_POWDER_SNOW;
             }
         }
         if (pathNodeType == PathNodeType.WALKABLE) {

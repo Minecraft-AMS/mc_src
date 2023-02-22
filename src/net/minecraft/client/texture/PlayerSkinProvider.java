@@ -132,9 +132,9 @@ public class PlayerSkinProvider {
                     }
                 }
             }
-            MinecraftClient.getInstance().execute(() -> RenderSystem.recordRenderCall(() -> ImmutableList.of((Object)MinecraftProfileTexture.Type.SKIN, (Object)MinecraftProfileTexture.Type.CAPE).forEach(type -> {
-                if (map.containsKey(type)) {
-                    this.loadSkin((MinecraftProfileTexture)map.get(type), (MinecraftProfileTexture.Type)type, callback);
+            MinecraftClient.getInstance().execute(() -> RenderSystem.recordRenderCall(() -> ImmutableList.of((Object)MinecraftProfileTexture.Type.SKIN, (Object)MinecraftProfileTexture.Type.CAPE).forEach(textureType -> {
+                if (map.containsKey(textureType)) {
+                    this.loadSkin((MinecraftProfileTexture)map.get(textureType), (MinecraftProfileTexture.Type)textureType, callback);
                 }
             })));
         };

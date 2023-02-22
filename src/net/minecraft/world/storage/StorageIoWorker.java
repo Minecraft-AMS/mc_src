@@ -4,16 +4,17 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.util.Either
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.storage;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.util.Either;
-import java.io.File;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -23,26 +24,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.thread.MessageListener;
 import net.minecraft.util.thread.TaskExecutor;
 import net.minecraft.util.thread.TaskQueue;
+import net.minecraft.world.storage.NbtScannable;
 import net.minecraft.world.storage.RegionBasedStorage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class StorageIoWorker
-implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+implements NbtScannable,
+AutoCloseable {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final AtomicBoolean closed = new AtomicBoolean();
     private final TaskExecutor<TaskQueue.PrioritizedTask> executor;
     private final RegionBasedStorage storage;
     private final Map<ChunkPos, Result> results = Maps.newLinkedHashMap();
 
-    protected StorageIoWorker(File directory, boolean dsync, String name) {
+    protected StorageIoWorker(Path directory, boolean dsync, String name) {
         this.storage = new RegionBasedStorage(directory, dsync);
         this.executor = new TaskExecutor<TaskQueue.PrioritizedTask>(new TaskQueue.Prioritized(Priority.values().length), Util.getIoWorkerExecutor(), "IOWorker-" + name);
     }
@@ -101,6 +104,27 @@ implements AutoCloseable {
             }));
         }
         return ((CompletableFuture)completableFuture).thenCompose(void_ -> this.run(() -> Either.left(null)));
+    }
+
+    @Override
+    public CompletableFuture<Void> scanChunk(ChunkPos pos, NbtScanner scanner) {
+        return this.run(() -> {
+            try {
+                Result result = this.results.get(pos);
+                if (result != null) {
+                    if (result.nbt != null) {
+                        result.nbt.accept(scanner);
+                    }
+                } else {
+                    this.storage.method_39802(pos, scanner);
+                }
+                return Either.left(null);
+            }
+            catch (Exception exception) {
+                LOGGER.warn("Failed to bulk scan chunk {}", (Object)pos, (Object)exception);
+                return Either.right((Object)exception);
+            }
+        });
     }
 
     private <T> CompletableFuture<T> run(Supplier<Either<T, Exception>> task) {

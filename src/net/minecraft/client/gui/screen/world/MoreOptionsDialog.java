@@ -3,42 +3,33 @@
  * 
  * Could not load the following classes:
  *  com.google.gson.JsonElement
- *  com.google.gson.JsonIOException
  *  com.google.gson.JsonParser
- *  com.google.gson.JsonSyntaxException
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DataResult$PartialResult
- *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.JsonOps
  *  com.mojang.serialization.Lifecycle
  *  it.unimi.dsi.fastutil.booleans.BooleanConsumer
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.lang3.StringUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.lwjgl.util.tinyfd.TinyFileDialogs
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.world;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonIOException;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.Lifecycle;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -56,51 +47,47 @@ import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.GeneratorType;
 import net.minecraft.resource.FileResourcePackProvider;
+import net.minecraft.resource.LifecycledResourceManagerImpl;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackSource;
 import net.minecraft.resource.ResourceType;
-import net.minecraft.resource.ServerResourceManager;
 import net.minecraft.resource.VanillaDataPackProvider;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.SaveLoader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.Util;
 import net.minecraft.util.dynamic.RegistryOps;
-import net.minecraft.util.dynamic.RegistryReadingOps;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.gen.GeneratorOptions;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class MoreOptionsDialog
 implements Drawable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Text CUSTOM_TEXT = new TranslatableText("generator.custom");
     private static final Text AMPLIFIED_INFO_TEXT = new TranslatableText("generator.amplified.info");
     private static final Text MAP_FEATURES_INFO_TEXT = new TranslatableText("selectWorld.mapFeatures.info");
     private static final Text SELECT_SETTINGS_FILE_TEXT = new TranslatableText("selectWorld.import_worldgen_settings.select_file");
-    private MultilineText generatorInfoText = MultilineText.EMPTY;
+    private MultilineText amplifiedInfoText = MultilineText.EMPTY;
     private TextRenderer textRenderer;
     private int parentWidth;
     private TextFieldWidget seedTextField;
     private CyclingButtonWidget<Boolean> mapFeaturesButton;
     private CyclingButtonWidget<Boolean> bonusItemsButton;
     private CyclingButtonWidget<GeneratorType> mapTypeButton;
-    private ButtonWidget field_28001;
+    private ButtonWidget unchangeableMapTypeButton;
     private ButtonWidget customizeTypeButton;
     private ButtonWidget importSettingsButton;
-    private DynamicRegistryManager.Impl registryManager;
+    private DynamicRegistryManager.Immutable registryManager;
     private GeneratorOptions generatorOptions;
     private Optional<GeneratorType> generatorType;
     private OptionalLong seed;
 
-    public MoreOptionsDialog(DynamicRegistryManager.Impl registryManager, GeneratorOptions generatorOptions, Optional<GeneratorType> generatorType, OptionalLong seed) {
+    public MoreOptionsDialog(DynamicRegistryManager.Immutable registryManager, GeneratorOptions generatorOptions, Optional<GeneratorType> generatorType, OptionalLong seed) {
         this.registryManager = registryManager;
         this.generatorOptions = generatorOptions;
         this.generatorType = generatorType;
@@ -113,7 +100,7 @@ implements Drawable {
         this.seedTextField = new TextFieldWidget(this.textRenderer, this.parentWidth / 2 - 100, 60, 200, 20, new TranslatableText("selectWorld.enterSeed"));
         this.seedTextField.setText(MoreOptionsDialog.seedToString(this.seed));
         this.seedTextField.setChangedListener(seedText -> {
-            this.seed = this.getSeed();
+            this.seed = GeneratorOptions.parseSeed(this.seedTextField.getText());
         });
         parent.addSelectableChild(this.seedTextField);
         int i = this.parentWidth / 2 - 155;
@@ -122,7 +109,7 @@ implements Drawable {
             this.generatorOptions = this.generatorOptions.toggleGenerateStructures();
         }));
         this.mapFeaturesButton.visible = false;
-        this.mapTypeButton = parent.addDrawableChild(CyclingButtonWidget.builder(GeneratorType::getTranslationKey).values(GeneratorType.VALUES.stream().filter(GeneratorType::isNotDebug).collect(Collectors.toList()), GeneratorType.VALUES).narration(button -> {
+        this.mapTypeButton = parent.addDrawableChild(CyclingButtonWidget.builder(GeneratorType::getDisplayName).values(GeneratorType.VALUES.stream().filter(GeneratorType::isNotDebug).collect(Collectors.toList()), GeneratorType.VALUES).narration(button -> {
             if (button.getValue() == GeneratorType.AMPLIFIED) {
                 return ScreenTexts.joinSentences(button.getGenericNarrationMessage(), AMPLIFIED_INFO_TEXT);
             }
@@ -134,9 +121,9 @@ implements Drawable {
         }));
         this.generatorType.ifPresent(this.mapTypeButton::setValue);
         this.mapTypeButton.visible = false;
-        this.field_28001 = parent.addDrawableChild(new ButtonWidget(j, 100, 150, 20, ScreenTexts.composeGenericOptionText(new TranslatableText("selectWorld.mapType"), CUSTOM_TEXT), button -> {}));
-        this.field_28001.active = false;
-        this.field_28001.visible = false;
+        this.unchangeableMapTypeButton = parent.addDrawableChild(new ButtonWidget(j, 100, 150, 20, ScreenTexts.composeGenericOptionText(new TranslatableText("selectWorld.mapType"), CUSTOM_TEXT), button -> {}));
+        this.unchangeableMapTypeButton.active = false;
+        this.unchangeableMapTypeButton.visible = false;
         this.customizeTypeButton = parent.addDrawableChild(new ButtonWidget(j, 120, 150, 20, new TranslatableText("selectWorld.customizeType"), button -> {
             GeneratorType.ScreenProvider screenProvider = GeneratorType.SCREEN_PROVIDERS.get(this.generatorType);
             if (screenProvider != null) {
@@ -150,54 +137,42 @@ implements Drawable {
         this.bonusItemsButton.visible = false;
         this.importSettingsButton = parent.addDrawableChild(new ButtonWidget(i, 185, 150, 20, new TranslatableText("selectWorld.import_worldgen_settings"), button -> {
             DataResult dataResult;
-            ServerResourceManager serverResourceManager;
             String string = TinyFileDialogs.tinyfd_openFileDialog((CharSequence)SELECT_SETTINGS_FILE_TEXT.getString(), null, null, null, (boolean)false);
             if (string == null) {
                 return;
             }
-            DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-            ResourcePackManager resourcePackManager = new ResourcePackManager(ResourceType.SERVER_DATA, new VanillaDataPackProvider(), new FileResourcePackProvider(parent.getDataPackTempDir().toFile(), ResourcePackSource.PACK_SOURCE_WORLD));
-            try {
+            DynamicRegistryManager.Mutable mutable = DynamicRegistryManager.createAndLoad();
+            try (ResourcePackManager resourcePackManager = new ResourcePackManager(ResourceType.SERVER_DATA, new VanillaDataPackProvider(), new FileResourcePackProvider(parent.getDataPackTempDir().toFile(), ResourcePackSource.PACK_SOURCE_WORLD));){
                 MinecraftServer.loadDataPacks(resourcePackManager, createWorldScreen.dataPackSettings, false);
-                CompletableFuture<ServerResourceManager> completableFuture = ServerResourceManager.reload(resourcePackManager.createResourcePacks(), impl, CommandManager.RegistrationEnvironment.INTEGRATED, 2, Util.getMainWorkerExecutor(), client);
-                client.runTasks(completableFuture::isDone);
-                serverResourceManager = completableFuture.get();
+                try (LifecycledResourceManagerImpl lifecycledResourceManager = new LifecycledResourceManagerImpl(ResourceType.SERVER_DATA, resourcePackManager.createResourcePacks());){
+                    RegistryOps dynamicOps = RegistryOps.ofLoaded(JsonOps.INSTANCE, mutable, lifecycledResourceManager);
+                    try (BufferedReader bufferedReader = Files.newBufferedReader(Paths.get(string, new String[0]));){
+                        JsonElement jsonElement = JsonParser.parseReader((Reader)bufferedReader);
+                        dataResult = GeneratorOptions.CODEC.parse(dynamicOps, (Object)jsonElement);
+                    }
+                    catch (Exception exception) {
+                        dataResult = DataResult.error((String)("Failed to parse file: " + exception.getMessage()));
+                    }
+                    if (dataResult.error().isPresent()) {
+                        TranslatableText text = new TranslatableText("selectWorld.import_worldgen_settings.failure");
+                        String string2 = ((DataResult.PartialResult)dataResult.error().get()).message();
+                        LOGGER.error("Error parsing world settings: {}", (Object)string2);
+                        LiteralText text2 = new LiteralText(string2);
+                        client.getToastManager().add(SystemToast.create(client, SystemToast.Type.WORLD_GEN_SETTINGS_TRANSFER, text, text2));
+                        return;
+                    }
+                }
             }
-            catch (InterruptedException | ExecutionException exception) {
-                LOGGER.error("Error loading data packs when importing world settings", (Throwable)exception);
-                TranslatableText text = new TranslatableText("selectWorld.import_worldgen_settings.failure");
-                LiteralText text2 = new LiteralText(exception.getMessage());
-                client.getToastManager().add(SystemToast.create(client, SystemToast.Type.WORLD_GEN_SETTINGS_TRANSFER, text, text2));
-                resourcePackManager.close();
-                return;
-            }
-            RegistryOps registryOps = RegistryOps.ofLoaded(JsonOps.INSTANCE, serverResourceManager.getResourceManager(), (DynamicRegistryManager)impl);
-            JsonParser jsonParser = new JsonParser();
-            try (BufferedReader bufferedReader = Files.newBufferedReader(Paths.get(string, new String[0]));){
-                JsonElement jsonElement = jsonParser.parse((Reader)bufferedReader);
-                dataResult = GeneratorOptions.CODEC.parse(registryOps, (Object)jsonElement);
-            }
-            catch (JsonIOException | JsonSyntaxException | IOException exception2) {
-                dataResult = DataResult.error((String)("Failed to parse file: " + exception2.getMessage()));
-            }
-            if (dataResult.error().isPresent()) {
-                TranslatableText text3 = new TranslatableText("selectWorld.import_worldgen_settings.failure");
-                String string2 = ((DataResult.PartialResult)dataResult.error().get()).message();
-                LOGGER.error("Error parsing world settings: {}", (Object)string2);
-                LiteralText text4 = new LiteralText(string2);
-                client.getToastManager().add(SystemToast.create(client, SystemToast.Type.WORLD_GEN_SETTINGS_TRANSFER, text3, text4));
-            }
-            serverResourceManager.close();
             Lifecycle lifecycle = dataResult.lifecycle();
             dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(generatorOptions -> {
                 BooleanConsumer booleanConsumer = confirmed -> {
                     client.setScreen(parent);
                     if (confirmed) {
-                        this.importOptions(impl, (GeneratorOptions)generatorOptions);
+                        this.importOptions(mutable.toImmutable(), (GeneratorOptions)generatorOptions);
                     }
                 };
                 if (lifecycle == Lifecycle.stable()) {
-                    this.importOptions(impl, (GeneratorOptions)generatorOptions);
+                    this.importOptions(mutable.toImmutable(), (GeneratorOptions)generatorOptions);
                 } else if (lifecycle == Lifecycle.experimental()) {
                     client.setScreen(new ConfirmScreen(booleanConsumer, new TranslatableText("selectWorld.import_worldgen_settings.experimental.title"), new TranslatableText("selectWorld.import_worldgen_settings.experimental.question")));
                 } else {
@@ -206,10 +181,10 @@ implements Drawable {
             });
         }));
         this.importSettingsButton.visible = false;
-        this.generatorInfoText = MultilineText.create(textRenderer, (StringVisitable)AMPLIFIED_INFO_TEXT, this.mapTypeButton.getWidth());
+        this.amplifiedInfoText = MultilineText.create(textRenderer, (StringVisitable)AMPLIFIED_INFO_TEXT, this.mapTypeButton.getWidth());
     }
 
-    private void importOptions(DynamicRegistryManager.Impl registryManager, GeneratorOptions generatorOptions) {
+    private void importOptions(DynamicRegistryManager.Immutable registryManager, GeneratorOptions generatorOptions) {
         this.registryManager = registryManager;
         this.generatorOptions = generatorOptions;
         this.generatorType = GeneratorType.fromGeneratorOptions(generatorOptions);
@@ -229,7 +204,7 @@ implements Drawable {
         }
         this.seedTextField.render(matrices, mouseX, mouseY, delta);
         if (this.generatorType.equals(Optional.of(GeneratorType.AMPLIFIED))) {
-            this.generatorInfoText.drawWithShadow(matrices, this.mapTypeButton.x + 2, this.mapTypeButton.y + 22, this.textRenderer.fontHeight, 0xA0A0A0);
+            this.amplifiedInfoText.drawWithShadow(matrices, this.mapTypeButton.x + 2, this.mapTypeButton.y + 22, this.textRenderer.fontHeight, 0xA0A0A0);
         }
     }
 
@@ -244,25 +219,9 @@ implements Drawable {
         return "";
     }
 
-    private static OptionalLong tryParseLong(String string) {
-        try {
-            return OptionalLong.of(Long.parseLong(string));
-        }
-        catch (NumberFormatException numberFormatException) {
-            return OptionalLong.empty();
-        }
-    }
-
     public GeneratorOptions getGeneratorOptions(boolean hardcore) {
-        OptionalLong optionalLong = this.getSeed();
+        OptionalLong optionalLong = GeneratorOptions.parseSeed(this.seedTextField.getText());
         return this.generatorOptions.withHardcore(hardcore, optionalLong);
-    }
-
-    private OptionalLong getSeed() {
-        OptionalLong optionalLong2;
-        String string = this.seedTextField.getText();
-        OptionalLong optionalLong = StringUtils.isEmpty((CharSequence)string) ? OptionalLong.empty() : ((optionalLong2 = MoreOptionsDialog.tryParseLong(string)).isPresent() && optionalLong2.getAsLong() != 0L ? optionalLong2 : OptionalLong.of(string.hashCode()));
-        return optionalLong;
     }
 
     public boolean isDebugWorld() {
@@ -288,26 +247,20 @@ implements Drawable {
     private void setMapTypeButtonVisible(boolean visible) {
         if (this.generatorType.isPresent()) {
             this.mapTypeButton.visible = visible;
-            this.field_28001.visible = false;
+            this.unchangeableMapTypeButton.visible = false;
         } else {
             this.mapTypeButton.visible = false;
-            this.field_28001.visible = visible;
+            this.unchangeableMapTypeButton.visible = visible;
         }
     }
 
-    public DynamicRegistryManager.Impl getRegistryManager() {
+    public DynamicRegistryManager getRegistryManager() {
         return this.registryManager;
     }
 
-    void loadDatapacks(ServerResourceManager serverResourceManager) {
-        DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-        RegistryReadingOps registryReadingOps = RegistryReadingOps.of(JsonOps.INSTANCE, this.registryManager);
-        RegistryOps registryOps = RegistryOps.ofLoaded(JsonOps.INSTANCE, serverResourceManager.getResourceManager(), (DynamicRegistryManager)impl);
-        DataResult dataResult = GeneratorOptions.CODEC.encodeStart(registryReadingOps, (Object)this.generatorOptions).flatMap(jsonElement -> GeneratorOptions.CODEC.parse((DynamicOps)registryOps, jsonElement));
-        dataResult.resultOrPartial(Util.addPrefix("Error parsing worldgen settings after loading data packs: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).ifPresent(generatorOptions -> {
-            this.generatorOptions = generatorOptions;
-            this.registryManager = impl;
-        });
+    void loadDatapacks(SaveLoader saveLoader) {
+        this.generatorOptions = saveLoader.saveProperties().getGeneratorOptions();
+        this.registryManager = saveLoader.dynamicRegistryManager();
     }
 
     public void disableBonusItems() {

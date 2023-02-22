@@ -10,17 +10,28 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtShort
 extends AbstractNbtNumber {
-    private static final int field_33231 = 80;
-    public static final NbtType<NbtShort> TYPE = new NbtType<NbtShort>(){
+    private static final int SIZE = 80;
+    public static final NbtType<NbtShort> TYPE = new NbtType.OfFixedSize<NbtShort>(){
 
         @Override
         public NbtShort read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
             nbtTagSizeTracker.add(80L);
             return NbtShort.of(dataInput.readShort());
+        }
+
+        @Override
+        public NbtScanner.Result doAccept(DataInput input, NbtScanner visitor) throws IOException {
+            return visitor.visitShort(input.readShort());
+        }
+
+        @Override
+        public int getSizeInBytes() {
+            return 2;
         }
 
         @Override
@@ -45,8 +56,8 @@ extends AbstractNbtNumber {
     };
     private final short value;
 
-    NbtShort(short s) {
-        this.value = s;
+    NbtShort(short value) {
+        this.value = value;
     }
 
     public static NbtShort of(short value) {
@@ -127,13 +138,18 @@ extends AbstractNbtNumber {
     }
 
     @Override
+    public NbtScanner.Result doAccept(NbtScanner visitor) {
+        return visitor.visitShort(this.value);
+    }
+
+    @Override
     public /* synthetic */ NbtElement copy() {
         return this.copy();
     }
 
     static class Cache {
-        private static final int field_33232 = 1024;
-        private static final int field_33233 = -128;
+        private static final int MAX = 1024;
+        private static final int MIN = -128;
         static final NbtShort[] VALUES = new NbtShort[1153];
 
         private Cache() {

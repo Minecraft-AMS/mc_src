@@ -2,16 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  io.netty.buffer.ByteBuf
  *  io.netty.channel.ChannelHandlerContext
  *  io.netty.handler.codec.MessageToByteEncoder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- *  org.apache.logging.log4j.Marker
- *  org.apache.logging.log4j.MarkerManager
+ *  org.slf4j.Logger
  */
 package net.minecraft.network;
 
+import com.mojang.logging.LogUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -22,15 +21,12 @@ import net.minecraft.network.NetworkState;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.PacketEncoderException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
+import net.minecraft.util.profiling.jfr.FlightProfiler;
+import org.slf4j.Logger;
 
 public class PacketEncoder
 extends MessageToByteEncoder<Packet<?>> {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final Marker MARKER = MarkerManager.getMarker((String)"PACKET_SENT", (Marker)ClientConnection.NETWORK_PACKETS_MARKER);
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final NetworkSide side;
 
     public PacketEncoder(NetworkSide side) {
@@ -44,7 +40,7 @@ extends MessageToByteEncoder<Packet<?>> {
         }
         Integer integer = networkState.getPacketId(this.side, packet);
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(MARKER, "OUT: [{}:{}] {}", channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), (Object)integer, (Object)packet.getClass().getName());
+            LOGGER.debug(ClientConnection.PACKET_SENT_MARKER, "OUT: [{}:{}] {}", new Object[]{channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), integer, packet.getClass().getName()});
         }
         if (integer == null) {
             throw new IOException("Can't serialize unregistered packet");
@@ -58,9 +54,11 @@ extends MessageToByteEncoder<Packet<?>> {
             if (j > 0x800000) {
                 throw new IllegalArgumentException("Packet too big (is " + j + ", should be less than 8388608): " + packet);
             }
+            int k = ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId();
+            FlightProfiler.INSTANCE.onPacketSent(k, integer, channelHandlerContext.channel().remoteAddress(), j);
         }
         catch (Throwable throwable) {
-            LOGGER.error((Object)throwable);
+            LOGGER.error("Error receiving packet {}", (Object)integer, (Object)throwable);
             if (packet.isWritingErrorSkippable()) {
                 throw new PacketEncoderException(throwable);
             }

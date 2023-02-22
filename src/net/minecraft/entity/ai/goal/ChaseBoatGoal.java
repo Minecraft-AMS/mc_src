@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.goal;
 
@@ -15,11 +18,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
 
 public class ChaseBoatGoal
 extends Goal {
     private int updateCountdownTicks;
     private final PathAwareEntity mob;
+    @Nullable
     private PlayerEntity passenger;
     private ChaseBoatState state;
 
@@ -77,7 +82,7 @@ extends Goal {
         if (--this.updateCountdownTicks > 0) {
             return;
         }
-        this.updateCountdownTicks = 10;
+        this.updateCountdownTicks = this.getTickCount(10);
         if (this.state == ChaseBoatState.GO_TO_BOAT) {
             BlockPos blockPos = this.passenger.getBlockPos().offset(this.passenger.getHorizontalFacing().getOpposite());
             blockPos = blockPos.add(0, -1, 0);

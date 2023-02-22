@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  org.apache.commons.lang3.tuple.Pair
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
@@ -37,6 +38,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -46,14 +48,17 @@ import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.event.GameEvent;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.Nullable;
 
 public class MooshroomEntity
 extends CowEntity
 implements Shearable {
     private static final TrackedData<String> TYPE = DataTracker.registerData(MooshroomEntity.class, TrackedDataHandlerRegistry.STRING);
     private static final int MUTATION_CHANCE = 1024;
+    @Nullable
     private StatusEffect stewEffect;
     private int stewEffectDuration;
+    @Nullable
     private UUID lightningId;
 
     public MooshroomEntity(EntityType<? extends MooshroomEntity> entityType, World world) {
@@ -69,7 +74,7 @@ implements Shearable {
     }
 
     public static boolean canSpawn(EntityType<MooshroomEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
-        return world.getBlockState(pos.down()).isOf(Blocks.MYCELIUM) && world.getBaseLightLevel(pos, 0) > 8;
+        return world.getBlockState(pos.down()).isIn(BlockTags.MOOSHROOMS_SPAWNABLE_ON) && MooshroomEntity.isLightLevelValidForNaturalSpawn(world, pos);
     }
 
     @Override

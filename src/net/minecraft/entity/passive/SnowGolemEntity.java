@@ -44,6 +44,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +66,7 @@ RangedAttackMob {
         this.goalSelector.add(2, new WanderAroundFarGoal((PathAwareEntity)this, 1.0, 1.0000001E-5f));
         this.goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
         this.goalSelector.add(4, new LookAroundGoal(this));
-        this.targetSelector.add(1, new ActiveTargetGoal<MobEntity>(this, MobEntity.class, 10, true, false, livingEntity -> livingEntity instanceof Monster));
+        this.targetSelector.add(1, new ActiveTargetGoal<MobEntity>(this, MobEntity.class, 10, true, false, entity -> entity instanceof Monster));
     }
 
     public static DefaultAttributeContainer.Builder createSnowGolemAttributes() {
@@ -101,12 +102,12 @@ RangedAttackMob {
     public void tickMovement() {
         super.tickMovement();
         if (!this.world.isClient) {
+            int k;
+            int j;
             int i = MathHelper.floor(this.getX());
-            int j = MathHelper.floor(this.getY());
-            int k = MathHelper.floor(this.getZ());
-            BlockPos blockPos = new BlockPos(i, 0, k);
-            BlockPos blockPos2 = new BlockPos(i, j, k);
-            if (this.world.getBiome(blockPos).getTemperature(blockPos2) > 1.0f) {
+            BlockPos blockPos = new BlockPos(i, j = MathHelper.floor(this.getY()), k = MathHelper.floor(this.getZ()));
+            Biome biome = this.world.getBiome(blockPos).value();
+            if (biome.isHot(blockPos)) {
                 this.damage(DamageSource.ON_FIRE, 1.0f);
             }
             if (!this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
@@ -115,9 +116,9 @@ RangedAttackMob {
             BlockState blockState = Blocks.SNOW.getDefaultState();
             for (int l = 0; l < 4; ++l) {
                 i = MathHelper.floor(this.getX() + (double)((float)(l % 2 * 2 - 1) * 0.25f));
-                BlockPos blockPos3 = new BlockPos(i, j = MathHelper.floor(this.getY()), k = MathHelper.floor(this.getZ() + (double)((float)(l / 2 % 2 * 2 - 1) * 0.25f)));
-                if (!this.world.getBlockState(blockPos3).isAir() || !(this.world.getBiome(blockPos3).getTemperature(blockPos3) < 0.8f) || !blockState.canPlaceAt(this.world, blockPos3)) continue;
-                this.world.setBlockState(blockPos3, blockState);
+                BlockPos blockPos2 = new BlockPos(i, j = MathHelper.floor(this.getY()), k = MathHelper.floor(this.getZ() + (double)((float)(l / 2 % 2 * 2 - 1) * 0.25f)));
+                if (!this.world.getBlockState(blockPos2).isAir() || !blockState.canPlaceAt(this.world, blockPos2)) continue;
+                this.world.setBlockState(blockPos2, blockState);
             }
         }
     }

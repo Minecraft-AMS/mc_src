@@ -8,9 +8,9 @@
  *  com.google.common.collect.Sets
  *  com.google.gson.Gson
  *  com.google.gson.JsonObject
+ *  com.mojang.logging.LogUtils
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.tag;
 
@@ -20,6 +20,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
@@ -40,15 +41,13 @@ import java.util.stream.Collectors;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.tag.Tag;
-import net.minecraft.tag.TagGroup;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class TagGroupLoader<T> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new Gson();
     private static final String JSON_EXTENSION = ".json";
     private static final int JSON_EXTENSION_LENGTH = ".json".length();
@@ -75,7 +74,7 @@ public class TagGroupLoader<T> {
                         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));){
                             JsonObject jsonObject = JsonHelper.deserialize(GSON, (Reader)reader, JsonObject.class);
                             if (jsonObject == null) {
-                                LOGGER.error("Couldn't load tag list {} from {} in data pack {} as it is empty or null", (Object)identifier22, (Object)identifier2, (Object)resource.getResourcePackName());
+                                LOGGER.error("Couldn't load tag list {} from {} in data pack {} as it is empty or null", new Object[]{identifier22, identifier2, resource.getResourcePackName()});
                                 continue;
                             }
                             map.computeIfAbsent(identifier22, identifier -> Tag.Builder.create()).read(jsonObject, resource.getResourcePackName());
@@ -86,7 +85,7 @@ public class TagGroupLoader<T> {
                         }
                     }
                     catch (IOException | RuntimeException exception) {
-                        LOGGER.error("Couldn't read tag list {} from {} in data pack {}", (Object)identifier22, (Object)identifier2, (Object)resource.getResourcePackName(), (Object)exception);
+                        LOGGER.error("Couldn't read tag list {} from {} in data pack {}", new Object[]{identifier22, identifier2, resource.getResourcePackName(), exception});
                     }
                     finally {
                         IOUtils.closeQuietly((Closeable)resource);
@@ -94,7 +93,7 @@ public class TagGroupLoader<T> {
                 }
             }
             catch (IOException iOException) {
-                LOGGER.error("Couldn't read tag list {} from {}", (Object)identifier22, (Object)identifier2, (Object)iOException);
+                LOGGER.error("Couldn't read tag list {} from {}", new Object[]{identifier22, identifier2, iOException});
             }
         }
         return map;
@@ -125,24 +124,24 @@ public class TagGroupLoader<T> {
         }
     }
 
-    public TagGroup<T> buildGroup(Map<Identifier, Tag.Builder> tags) {
+    public Map<Identifier, Tag<T>> buildGroup(Map<Identifier, Tag.Builder> tags) {
         HashMap map = Maps.newHashMap();
         Function<Identifier, Tag> function = map::get;
-        Function<Identifier, Object> function2 = identifier -> this.registryGetter.apply((Identifier)identifier).orElse(null);
+        Function<Identifier, Object> function2 = id -> this.registryGetter.apply((Identifier)id).orElse(null);
         HashMultimap multimap = HashMultimap.create();
         tags.forEach((arg_0, arg_1) -> TagGroupLoader.method_32843((Multimap)multimap, arg_0, arg_1));
         tags.forEach((arg_0, arg_1) -> TagGroupLoader.method_32835((Multimap)multimap, arg_0, arg_1));
         HashSet set = Sets.newHashSet();
         tags.keySet().forEach(arg_0 -> TagGroupLoader.method_32838(tags, (Multimap)multimap, set, function, function2, map, arg_0));
-        return TagGroup.create(map);
+        return map;
     }
 
-    public TagGroup<T> load(ResourceManager manager) {
+    public Map<Identifier, Tag<T>> load(ResourceManager manager) {
         return this.buildGroup(this.loadTags(manager));
     }
 
     private static /* synthetic */ void method_32838(Map map, Multimap multimap, Set set, Function function, Function function2, Map map2, Identifier identifier2) {
-        TagGroupLoader.method_32839(map, (Multimap<Identifier, Identifier>)multimap, set, identifier2, (identifier, builder) -> builder.build(function, function2).ifLeft(collection -> LOGGER.error("Couldn't load tag {} as it is missing following references: {}", identifier, (Object)collection.stream().map(Objects::toString).collect(Collectors.joining(",")))).ifRight(tag -> map2.put(identifier, tag)));
+        TagGroupLoader.method_32839(map, (Multimap<Identifier, Identifier>)multimap, set, identifier2, (identifier, builder) -> builder.build(function, function2).ifLeft(collection -> LOGGER.error("Couldn't load tag {} as it is missing following references: {}", identifier, (Object)collection.stream().map(Objects::toString).collect(Collectors.joining(", ")))).ifRight(tag -> map2.put(identifier, tag)));
     }
 
     private static /* synthetic */ void method_32835(Multimap multimap, Identifier identifier, Tag.Builder builder) {

@@ -93,7 +93,7 @@ implements ModelBakeSettings {
 
     static {
         field_5365 = ModelRotation.method_36925();
-        BY_INDEX = Arrays.stream(ModelRotation.values()).collect(Collectors.toMap(modelRotation -> modelRotation.index, modelRotation -> modelRotation));
+        BY_INDEX = Arrays.stream(ModelRotation.values()).collect(Collectors.toMap(rotation -> rotation.index, modelRotation -> modelRotation));
     }
 }
 

@@ -6,6 +6,7 @@
  */
 package net.minecraft.block;
 
+import java.util.List;
 import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -41,9 +42,14 @@ import org.jetbrains.annotations.Nullable;
 public class EnchantingTableBlock
 extends BlockWithEntity {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 12.0, 16.0);
+    public static final List<BlockPos> BOOKSHELF_OFFSETS = BlockPos.stream(-2, 0, -2, 2, 1, 2).filter(pos -> Math.abs(pos.getX()) == 2 || Math.abs(pos.getZ()) == 2).map(BlockPos::toImmutable).toList();
 
     protected EnchantingTableBlock(AbstractBlock.Settings settings) {
         super(settings);
+    }
+
+    public static boolean canAccessBookshelf(World world, BlockPos tablePos, BlockPos bookshelfOffset) {
+        return world.getBlockState(tablePos.add(bookshelfOffset)).isOf(Blocks.BOOKSHELF) && world.isAir(tablePos.add(bookshelfOffset.getX() / 2, bookshelfOffset.getY(), bookshelfOffset.getZ() / 2));
     }
 
     @Override
@@ -59,19 +65,9 @@ extends BlockWithEntity {
     @Override
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         super.randomDisplayTick(state, world, pos, random);
-        for (int i = -2; i <= 2; ++i) {
-            block1: for (int j = -2; j <= 2; ++j) {
-                if (i > -2 && i < 2 && j == -1) {
-                    j = 2;
-                }
-                if (random.nextInt(16) != 0) continue;
-                for (int k = 0; k <= 1; ++k) {
-                    BlockPos blockPos = pos.add(i, k, j);
-                    if (!world.getBlockState(blockPos).isOf(Blocks.BOOKSHELF)) continue;
-                    if (!world.isAir(pos.add(i / 2, 0, j / 2))) continue block1;
-                    world.addParticle(ParticleTypes.ENCHANT, (double)pos.getX() + 0.5, (double)pos.getY() + 2.0, (double)pos.getZ() + 0.5, (double)((float)i + random.nextFloat()) - 0.5, (float)k - random.nextFloat() - 1.0f, (double)((float)j + random.nextFloat()) - 0.5);
-                }
-            }
+        for (BlockPos blockPos : BOOKSHELF_OFFSETS) {
+            if (random.nextInt(16) != 0 || !EnchantingTableBlock.canAccessBookshelf(world, pos, blockPos)) continue;
+            world.addParticle(ParticleTypes.ENCHANT, (double)pos.getX() + 0.5, (double)pos.getY() + 2.0, (double)pos.getZ() + 0.5, (double)((float)blockPos.getX() + random.nextFloat()) - 0.5, (float)blockPos.getY() - random.nextFloat() - 1.0f, (double)((float)blockPos.getZ() + random.nextFloat()) - 0.5);
         }
     }
 

@@ -5,6 +5,7 @@
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.apache.commons.io.IOUtils
  */
 package net.minecraft.client.realms;
 
@@ -18,6 +19,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.realms.dto.RegionPingResult;
 import net.minecraft.util.Util;
+import org.apache.commons.io.IOUtils;
 
 @Environment(value=EnvType.CLIENT)
 public class Ping {
@@ -47,7 +49,7 @@ public class Ping {
                 long m = Ping.now();
                 socket.connect(socketAddress, 700);
                 l += Ping.now() - m;
-                Ping.close(socket);
+                IOUtils.closeQuietly((Socket)socket);
                 continue;
             }
             catch (Exception exception) {
@@ -55,21 +57,10 @@ public class Ping {
                 continue;
             }
             finally {
-                Ping.close(socket);
+                IOUtils.closeQuietly(socket);
             }
         }
         return (int)((double)l / 5.0);
-    }
-
-    private static void close(Socket socket) {
-        try {
-            if (socket != null) {
-                socket.close();
-            }
-        }
-        catch (Throwable throwable) {
-            // empty catch block
-        }
     }
 
     private static long now() {

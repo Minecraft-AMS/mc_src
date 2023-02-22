@@ -1,11 +1,16 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  */
 package net.minecraft.util.math.noise;
 
+import com.google.common.annotations.VisibleForTesting;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
-import net.minecraft.world.gen.WorldGenRandom;
+import net.minecraft.world.gen.noise.NoiseHelper;
+import net.minecraft.world.gen.random.AbstractRandom;
 
 public final class PerlinNoiseSampler {
     private static final float field_31701 = 1.0E-7f;
@@ -14,7 +19,7 @@ public final class PerlinNoiseSampler {
     public final double originY;
     public final double originZ;
 
-    public PerlinNoiseSampler(WorldGenRandom random) {
+    public PerlinNoiseSampler(AbstractRandom random) {
         int i;
         this.originX = random.nextDouble() * 256.0;
         this.originY = random.nextDouble() * 256.0;
@@ -148,6 +153,11 @@ public final class PerlinNoiseSampler {
         ds[1] = ds[1] + am;
         ds[2] = ds[2] + an;
         return MathHelper.lerp3(z, aa, ab, d, e, f, g, h, w, x, y);
+    }
+
+    @VisibleForTesting
+    public void addDebugInfo(StringBuilder info) {
+        NoiseHelper.appendDebugInfo(info, this.originX, this.originY, this.originZ, this.permutations);
     }
 }
 

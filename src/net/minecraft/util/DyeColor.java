@@ -52,8 +52,8 @@ implements StringIdentifiable {
         return Enum.valueOf(DyeColor.class, string);
     }
 
-    private DyeColor(int woolId, String name, int color, MapColor mapColor, int fireworkColor, int signColor) {
-        this.id = woolId;
+    private DyeColor(int id, String name, int color, MapColor mapColor, int fireworkColor, int signColor) {
+        this.id = id;
         this.name = name;
         this.mapColor = mapColor;
         this.signColor = signColor;

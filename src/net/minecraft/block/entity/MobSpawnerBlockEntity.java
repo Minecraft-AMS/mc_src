@@ -11,6 +11,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
@@ -49,10 +50,9 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
-        this.logic.writeNbt(this.world, this.pos, nbt);
-        return nbt;
+        this.logic.writeNbt(nbt);
     }
 
     public static void clientTick(World world, BlockPos pos, BlockState state, MobSpawnerBlockEntity blockEntity) {
@@ -63,15 +63,13 @@ extends BlockEntity {
         blockEntity.logic.serverTick((ServerWorld)world, pos);
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 1, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        NbtCompound nbtCompound = this.writeNbt(new NbtCompound());
+        NbtCompound nbtCompound = this.createNbt();
         nbtCompound.remove("SpawnPotentials");
         return nbtCompound;
     }
@@ -91,6 +89,10 @@ extends BlockEntity {
 
     public MobSpawnerLogic getLogic() {
         return this.logic;
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 }
 

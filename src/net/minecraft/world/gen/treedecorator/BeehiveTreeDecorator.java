@@ -7,10 +7,13 @@
 package net.minecraft.world.gen.treedecorator;
 
 import com.mojang.serialization.Codec;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.minecraft.block.BeehiveBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -28,6 +31,8 @@ import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
 public class BeehiveTreeDecorator
 extends TreeDecorator {
     public static final Codec<BeehiveTreeDecorator> CODEC = Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("probability").xmap(BeehiveTreeDecorator::new, decorator -> Float.valueOf(decorator.probability)).codec();
+    private static final Direction BEE_NEST_FACE = Direction.SOUTH;
+    private static final Direction[] GENERATE_DIRECTIONS = (Direction[])Direction.Type.HORIZONTAL.stream().filter(direction -> direction != BEE_NEST_FACE.getOpposite()).toArray(Direction[]::new);
     private final float probability;
 
     public BeehiveTreeDecorator(float probability) {
@@ -44,19 +49,18 @@ extends TreeDecorator {
         if (random.nextFloat() >= this.probability) {
             return;
         }
-        Direction direction = BeehiveBlock.getRandomGenerationDirection(random);
-        int i = !leavesPositions.isEmpty() ? Math.max(leavesPositions.get(0).getY() - 1, logPositions.get(0).getY()) : Math.min(logPositions.get(0).getY() + 1 + random.nextInt(3), logPositions.get(logPositions.size() - 1).getY());
-        List list = logPositions.stream().filter(pos -> pos.getY() == i).collect(Collectors.toList());
+        int i = !leavesPositions.isEmpty() ? Math.max(leavesPositions.get(0).getY() - 1, logPositions.get(0).getY() + 1) : Math.min(logPositions.get(0).getY() + 1 + random.nextInt(3), logPositions.get(logPositions.size() - 1).getY());
+        List list = logPositions.stream().filter(pos -> pos.getY() == i).flatMap(pos -> Stream.of(GENERATE_DIRECTIONS).map(pos::offset)).collect(Collectors.toList());
         if (list.isEmpty()) {
             return;
         }
-        BlockPos blockPos = (BlockPos)list.get(random.nextInt(list.size()));
-        BlockPos blockPos2 = blockPos.offset(direction);
-        if (!Feature.isAir(world, blockPos2) || !Feature.isAir(world, blockPos2.offset(Direction.SOUTH))) {
+        Collections.shuffle(list);
+        Optional<BlockPos> optional = list.stream().filter(pos -> Feature.isAir(world, pos) && Feature.isAir(world, pos.offset(BEE_NEST_FACE))).findFirst();
+        if (optional.isEmpty()) {
             return;
         }
-        replacer.accept(blockPos2, (BlockState)Blocks.BEE_NEST.getDefaultState().with(BeehiveBlock.FACING, Direction.SOUTH));
-        world.getBlockEntity(blockPos2, BlockEntityType.BEEHIVE).ifPresent(blockEntity -> {
+        replacer.accept(optional.get(), (BlockState)Blocks.BEE_NEST.getDefaultState().with(BeehiveBlock.FACING, BEE_NEST_FACE));
+        world.getBlockEntity(optional.get(), BlockEntityType.BEEHIVE).ifPresent(blockEntity -> {
             int i = 2 + random.nextInt(2);
             for (int j = 0; j < i; ++j) {
                 NbtCompound nbtCompound = new NbtCompound();

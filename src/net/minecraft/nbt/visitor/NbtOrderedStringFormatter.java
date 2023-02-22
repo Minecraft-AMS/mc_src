@@ -26,13 +26,13 @@ import net.minecraft.nbt.NbtByteArray;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtDouble;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtEnd;
 import net.minecraft.nbt.NbtFloat;
 import net.minecraft.nbt.NbtInt;
 import net.minecraft.nbt.NbtIntArray;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtLong;
 import net.minecraft.nbt.NbtLongArray;
-import net.minecraft.nbt.NbtNull;
 import net.minecraft.nbt.NbtShort;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
@@ -49,17 +49,17 @@ implements NbtElementVisitor {
     private static final Pattern SIMPLE_NAME = Pattern.compile("[A-Za-z0-9._+-]+");
     private static final String KEY_VALUE_SEPARATOR = String.valueOf(':');
     private static final String ENTRY_SEPARATOR = String.valueOf(',');
-    private static final String field_33234 = "[";
-    private static final String field_33235 = "]";
-    private static final String field_33236 = ";";
-    private static final String field_33237 = " ";
-    private static final String field_33238 = "{";
-    private static final String field_33239 = "}";
-    private static final String field_33240 = "\n";
+    private static final String SQUARE_OPEN_BRACKET = "[";
+    private static final String SQUARE_CLOSE_BRACKET = "]";
+    private static final String SEMICOLON = ";";
+    private static final String SPACE = " ";
+    private static final String CURLY_OPEN_BRACKET = "{";
+    private static final String CURLY_CLOSE_BRACKET = "}";
+    private static final String NEW_LINE = "\n";
     private final String prefix;
     private final int indentationLevel;
     private final List<String> pathParts;
-    private String result;
+    private String result = "";
 
     public NbtOrderedStringFormatter() {
         this("    ", 0, Lists.newArrayList());
@@ -113,41 +113,41 @@ implements NbtElementVisitor {
 
     @Override
     public void visitByteArray(NbtByteArray element) {
-        StringBuilder stringBuilder = new StringBuilder(field_33234).append("B").append(field_33236);
+        StringBuilder stringBuilder = new StringBuilder(SQUARE_OPEN_BRACKET).append("B").append(SEMICOLON);
         byte[] bs = element.getByteArray();
         for (int i = 0; i < bs.length; ++i) {
-            stringBuilder.append(field_33237).append(bs[i]).append("B");
+            stringBuilder.append(SPACE).append(bs[i]).append("B");
             if (i == bs.length - 1) continue;
             stringBuilder.append(ENTRY_SEPARATOR);
         }
-        stringBuilder.append(field_33235);
+        stringBuilder.append(SQUARE_CLOSE_BRACKET);
         this.result = stringBuilder.toString();
     }
 
     @Override
     public void visitIntArray(NbtIntArray element) {
-        StringBuilder stringBuilder = new StringBuilder(field_33234).append("I").append(field_33236);
+        StringBuilder stringBuilder = new StringBuilder(SQUARE_OPEN_BRACKET).append("I").append(SEMICOLON);
         int[] is = element.getIntArray();
         for (int i = 0; i < is.length; ++i) {
-            stringBuilder.append(field_33237).append(is[i]);
+            stringBuilder.append(SPACE).append(is[i]);
             if (i == is.length - 1) continue;
             stringBuilder.append(ENTRY_SEPARATOR);
         }
-        stringBuilder.append(field_33235);
+        stringBuilder.append(SQUARE_CLOSE_BRACKET);
         this.result = stringBuilder.toString();
     }
 
     @Override
     public void visitLongArray(NbtLongArray element) {
         String string = "L";
-        StringBuilder stringBuilder = new StringBuilder(field_33234).append("L").append(field_33236);
+        StringBuilder stringBuilder = new StringBuilder(SQUARE_OPEN_BRACKET).append("L").append(SEMICOLON);
         long[] ls = element.getLongArray();
         for (int i = 0; i < ls.length; ++i) {
-            stringBuilder.append(field_33237).append(ls[i]).append("L");
+            stringBuilder.append(SPACE).append(ls[i]).append("L");
             if (i == ls.length - 1) continue;
             stringBuilder.append(ENTRY_SEPARATOR);
         }
-        stringBuilder.append(field_33235);
+        stringBuilder.append(SQUARE_CLOSE_BRACKET);
         this.result = stringBuilder.toString();
     }
 
@@ -158,22 +158,22 @@ implements NbtElementVisitor {
             this.result = "[]";
             return;
         }
-        StringBuilder stringBuilder = new StringBuilder(field_33234);
+        StringBuilder stringBuilder = new StringBuilder(SQUARE_OPEN_BRACKET);
         this.pushPathPart("[]");
         String string2 = string = IGNORED_PATHS.contains(this.joinPath()) ? "" : this.prefix;
         if (!string.isEmpty()) {
-            stringBuilder.append(field_33240);
+            stringBuilder.append(NEW_LINE);
         }
         for (int i = 0; i < element.size(); ++i) {
             stringBuilder.append(Strings.repeat((String)string, (int)(this.indentationLevel + 1)));
             stringBuilder.append(new NbtOrderedStringFormatter(string, this.indentationLevel + 1, this.pathParts).apply(element.get(i)));
             if (i == element.size() - 1) continue;
-            stringBuilder.append(ENTRY_SEPARATOR).append(string.isEmpty() ? field_33237 : field_33240);
+            stringBuilder.append(ENTRY_SEPARATOR).append(string.isEmpty() ? SPACE : NEW_LINE);
         }
         if (!string.isEmpty()) {
-            stringBuilder.append(field_33240).append(Strings.repeat((String)string, (int)this.indentationLevel));
+            stringBuilder.append(NEW_LINE).append(Strings.repeat((String)string, (int)this.indentationLevel));
         }
-        stringBuilder.append(field_33235);
+        stringBuilder.append(SQUARE_CLOSE_BRACKET);
         this.result = stringBuilder.toString();
         this.popPathPart();
     }
@@ -185,11 +185,11 @@ implements NbtElementVisitor {
             this.result = "{}";
             return;
         }
-        StringBuilder stringBuilder = new StringBuilder(field_33238);
+        StringBuilder stringBuilder = new StringBuilder(CURLY_OPEN_BRACKET);
         this.pushPathPart("{}");
         String string2 = string = IGNORED_PATHS.contains(this.joinPath()) ? "" : this.prefix;
         if (!string.isEmpty()) {
-            stringBuilder.append(field_33240);
+            stringBuilder.append(NEW_LINE);
         }
         List<String> collection = this.getSortedNames(compound);
         Iterator iterator = collection.iterator();
@@ -197,15 +197,15 @@ implements NbtElementVisitor {
             String string22 = (String)iterator.next();
             NbtElement nbtElement = compound.get(string22);
             this.pushPathPart(string22);
-            stringBuilder.append(Strings.repeat((String)string, (int)(this.indentationLevel + 1))).append(NbtOrderedStringFormatter.escapeName(string22)).append(KEY_VALUE_SEPARATOR).append(field_33237).append(new NbtOrderedStringFormatter(string, this.indentationLevel + 1, this.pathParts).apply(nbtElement));
+            stringBuilder.append(Strings.repeat((String)string, (int)(this.indentationLevel + 1))).append(NbtOrderedStringFormatter.escapeName(string22)).append(KEY_VALUE_SEPARATOR).append(SPACE).append(new NbtOrderedStringFormatter(string, this.indentationLevel + 1, this.pathParts).apply(nbtElement));
             this.popPathPart();
             if (!iterator.hasNext()) continue;
-            stringBuilder.append(ENTRY_SEPARATOR).append(string.isEmpty() ? field_33237 : field_33240);
+            stringBuilder.append(ENTRY_SEPARATOR).append(string.isEmpty() ? SPACE : NEW_LINE);
         }
         if (!string.isEmpty()) {
-            stringBuilder.append(field_33240).append(Strings.repeat((String)string, (int)this.indentationLevel));
+            stringBuilder.append(NEW_LINE).append(Strings.repeat((String)string, (int)this.indentationLevel));
         }
-        stringBuilder.append(field_33239);
+        stringBuilder.append(CURLY_CLOSE_BRACKET);
         this.result = stringBuilder.toString();
         this.popPathPart();
     }
@@ -249,7 +249,7 @@ implements NbtElementVisitor {
     }
 
     @Override
-    public void visitNull(NbtNull element) {
+    public void visitEnd(NbtEnd element) {
     }
 }
 

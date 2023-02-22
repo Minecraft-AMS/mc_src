@@ -5,18 +5,19 @@
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.DataFixer
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.Lifecycle
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.level;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.Lifecycle;
@@ -36,7 +37,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.dynamic.DynamicSerializableUuid;
-import net.minecraft.util.dynamic.RegistryReadingOps;
+import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.Difficulty;
@@ -51,14 +52,14 @@ import net.minecraft.world.level.ServerWorldProperties;
 import net.minecraft.world.level.storage.SaveVersionInfo;
 import net.minecraft.world.timer.Timer;
 import net.minecraft.world.timer.TimerCallbackSerializer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class LevelProperties
 implements ServerWorldProperties,
 SaveProperties {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    protected static final String field_36349 = "Player";
     protected static final String WORLD_GEN_SETTINGS_KEY = "WorldGenSettings";
     private LevelInfo levelInfo;
     private final GeneratorOptions generatorOptions;
@@ -134,7 +135,7 @@ SaveProperties {
     public static LevelProperties readProperties(Dynamic<NbtElement> dynamic2, DataFixer dataFixer, int dataVersion, @Nullable NbtCompound playerData, LevelInfo levelInfo, SaveVersionInfo saveVersionInfo, GeneratorOptions generatorOptions, Lifecycle lifecycle) {
         long l = dynamic2.get("Time").asLong(0L);
         NbtCompound nbtCompound = (NbtCompound)dynamic2.get("DragonFight").result().map(Dynamic::getValue).orElseGet(() -> (NbtElement)dynamic2.get("DimensionData").get("1").get("DragonFight").orElseEmptyMap().getValue());
-        return new LevelProperties(dataFixer, dataVersion, playerData, dynamic2.get("WasModded").asBoolean(false), dynamic2.get("SpawnX").asInt(0), dynamic2.get("SpawnY").asInt(0), dynamic2.get("SpawnZ").asInt(0), dynamic2.get("SpawnAngle").asFloat(0.0f), l, dynamic2.get("DayTime").asLong(l), saveVersionInfo.getLevelFormatVersion(), dynamic2.get("clearWeatherTime").asInt(0), dynamic2.get("rainTime").asInt(0), dynamic2.get("raining").asBoolean(false), dynamic2.get("thunderTime").asInt(0), dynamic2.get("thundering").asBoolean(false), dynamic2.get("initialized").asBoolean(true), dynamic2.get("DifficultyLocked").asBoolean(false), WorldBorder.Properties.fromDynamic(dynamic2, WorldBorder.DEFAULT_BORDER), dynamic2.get("WanderingTraderSpawnDelay").asInt(0), dynamic2.get("WanderingTraderSpawnChance").asInt(0), dynamic2.get("WanderingTraderId").read(DynamicSerializableUuid.CODEC).result().orElse(null), dynamic2.get("ServerBrands").asStream().flatMap(dynamic -> Util.stream(dynamic.asString().result())).collect(Collectors.toCollection(Sets::newLinkedHashSet)), new Timer<MinecraftServer>(TimerCallbackSerializer.INSTANCE, dynamic2.get("ScheduledEvents").asStream()), (NbtCompound)dynamic2.get("CustomBossEvents").orElseEmptyMap().getValue(), nbtCompound, levelInfo, generatorOptions, lifecycle);
+        return new LevelProperties(dataFixer, dataVersion, playerData, dynamic2.get("WasModded").asBoolean(false), dynamic2.get("SpawnX").asInt(0), dynamic2.get("SpawnY").asInt(0), dynamic2.get("SpawnZ").asInt(0), dynamic2.get("SpawnAngle").asFloat(0.0f), l, dynamic2.get("DayTime").asLong(l), saveVersionInfo.getLevelFormatVersion(), dynamic2.get("clearWeatherTime").asInt(0), dynamic2.get("rainTime").asInt(0), dynamic2.get("raining").asBoolean(false), dynamic2.get("thunderTime").asInt(0), dynamic2.get("thundering").asBoolean(false), dynamic2.get("initialized").asBoolean(true), dynamic2.get("DifficultyLocked").asBoolean(false), WorldBorder.Properties.fromDynamic(dynamic2, WorldBorder.DEFAULT_BORDER), dynamic2.get("WanderingTraderSpawnDelay").asInt(0), dynamic2.get("WanderingTraderSpawnChance").asInt(0), dynamic2.get("WanderingTraderId").read(DynamicSerializableUuid.CODEC).result().orElse(null), dynamic2.get("ServerBrands").asStream().flatMap(dynamic -> dynamic.asString().result().stream()).collect(Collectors.toCollection(Sets::newLinkedHashSet)), new Timer<MinecraftServer>(TimerCallbackSerializer.INSTANCE, dynamic2.get("ScheduledEvents").asStream()), (NbtCompound)dynamic2.get("CustomBossEvents").orElseEmptyMap().getValue(), nbtCompound, levelInfo, generatorOptions, lifecycle);
     }
 
     @Override
@@ -155,12 +156,13 @@ SaveProperties {
         levelNbt.putBoolean("WasModded", this.modded);
         NbtCompound nbtCompound = new NbtCompound();
         nbtCompound.putString("Name", SharedConstants.getGameVersion().getName());
-        nbtCompound.putInt("Id", SharedConstants.getGameVersion().getWorldVersion());
+        nbtCompound.putInt("Id", SharedConstants.getGameVersion().getSaveVersion().getId());
         nbtCompound.putBoolean("Snapshot", !SharedConstants.getGameVersion().isStable());
+        nbtCompound.putString("Series", SharedConstants.getGameVersion().getSaveVersion().getSeries());
         levelNbt.put("Version", nbtCompound);
         levelNbt.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
-        RegistryReadingOps<NbtElement> registryReadingOps = RegistryReadingOps.of(NbtOps.INSTANCE, registryManager);
-        GeneratorOptions.CODEC.encodeStart(registryReadingOps, (Object)this.generatorOptions).resultOrPartial(Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).ifPresent(nbtElement -> levelNbt.put(WORLD_GEN_SETTINGS_KEY, (NbtElement)nbtElement));
+        RegistryOps<NbtElement> dynamicOps = RegistryOps.of(NbtOps.INSTANCE, registryManager);
+        GeneratorOptions.CODEC.encodeStart(dynamicOps, (Object)this.generatorOptions).resultOrPartial(Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).ifPresent(nbtElement -> levelNbt.put(WORLD_GEN_SETTINGS_KEY, (NbtElement)nbtElement));
         levelNbt.putInt("GameType", this.levelInfo.getGameMode().getId());
         levelNbt.putInt("SpawnX", this.spawnX);
         levelNbt.putInt("SpawnY", this.spawnY);
@@ -185,7 +187,7 @@ SaveProperties {
         levelNbt.put("GameRules", this.levelInfo.getGameRules().toNbt());
         levelNbt.put("DragonFight", this.dragonFight);
         if (playerNbt != null) {
-            levelNbt.put("Player", playerNbt);
+            levelNbt.put(field_36349, playerNbt);
         }
         DataPackSettings.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.levelInfo.getDataPackSettings()).result().ifPresent(nbtElement -> levelNbt.put("DataPacks", (NbtElement)nbtElement));
         if (this.customBossEvents != null) {
@@ -264,8 +266,8 @@ SaveProperties {
     }
 
     @Override
-    public void setSpawnAngle(float angle) {
-        this.spawnAngle = angle;
+    public void setSpawnAngle(float spawnAngle) {
+        this.spawnAngle = spawnAngle;
     }
 
     @Override
@@ -387,8 +389,8 @@ SaveProperties {
     }
 
     @Override
-    public void setWorldBorder(WorldBorder.Properties properties) {
-        this.worldBorder = properties;
+    public void setWorldBorder(WorldBorder.Properties worldBorder) {
+        this.worldBorder = worldBorder;
     }
 
     @Override
@@ -407,8 +409,8 @@ SaveProperties {
     }
 
     @Override
-    public void setDifficultyLocked(boolean locked) {
-        this.difficultyLocked = locked;
+    public void setDifficultyLocked(boolean difficultyLocked) {
+        this.difficultyLocked = difficultyLocked;
     }
 
     @Override
@@ -438,8 +440,8 @@ SaveProperties {
     }
 
     @Override
-    public void setDragonFight(NbtCompound nbt) {
-        this.dragonFight = nbt;
+    public void setDragonFight(NbtCompound dragonFight) {
+        this.dragonFight = dragonFight;
     }
 
     @Override
@@ -459,8 +461,8 @@ SaveProperties {
     }
 
     @Override
-    public void setCustomBossEvents(@Nullable NbtCompound nbt) {
-        this.customBossEvents = nbt;
+    public void setCustomBossEvents(@Nullable NbtCompound customBossEvents) {
+        this.customBossEvents = customBossEvents;
     }
 
     @Override
@@ -490,8 +492,8 @@ SaveProperties {
     }
 
     @Override
-    public void setWanderingTraderId(UUID uuid) {
-        this.wanderingTraderId = uuid;
+    public void setWanderingTraderId(UUID wanderingTraderId) {
+        this.wanderingTraderId = wanderingTraderId;
     }
 
     @Override

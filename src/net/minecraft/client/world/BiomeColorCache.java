@@ -2,47 +2,58 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.world;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.IntSupplier;
+import java.util.function.ToIntFunction;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class BiomeColorCache {
-    private static final int field_32164 = 256;
+    private static final int MAX_ENTRY_SIZE = 256;
     private final ThreadLocal<Last> last = ThreadLocal.withInitial(Last::new);
-    private final Long2ObjectLinkedOpenHashMap<int[]> colors = new Long2ObjectLinkedOpenHashMap(256, 0.25f);
+    private final Long2ObjectLinkedOpenHashMap<Colors> colors = new Long2ObjectLinkedOpenHashMap(256, 0.25f);
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private final ToIntFunction<BlockPos> colorFactory;
 
-    public int getBiomeColor(BlockPos pos, IntSupplier colorFactory) {
+    public BiomeColorCache(ToIntFunction<BlockPos> colorFactory) {
+        this.colorFactory = colorFactory;
+    }
+
+    public int getBiomeColor(BlockPos pos) {
         int o;
         int i = ChunkSectionPos.getSectionCoord(pos.getX());
         int j = ChunkSectionPos.getSectionCoord(pos.getZ());
         Last last = this.last.get();
-        if (last.x != i || last.z != j) {
+        if (last.x != i || last.z != j || last.colors == null) {
             last.x = i;
             last.z = j;
             last.colors = this.getColorArray(i, j);
         }
+        int[] is = last.colors.get(pos.getY());
         int k = pos.getX() & 0xF;
         int l = pos.getZ() & 0xF;
         int m = l << 4 | k;
-        int n = last.colors[m];
+        int n = is[m];
         if (n != -1) {
             return n;
         }
-        last.colors[m] = o = colorFactory.getAsInt();
+        is[m] = o = this.colorFactory.applyAsInt(pos);
         return o;
     }
 
@@ -77,41 +88,89 @@ public class BiomeColorCache {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    private int[] getColorArray(int chunkX, int chunkZ) {
-        int[] is;
+    private Colors getColorArray(int chunkX, int chunkZ) {
+        Colors colors;
         long l = ChunkPos.toLong(chunkX, chunkZ);
         this.lock.readLock().lock();
         try {
-            is = (int[])this.colors.get(l);
+            colors = (Colors)this.colors.get(l);
+            if (colors != null) {
+                Colors colors2 = colors;
+                return colors2;
+            }
         }
         finally {
             this.lock.readLock().unlock();
         }
-        if (is != null) {
-            return is;
-        }
-        int[] js = new int[256];
-        Arrays.fill(js, -1);
+        this.lock.writeLock().lock();
         try {
-            this.lock.writeLock().lock();
+            colors = (Colors)this.colors.get(l);
+            if (colors != null) {
+                Colors colors3 = colors;
+                return colors3;
+            }
+            Colors colors2 = new Colors();
             if (this.colors.size() >= 256) {
                 this.colors.removeFirst();
             }
-            this.colors.put(l, (Object)js);
+            this.colors.put(l, (Object)colors2);
+            Colors colors4 = colors2;
+            return colors4;
         }
         finally {
             this.lock.writeLock().unlock();
         }
-        return js;
     }
 
     @Environment(value=EnvType.CLIENT)
     static class Last {
         public int x = Integer.MIN_VALUE;
         public int z = Integer.MIN_VALUE;
-        public int[] colors;
+        @Nullable
+        Colors colors;
 
         private Last() {
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class Colors {
+        private final Int2ObjectArrayMap<int[]> colors = new Int2ObjectArrayMap(16);
+        private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+        private static final int XZ_COLORS_SIZE = MathHelper.square(16);
+
+        Colors() {
+        }
+
+        /*
+         * WARNING - Removed try catching itself - possible behaviour change.
+         */
+        public int[] get(int y2) {
+            this.lock.readLock().lock();
+            try {
+                int[] is = (int[])this.colors.get(y2);
+                if (is != null) {
+                    int[] nArray = is;
+                    return nArray;
+                }
+            }
+            finally {
+                this.lock.readLock().unlock();
+            }
+            this.lock.writeLock().lock();
+            try {
+                int[] nArray = (int[])this.colors.computeIfAbsent(y2, y -> this.createDefault());
+                return nArray;
+            }
+            finally {
+                this.lock.writeLock().unlock();
+            }
+        }
+
+        private int[] createDefault() {
+            int[] is = new int[XZ_COLORS_SIZE];
+            Arrays.fill(is, -1);
+            return is;
         }
     }
 }

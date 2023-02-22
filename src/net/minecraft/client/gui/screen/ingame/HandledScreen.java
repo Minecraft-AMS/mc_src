@@ -42,7 +42,6 @@ implements ScreenHandlerProvider<T> {
     public static final Identifier BACKGROUND_TEXTURE = new Identifier("textures/gui/container/inventory.png");
     private static final float field_32318 = 100.0f;
     private static final int field_32319 = 500;
-    private static final int DOUBLE_CLICK_TIMEOUT = 250;
     public static final int field_32322 = 100;
     private static final int field_32321 = 200;
     protected int backgroundWidth = 176;
@@ -285,7 +284,7 @@ implements ScreenHandlerProvider<T> {
         if (super.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        boolean bl = this.client.options.keyPickItem.matchesMouse(button);
+        boolean bl = this.client.options.pickItemKey.matchesMouse(button) && this.client.interactionManager.hasCreativeInventory();
         Slot slot = this.getSlotAt(mouseX, mouseY);
         long l = Util.getMeasuringTimeMs();
         this.doubleClicking = this.lastClickedSlot == slot && l - this.lastButtonClickTime < 250L && this.lastClickedButton == button;
@@ -316,7 +315,7 @@ implements ScreenHandlerProvider<T> {
                     }
                 } else if (!this.cursorDragging) {
                     if (((ScreenHandler)this.handler).getCursorStack().isEmpty()) {
-                        if (this.client.options.keyPickItem.matchesMouse(button)) {
+                        if (bl) {
                             this.onMouseClick(slot, k, button, SlotActionType.CLONE);
                         } else {
                             boolean bl3 = k != -999 && (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 344));
@@ -338,7 +337,7 @@ implements ScreenHandlerProvider<T> {
                             this.heldButtonType = 0;
                         } else if (button == 1) {
                             this.heldButtonType = 1;
-                        } else if (this.client.options.keyPickItem.matchesMouse(button)) {
+                        } else if (bl) {
                             this.heldButtonType = 2;
                         }
                     }
@@ -355,12 +354,12 @@ implements ScreenHandlerProvider<T> {
 
     private void onMouseClick(int button) {
         if (this.focusedSlot != null && ((ScreenHandler)this.handler).getCursorStack().isEmpty()) {
-            if (this.client.options.keySwapHands.matchesMouse(button)) {
+            if (this.client.options.swapHandsKey.matchesMouse(button)) {
                 this.onMouseClick(this.focusedSlot, this.focusedSlot.id, 40, SlotActionType.SWAP);
                 return;
             }
             for (int i = 0; i < 9; ++i) {
-                if (!this.client.options.keysHotbar[i].matchesMouse(button)) continue;
+                if (!this.client.options.hotbarKeys[i].matchesMouse(button)) continue;
                 this.onMouseClick(this.focusedSlot, this.focusedSlot.id, i, SlotActionType.SWAP);
             }
         }
@@ -476,7 +475,7 @@ implements ScreenHandlerProvider<T> {
                 }
                 this.onMouseClick(null, -999, ScreenHandler.packQuickCraftData(2, this.heldButtonType), SlotActionType.QUICK_CRAFT);
             } else if (!((ScreenHandler)this.handler).getCursorStack().isEmpty()) {
-                if (this.client.options.keyPickItem.matchesMouse(button)) {
+                if (this.client.options.pickItemKey.matchesMouse(button)) {
                     this.onMouseClick(slot, k, button, SlotActionType.CLONE);
                 } else {
                     boolean bl2;
@@ -517,15 +516,15 @@ implements ScreenHandlerProvider<T> {
         if (super.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (this.client.options.keyInventory.matchesKey(keyCode, scanCode)) {
-            this.onClose();
+        if (this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) {
+            this.close();
             return true;
         }
         this.handleHotbarKeyPressed(keyCode, scanCode);
         if (this.focusedSlot != null && this.focusedSlot.hasStack()) {
-            if (this.client.options.keyPickItem.matchesKey(keyCode, scanCode)) {
+            if (this.client.options.pickItemKey.matchesKey(keyCode, scanCode)) {
                 this.onMouseClick(this.focusedSlot, this.focusedSlot.id, 0, SlotActionType.CLONE);
-            } else if (this.client.options.keyDrop.matchesKey(keyCode, scanCode)) {
+            } else if (this.client.options.dropKey.matchesKey(keyCode, scanCode)) {
                 this.onMouseClick(this.focusedSlot, this.focusedSlot.id, HandledScreen.hasControlDown() ? 1 : 0, SlotActionType.THROW);
             }
         }
@@ -534,12 +533,12 @@ implements ScreenHandlerProvider<T> {
 
     protected boolean handleHotbarKeyPressed(int keyCode, int scanCode) {
         if (((ScreenHandler)this.handler).getCursorStack().isEmpty() && this.focusedSlot != null) {
-            if (this.client.options.keySwapHands.matchesKey(keyCode, scanCode)) {
+            if (this.client.options.swapHandsKey.matchesKey(keyCode, scanCode)) {
                 this.onMouseClick(this.focusedSlot, this.focusedSlot.id, 40, SlotActionType.SWAP);
                 return true;
             }
             for (int i = 0; i < 9; ++i) {
-                if (!this.client.options.keysHotbar[i].matchesKey(keyCode, scanCode)) continue;
+                if (!this.client.options.hotbarKeys[i].matchesKey(keyCode, scanCode)) continue;
                 this.onMouseClick(this.focusedSlot, this.focusedSlot.id, i, SlotActionType.SWAP);
                 return true;
             }
@@ -556,7 +555,7 @@ implements ScreenHandlerProvider<T> {
     }
 
     @Override
-    public boolean isPauseScreen() {
+    public boolean shouldPause() {
         return false;
     }
 
@@ -579,9 +578,9 @@ implements ScreenHandlerProvider<T> {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.client.player.closeHandledScreen();
-        super.onClose();
+        super.close();
     }
 }
 

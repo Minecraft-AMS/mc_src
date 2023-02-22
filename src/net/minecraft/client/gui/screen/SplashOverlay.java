@@ -17,7 +17,6 @@ import java.util.function.IntSupplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.BackgroundHelper;
 import net.minecraft.client.gui.screen.Overlay;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.resource.metadata.TextureResourceMetadata;
@@ -30,21 +29,22 @@ import net.minecraft.resource.ResourceReload;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class SplashOverlay
 extends Overlay {
     static final Identifier LOGO = new Identifier("textures/gui/title/mojangstudios.png");
-    private static final int MOJANG_RED = BackgroundHelper.ColorMixer.getArgb(255, 239, 50, 61);
-    private static final int MONOCHROME_BLACK = BackgroundHelper.ColorMixer.getArgb(255, 0, 0, 0);
+    private static final int MOJANG_RED = ColorHelper.Argb.getArgb(255, 239, 50, 61);
+    private static final int MONOCHROME_BLACK = ColorHelper.Argb.getArgb(255, 0, 0, 0);
     private static final IntSupplier BRAND_ARGB = () -> MinecraftClient.getInstance().options.monochromeLogo ? MONOCHROME_BLACK : MOJANG_RED;
     private static final int field_32251 = 240;
-    private static final float field_32252 = 60.0f;
+    private static final float LOGO_RIGHT_HALF_V = 60.0f;
     private static final int field_32253 = 60;
     private static final int field_32254 = 120;
-    private static final float field_32255 = 0.0625f;
-    private static final float field_32256 = 0.95f;
+    private static final float LOGO_OVERLAP = 0.0625f;
+    private static final float PROGRESS_LERP_DELTA = 0.95f;
     public static final long RELOAD_COMPLETE_FADE_DURATION = 1000L;
     public static final long RELOAD_START_FADE_DURATION = 500L;
     private final MinecraftClient client;
@@ -149,7 +149,7 @@ extends Overlay {
     private void renderProgressBar(MatrixStack matrices, int minX, int minY, int maxX, int maxY, float opacity) {
         int i = MathHelper.ceil((float)(maxX - minX - 2) * this.progress);
         int j = Math.round(opacity * 255.0f);
-        int k = BackgroundHelper.ColorMixer.getArgb(j, 255, 255, 255);
+        int k = ColorHelper.Argb.getArgb(j, 255, 255, 255);
         SplashOverlay.fill(matrices, minX + 2, minY + 2, minX + i, maxY - 2, k);
         SplashOverlay.fill(matrices, minX + 1, minY, maxX - 1, minY + 1, k);
         SplashOverlay.fill(matrices, minX + 1, maxY, maxX - 1, maxY - 1, k);

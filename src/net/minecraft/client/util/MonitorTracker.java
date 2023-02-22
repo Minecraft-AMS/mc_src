@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  net.fabricmc.api.EnvType
@@ -10,10 +11,12 @@
  *  org.lwjgl.PointerBuffer
  *  org.lwjgl.glfw.GLFW
  *  org.lwjgl.glfw.GLFWMonitorCallback
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.util;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.api.EnvType;
@@ -25,14 +28,16 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWMonitorCallback;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class MonitorTracker {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Long2ObjectMap<Monitor> pointerToMonitorMap = new Long2ObjectOpenHashMap();
     private final MonitorFactory monitorFactory;
 
     public MonitorTracker(MonitorFactory monitorFactory) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         this.monitorFactory = monitorFactory;
         GLFW.glfwSetMonitorCallback(this::handleMonitorEvent);
         PointerBuffer pointerBuffer = GLFW.glfwGetMonitors();
@@ -45,18 +50,20 @@ public class MonitorTracker {
     }
 
     private void handleMonitorEvent(long monitor, int event) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (event == 262145) {
             this.pointerToMonitorMap.put(monitor, (Object)this.monitorFactory.createMonitor(monitor));
+            LOGGER.debug("Monitor {} connected. Current monitors: {}", (Object)monitor, this.pointerToMonitorMap);
         } else if (event == 262146) {
             this.pointerToMonitorMap.remove(monitor);
+            LOGGER.debug("Monitor {} disconnected. Current monitors: {}", (Object)monitor, this.pointerToMonitorMap);
         }
     }
 
     @Nullable
-    public Monitor getMonitor(long l) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
-        return (Monitor)this.pointerToMonitorMap.get(l);
+    public Monitor getMonitor(long pointer) {
+        RenderSystem.assertInInitPhase();
+        return (Monitor)this.pointerToMonitorMap.get(pointer);
     }
 
     @Nullable
@@ -71,22 +78,30 @@ public class MonitorTracker {
         int m = k + window.getHeight();
         int n = -1;
         Monitor monitor = null;
+        long o = GLFW.glfwGetPrimaryMonitor();
+        LOGGER.debug("Selecting monitor - primary: {}, current monitors: {}", (Object)o, this.pointerToMonitorMap);
         for (Monitor monitor2 : this.pointerToMonitorMap.values()) {
-            int x;
-            int o = monitor2.getViewportX();
-            int p = o + monitor2.getCurrentVideoMode().getWidth();
-            int q = monitor2.getViewportY();
-            int r = q + monitor2.getCurrentVideoMode().getHeight();
-            int s = MonitorTracker.clamp(i, o, p);
-            int t = MonitorTracker.clamp(j, o, p);
-            int u = MonitorTracker.clamp(k, q, r);
-            int v = MonitorTracker.clamp(m, q, r);
-            int w = Math.max(0, t - s);
-            int y = w * (x = Math.max(0, v - u));
-            if (y <= n) continue;
+            int y;
+            int p = monitor2.getViewportX();
+            int q = p + monitor2.getCurrentVideoMode().getWidth();
+            int r = monitor2.getViewportY();
+            int s = r + monitor2.getCurrentVideoMode().getHeight();
+            int t = MonitorTracker.clamp(i, p, q);
+            int u = MonitorTracker.clamp(j, p, q);
+            int v = MonitorTracker.clamp(k, r, s);
+            int w = MonitorTracker.clamp(m, r, s);
+            int x = Math.max(0, u - t);
+            int z = x * (y = Math.max(0, w - v));
+            if (z > n) {
+                monitor = monitor2;
+                n = z;
+                continue;
+            }
+            if (z != n || o != monitor2.getHandle()) continue;
+            LOGGER.debug("Primary monitor {} is preferred to monitor {}", (Object)monitor2, (Object)monitor);
             monitor = monitor2;
-            n = y;
         }
+        LOGGER.debug("Selected monitor: {}", monitor);
         return monitor;
     }
 
@@ -101,7 +116,7 @@ public class MonitorTracker {
     }
 
     public void stop() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GLFWMonitorCallback gLFWMonitorCallback = GLFW.glfwSetMonitorCallback(null);
         if (gLFWMonitorCallback != null) {
             gLFWMonitorCallback.free();

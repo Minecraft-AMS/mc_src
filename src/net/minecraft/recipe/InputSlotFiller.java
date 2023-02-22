@@ -3,16 +3,17 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  it.unimi.dsi.fastutil.ints.IntList
  *  it.unimi.dsi.fastutil.ints.IntListIterator
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.recipe;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntListIterator;
@@ -28,13 +29,12 @@ import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class InputSlotFiller<C extends Inventory>
 implements RecipeGridAligner<Integer> {
-    protected static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     protected final RecipeMatcher matcher = new RecipeMatcher();
     protected PlayerInventory inventory;
     protected AbstractRecipeScreenHandler<C> handler;

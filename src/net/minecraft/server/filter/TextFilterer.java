@@ -10,10 +10,9 @@
  *  com.google.gson.stream.JsonReader
  *  com.google.gson.stream.JsonWriter
  *  com.mojang.authlib.GameProfile
- *  org.apache.commons.codec.binary.Base64
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.filter;
 
@@ -25,6 +24,7 @@ import com.google.gson.internal.Streams;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.mojang.authlib.GameProfile;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -36,6 +36,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -48,14 +49,12 @@ import net.minecraft.server.filter.TextStream;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.thread.TaskExecutor;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class TextFilterer
 implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final AtomicInteger NEXT_WORKER_ID = new AtomicInteger(1);
     private static final ThreadFactory THREAD_FACTORY = runnable -> {
         Thread thread = new Thread(runnable);
@@ -68,18 +67,25 @@ implements AutoCloseable {
     private final String apiKey;
     private final int ruleId;
     private final String serverId;
+    private final String roomId;
     final HashIgnorer ignorer;
     final ExecutorService executor;
 
-    private TextFilterer(URI apiUrl, String apiKey, int ruleId, String serverId, HashIgnorer ignorer, int threadsNumber) throws MalformedURLException {
+    private TextFilterer(URL chatEndpoint, URL joinEndpoint, URL leaveEndpoint, String apiKey, int ruleId, String serverId, String roomId, HashIgnorer ignorer, int parallelism) {
         this.apiKey = apiKey;
         this.ruleId = ruleId;
         this.serverId = serverId;
+        this.roomId = roomId;
         this.ignorer = ignorer;
-        this.chatEndpoint = apiUrl.resolve("/v1/chat").toURL();
-        this.joinEndpoint = apiUrl.resolve("/v1/join").toURL();
-        this.leaveEndpoint = apiUrl.resolve("/v1/leave").toURL();
-        this.executor = Executors.newFixedThreadPool(threadsNumber, THREAD_FACTORY);
+        this.chatEndpoint = chatEndpoint;
+        this.joinEndpoint = joinEndpoint;
+        this.leaveEndpoint = leaveEndpoint;
+        this.executor = Executors.newFixedThreadPool(parallelism, THREAD_FACTORY);
+    }
+
+    private static URL getEndpoint(URI root, @Nullable JsonObject endpoints, String key, String fallback) throws MalformedURLException {
+        String string = endpoints != null ? JsonHelper.getString(endpoints, key, fallback) : fallback;
+        return root.resolve("/" + string).toURL();
     }
 
     @Nullable
@@ -96,10 +102,15 @@ implements AutoCloseable {
             }
             int i = JsonHelper.getInt(jsonObject, "ruleId", 1);
             String string2 = JsonHelper.getString(jsonObject, "serverId", "");
+            String string3 = JsonHelper.getString(jsonObject, "roomId", "Java:Chat");
             int j = JsonHelper.getInt(jsonObject, "hashesToDrop", -1);
             int k = JsonHelper.getInt(jsonObject, "maxConcurrentRequests", 7);
+            JsonObject jsonObject2 = JsonHelper.getObject(jsonObject, "endpoints", null);
+            URL uRL = TextFilterer.getEndpoint(uRI, jsonObject2, "chat", "v1/chat");
+            URL uRL2 = TextFilterer.getEndpoint(uRI, jsonObject2, "join", "v1/join");
+            URL uRL3 = TextFilterer.getEndpoint(uRI, jsonObject2, "leave", "v1/leave");
             HashIgnorer hashIgnorer = HashIgnorer.dropHashes(j);
-            return new TextFilterer(uRI, new Base64().encodeToString(string.getBytes(StandardCharsets.US_ASCII)), i, string2, hashIgnorer, k);
+            return new TextFilterer(uRL, uRL2, uRL3, Base64.getEncoder().encodeToString(string.getBytes(StandardCharsets.US_ASCII)), i, string2, string3, hashIgnorer, k);
         }
         catch (Exception exception) {
             LOGGER.warn("Failed to parse chat filter config {}", (Object)config, (Object)exception);
@@ -110,7 +121,7 @@ implements AutoCloseable {
     void sendJoinOrLeaveRequest(GameProfile gameProfile, URL endpoint, Executor executor) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("server", this.serverId);
-        jsonObject.addProperty("room", "Chat");
+        jsonObject.addProperty("room", this.roomId);
         jsonObject.addProperty("user_id", gameProfile.getId().toString());
         jsonObject.addProperty("user_display_name", gameProfile.getName());
         executor.execute(() -> {
@@ -118,7 +129,7 @@ implements AutoCloseable {
                 this.sendRequest(jsonObject, endpoint);
             }
             catch (Exception exception) {
-                LOGGER.warn("Failed to send join/leave packet to {} for player {}", (Object)endpoint, (Object)gameProfile, (Object)exception);
+                LOGGER.warn("Failed to send join/leave packet to {} for player {}", new Object[]{endpoint, gameProfile, exception});
             }
         });
     }
@@ -130,7 +141,7 @@ implements AutoCloseable {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("rule", (Number)this.ruleId);
         jsonObject.addProperty("server", this.serverId);
-        jsonObject.addProperty("room", "Chat");
+        jsonObject.addProperty("room", this.roomId);
         jsonObject.addProperty("player", gameProfile.getId().toString());
         jsonObject.addProperty("player_display_name", gameProfile.getName());
         jsonObject.addProperty("text", message);
@@ -277,7 +288,7 @@ implements AutoCloseable {
 
         @Override
         public CompletableFuture<List<TextStream.Message>> filterTexts(List<String> texts) {
-            List list = (List)texts.stream().map(string -> TextFilterer.this.filterMessage(this.gameProfile, (String)string, TextFilterer.this.ignorer, this.executor)).collect(ImmutableList.toImmutableList());
+            List list = (List)texts.stream().map(text -> TextFilterer.this.filterMessage(this.gameProfile, (String)text, TextFilterer.this.ignorer, this.executor)).collect(ImmutableList.toImmutableList());
             return Util.combine(list).exceptionally(throwable -> ImmutableList.of());
         }
 

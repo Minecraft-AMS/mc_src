@@ -35,11 +35,11 @@ extends Task<E> {
     }
 
     public ForgetAttackTargetTask(Consumer<E> forgetCallback) {
-        this((LivingEntity livingEntity) -> false, forgetCallback);
+        this((LivingEntity target) -> false, forgetCallback);
     }
 
     public ForgetAttackTargetTask() {
-        this((LivingEntity livingEntity) -> false, mobEntity -> {});
+        this((LivingEntity target) -> false, mobEntity -> {});
     }
 
     @Override

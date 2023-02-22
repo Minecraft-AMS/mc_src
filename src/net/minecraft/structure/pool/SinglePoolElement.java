@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.StructureBlockMode;
 import net.minecraft.structure.Structure;
@@ -46,6 +45,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -55,7 +55,7 @@ extends StructurePoolElement {
     private static final Codec<Either<Identifier, Structure>> field_24951 = Codec.of(SinglePoolElement::method_28877, (Decoder)Identifier.CODEC.map(Either::left));
     public static final Codec<SinglePoolElement> field_24952 = RecordCodecBuilder.create(instance -> instance.group(SinglePoolElement.method_28882(), SinglePoolElement.method_28880(), SinglePoolElement.method_28883()).apply((Applicative)instance, SinglePoolElement::new));
     protected final Either<Identifier, Structure> location;
-    protected final Supplier<StructureProcessorList> processors;
+    protected final RegistryEntry<StructureProcessorList> processors;
 
     private static <T> DataResult<T> method_28877(Either<Identifier, Structure> either, DynamicOps<T> dynamicOps, T object) {
         Optional optional = either.left();
@@ -65,7 +65,7 @@ extends StructurePoolElement {
         return Identifier.CODEC.encode((Object)((Identifier)optional.get()), dynamicOps, object);
     }
 
-    protected static <E extends SinglePoolElement> RecordCodecBuilder<E, Supplier<StructureProcessorList>> method_28880() {
+    protected static <E extends SinglePoolElement> RecordCodecBuilder<E, RegistryEntry<StructureProcessorList>> method_28880() {
         return StructureProcessorType.REGISTRY_CODEC.fieldOf("processors").forGetter(singlePoolElement -> singlePoolElement.processors);
     }
 
@@ -73,28 +73,28 @@ extends StructurePoolElement {
         return field_24951.fieldOf("location").forGetter(singlePoolElement -> singlePoolElement.location);
     }
 
-    protected SinglePoolElement(Either<Identifier, Structure> location, Supplier<StructureProcessorList> processors, StructurePool.Projection projection) {
+    protected SinglePoolElement(Either<Identifier, Structure> location, RegistryEntry<StructureProcessorList> registryEntry, StructurePool.Projection projection) {
         super(projection);
         this.location = location;
-        this.processors = processors;
+        this.processors = registryEntry;
     }
 
     public SinglePoolElement(Structure structure) {
-        this((Either<Identifier, Structure>)Either.right((Object)structure), () -> StructureProcessorLists.EMPTY, StructurePool.Projection.RIGID);
+        this((Either<Identifier, Structure>)Either.right((Object)structure), StructureProcessorLists.EMPTY, StructurePool.Projection.RIGID);
     }
 
     @Override
     public Vec3i getStart(StructureManager structureManager, BlockRotation rotation) {
-        Structure structure = this.method_27233(structureManager);
+        Structure structure = this.getStructure(structureManager);
         return structure.getRotatedSize(rotation);
     }
 
-    private Structure method_27233(StructureManager structureManager) {
+    private Structure getStructure(StructureManager structureManager) {
         return (Structure)this.location.map(structureManager::getStructureOrBlank, Function.identity());
     }
 
     public List<Structure.StructureBlockInfo> getDataStructureBlocks(StructureManager structureManager, BlockPos pos, BlockRotation rotation, boolean mirroredAndRotated) {
-        Structure structure = this.method_27233(structureManager);
+        Structure structure = this.getStructure(structureManager);
         List<Structure.StructureBlockInfo> list = structure.getInfosForBlock(pos, new StructurePlacementData().setRotation(rotation), Blocks.STRUCTURE_BLOCK, mirroredAndRotated);
         ArrayList list2 = Lists.newArrayList();
         for (Structure.StructureBlockInfo structureBlockInfo : list) {
@@ -107,7 +107,7 @@ extends StructurePoolElement {
 
     @Override
     public List<Structure.StructureBlockInfo> getStructureBlockInfos(StructureManager structureManager, BlockPos pos, BlockRotation rotation, Random random) {
-        Structure structure = this.method_27233(structureManager);
+        Structure structure = this.getStructure(structureManager);
         List<Structure.StructureBlockInfo> list = structure.getInfosForBlock(pos, new StructurePlacementData().setRotation(rotation), Blocks.JIGSAW, true);
         Collections.shuffle(list, random);
         return list;
@@ -115,14 +115,14 @@ extends StructurePoolElement {
 
     @Override
     public BlockBox getBoundingBox(StructureManager structureManager, BlockPos pos, BlockRotation rotation) {
-        Structure structure = this.method_27233(structureManager);
+        Structure structure = this.getStructure(structureManager);
         return structure.calculateBoundingBox(new StructurePlacementData().setRotation(rotation), pos);
     }
 
     @Override
     public boolean generate(StructureManager structureManager, StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, BlockPos pos, BlockPos blockPos, BlockRotation rotation, BlockBox box, Random random, boolean keepJigsaws) {
         StructurePlacementData structurePlacementData;
-        Structure structure = this.method_27233(structureManager);
+        Structure structure = this.getStructure(structureManager);
         if (structure.place(world, pos, blockPos, structurePlacementData = this.createPlacementData(rotation, box, keepJigsaws), random, 18)) {
             List<Structure.StructureBlockInfo> list = Structure.process(world, pos, blockPos, structurePlacementData, this.getDataStructureBlocks(structureManager, pos, rotation, false));
             for (Structure.StructureBlockInfo structureBlockInfo : list) {
@@ -140,11 +140,11 @@ extends StructurePoolElement {
         structurePlacementData.setUpdateNeighbors(true);
         structurePlacementData.setIgnoreEntities(false);
         structurePlacementData.addProcessor(BlockIgnoreStructureProcessor.IGNORE_STRUCTURE_BLOCKS);
-        structurePlacementData.method_27264(true);
+        structurePlacementData.setInitializeMobs(true);
         if (!keepJigsaws) {
             structurePlacementData.addProcessor(JigsawReplacementStructureProcessor.INSTANCE);
         }
-        this.processors.get().getList().forEach(structurePlacementData::addProcessor);
+        this.processors.value().getList().forEach(structurePlacementData::addProcessor);
         this.getProjection().getProcessors().forEach(structurePlacementData::addProcessor);
         return structurePlacementData;
     }

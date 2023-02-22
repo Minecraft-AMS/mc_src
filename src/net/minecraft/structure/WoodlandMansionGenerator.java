@@ -20,9 +20,9 @@ import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.mob.IllagerEntity;
 import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.SimpleStructurePiece;
 import net.minecraft.structure.Structure;
+import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePlacementData;
@@ -972,21 +972,21 @@ public class WoodlandMansionGenerator {
 
     public static class Piece
     extends SimpleStructurePiece {
-        public Piece(StructureManager structureManager, String template, BlockPos pos, BlockRotation rotation) {
-            this(structureManager, template, pos, rotation, BlockMirror.NONE);
+        public Piece(StructureManager manager, String template, BlockPos pos, BlockRotation rotation) {
+            this(manager, template, pos, rotation, BlockMirror.NONE);
         }
 
-        public Piece(StructureManager structureManager, String template, BlockPos pos, BlockRotation rotation, BlockMirror mirror) {
-            super(StructurePieceType.WOODLAND_MANSION, 0, structureManager, Piece.getId(template), template, Piece.createPlacementData(mirror, rotation), pos);
+        public Piece(StructureManager manager, String template, BlockPos pos, BlockRotation rotation, BlockMirror mirror) {
+            super(StructurePieceType.WOODLAND_MANSION, 0, manager, Piece.getId(template), template, Piece.createPlacementData(mirror, rotation), pos);
         }
 
-        public Piece(ServerWorld world, NbtCompound nbt) {
-            super(StructurePieceType.WOODLAND_MANSION, nbt, world, (Identifier identifier) -> Piece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mi")), BlockRotation.valueOf(nbt.getString("Rot"))));
+        public Piece(StructureManager manager, NbtCompound nbt) {
+            super(StructurePieceType.WOODLAND_MANSION, nbt, manager, (Identifier identifier) -> Piece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mi")), BlockRotation.valueOf(nbt.getString("Rot"))));
         }
 
         @Override
         protected Identifier getId() {
-            return Piece.getId(this.identifier);
+            return Piece.getId(this.template);
         }
 
         private static Identifier getId(String identifier) {
@@ -998,8 +998,8 @@ public class WoodlandMansionGenerator {
         }
 
         @Override
-        protected void writeNbt(ServerWorld world, NbtCompound nbt) {
-            super.writeNbt(world, nbt);
+        protected void writeNbt(StructureContext context, NbtCompound nbt) {
+            super.writeNbt(context, nbt);
             nbt.putString("Rot", this.placementData.getRotation().name());
             nbt.putString("Mi", this.placementData.getMirror().name());
         }

@@ -3,17 +3,20 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableSet
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DynamicOps
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.structure;
 
 import com.google.common.collect.ImmutableSet;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DynamicOps;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -26,7 +29,7 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePiecesHolder;
 import net.minecraft.util.BlockMirror;
@@ -45,12 +48,11 @@ import net.minecraft.world.WorldView;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.StructureWeightType;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public abstract class StructurePiece {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     protected static final BlockState AIR = Blocks.CAVE_AIR.getDefaultState();
     protected BlockBox boundingBox;
     @Nullable
@@ -84,27 +86,27 @@ public abstract class StructurePiece {
         return Direction.Type.HORIZONTAL.random(random);
     }
 
-    public final NbtCompound toNbt(ServerWorld world) {
+    public final NbtCompound toNbt(StructureContext context) {
         NbtCompound nbtCompound = new NbtCompound();
         nbtCompound.putString("id", Registry.STRUCTURE_PIECE.getId(this.getType()).toString());
         BlockBox.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.boundingBox).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbtCompound.put("BB", (NbtElement)nbtElement));
         Direction direction = this.getFacing();
         nbtCompound.putInt("O", direction == null ? -1 : direction.getHorizontal());
         nbtCompound.putInt("GD", this.chainLength);
-        this.writeNbt(world, nbtCompound);
+        this.writeNbt(context, nbtCompound);
         return nbtCompound;
     }
 
-    protected abstract void writeNbt(ServerWorld var1, NbtCompound var2);
+    protected abstract void writeNbt(StructureContext var1, NbtCompound var2);
 
-    public StructureWeightType method_33882() {
+    public StructureWeightType getWeightType() {
         return StructureWeightType.BEARD;
     }
 
-    public void fillOpenings(StructurePiece start, StructurePiecesHolder structurePiecesHolder, Random random) {
+    public void fillOpenings(StructurePiece start, StructurePiecesHolder holder, Random random) {
     }
 
-    public abstract boolean generate(StructureWorldAccess var1, StructureAccessor var2, ChunkGenerator var3, Random var4, BlockBox var5, ChunkPos var6, BlockPos var7);
+    public abstract void generate(StructureWorldAccess var1, StructureAccessor var2, ChunkGenerator var3, Random var4, BlockBox var5, ChunkPos var6, BlockPos var7);
 
     public BlockBox getBoundingBox() {
         return this.boundingBox;
@@ -192,7 +194,7 @@ public abstract class StructurePiece {
         world.setBlockState(blockPos, block, 2);
         FluidState fluidState = world.getFluidState(blockPos);
         if (!fluidState.isEmpty()) {
-            world.getFluidTickScheduler().schedule(blockPos, fluidState.getFluid(), 0);
+            world.createAndScheduleFluidTick(blockPos, fluidState.getFluid(), 0);
         }
         if (BLOCKS_NEEDING_POST_PROCESSING.contains(block.getBlock())) {
             world.getChunk(blockPos).markBlockForPostProcessing(blockPos);
@@ -390,6 +392,19 @@ public abstract class StructurePiece {
 
     public void translate(int x, int y, int z) {
         this.boundingBox.move(x, y, z);
+    }
+
+    public static BlockBox boundingBox(Stream<StructurePiece> pieces) {
+        return BlockBox.encompass(pieces.map(StructurePiece::getBoundingBox)::iterator).orElseThrow(() -> new IllegalStateException("Unable to calculate boundingbox without pieces"));
+    }
+
+    @Nullable
+    public static StructurePiece firstIntersecting(List<StructurePiece> pieces, BlockBox box) {
+        for (StructurePiece structurePiece : pieces) {
+            if (!structurePiece.getBoundingBox().intersects(box)) continue;
+            return structurePiece;
+        }
+        return null;
     }
 
     @Nullable

@@ -41,7 +41,7 @@ extends Enum<Formatting> {
     public static final /* enum */ Formatting UNDERLINE = new Formatting("UNDERLINE", 'n', true);
     public static final /* enum */ Formatting ITALIC = new Formatting("ITALIC", 'o', true);
     public static final /* enum */ Formatting RESET = new Formatting("RESET", 'r', -1, null);
-    public static final char field_33292 = '\u00a7';
+    public static final char FORMATTING_CODE_PREFIX = '\u00a7';
     private static final Map<String, Formatting> BY_NAME;
     private static final Pattern FORMATTING_CODE_PATTERN;
     private final String name;

@@ -3,15 +3,16 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.network;
 
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -24,13 +25,12 @@ import net.minecraft.client.toast.AdvancementToast;
 import net.minecraft.network.packet.c2s.play.AdvancementTabC2SPacket;
 import net.minecraft.network.packet.s2c.play.AdvancementUpdateS2CPacket;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientAdvancementManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final MinecraftClient client;
     private final AdvancementManager manager = new AdvancementManager();
     private final Map<Advancement, AdvancementProgress> advancementProgresses = Maps.newHashMap();

@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  io.netty.handler.codec.DecoderException
  *  io.netty.handler.codec.EncoderException
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
@@ -10,13 +11,13 @@
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  org.apache.commons.lang3.ObjectUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.data;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -37,12 +38,11 @@ import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class DataTracker {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Object2IntMap<Class<? extends Entity>> TRACKED_ENTITIES = new Object2IntOpenHashMap();
     private static final int field_33377 = 255;
     private static final int field_33378 = 254;
@@ -62,7 +62,7 @@ public class DataTracker {
             try {
                 Class<?> class_ = Class.forName(Thread.currentThread().getStackTrace()[2].getClassName());
                 if (!class_.equals(entityClass)) {
-                    LOGGER.debug("defineId called for: {} from {}", entityClass, class_, (Object)new RuntimeException());
+                    LOGGER.debug("defineId called for: {} from {}", new Object[]{entityClass, class_, new RuntimeException()});
                 }
             }
             catch (ClassNotFoundException class_) {
@@ -146,13 +146,13 @@ public class DataTracker {
         return this.dirty;
     }
 
-    public static void entriesToPacket(@Nullable List<Entry<?>> list, PacketByteBuf packetByteBuf) {
-        if (list != null) {
-            for (Entry<?> entry : list) {
-                DataTracker.writeEntryToPacket(packetByteBuf, entry);
+    public static void entriesToPacket(@Nullable List<Entry<?>> entries, PacketByteBuf buf) {
+        if (entries != null) {
+            for (Entry<?> entry : entries) {
+                DataTracker.writeEntryToPacket(buf, entry);
             }
         }
-        packetByteBuf.writeByte(255);
+        buf.writeByte(255);
     }
 
     @Nullable
@@ -224,10 +224,10 @@ public class DataTracker {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public void writeUpdatedEntries(List<Entry<?>> list) {
+    public void writeUpdatedEntries(List<Entry<?>> entries) {
         this.lock.writeLock().lock();
         try {
-            for (Entry<?> entry : list) {
+            for (Entry<?> entry : entries) {
                 Entry entry2 = (Entry)this.entries.get(entry.getData().getId());
                 if (entry2 == null) continue;
                 this.copyToFrom(entry2, entry);
@@ -240,11 +240,11 @@ public class DataTracker {
         this.dirty = true;
     }
 
-    private <T> void copyToFrom(Entry<T> entry, Entry<?> entry2) {
-        if (!Objects.equals(entry2.data.getType(), entry.data.getType())) {
-            throw new IllegalStateException(String.format("Invalid entity data item type for field %d on entity %s: old=%s(%s), new=%s(%s)", entry.data.getId(), this.trackedEntity, entry.value, entry.value.getClass(), entry2.value, entry2.value.getClass()));
+    private <T> void copyToFrom(Entry<T> to, Entry<?> from) {
+        if (!Objects.equals(from.data.getType(), to.data.getType())) {
+            throw new IllegalStateException(String.format("Invalid entity data item type for field %d on entity %s: old=%s(%s), new=%s(%s)", to.data.getId(), this.trackedEntity, to.value, to.value.getClass(), from.value, from.value.getClass()));
         }
-        entry.set(entry2.get());
+        to.set(from.get());
     }
 
     public boolean isEmpty() {

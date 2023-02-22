@@ -8,11 +8,11 @@ public class HungerConstants {
     public static final float field_30705 = 20.0f;
     public static final float INITIAL_SATURATION_LEVEL = 5.0f;
     public static final float field_30707 = 2.5f;
-    public static final float EXHAUSION_UNIT = 4.0f;
+    public static final float EXHAUSTION_UNIT = 4.0f;
     public static final int SLOW_HEALING_STARVING_INTERVAL = 80;
     public static final int FAST_HEALING_INTERVAL = 10;
     public static final int SLOW_HEALING_FOOD_LEVEL = 18;
-    public static final int EXHAUSION_PER_HITPOINT = 6;
+    public static final int EXHAUSTION_PER_HITPOINT = 6;
     public static final int STARVING_FOOD_LEVEL = 0;
     public static final float field_30714 = 0.1f;
     public static final float field_30715 = 0.3f;

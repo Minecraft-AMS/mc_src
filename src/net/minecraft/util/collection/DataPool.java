@@ -15,11 +15,16 @@ import java.util.Optional;
 import java.util.Random;
 import net.minecraft.util.collection.Pool;
 import net.minecraft.util.collection.Weighted;
+import net.minecraft.util.dynamic.Codecs;
 
 public class DataPool<E>
 extends Pool<Weighted.Present<E>> {
+    public static <E> Codec<DataPool<E>> method_39521(Codec<E> codec) {
+        return Weighted.Present.createCodec(codec).listOf().xmap(DataPool::new, Pool::getEntries);
+    }
+
     public static <E> Codec<DataPool<E>> createCodec(Codec<E> dataCodec) {
-        return Weighted.Present.createCodec(dataCodec).listOf().xmap(DataPool::new, Pool::getEntries);
+        return Codecs.nonEmptyList(Weighted.Present.createCodec(dataCodec).listOf()).xmap(DataPool::new, Pool::getEntries);
     }
 
     DataPool(List<? extends Weighted.Present<E>> list) {
@@ -28,6 +33,14 @@ extends Pool<Weighted.Present<E>> {
 
     public static <E> Builder<E> builder() {
         return new Builder();
+    }
+
+    public static <E> DataPool<E> empty() {
+        return new DataPool<E>(List.of());
+    }
+
+    public static <E> DataPool<E> of(E object) {
+        return new DataPool<E>(List.of(Weighted.of(object, 1)));
     }
 
     public Optional<E> getDataOrEmpty(Random random) {

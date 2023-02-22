@@ -117,6 +117,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.world.CommandBlockExecutor;
 import net.minecraft.world.Difficulty;
@@ -144,8 +145,8 @@ extends LivingEntity {
     private static final TrackedData<Integer> SCORE = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.INTEGER);
     protected static final TrackedData<Byte> PLAYER_MODEL_PARTS = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BYTE);
     protected static final TrackedData<Byte> MAIN_ARM = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.BYTE);
-    protected static final TrackedData<NbtCompound> LEFT_SHOULDER_ENTITY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.TAG_COMPOUND);
-    protected static final TrackedData<NbtCompound> RIGHT_SHOULDER_ENTITY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.TAG_COMPOUND);
+    protected static final TrackedData<NbtCompound> LEFT_SHOULDER_ENTITY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.NBT_COMPOUND);
+    protected static final TrackedData<NbtCompound> RIGHT_SHOULDER_ENTITY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.NBT_COMPOUND);
     private long shoulderEntityAddedTime;
     private final PlayerInventory inventory = new PlayerInventory(this);
     protected EnderChestInventory enderChestInventory = new EnderChestInventory();
@@ -199,7 +200,7 @@ extends LivingEntity {
             return false;
         }
         ItemStack itemStack = this.getMainHandStack();
-        return itemStack.isEmpty() || !itemStack.canDestroy(world.getTagManager(), new CachedBlockPosition(world, pos, false));
+        return itemStack.isEmpty() || !itemStack.canDestroy(world.getRegistryManager().get(Registry.BLOCK_KEY), new CachedBlockPosition(world, pos, false));
     }
 
     public static DefaultAttributeContainer.Builder createPlayerAttributes() {
@@ -458,9 +459,9 @@ extends LivingEntity {
         this.inventory.updateItems();
         this.prevStrideDistance = this.strideDistance;
         super.tickMovement();
-        this.flyingSpeed = 0.02f;
+        this.airStrafingSpeed = 0.02f;
         if (this.isSprinting()) {
-            this.flyingSpeed = (float)((double)this.flyingSpeed + 0.005999999865889549);
+            this.airStrafingSpeed += 0.006f;
         }
         this.setMovementSpeed((float)this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
         float f = !this.onGround || this.isDead() || this.isSwimming() ? 0.0f : Math.min(0.1f, (float)this.getVelocity().horizontalLength());
@@ -515,6 +516,14 @@ extends LivingEntity {
     public void addScore(int score) {
         int i = this.getScore();
         this.dataTracker.set(SCORE, i + score);
+    }
+
+    public void useRiptide(int riptideTicks) {
+        this.riptideTicks = riptideTicks;
+        if (!this.world.isClient) {
+            this.dropShoulderEntities();
+            this.setLivingFlag(4, true);
+        }
     }
 
     @Override
@@ -729,7 +738,9 @@ extends LivingEntity {
         if (this.isDead()) {
             return false;
         }
-        this.dropShoulderEntities();
+        if (!this.world.isClient) {
+            this.dropShoulderEntities();
+        }
         if (source.isScaledWithDifficulty()) {
             if (this.world.getDifficulty() == Difficulty.PEACEFUL) {
                 amount = 0.0f;
@@ -793,7 +804,7 @@ extends LivingEntity {
         if (amount >= 3.0f) {
             int i = 1 + MathHelper.floor(amount);
             Hand hand = this.getActiveHand();
-            this.activeItemStack.damage(i, this, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+            this.activeItemStack.damage(i, this, player -> player.sendToolBreakStatus(hand));
             if (this.activeItemStack.isEmpty()) {
                 if (hand == Hand.MAIN_HAND) {
                     this.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
@@ -1156,12 +1167,12 @@ extends LivingEntity {
         return Either.right((Object)((Object)Unit.INSTANCE));
     }
 
-    public void wakeUp(boolean bl, boolean updateSleepingPlayers) {
+    public void wakeUp(boolean skipSleepTimer, boolean updateSleepingPlayers) {
         super.wakeUp();
         if (this.world instanceof ServerWorld && updateSleepingPlayers) {
             ((ServerWorld)this.world).updateSleepingPlayers();
         }
-        this.sleepTimer = bl ? 0 : 100;
+        this.sleepTimer = skipSleepTimer ? 0 : 100;
     }
 
     @Override
@@ -1169,31 +1180,31 @@ extends LivingEntity {
         this.wakeUp(true, true);
     }
 
-    public static Optional<Vec3d> findRespawnPosition(ServerWorld world, BlockPos pos, float f, boolean bl, boolean bl2) {
+    public static Optional<Vec3d> findRespawnPosition(ServerWorld world, BlockPos pos, float angle, boolean forced, boolean alive) {
         BlockState blockState = world.getBlockState(pos);
         Block block = blockState.getBlock();
         if (block instanceof RespawnAnchorBlock && blockState.get(RespawnAnchorBlock.CHARGES) > 0 && RespawnAnchorBlock.isNether(world)) {
             Optional<Vec3d> optional = RespawnAnchorBlock.findRespawnPosition(EntityType.PLAYER, world, pos);
-            if (!bl2 && optional.isPresent()) {
+            if (!alive && optional.isPresent()) {
                 world.setBlockState(pos, (BlockState)blockState.with(RespawnAnchorBlock.CHARGES, blockState.get(RespawnAnchorBlock.CHARGES) - 1), 3);
             }
             return optional;
         }
         if (block instanceof BedBlock && BedBlock.isBedWorking(world)) {
-            return BedBlock.findWakeUpPosition(EntityType.PLAYER, world, pos, f);
+            return BedBlock.findWakeUpPosition(EntityType.PLAYER, world, pos, angle);
         }
-        if (!bl) {
+        if (!forced) {
             return Optional.empty();
         }
-        boolean bl3 = block.canMobSpawnInside();
-        boolean bl4 = world.getBlockState(pos.up()).getBlock().canMobSpawnInside();
-        if (bl3 && bl4) {
+        boolean bl = block.canMobSpawnInside();
+        boolean bl2 = world.getBlockState(pos.up()).getBlock().canMobSpawnInside();
+        if (bl && bl2) {
             return Optional.of(new Vec3d((double)pos.getX() + 0.5, (double)pos.getY() + 0.1, (double)pos.getZ() + 0.5));
         }
         return Optional.empty();
     }
 
-    public boolean isSleepingLongEnough() {
+    public boolean canResetTimeBySleeping() {
         return this.isSleeping() && this.sleepTimer >= 100;
     }
 
@@ -1261,13 +1272,13 @@ extends LivingEntity {
         }
         if (this.abilities.flying && !this.hasVehicle()) {
             g = this.getVelocity().y;
-            float i = this.flyingSpeed;
-            this.flyingSpeed = this.abilities.getFlySpeed() * (float)(this.isSprinting() ? 2 : 1);
+            float i = this.airStrafingSpeed;
+            this.airStrafingSpeed = this.abilities.getFlySpeed() * (float)(this.isSprinting() ? 2 : 1);
             super.travel(movementInput);
             Vec3d vec3d2 = this.getVelocity();
             this.setVelocity(vec3d2.x, g * 0.6, vec3d2.z);
-            this.flyingSpeed = i;
-            this.fallDistance = 0.0f;
+            this.airStrafingSpeed = i;
+            this.onLanding();
             this.setFlag(7, false);
         } else {
             super.travel(movementInput);
@@ -1399,11 +1410,8 @@ extends LivingEntity {
     }
 
     @Override
-    protected SoundEvent getFallSound(int distance) {
-        if (distance > 4) {
-            return SoundEvents.ENTITY_PLAYER_BIG_FALL;
-        }
-        return SoundEvents.ENTITY_PLAYER_SMALL_FALL;
+    public LivingEntity.FallSounds getFallSounds() {
+        return new LivingEntity.FallSounds(SoundEvents.ENTITY_PLAYER_SMALL_FALL, SoundEvents.ENTITY_PLAYER_BIG_FALL);
     }
 
     @Override
@@ -1508,7 +1516,7 @@ extends LivingEntity {
         }
         BlockPos blockPos = pos.offset(facing.getOpposite());
         CachedBlockPosition cachedBlockPosition = new CachedBlockPosition(this.world, blockPos, false);
-        return stack.canPlaceOn(this.world.getTagManager(), cachedBlockPosition);
+        return stack.canPlaceOn(this.world.getRegistryManager().get(Registry.BLOCK_KEY), cachedBlockPosition);
     }
 
     @Override
@@ -1732,8 +1740,8 @@ extends LivingEntity {
     }
 
     @Override
-    public void setFireTicks(int ticks) {
-        super.setFireTicks(this.abilities.invulnerable ? Math.min(ticks, 1) : ticks);
+    public void setFireTicks(int fireTicks) {
+        super.setFireTicks(this.abilities.invulnerable ? Math.min(fireTicks, 1) : fireTicks);
     }
 
     @Override
@@ -1842,31 +1850,31 @@ extends LivingEntity {
     }
 
     @Override
-    public Vec3d method_30951(float f) {
+    public Vec3d getLeashPos(float delta) {
         double d = 0.22 * (this.getMainArm() == Arm.RIGHT ? -1.0 : 1.0);
-        float g = MathHelper.lerp(f * 0.5f, this.getPitch(), this.prevPitch) * ((float)Math.PI / 180);
-        float h = MathHelper.lerp(f, this.prevBodyYaw, this.bodyYaw) * ((float)Math.PI / 180);
+        float f = MathHelper.lerp(delta * 0.5f, this.getPitch(), this.prevPitch) * ((float)Math.PI / 180);
+        float g = MathHelper.lerp(delta, this.prevBodyYaw, this.bodyYaw) * ((float)Math.PI / 180);
         if (this.isFallFlying() || this.isUsingRiptide()) {
-            float l;
-            Vec3d vec3d = this.getRotationVec(f);
+            float k;
+            Vec3d vec3d = this.getRotationVec(delta);
             Vec3d vec3d2 = this.getVelocity();
             double e = vec3d2.horizontalLengthSquared();
-            double i = vec3d.horizontalLengthSquared();
-            if (e > 0.0 && i > 0.0) {
-                double j = (vec3d2.x * vec3d.x + vec3d2.z * vec3d.z) / Math.sqrt(e * i);
-                double k = vec3d2.x * vec3d.z - vec3d2.z * vec3d.x;
-                l = (float)(Math.signum(k) * Math.acos(j));
+            double h = vec3d.horizontalLengthSquared();
+            if (e > 0.0 && h > 0.0) {
+                double i = (vec3d2.x * vec3d.x + vec3d2.z * vec3d.z) / Math.sqrt(e * h);
+                double j = vec3d2.x * vec3d.z - vec3d2.z * vec3d.x;
+                k = (float)(Math.signum(j) * Math.acos(i));
             } else {
-                l = 0.0f;
+                k = 0.0f;
             }
-            return this.getLerpedPos(f).add(new Vec3d(d, -0.11, 0.85).rotateZ(-l).rotateX(-g).rotateY(-h));
+            return this.getLerpedPos(delta).add(new Vec3d(d, -0.11, 0.85).rotateZ(-k).rotateX(-f).rotateY(-g));
         }
         if (this.isInSwimmingPose()) {
-            return this.getLerpedPos(f).add(new Vec3d(d, 0.2, -0.15).rotateX(-g).rotateY(-h));
+            return this.getLerpedPos(delta).add(new Vec3d(d, 0.2, -0.15).rotateX(-f).rotateY(-g));
         }
-        double m = this.getBoundingBox().getYLength() - 1.0;
+        double l = this.getBoundingBox().getYLength() - 1.0;
         double e = this.isInSneakingPose() ? -0.2 : 0.07;
-        return this.getLerpedPos(f).add(new Vec3d(d, m, e).rotateY(-h));
+        return this.getLerpedPos(delta).add(new Vec3d(d, l, e).rotateY(-g));
     }
 
     @Override
@@ -1892,7 +1900,7 @@ extends LivingEntity {
         public static final /* enum */ SleepFailureReason OTHER_PROBLEM = new SleepFailureReason();
         public static final /* enum */ SleepFailureReason NOT_SAFE = new SleepFailureReason(new TranslatableText("block.minecraft.bed.not_safe"));
         @Nullable
-        private final Text text;
+        private final Text message;
         private static final /* synthetic */ SleepFailureReason[] field_7526;
 
         public static SleepFailureReason[] values() {
@@ -1904,16 +1912,16 @@ extends LivingEntity {
         }
 
         private SleepFailureReason() {
-            this.text = null;
+            this.message = null;
         }
 
-        private SleepFailureReason(Text text) {
-            this.text = text;
+        private SleepFailureReason(Text message) {
+            this.message = message;
         }
 
         @Nullable
-        public Text toText() {
-            return this.text;
+        public Text getMessage() {
+            return this.message;
         }
 
         private static /* synthetic */ SleepFailureReason[] method_36661() {

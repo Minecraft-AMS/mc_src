@@ -78,7 +78,7 @@ extends AnimalEntity {
     static final TargetPredicate ASK_FOR_BAMBOO_TARGET = TargetPredicate.createNonAttackable().setBaseMaxDistance(8.0);
     private static final int SNEEZING_FLAG = 2;
     private static final int PLAYING_FLAG = 4;
-    private static final int SCARED_FLAG = 8;
+    private static final int SITTING_FLAG = 8;
     private static final int LYING_ON_BACK_FLAG = 16;
     private static final int EATING_ANIMATION_INTERVAL = 5;
     public static final int MAIN_GENE_MUTATION_CHANCE = 32;
@@ -87,8 +87,8 @@ extends AnimalEntity {
     boolean shouldAttack;
     public int playingTicks;
     private Vec3d playingJump;
-    private float scaredAnimationProgress;
-    private float lastScaredAnimationProgress;
+    private float sittingAnimationProgress;
+    private float lastSittingAnimationProgress;
     private float lieOnBackAnimationProgress;
     private float lastLieOnBackAnimationProgress;
     private float rollOverAnimationProgress;
@@ -128,12 +128,12 @@ extends AnimalEntity {
         return this.hasPandaFlag(2);
     }
 
-    public boolean isScared() {
+    public boolean isSitting() {
         return this.hasPandaFlag(8);
     }
 
-    public void setScared(boolean scared) {
-        this.setPandaFlag(8, scared);
+    public void setSitting(boolean sitting) {
+        this.setPandaFlag(8, sitting);
     }
 
     public boolean isLyingOnBack() {
@@ -257,7 +257,7 @@ extends AnimalEntity {
     @Override
     protected void initGoals() {
         this.goalSelector.add(0, new SwimGoal(this));
-        this.goalSelector.add(2, new ExtinguishFireGoal(this, 2.0));
+        this.goalSelector.add(2, new PandaEscapeDangerGoal(this, 2.0));
         this.goalSelector.add(2, new PandaMateGoal(this, 1.0));
         this.goalSelector.add(3, new AttackGoal(this, (double)1.2f, true));
         this.goalSelector.add(4, new TemptGoal(this, 1.0, Ingredient.ofItems(Blocks.BAMBOO.asItem()), false));
@@ -324,22 +324,23 @@ extends AnimalEntity {
 
     @Override
     public void tick() {
+        LivingEntity livingEntity;
         super.tick();
         if (this.isWorried()) {
             if (this.world.isThundering() && !this.isTouchingWater()) {
-                this.setScared(true);
+                this.setSitting(true);
                 this.setEating(false);
             } else if (!this.isEating()) {
-                this.setScared(false);
+                this.setSitting(false);
             }
         }
-        if (this.getTarget() == null) {
+        if ((livingEntity = this.getTarget()) == null) {
             this.shouldGetRevenge = false;
             this.shouldAttack = false;
         }
         if (this.getAskForBambooTicks() > 0) {
-            if (this.getTarget() != null) {
-                this.lookAtEntity(this.getTarget(), 90.0f, 90.0f);
+            if (livingEntity != null) {
+                this.lookAtEntity(livingEntity, 90.0f, 90.0f);
             }
             if (this.getAskForBambooTicks() == 29 || this.getAskForBambooTicks() == 14) {
                 this.playSound(SoundEvents.ENTITY_PANDA_CANT_BREED, 1.0f, 1.0f);
@@ -360,10 +361,10 @@ extends AnimalEntity {
         } else {
             this.playingTicks = 0;
         }
-        if (this.isScared()) {
+        if (this.isSitting()) {
             this.setPitch(0.0f);
         }
-        this.updateScaredAnimation();
+        this.updateSittingAnimation();
         this.updateEatingAnimation();
         this.updateLieOnBackAnimation();
         this.updateRollOverAnimation();
@@ -374,9 +375,9 @@ extends AnimalEntity {
     }
 
     private void updateEatingAnimation() {
-        if (!this.isEating() && this.isScared() && !this.isScaredByThunderstorm() && !this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty() && this.random.nextInt(80) == 1) {
+        if (!this.isEating() && this.isSitting() && !this.isScaredByThunderstorm() && !this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty() && this.random.nextInt(80) == 1) {
             this.setEating(true);
-        } else if (this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty() || !this.isScared()) {
+        } else if (this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty() || !this.isSitting()) {
             this.setEating(false);
         }
         if (this.isEating()) {
@@ -387,7 +388,7 @@ extends AnimalEntity {
                         this.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
                         this.emitGameEvent(GameEvent.EAT, this.getCameraBlockPos());
                     }
-                    this.setScared(false);
+                    this.setSitting(false);
                 }
                 this.setEating(false);
                 return;
@@ -412,9 +413,9 @@ extends AnimalEntity {
         }
     }
 
-    private void updateScaredAnimation() {
-        this.lastScaredAnimationProgress = this.scaredAnimationProgress;
-        this.scaredAnimationProgress = this.isScared() ? Math.min(1.0f, this.scaredAnimationProgress + 0.15f) : Math.max(0.0f, this.scaredAnimationProgress - 0.19f);
+    private void updateSittingAnimation() {
+        this.lastSittingAnimationProgress = this.sittingAnimationProgress;
+        this.sittingAnimationProgress = this.isSitting() ? Math.min(1.0f, this.sittingAnimationProgress + 0.15f) : Math.max(0.0f, this.sittingAnimationProgress - 0.19f);
     }
 
     private void updateLieOnBackAnimation() {
@@ -427,8 +428,8 @@ extends AnimalEntity {
         this.rollOverAnimationProgress = this.isPlaying() ? Math.min(1.0f, this.rollOverAnimationProgress + 0.15f) : Math.max(0.0f, this.rollOverAnimationProgress - 0.19f);
     }
 
-    public float getScaredAnimationProgress(float tickDelta) {
-        return MathHelper.lerp(tickDelta, this.lastScaredAnimationProgress, this.scaredAnimationProgress);
+    public float getSittingAnimationProgress(float tickDelta) {
+        return MathHelper.lerp(tickDelta, this.lastSittingAnimationProgress, this.sittingAnimationProgress);
     }
 
     public float getLieOnBackAnimationProgress(float tickDelta) {
@@ -488,7 +489,9 @@ extends AnimalEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        this.setScared(false);
+        if (!this.world.isClient) {
+            this.setSitting(false);
+        }
         return super.damage(source, amount);
     }
 
@@ -548,7 +551,7 @@ extends AnimalEntity {
         if (!this.isTouchingWater()) {
             this.setForwardSpeed(0.0f);
             this.getNavigation().stop();
-            this.setScared(true);
+            this.setSitting(true);
         }
     }
 
@@ -574,7 +577,7 @@ extends AnimalEntity {
                 this.eat(player, hand, itemStack);
                 this.lovePlayer(player);
                 this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
-            } else if (!(this.world.isClient || this.isScared() || this.isTouchingWater())) {
+            } else if (!(this.world.isClient || this.isSitting() || this.isTouchingWater())) {
                 this.stop();
                 this.setEating(true);
                 ItemStack itemStack2 = this.getEquippedStack(EquipmentSlot.MAINHAND);
@@ -630,7 +633,7 @@ extends AnimalEntity {
     }
 
     public boolean isIdle() {
-        return !this.isLyingOnBack() && !this.isScaredByThunderstorm() && !this.isEating() && !this.isPlaying() && !this.isScared();
+        return !this.isLyingOnBack() && !this.isScaredByThunderstorm() && !this.isEating() && !this.isPlaying() && !this.isSitting();
     }
 
     static class PandaMoveControl
@@ -751,33 +754,23 @@ extends AnimalEntity {
         }
     }
 
-    static class ExtinguishFireGoal
+    static class PandaEscapeDangerGoal
     extends EscapeDangerGoal {
         private final PandaEntity panda;
 
-        public ExtinguishFireGoal(PandaEntity panda, double speed) {
+        public PandaEscapeDangerGoal(PandaEntity panda, double speed) {
             super(panda, speed);
             this.panda = panda;
         }
 
         @Override
-        public boolean canStart() {
-            if (!this.panda.isOnFire()) {
-                return false;
-            }
-            BlockPos blockPos = this.locateClosestWater(this.mob.world, this.mob, 5, 4);
-            if (blockPos != null) {
-                this.targetX = blockPos.getX();
-                this.targetY = blockPos.getY();
-                this.targetZ = blockPos.getZ();
-                return true;
-            }
-            return this.findTarget();
+        protected boolean isInDanger() {
+            return this.mob.shouldEscapePowderSnow() || this.mob.isOnFire();
         }
 
         @Override
         public boolean shouldContinue() {
-            if (this.panda.isScared()) {
+            if (this.panda.isSitting()) {
                 this.panda.getNavigation().stop();
                 return false;
             }
@@ -785,7 +778,7 @@ extends AnimalEntity {
         }
     }
 
-    class PandaMateGoal
+    static class PandaMateGoal
     extends AnimalMateGoal {
         private final PandaEntity panda;
         private int nextAskPlayerForBambooAge;
@@ -887,15 +880,15 @@ extends AnimalEntity {
 
         @Override
         public boolean shouldContinue() {
-            if (PandaEntity.this.isTouchingWater() || !PandaEntity.this.isLazy() && PandaEntity.this.random.nextInt(600) == 1) {
+            if (PandaEntity.this.isTouchingWater() || !PandaEntity.this.isLazy() && PandaEntity.this.random.nextInt(PickUpFoodGoal.toGoalTicks(600)) == 1) {
                 return false;
             }
-            return PandaEntity.this.random.nextInt(2000) != 1;
+            return PandaEntity.this.random.nextInt(PickUpFoodGoal.toGoalTicks(2000)) != 1;
         }
 
         @Override
         public void tick() {
-            if (!PandaEntity.this.isScared() && !PandaEntity.this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty()) {
+            if (!PandaEntity.this.isSitting() && !PandaEntity.this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty()) {
                 PandaEntity.this.stop();
             }
         }
@@ -920,7 +913,7 @@ extends AnimalEntity {
                 int i = PandaEntity.this.isLazy() ? PandaEntity.this.random.nextInt(50) + 10 : PandaEntity.this.random.nextInt(150) + 10;
                 this.startAge = PandaEntity.this.age + i * 20;
             }
-            PandaEntity.this.setScared(false);
+            PandaEntity.this.setSitting(false);
         }
     }
 
@@ -935,15 +928,15 @@ extends AnimalEntity {
 
         @Override
         public boolean canStart() {
-            return this.nextLieOnBackAge < this.panda.age && this.panda.isLazy() && this.panda.isIdle() && this.panda.random.nextInt(400) == 1;
+            return this.nextLieOnBackAge < this.panda.age && this.panda.isLazy() && this.panda.isIdle() && this.panda.random.nextInt(LieOnBackGoal.toGoalTicks(400)) == 1;
         }
 
         @Override
         public boolean shouldContinue() {
-            if (this.panda.isTouchingWater() || !this.panda.isLazy() && this.panda.random.nextInt(600) == 1) {
+            if (this.panda.isTouchingWater() || !this.panda.isLazy() && this.panda.random.nextInt(LieOnBackGoal.toGoalTicks(600)) == 1) {
                 return false;
             }
-            return this.panda.random.nextInt(2000) != 1;
+            return this.panda.random.nextInt(LieOnBackGoal.toGoalTicks(2000)) != 1;
         }
 
         @Override
@@ -972,10 +965,10 @@ extends AnimalEntity {
             if (!this.panda.isBaby() || !this.panda.isIdle()) {
                 return false;
             }
-            if (this.panda.isWeak() && this.panda.random.nextInt(500) == 1) {
+            if (this.panda.isWeak() && this.panda.random.nextInt(SneezeGoal.toGoalTicks(500)) == 1) {
                 return true;
             }
-            return this.panda.random.nextInt(6000) == 1;
+            return this.panda.random.nextInt(SneezeGoal.toGoalTicks(6000)) == 1;
         }
 
         @Override
@@ -1037,6 +1030,7 @@ extends AnimalEntity {
 
         @Override
         public boolean canStart() {
+            int j;
             if (!this.panda.isBaby() && !this.panda.isPlayful() || !this.panda.onGround) {
                 return false;
             }
@@ -1044,23 +1038,17 @@ extends AnimalEntity {
                 return false;
             }
             float f = this.panda.getYaw() * ((float)Math.PI / 180);
-            int i = 0;
-            int j = 0;
             float g = -MathHelper.sin(f);
             float h = MathHelper.cos(f);
-            if ((double)Math.abs(g) > 0.5) {
-                i = (int)((float)i + g / Math.abs(g));
-            }
-            if ((double)Math.abs(h) > 0.5) {
-                j = (int)((float)j + h / Math.abs(h));
-            }
+            int i = (double)Math.abs(g) > 0.5 ? MathHelper.sign(g) : 0;
+            int n = j = (double)Math.abs(h) > 0.5 ? MathHelper.sign(h) : 0;
             if (this.panda.world.getBlockState(this.panda.getBlockPos().add(i, -1, j)).isAir()) {
                 return true;
             }
-            if (this.panda.isPlayful() && this.panda.random.nextInt(60) == 1) {
+            if (this.panda.isPlayful() && this.panda.random.nextInt(PlayGoal.toGoalTicks(60)) == 1) {
                 return true;
             }
-            return this.panda.random.nextInt(500) == 1;
+            return this.panda.random.nextInt(PlayGoal.toGoalTicks(500)) == 1;
         }
 
         @Override

@@ -18,8 +18,8 @@ public final class WhiteRectangleGlyph
 extends Enum<WhiteRectangleGlyph>
 implements RenderableGlyph {
     public static final /* enum */ WhiteRectangleGlyph INSTANCE = new WhiteRectangleGlyph();
-    private static final int field_32230 = 5;
-    private static final int field_32231 = 8;
+    private static final int WIDTH = 5;
+    private static final int HEIGHT = 8;
     private static final NativeImage IMAGE;
     private static final /* synthetic */ WhiteRectangleGlyph[] field_20914;
 
@@ -67,14 +67,14 @@ implements RenderableGlyph {
 
     static {
         field_20914 = WhiteRectangleGlyph.method_36875();
-        IMAGE = Util.make(new NativeImage(NativeImage.Format.RGBA, 5, 8, false), nativeImage -> {
+        IMAGE = Util.make(new NativeImage(NativeImage.Format.RGBA, 5, 8, false), image -> {
             for (int i = 0; i < 8; ++i) {
                 for (int j = 0; j < 5; ++j) {
                     boolean bl = j == 0 || j + 1 == 5 || i == 0 || i + 1 == 8;
-                    nativeImage.setColor(j, i, -1);
+                    image.setColor(j, i, -1);
                 }
             }
-            nativeImage.untrack();
+            image.untrack();
         });
     }
 }

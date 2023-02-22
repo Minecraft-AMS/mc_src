@@ -2,23 +2,20 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableSet
  *  com.mojang.datafixers.DataFixer
- *  com.mojang.datafixers.util.Function4
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.booleans.BooleanConsumer
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.world;
 
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.DataFixer;
-import com.mojang.datafixers.util.Function4;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
@@ -29,26 +26,24 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.resource.DataPackSettings;
-import net.minecraft.resource.ResourceManager;
+import net.minecraft.server.SaveLoader;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.World;
+import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.updater.WorldUpdater;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class OptimizeWorldScreen
 extends Screen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Object2IntMap<RegistryKey<World>> DIMENSION_COLORS = (Object2IntMap)Util.make(new Object2IntOpenCustomHashMap(Util.identityHashStrategy()), colors -> {
         colors.put(World.OVERWORLD, -13408734);
         colors.put(World.NETHER, -10075085);
@@ -60,23 +55,21 @@ extends Screen {
 
     @Nullable
     public static OptimizeWorldScreen create(MinecraftClient client, BooleanConsumer callback, DataFixer dataFixer, LevelStorage.Session storageSession, boolean eraseCache) {
-        DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-        MinecraftClient.IntegratedResourceManager integratedResourceManager = client.createIntegratedResourceManager(impl, MinecraftClient::loadDataPackSettings, (Function4<LevelStorage.Session, DynamicRegistryManager.Impl, ResourceManager, DataPackSettings, SaveProperties>)((Function4)MinecraftClient::createSaveProperties), false, storageSession);
+        SaveLoader saveLoader = client.createSaveLoader(storageSession, false);
         try {
-            SaveProperties saveProperties = integratedResourceManager.getSaveProperties();
-            storageSession.backupLevelDataFile(impl, saveProperties);
-            ImmutableSet<RegistryKey<World>> immutableSet = saveProperties.getGeneratorOptions().getWorlds();
-            OptimizeWorldScreen optimizeWorldScreen = new OptimizeWorldScreen(callback, dataFixer, storageSession, saveProperties.getLevelInfo(), eraseCache, immutableSet);
-            if (integratedResourceManager != null) {
-                integratedResourceManager.close();
+            SaveProperties saveProperties = saveLoader.saveProperties();
+            storageSession.backupLevelDataFile(saveLoader.dynamicRegistryManager(), saveProperties);
+            OptimizeWorldScreen optimizeWorldScreen = new OptimizeWorldScreen(callback, dataFixer, storageSession, saveProperties.getLevelInfo(), eraseCache, saveProperties.getGeneratorOptions());
+            if (saveLoader != null) {
+                saveLoader.close();
             }
             return optimizeWorldScreen;
         }
         catch (Throwable throwable) {
             try {
-                if (integratedResourceManager != null) {
+                if (saveLoader != null) {
                     try {
-                        integratedResourceManager.close();
+                        saveLoader.close();
                     }
                     catch (Throwable throwable2) {
                         throwable.addSuppressed(throwable2);
@@ -91,10 +84,10 @@ extends Screen {
         }
     }
 
-    private OptimizeWorldScreen(BooleanConsumer callback, DataFixer dataFixer, LevelStorage.Session storageSession, LevelInfo levelInfo, boolean eraseCache, ImmutableSet<RegistryKey<World>> worlds) {
+    private OptimizeWorldScreen(BooleanConsumer callback, DataFixer dataFixer, LevelStorage.Session storageSession, LevelInfo levelInfo, boolean eraseCache, GeneratorOptions generatorOptions) {
         super(new TranslatableText("optimizeWorld.title", levelInfo.getLevelName()));
         this.callback = callback;
-        this.updater = new WorldUpdater(storageSession, dataFixer, worlds, eraseCache);
+        this.updater = new WorldUpdater(storageSession, dataFixer, generatorOptions, eraseCache);
     }
 
     @Override
@@ -114,7 +107,7 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.callback.accept(false);
     }
 

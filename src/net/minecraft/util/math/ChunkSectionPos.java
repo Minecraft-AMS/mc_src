@@ -1,8 +1,12 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  it.unimi.dsi.fastutil.longs.LongConsumer
  */
 package net.minecraft.util.math;
 
+import it.unimi.dsi.fastutil.longs.LongConsumer;
 import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -20,7 +24,7 @@ public class ChunkSectionPos
 extends Vec3i {
     public static final int field_33096 = 4;
     public static final int field_33097 = 16;
-    private static final int field_33100 = 15;
+    public static final int field_33100 = 15;
     public static final int field_33098 = 8;
     public static final int field_33099 = 15;
     private static final int field_33101 = 22;
@@ -253,6 +257,34 @@ extends Vec3i {
                 return false;
             }
         }, false);
+    }
+
+    public static void forEachChunkSectionAround(BlockPos pos, LongConsumer consumer) {
+        ChunkSectionPos.forEachChunkSectionAround(pos.getX(), pos.getY(), pos.getZ(), consumer);
+    }
+
+    public static void forEachChunkSectionAround(long pos, LongConsumer consumer) {
+        ChunkSectionPos.forEachChunkSectionAround(BlockPos.unpackLongX(pos), BlockPos.unpackLongY(pos), BlockPos.unpackLongZ(pos), consumer);
+    }
+
+    public static void forEachChunkSectionAround(int x, int y, int z, LongConsumer consumer) {
+        int i = ChunkSectionPos.getSectionCoord(x - 1);
+        int j = ChunkSectionPos.getSectionCoord(x + 1);
+        int k = ChunkSectionPos.getSectionCoord(y - 1);
+        int l = ChunkSectionPos.getSectionCoord(y + 1);
+        int m = ChunkSectionPos.getSectionCoord(z - 1);
+        int n = ChunkSectionPos.getSectionCoord(z + 1);
+        if (i == j && k == l && m == n) {
+            consumer.accept(ChunkSectionPos.asLong(i, k, m));
+        } else {
+            for (int o = i; o <= j; ++o) {
+                for (int p = k; p <= l; ++p) {
+                    for (int q = m; q <= n; ++q) {
+                        consumer.accept(ChunkSectionPos.asLong(o, p, q));
+                    }
+                }
+            }
+        }
     }
 
     @Override

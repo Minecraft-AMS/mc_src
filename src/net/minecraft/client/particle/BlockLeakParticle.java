@@ -34,8 +34,8 @@ extends SpriteBillboardParticle {
     private final Fluid fluid;
     protected boolean obsidianTear;
 
-    BlockLeakParticle(ClientWorld clientWorld, double d, double e, double f, Fluid fluid) {
-        super(clientWorld, d, e, f);
+    BlockLeakParticle(ClientWorld world, double x, double y, double z, Fluid fluid) {
+        super(world, x, y, z);
         this.setBoundingBoxSpacing(0.01f, 0.01f);
         this.gravityStrength = 0.06f;
         this.fluid = fluid;
@@ -429,9 +429,9 @@ extends SpriteBillboardParticle {
             this(clientWorld, d, e, f, fluid, (int)(64.0 / (Math.random() * 0.8 + 0.2)));
         }
 
-        Falling(ClientWorld clientWorld, double d, double e, double f, Fluid fluid, int i) {
-            super(clientWorld, d, e, f, fluid);
-            this.maxAge = i;
+        Falling(ClientWorld world, double x, double y, double z, Fluid fluid, int maxAge) {
+            super(world, x, y, z, fluid);
+            this.maxAge = maxAge;
         }
 
         @Override
@@ -484,9 +484,9 @@ extends SpriteBillboardParticle {
     extends Falling {
         protected final ParticleEffect nextParticle;
 
-        ContinuousFalling(ClientWorld clientWorld, double d, double e, double f, Fluid fluid, ParticleEffect particleEffect) {
-            super(clientWorld, d, e, f, fluid);
-            this.nextParticle = particleEffect;
+        ContinuousFalling(ClientWorld world, double x, double y, double z, Fluid fluid, ParticleEffect nextParticle) {
+            super(world, x, y, z, fluid);
+            this.nextParticle = nextParticle;
         }
 
         @Override
@@ -507,9 +507,9 @@ extends SpriteBillboardParticle {
 
         @Override
         protected void updateAge() {
-            this.colorRed = 1.0f;
-            this.colorGreen = 16.0f / (float)(40 - this.maxAge + 16);
-            this.colorBlue = 4.0f / (float)(40 - this.maxAge + 8);
+            this.red = 1.0f;
+            this.green = 16.0f / (float)(40 - this.maxAge + 16);
+            this.blue = 4.0f / (float)(40 - this.maxAge + 8);
             super.updateAge();
         }
     }
@@ -519,9 +519,9 @@ extends SpriteBillboardParticle {
     extends BlockLeakParticle {
         private final ParticleEffect nextParticle;
 
-        Dripping(ClientWorld clientWorld, double d, double e, double f, Fluid fluid, ParticleEffect particleEffect) {
-            super(clientWorld, d, e, f, fluid);
-            this.nextParticle = particleEffect;
+        Dripping(ClientWorld world, double x, double y, double z, Fluid fluid, ParticleEffect nextParticle) {
+            super(world, x, y, z, fluid);
+            this.nextParticle = nextParticle;
             this.gravityStrength *= 0.02f;
             this.maxAge = 40;
         }

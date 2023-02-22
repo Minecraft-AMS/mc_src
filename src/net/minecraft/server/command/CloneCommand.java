@@ -37,12 +37,12 @@ import net.minecraft.command.argument.BlockPredicateArgumentType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.world.ServerTickScheduler;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Clearable;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.tick.WorldTickScheduler;
 import org.jetbrains.annotations.Nullable;
 
 public class CloneCommand {
@@ -86,7 +86,7 @@ public class CloneCommand {
                     if (!filter.test(cachedBlockPosition)) continue;
                     BlockEntity blockEntity = serverWorld.getBlockEntity(blockPos3);
                     if (blockEntity != null) {
-                        NbtCompound nbtCompound = blockEntity.writeNbt(new NbtCompound());
+                        NbtCompound nbtCompound = blockEntity.createNbt();
                         list2.add(new BlockInfo(blockPos4, blockState, nbtCompound));
                         deque.addLast(blockPos3);
                         continue;
@@ -128,11 +128,8 @@ public class CloneCommand {
         }
         for (BlockInfo blockInfo2 : list2) {
             BlockEntity blockEntity4 = serverWorld.getBlockEntity(blockInfo2.pos);
-            if (blockInfo2.blockEntityTag != null && blockEntity4 != null) {
-                blockInfo2.blockEntityTag.putInt("x", blockInfo2.pos.getX());
-                blockInfo2.blockEntityTag.putInt("y", blockInfo2.pos.getY());
-                blockInfo2.blockEntityTag.putInt("z", blockInfo2.pos.getZ());
-                blockEntity4.readNbt(blockInfo2.blockEntityTag);
+            if (blockInfo2.blockEntityNbt != null && blockEntity4 != null) {
+                blockEntity4.readNbt(blockInfo2.blockEntityNbt);
                 blockEntity4.markDirty();
             }
             serverWorld.setBlockState(blockInfo2.pos, blockInfo2.state, 2);
@@ -140,7 +137,7 @@ public class CloneCommand {
         for (BlockInfo blockInfo2 : list5) {
             serverWorld.updateNeighbors(blockInfo2.pos, blockInfo2.state.getBlock());
         }
-        ((ServerTickScheduler)serverWorld.getBlockTickScheduler()).copyScheduledTicks(blockBox, blockPos2);
+        ((WorldTickScheduler)serverWorld.getBlockTickScheduler()).scheduleTicks(blockBox, blockPos2);
         if (l == 0) {
             throw FAILED_EXCEPTION.create();
         }
@@ -185,12 +182,12 @@ public class CloneCommand {
         public final BlockPos pos;
         public final BlockState state;
         @Nullable
-        public final NbtCompound blockEntityTag;
+        public final NbtCompound blockEntityNbt;
 
-        public BlockInfo(BlockPos pos, BlockState state, @Nullable NbtCompound blockEntityTag) {
+        public BlockInfo(BlockPos pos, BlockState state, @Nullable NbtCompound blockEntityNbt) {
             this.pos = pos;
             this.state = state;
-            this.blockEntityTag = blockEntityTag;
+            this.blockEntityNbt = blockEntityNbt;
         }
     }
 }

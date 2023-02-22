@@ -2,11 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.logging;
 
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class UncaughtExceptionLogger
 implements Thread.UncaughtExceptionHandler {

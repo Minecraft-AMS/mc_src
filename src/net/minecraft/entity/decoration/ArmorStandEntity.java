@@ -725,8 +725,8 @@ extends LivingEntity {
     }
 
     @Override
-    protected SoundEvent getFallSound(int distance) {
-        return SoundEvents.ENTITY_ARMOR_STAND_FALL;
+    public LivingEntity.FallSounds getFallSounds() {
+        return new LivingEntity.FallSounds(SoundEvents.ENTITY_ARMOR_STAND_FALL, SoundEvents.ENTITY_ARMOR_STAND_FALL);
     }
 
     @Override
@@ -754,7 +754,7 @@ extends LivingEntity {
     public void onTrackedDataSet(TrackedData<?> data) {
         if (ARMOR_STAND_FLAGS.equals(data)) {
             this.calculateDimensions();
-            this.inanimate = !this.isMarker();
+            this.intersectionChecked = !this.isMarker();
         }
         super.onTrackedDataSet(data);
     }

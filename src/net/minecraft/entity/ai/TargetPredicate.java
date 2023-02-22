@@ -19,6 +19,7 @@ public class TargetPredicate {
     private double baseMaxDistance = -1.0;
     private boolean respectsVisibility = true;
     private boolean useDistanceScalingFactor = true;
+    @Nullable
     private Predicate<LivingEntity> predicate;
 
     private TargetPredicate(boolean attackable) {
@@ -77,6 +78,7 @@ public class TargetPredicate {
                 return false;
             }
         } else {
+            MobEntity mobEntity;
             if (this.attackable && (!baseEntity.canTarget(targetEntity) || !baseEntity.canTarget(targetEntity.getType()) || baseEntity.isTeammate(targetEntity))) {
                 return false;
             }
@@ -88,7 +90,7 @@ public class TargetPredicate {
                     return false;
                 }
             }
-            if (this.respectsVisibility && baseEntity instanceof MobEntity && !((MobEntity)baseEntity).getVisibilityCache().canSee(targetEntity)) {
+            if (this.respectsVisibility && baseEntity instanceof MobEntity && !(mobEntity = (MobEntity)baseEntity).getVisibilityCache().canSee(targetEntity)) {
                 return false;
             }
         }

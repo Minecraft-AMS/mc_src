@@ -14,6 +14,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
@@ -53,7 +54,7 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         for (int i = 0; i < 4; ++i) {
             Text text = this.texts[i];
@@ -65,7 +66,6 @@ extends BlockEntity {
         }
         nbt.putString("Color", this.textColor.getName());
         nbt.putBoolean("GlowingText", this.glowingText);
-        return nbt;
     }
 
     @Override
@@ -139,15 +139,13 @@ extends BlockEntity {
         return filtered ? this.filteredTexts : this.texts;
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 9, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     @Override
@@ -220,6 +218,10 @@ extends BlockEntity {
     private void updateListeners() {
         this.markDirty();
         this.world.updateListeners(this.getPos(), this.getCachedState(), this.getCachedState(), 3);
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 }
 

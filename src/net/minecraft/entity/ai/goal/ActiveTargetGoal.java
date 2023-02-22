@@ -20,13 +20,19 @@ import org.jetbrains.annotations.Nullable;
 
 public class ActiveTargetGoal<T extends LivingEntity>
 extends TrackTargetGoal {
+    private static final int DEFAULT_RECIPROCAL_CHANCE = 10;
     protected final Class<T> targetClass;
     protected final int reciprocalChance;
+    @Nullable
     protected LivingEntity targetEntity;
     protected TargetPredicate targetPredicate;
 
     public ActiveTargetGoal(MobEntity mob, Class<T> targetClass, boolean checkVisibility) {
-        this(mob, targetClass, checkVisibility, false);
+        this(mob, targetClass, 10, checkVisibility, false, null);
+    }
+
+    public ActiveTargetGoal(MobEntity mob, Class<T> targetClass, boolean checkVisibility, Predicate<LivingEntity> targetPredicate) {
+        this(mob, targetClass, 10, checkVisibility, false, targetPredicate);
     }
 
     public ActiveTargetGoal(MobEntity mob, Class<T> targetClass, boolean checkVisibility, boolean checkCanNavigate) {
@@ -36,7 +42,7 @@ extends TrackTargetGoal {
     public ActiveTargetGoal(MobEntity mob, Class<T> targetClass, int reciprocalChance, boolean checkVisibility, boolean checkCanNavigate, @Nullable Predicate<LivingEntity> targetPredicate) {
         super(mob, checkVisibility, checkCanNavigate);
         this.targetClass = targetClass;
-        this.reciprocalChance = reciprocalChance;
+        this.reciprocalChance = ActiveTargetGoal.toGoalTicks(reciprocalChance);
         this.setControls(EnumSet.of(Goal.Control.TARGET));
         this.targetPredicate = TargetPredicate.createAttackable().setBaseMaxDistance(this.getFollowRange()).setPredicate(targetPredicate);
     }

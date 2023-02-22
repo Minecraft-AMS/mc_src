@@ -5,18 +5,19 @@
  *  com.google.common.base.Splitter
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.Object2LongMap
  *  it.unimi.dsi.fastutil.objects.Object2LongMaps
  *  org.apache.commons.io.IOUtils
  *  org.apache.commons.lang3.ObjectUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.profiler;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
 import java.io.BufferedWriter;
@@ -41,12 +42,11 @@ import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.ProfilerTiming;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class ProfileResultImpl
 implements ProfileResult {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final ProfileLocationInfo EMPTY_INFO = new ProfileLocationInfo(){
 
         @Override
@@ -271,7 +271,7 @@ implements ProfileResult {
     }
 
     private static String generateWittyComment() {
-        String[] strings = new String[]{"Shiny numbers!", "Am I not running fast enough? :(", "I'm working as hard as I can!", "Will I ever be good enough for you? :(", "Speedy. Zoooooom!", "Hello world", "40% better than a crash report.", "Now with extra numbers", "Now with less numbers", "Now with the same numbers", "You should add flames to things, it makes them go faster!", "Do you feel the need for... optimization?", "*cracks redstone whip*", "Maybe if you treated it better then it'll have more motivation to work faster! Poor server."};
+        String[] strings = new String[]{"I'd Rather Be Surfing", "Shiny numbers!", "Am I not running fast enough? :(", "I'm working as hard as I can!", "Will I ever be good enough for you? :(", "Speedy. Zoooooom!", "Hello world", "40% better than a crash report.", "Now with extra numbers", "Now with less numbers", "Now with the same numbers", "You should add flames to things, it makes them go faster!", "Do you feel the need for... optimization?", "*cracks redstone whip*", "Maybe if you treated it better then it'll have more motivation to work faster! Poor server."};
         try {
             return strings[(int)(Util.getMeasuringTimeNano() % (long)strings.length)];
         }

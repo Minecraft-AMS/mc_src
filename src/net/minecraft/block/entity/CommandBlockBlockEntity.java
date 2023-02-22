@@ -1,8 +1,5 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block.entity;
 
@@ -13,21 +10,18 @@ import net.minecraft.block.CommandBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.CommandBlockExecutor;
-import org.jetbrains.annotations.Nullable;
 
 public class CommandBlockBlockEntity
 extends BlockEntity {
     private boolean powered;
     private boolean auto;
     private boolean conditionMet;
-    private boolean needsUpdatePacket;
     private final CommandBlockExecutor commandExecutor = new CommandBlockExecutor(){
 
         @Override
@@ -63,13 +57,12 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         this.commandExecutor.writeNbt(nbt);
         nbt.putBoolean("powered", this.isPowered());
         nbt.putBoolean("conditionMet", this.isConditionMet());
         nbt.putBoolean("auto", this.isAuto());
-        return nbt;
     }
 
     @Override
@@ -79,17 +72,6 @@ extends BlockEntity {
         this.powered = nbt.getBoolean("powered");
         this.conditionMet = nbt.getBoolean("conditionMet");
         this.setAuto(nbt.getBoolean("auto"));
-    }
-
-    @Override
-    @Nullable
-    public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        if (this.needsUpdatePacket()) {
-            this.setNeedsUpdatePacket(false);
-            NbtCompound nbtCompound = this.writeNbt(new NbtCompound());
-            return new BlockEntityUpdateS2CPacket(this.pos, 2, nbtCompound);
-        }
-        return null;
     }
 
     @Override
@@ -132,7 +114,7 @@ extends BlockEntity {
         Block block = this.getCachedState().getBlock();
         if (block instanceof CommandBlock) {
             this.updateConditionMet();
-            this.world.getBlockTickScheduler().schedule(this.pos, block, 1);
+            this.world.createAndScheduleBlockTick(this.pos, block, 1);
         }
     }
 
@@ -148,14 +130,6 @@ extends BlockEntity {
             this.conditionMet = this.world.getBlockState(blockPos).getBlock() instanceof CommandBlock ? (blockEntity = this.world.getBlockEntity(blockPos)) instanceof CommandBlockBlockEntity && ((CommandBlockBlockEntity)blockEntity).getCommandExecutor().getSuccessCount() > 0 : false;
         }
         return this.conditionMet;
-    }
-
-    public boolean needsUpdatePacket() {
-        return this.needsUpdatePacket;
-    }
-
-    public void setNeedsUpdatePacket(boolean needsUpdatePacket) {
-        this.needsUpdatePacket = needsUpdatePacket;
     }
 
     public Type getCommandBlockType() {

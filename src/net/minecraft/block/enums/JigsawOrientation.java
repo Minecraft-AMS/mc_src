@@ -76,9 +76,9 @@ implements StringIdentifiable {
 
     static {
         field_23397 = JigsawOrientation.method_36936();
-        BY_INDEX = (Int2ObjectMap)Util.make(new Int2ObjectOpenHashMap(JigsawOrientation.values().length), int2ObjectOpenHashMap -> {
+        BY_INDEX = (Int2ObjectMap)Util.make(new Int2ObjectOpenHashMap(JigsawOrientation.values().length), map -> {
             for (JigsawOrientation jigsawOrientation : JigsawOrientation.values()) {
-                int2ObjectOpenHashMap.put(JigsawOrientation.getIndex(jigsawOrientation.facing, jigsawOrientation.rotation), (Object)jigsawOrientation);
+                map.put(JigsawOrientation.getIndex(jigsawOrientation.facing, jigsawOrientation.rotation), (Object)jigsawOrientation);
             }
         });
     }

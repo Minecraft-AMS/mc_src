@@ -77,7 +77,7 @@ implements Monster {
     private static final int field_30491 = 8;
     private static final int field_30492 = 5;
     private static final float field_30493 = 0.05f;
-    static final Vec3f field_33765 = Util.make(() -> {
+    static final Vec3f SOUTH_VECTOR = Util.make(() -> {
         Vec3i vec3i = Direction.SOUTH.getVector();
         return new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
     });
@@ -91,7 +91,7 @@ implements Monster {
     public ShulkerEntity(EntityType<? extends ShulkerEntity> entityType, World world) {
         super((EntityType<? extends GolemEntity>)entityType, world);
         this.experiencePoints = 5;
-        this.lookControl = new class_6376(this);
+        this.lookControl = new ShulkerLookControl(this);
     }
 
     @Override
@@ -101,8 +101,8 @@ implements Monster {
         this.goalSelector.add(7, new PeekGoal());
         this.goalSelector.add(8, new LookAroundGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, this.getClass()).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new SearchForPlayerGoal(this));
-        this.targetSelector.add(3, new SearchForTargetGoal(this));
+        this.targetSelector.add(2, new TargetPlayerGoal(this));
+        this.targetSelector.add(3, new TargetOtherTeamGoal(this));
     }
 
     @Override
@@ -204,14 +204,14 @@ implements Monster {
 
     @Override
     protected Box calculateBoundingBox() {
-        float f = ShulkerEntity.method_33342(this.openProgress);
+        float f = ShulkerEntity.getExtraLength(this.openProgress);
         Direction direction = this.getAttachedFace().getOpposite();
         float g = this.getType().getWidth() / 2.0f;
-        return ShulkerEntity.method_33346(direction, f).offset(this.getX() - (double)g, this.getY(), this.getZ() - (double)g);
+        return ShulkerEntity.calculateBoundingBox(direction, f).offset(this.getX() - (double)g, this.getY(), this.getZ() - (double)g);
     }
 
-    private static float method_33342(float f) {
-        return 0.5f - MathHelper.sin((0.5f + f) * (float)Math.PI) * 0.5f;
+    private static float getExtraLength(float openProgress) {
+        return 0.5f - MathHelper.sin((0.5f + openProgress) * (float)Math.PI) * 0.5f;
     }
 
     private boolean tickOpenProgress() {
@@ -226,27 +226,27 @@ implements Monster {
 
     private void moveEntities() {
         this.refreshPosition();
-        float f = ShulkerEntity.method_33342(this.openProgress);
-        float g = ShulkerEntity.method_33342(this.prevOpenProgress);
+        float f = ShulkerEntity.getExtraLength(this.openProgress);
+        float g = ShulkerEntity.getExtraLength(this.prevOpenProgress);
         Direction direction = this.getAttachedFace().getOpposite();
         float h = f - g;
         if (h <= 0.0f) {
             return;
         }
-        List<Entity> list = this.world.getOtherEntities(this, ShulkerEntity.method_33347(direction, g, f).offset(this.getX() - 0.5, this.getY(), this.getZ() - 0.5), EntityPredicates.EXCEPT_SPECTATOR.and(entity -> !entity.isConnectedThroughVehicle(this)));
+        List<Entity> list = this.world.getOtherEntities(this, ShulkerEntity.calculateBoundingBox(direction, g, f).offset(this.getX() - 0.5, this.getY(), this.getZ() - 0.5), EntityPredicates.EXCEPT_SPECTATOR.and(entity -> !entity.isConnectedThroughVehicle(this)));
         for (Entity entity2 : list) {
             if (entity2 instanceof ShulkerEntity || entity2.noClip) continue;
             entity2.move(MovementType.SHULKER, new Vec3d(h * (float)direction.getOffsetX(), h * (float)direction.getOffsetY(), h * (float)direction.getOffsetZ()));
         }
     }
 
-    public static Box method_33346(Direction direction, float f) {
-        return ShulkerEntity.method_33347(direction, -1.0f, f);
+    public static Box calculateBoundingBox(Direction direction, float extraLength) {
+        return ShulkerEntity.calculateBoundingBox(direction, -1.0f, extraLength);
     }
 
-    public static Box method_33347(Direction direction, float f, float g) {
-        double d = Math.max(f, g);
-        double e = Math.min(f, g);
+    public static Box calculateBoundingBox(Direction direction, float prevExtraLength, float extraLength) {
+        double d = Math.max(prevExtraLength, extraLength);
+        double e = Math.min(prevExtraLength, extraLength);
         return new Box(BlockPos.ORIGIN).stretch((double)direction.getOffsetX() * d, (double)direction.getOffsetY() * d, (double)direction.getOffsetZ() * d).shrink((double)(-direction.getOffsetX()) * (1.0 + e), (double)(-direction.getOffsetY()) * (1.0 + e), (double)(-direction.getOffsetZ()) * (1.0 + e));
     }
 
@@ -341,18 +341,18 @@ implements Monster {
     }
 
     boolean canStay(BlockPos pos, Direction direction) {
-        if (this.method_33351(pos)) {
+        if (this.isInvalidPosition(pos)) {
             return false;
         }
         Direction direction2 = direction.getOpposite();
         if (!this.world.isDirectionSolid(pos.offset(direction), this, direction2)) {
             return false;
         }
-        Box box = ShulkerEntity.method_33346(direction2, 1.0f).offset(pos).contract(1.0E-6);
+        Box box = ShulkerEntity.calculateBoundingBox(direction2, 1.0f).offset(pos).contract(1.0E-6);
         return this.world.isSpaceEmpty(this, box);
     }
 
-    private boolean method_33351(BlockPos pos) {
+    private boolean isInvalidPosition(BlockPos pos) {
         BlockState blockState = this.world.getBlockState(pos);
         if (blockState.isAir()) {
             return false;
@@ -482,15 +482,16 @@ implements Monster {
     public void readFromPacket(MobSpawnS2CPacket packet) {
         super.readFromPacket(packet);
         this.bodyYaw = 0.0f;
+        this.prevBodyYaw = 0.0f;
     }
 
     @Override
-    public int getLookPitchSpeed() {
+    public int getMaxLookPitchChange() {
         return 180;
     }
 
     @Override
-    public int getBodyYawSpeed() {
+    public int getMaxHeadRotation() {
         return 180;
     }
 
@@ -529,27 +530,27 @@ implements Monster {
         return DyeColor.byId(b);
     }
 
-    class class_6376
+    class ShulkerLookControl
     extends LookControl {
-        public class_6376(MobEntity mobEntity) {
-            super(mobEntity);
+        public ShulkerLookControl(MobEntity entity) {
+            super(entity);
         }
 
         @Override
-        protected void method_36980() {
+        protected void clampHeadYaw() {
         }
 
         @Override
         protected Optional<Float> getTargetYaw() {
             Direction direction = ShulkerEntity.this.getAttachedFace().getOpposite();
-            Vec3f vec3f = field_33765.copy();
+            Vec3f vec3f = SOUTH_VECTOR.copy();
             vec3f.rotate(direction.getRotationQuaternion());
             Vec3i vec3i = direction.getVector();
             Vec3f vec3f2 = new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
             vec3f2.cross(vec3f);
-            double d = this.lookX - this.entity.getX();
-            double e = this.lookY - this.entity.getEyeY();
-            double f = this.lookZ - this.entity.getZ();
+            double d = this.x - this.entity.getX();
+            double e = this.y - this.entity.getEyeY();
+            double f = this.z - this.entity.getZ();
             Vec3f vec3f3 = new Vec3f((float)d, (float)e, (float)f);
             float g = vec3f2.dot(vec3f3);
             float h = vec3f.dot(vec3f3);
@@ -591,12 +592,20 @@ implements Monster {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
             if (ShulkerEntity.this.world.getDifficulty() == Difficulty.PEACEFUL) {
                 return;
             }
             --this.counter;
             LivingEntity livingEntity = ShulkerEntity.this.getTarget();
+            if (livingEntity == null) {
+                return;
+            }
             ShulkerEntity.this.getLookControl().lookAt(livingEntity, 180.0f, 180.0f);
             double d = ShulkerEntity.this.squaredDistanceTo(livingEntity);
             if (d < 400.0) {
@@ -621,7 +630,7 @@ implements Monster {
 
         @Override
         public boolean canStart() {
-            return ShulkerEntity.this.getTarget() == null && ShulkerEntity.this.random.nextInt(40) == 0 && ShulkerEntity.this.canStay(ShulkerEntity.this.getBlockPos(), ShulkerEntity.this.getAttachedFace());
+            return ShulkerEntity.this.getTarget() == null && ShulkerEntity.this.random.nextInt(PeekGoal.toGoalTicks(40)) == 0 && ShulkerEntity.this.canStay(ShulkerEntity.this.getBlockPos(), ShulkerEntity.this.getAttachedFace());
         }
 
         @Override
@@ -631,7 +640,7 @@ implements Monster {
 
         @Override
         public void start() {
-            this.counter = 20 * (1 + ShulkerEntity.this.random.nextInt(3));
+            this.counter = this.getTickCount(20 * (1 + ShulkerEntity.this.random.nextInt(3)));
             ShulkerEntity.this.setPeekAmount(30);
         }
 
@@ -648,9 +657,9 @@ implements Monster {
         }
     }
 
-    class SearchForPlayerGoal
+    class TargetPlayerGoal
     extends ActiveTargetGoal<PlayerEntity> {
-        public SearchForPlayerGoal(ShulkerEntity shulker) {
+        public TargetPlayerGoal(ShulkerEntity shulker) {
             super((MobEntity)shulker, PlayerEntity.class, true);
         }
 
@@ -675,9 +684,9 @@ implements Monster {
         }
     }
 
-    static class SearchForTargetGoal
+    static class TargetOtherTeamGoal
     extends ActiveTargetGoal<LivingEntity> {
-        public SearchForTargetGoal(ShulkerEntity shulker) {
+        public TargetOtherTeamGoal(ShulkerEntity shulker) {
             super(shulker, LivingEntity.class, 10, true, false, entity -> entity instanceof Monster);
         }
 

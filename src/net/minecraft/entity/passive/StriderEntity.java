@@ -50,7 +50,7 @@ import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.fluid.Fluid;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
@@ -88,13 +88,15 @@ Saddleable {
     private static final TrackedData<Boolean> COLD = DataTracker.registerData(StriderEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> SADDLED = DataTracker.registerData(StriderEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private final SaddledComponent saddledComponent;
+    @Nullable
     private TemptGoal temptGoal;
+    @Nullable
     private EscapeDangerGoal escapeDangerGoal;
 
     public StriderEntity(EntityType<? extends StriderEntity> entityType, World world) {
         super((EntityType<? extends AnimalEntity>)entityType, world);
         this.saddledComponent = new SaddledComponent(this.dataTracker, BOOST_TIME, SADDLED);
-        this.inanimate = true;
+        this.intersectionChecked = true;
         this.setPathfindingPenalty(PathNodeType.WATER, -1.0f);
         this.setPathfindingPenalty(PathNodeType.LAVA, 0.0f);
         this.setPathfindingPenalty(PathNodeType.DANGER_FIRE, 0.0f);
@@ -182,8 +184,8 @@ Saddleable {
     }
 
     @Override
-    public boolean canWalkOnFluid(Fluid fluid) {
-        return fluid.isIn(FluidTags.LAVA);
+    public boolean canWalkOnFluid(FluidState fluidState) {
+        return fluidState.isIn(FluidTags.LAVA);
     }
 
     @Override
@@ -205,7 +207,7 @@ Saddleable {
 
     @Override
     public boolean canSpawn(WorldView world) {
-        return world.intersectsEntities(this);
+        return world.doesNotIntersectEntities(this);
     }
 
     @Override
@@ -281,7 +283,7 @@ Saddleable {
     protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
         this.checkBlockCollision();
         if (this.isInLava()) {
-            this.fallDistance = 0.0f;
+            this.onLanding();
             return;
         }
         super.fall(heightDifference, onGround, landedState, landedPosition);
@@ -460,9 +462,9 @@ Saddleable {
     extends MoveToTargetPosGoal {
         private final StriderEntity strider;
 
-        GoBackToLavaGoal(StriderEntity striderEntity, double d) {
-            super(striderEntity, d, 8, 2);
-            this.strider = striderEntity;
+        GoBackToLavaGoal(StriderEntity strider, double speed) {
+            super(strider, speed, 8, 2);
+            this.strider = strider;
         }
 
         @Override

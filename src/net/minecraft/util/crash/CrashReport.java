@@ -3,14 +3,15 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  org.apache.commons.io.IOUtils
  *  org.apache.commons.lang3.ArrayUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.crash;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -30,11 +31,10 @@ import net.minecraft.util.crash.CrashMemoryReserve;
 import net.minecraft.util.crash.CrashReportSection;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class CrashReport {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final String message;
     private final Throwable cause;
     private final List<CrashReportSection> otherSections = Lists.newArrayList();
@@ -204,10 +204,7 @@ public class CrashReport {
                 }
             }
             this.hasStackTrace = crashReportSection.shouldGenerateStackTrace(stackTraceElement, stackTraceElement2);
-            if (i > 0 && !this.otherSections.isEmpty()) {
-                CrashReportSection crashReportSection2 = this.otherSections.get(this.otherSections.size() - 1);
-                crashReportSection2.trimStackTraceEnd(i);
-            } else if (stackTraceElements != null && stackTraceElements.length >= i && 0 <= j && j < stackTraceElements.length) {
+            if (stackTraceElements != null && stackTraceElements.length >= i && 0 <= j && j < stackTraceElements.length) {
                 this.stackTrace = new StackTraceElement[j];
                 System.arraycopy(stackTraceElements, 0, this.stackTrace, 0, this.stackTrace.length);
             } else {

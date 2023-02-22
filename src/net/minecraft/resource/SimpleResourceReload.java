@@ -16,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.minecraft.resource.ProfiledResourceReload;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReload;
 import net.minecraft.resource.ResourceReloader;
@@ -28,7 +29,6 @@ implements ResourceReload {
     private static final int FIRST_PREPARE_APPLY_WEIGHT = 2;
     private static final int SECOND_PREPARE_APPLY_WEIGHT = 2;
     private static final int RELOADER_WEIGHT = 1;
-    protected final ResourceManager manager;
     protected final CompletableFuture<Unit> prepareStageFuture = new CompletableFuture();
     protected final CompletableFuture<List<S>> applyStageFuture;
     final Set<ResourceReloader> waitingReloaders;
@@ -43,7 +43,6 @@ implements ResourceReload {
     }
 
     protected SimpleResourceReload(Executor prepareExecutor, final Executor applyExecutor, ResourceManager manager, List<ResourceReloader> reloaders, Factory<S> factory, CompletableFuture<Unit> initialStage) {
-        this.manager = manager;
         this.reloaderCount = reloaders.size();
         this.toPrepareCount.incrementAndGet();
         initialStage.thenRun(this.preparedCount::incrementAndGet);
@@ -84,8 +83,8 @@ implements ResourceReload {
     }
 
     @Override
-    public CompletableFuture<Unit> whenComplete() {
-        return this.applyStageFuture.thenApply(results -> Unit.INSTANCE);
+    public CompletableFuture<?> whenComplete() {
+        return this.applyStageFuture;
     }
 
     @Override
@@ -96,16 +95,11 @@ implements ResourceReload {
         return f / g;
     }
 
-    @Override
-    public boolean isComplete() {
-        return this.applyStageFuture.isDone();
-    }
-
-    @Override
-    public void throwException() {
-        if (this.applyStageFuture.isCompletedExceptionally()) {
-            this.applyStageFuture.join();
+    public static ResourceReload start(ResourceManager manager, List<ResourceReloader> reloaders, Executor prepareExecutor, Executor applyExecutor, CompletableFuture<Unit> initialStage, boolean profiled) {
+        if (profiled) {
+            return new ProfiledResourceReload(manager, reloaders, prepareExecutor, applyExecutor, initialStage);
         }
+        return SimpleResourceReload.create(manager, reloaders, prepareExecutor, applyExecutor, initialStage);
     }
 
     protected static interface Factory<S> {

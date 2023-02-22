@@ -24,6 +24,7 @@ import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
+import net.minecraft.entity.ai.goal.PowderSnowJumpGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.TemptGoal;
@@ -49,12 +50,14 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -99,6 +102,7 @@ extends AnimalEntity {
     @Override
     protected void initGoals() {
         this.goalSelector.add(1, new SwimGoal(this));
+        this.goalSelector.add(1, new PowderSnowJumpGoal(this, this.world));
         this.goalSelector.add(1, new EscapeDangerGoal(this, 2.2));
         this.goalSelector.add(2, new AnimalMateGoal(this, 0.8));
         this.goalSelector.add(3, new TemptGoal(this, 1.0, Ingredient.ofItems(Items.CARROT, Items.GOLDEN_CARROT, Blocks.DANDELION), false));
@@ -207,8 +211,8 @@ extends AnimalEntity {
                     this.lookTowards(vec3d.x, vec3d.z);
                     this.startJump();
                 }
-            } else if (!rabbitJumpControl.method_27313()) {
-                this.method_6611();
+            } else if (!rabbitJumpControl.canJump()) {
+                this.enableJump();
             }
         }
         this.lastOnGround = this.onGround;
@@ -223,12 +227,12 @@ extends AnimalEntity {
         this.setYaw((float)(MathHelper.atan2(z - this.getZ(), x - this.getX()) * 57.2957763671875) - 90.0f);
     }
 
-    private void method_6611() {
-        ((RabbitJumpControl)this.jumpControl).method_27311(true);
+    private void enableJump() {
+        ((RabbitJumpControl)this.jumpControl).setCanJump(true);
     }
 
-    private void method_6621() {
-        ((RabbitJumpControl)this.jumpControl).method_27311(false);
+    private void disableJump() {
+        ((RabbitJumpControl)this.jumpControl).setCanJump(false);
     }
 
     private void doScheduleJump() {
@@ -237,7 +241,7 @@ extends AnimalEntity {
 
     private void scheduleJump() {
         this.doScheduleJump();
-        this.method_6621();
+        this.disableJump();
     }
 
     @Override
@@ -355,20 +359,19 @@ extends AnimalEntity {
     }
 
     private int chooseType(WorldAccess world) {
-        Biome biome = world.getBiome(this.getBlockPos());
+        RegistryEntry<Biome> registryEntry = world.getBiome(this.getBlockPos());
         int i = this.random.nextInt(100);
-        if (biome.getPrecipitation() == Biome.Precipitation.SNOW) {
+        if (registryEntry.value().getPrecipitation() == Biome.Precipitation.SNOW) {
             return i < 80 ? 1 : 3;
         }
-        if (biome.getCategory() == Biome.Category.DESERT) {
+        if (Biome.getCategory(registryEntry) == Biome.Category.DESERT) {
             return 4;
         }
         return i < 50 ? 0 : (i < 90 ? 5 : 2);
     }
 
     public static boolean canSpawn(EntityType<RabbitEntity> entity, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
-        BlockState blockState = world.getBlockState(pos.down());
-        return (blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isOf(Blocks.SNOW) || blockState.isOf(Blocks.SAND)) && world.getBaseLightLevel(pos, 0) > 8;
+        return world.getBlockState(pos.down()).isIn(BlockTags.RABBITS_SPAWNABLE_ON) && RabbitEntity.isLightLevelValidForNaturalSpawn(world, pos);
     }
 
     boolean wantsCarrots() {
@@ -396,10 +399,10 @@ extends AnimalEntity {
         return this.createChild(world, entity);
     }
 
-    public class RabbitJumpControl
+    public static class RabbitJumpControl
     extends JumpControl {
         private final RabbitEntity rabbit;
-        private boolean field_24091;
+        private boolean canJump;
 
         public RabbitJumpControl(RabbitEntity rabbit) {
             super(rabbit);
@@ -410,12 +413,12 @@ extends AnimalEntity {
             return this.active;
         }
 
-        public boolean method_27313() {
-            return this.field_24091;
+        public boolean canJump() {
+            return this.canJump;
         }
 
-        public void method_27311(boolean bl) {
-            this.field_24091 = bl;
+        public void setCanJump(boolean canJump) {
+            this.canJump = canJump;
         }
 
         @Override
@@ -522,7 +525,7 @@ extends AnimalEntity {
         @Override
         public void tick() {
             super.tick();
-            this.rabbit.getLookControl().lookAt((double)this.targetPos.getX() + 0.5, this.targetPos.getY() + 1, (double)this.targetPos.getZ() + 0.5, 10.0f, this.rabbit.getLookPitchSpeed());
+            this.rabbit.getLookControl().lookAt((double)this.targetPos.getX() + 0.5, this.targetPos.getY() + 1, (double)this.targetPos.getZ() + 0.5, 10.0f, this.rabbit.getMaxLookPitchChange());
             if (this.hasReached()) {
                 World world = this.rabbit.world;
                 BlockPos blockPos = this.targetPos.up();

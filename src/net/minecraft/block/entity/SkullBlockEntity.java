@@ -21,8 +21,9 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.util.ChatUtil;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.UserCache;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
@@ -47,27 +48,26 @@ extends BlockEntity {
         super(BlockEntityType.SKULL, pos, state);
     }
 
-    public static void setUserCache(UserCache value) {
-        userCache = value;
-    }
-
-    public static void setSessionService(MinecraftSessionService value) {
-        sessionService = value;
-    }
-
-    public static void setExecutor(Executor executor) {
+    public static void setServices(UserCache userCache, MinecraftSessionService sessionService, Executor executor) {
+        SkullBlockEntity.userCache = userCache;
+        SkullBlockEntity.sessionService = sessionService;
         SkullBlockEntity.executor = executor;
     }
 
+    public static void clearServices() {
+        userCache = null;
+        sessionService = null;
+        executor = null;
+    }
+
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         if (this.owner != null) {
             NbtCompound nbtCompound = new NbtCompound();
             NbtHelper.writeGameProfile(nbtCompound, this.owner);
             nbt.put(SKULL_OWNER_KEY, nbtCompound);
         }
-        return nbt;
     }
 
     @Override
@@ -76,7 +76,7 @@ extends BlockEntity {
         super.readNbt(nbt);
         if (nbt.contains(SKULL_OWNER_KEY, 10)) {
             this.setOwner(NbtHelper.toGameProfile(nbt.getCompound(SKULL_OWNER_KEY)));
-        } else if (nbt.contains("ExtraType", 8) && !ChatUtil.isEmpty(string = nbt.getString("ExtraType"))) {
+        } else if (nbt.contains("ExtraType", 8) && !StringHelper.isEmpty(string = nbt.getString("ExtraType"))) {
             this.setOwner(new GameProfile(null, string));
         }
     }
@@ -102,15 +102,13 @@ extends BlockEntity {
         return this.owner;
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 4, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     /*
@@ -132,7 +130,7 @@ extends BlockEntity {
     }
 
     public static void loadProperties(@Nullable GameProfile owner, Consumer<GameProfile> callback) {
-        if (owner == null || ChatUtil.isEmpty(owner.getName()) || owner.isComplete() && owner.getProperties().containsKey((Object)"textures") || userCache == null || sessionService == null) {
+        if (owner == null || StringHelper.isEmpty(owner.getName()) || owner.isComplete() && owner.getProperties().containsKey((Object)"textures") || userCache == null || sessionService == null) {
             callback.accept(owner);
             return;
         }
@@ -147,6 +145,10 @@ extends BlockEntity {
                 callback.accept(gameProfile);
             });
         }, () -> executor.execute(() -> callback.accept(owner)))));
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 }
 

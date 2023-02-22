@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gl;
 
@@ -11,9 +12,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class GlBlendState {
+    @Nullable
     private static GlBlendState activeBlendState;
     private final int srcRgb;
     private final int srcAlpha;

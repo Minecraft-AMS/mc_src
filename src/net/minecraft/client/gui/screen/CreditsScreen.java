@@ -6,13 +6,13 @@
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  it.unimi.dsi.fastutil.ints.IntSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen;
 
@@ -22,11 +22,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.BufferedReader;
 import java.io.Closeable;
-import java.io.InputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -50,13 +51,12 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class CreditsScreen
 extends Screen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Identifier MINECRAFT_TITLE_TEXTURE = new Identifier("textures/gui/title/minecraft.png");
     private static final Identifier EDITION_TITLE_TEXTURE = new Identifier("textures/gui/title/edition.png");
     private static final Identifier VIGNETTE_TEXTURE = new Identifier("textures/misc/vignette.png");
@@ -98,7 +98,7 @@ extends Screen {
         this.client.getSoundManager().tick(false);
         float f = this.creditsHeight + this.height + this.height + 24;
         if (this.time > f) {
-            this.close();
+            this.closeScreen();
         }
     }
 
@@ -125,18 +125,15 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
-        this.close();
+    public void close() {
+        this.closeScreen();
     }
 
-    private void close() {
+    private void closeScreen() {
         this.finishAction.run();
         this.client.setScreen(null);
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     @Override
     protected void init() {
         if (this.credits != null) {
@@ -144,64 +141,82 @@ extends Screen {
         }
         this.credits = Lists.newArrayList();
         this.centeredLines = new IntOpenHashSet();
+        if (this.endCredits) {
+            this.load("texts/end.txt", this::readPoem);
+        }
+        this.load("texts/credits.json", this::readCredits);
+        if (this.endCredits) {
+            this.load("texts/postcredits.txt", this::readPoem);
+        }
+        this.creditsHeight = this.credits.size() * 12;
+    }
+
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
+    private void load(String id, CreditsReader reader) {
         Resource resource = null;
         try {
-            String string2;
-            if (this.endCredits) {
-                int i;
-                Object string;
-                resource = this.client.getResourceManager().getResource(new Identifier("texts/end.txt"));
-                InputStream inputStream = resource.getInputStream();
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-                Random random = new Random(8124371L);
-                while ((string = bufferedReader.readLine()) != null) {
-                    string = ((String)string).replaceAll("PLAYERNAME", this.client.getSession().getUsername());
-                    while ((i = ((String)string).indexOf(OBFUSCATION_PLACEHOLDER)) != -1) {
-                        string2 = ((String)string).substring(0, i);
-                        String string3 = ((String)string).substring(i + OBFUSCATION_PLACEHOLDER.length());
-                        string = string2 + Formatting.WHITE + Formatting.OBFUSCATED + "XXXXXXXX".substring(0, random.nextInt(4) + 3) + string3;
-                    }
-                    this.addText((String)string);
-                    this.addEmptyLine();
-                }
-                inputStream.close();
-                for (i = 0; i < 8; ++i) {
-                    this.addEmptyLine();
-                }
-            }
-            resource = this.client.getResourceManager().getResource(new Identifier("texts/credits.json"));
-            JsonArray jsonArray = JsonHelper.method_37165(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8));
-            JsonArray jsonArray2 = jsonArray.getAsJsonArray();
-            for (JsonElement jsonElement : jsonArray2) {
-                JsonObject jsonObject = jsonElement.getAsJsonObject();
-                string2 = jsonObject.get("section").getAsString();
-                this.addText(SEPARATOR_LINE, true);
-                this.addText(new LiteralText(string2).formatted(Formatting.YELLOW), true);
-                this.addText(SEPARATOR_LINE, true);
-                this.addEmptyLine();
-                this.addEmptyLine();
-                JsonArray jsonArray3 = jsonObject.getAsJsonArray("titles");
-                for (JsonElement jsonElement2 : jsonArray3) {
-                    JsonObject jsonObject2 = jsonElement2.getAsJsonObject();
-                    String string4 = jsonObject2.get("title").getAsString();
-                    JsonArray jsonArray4 = jsonObject2.getAsJsonArray("names");
-                    this.addText(new LiteralText(string4).formatted(Formatting.GRAY), false);
-                    for (JsonElement jsonElement3 : jsonArray4) {
-                        String string5 = jsonElement3.getAsString();
-                        this.addText(new LiteralText(CENTERED_LINE_PREFIX).append(string5).formatted(Formatting.WHITE), false);
-                    }
-                    this.addEmptyLine();
-                    this.addEmptyLine();
-                }
-            }
-            this.creditsHeight = this.credits.size() * 12;
-            IOUtils.closeQuietly((Closeable)resource);
+            resource = this.client.getResourceManager().getResource(new Identifier(id));
+            InputStreamReader inputStreamReader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8);
+            reader.read(inputStreamReader);
         }
         catch (Exception exception) {
-            LOGGER.error("Couldn't load credits", (Throwable)exception);
+            try {
+                LOGGER.error("Couldn't load credits", (Throwable)exception);
+            }
+            catch (Throwable throwable) {
+                IOUtils.closeQuietly(resource);
+                throw throwable;
+            }
+            IOUtils.closeQuietly((Closeable)resource);
         }
-        finally {
-            IOUtils.closeQuietly(resource);
+        IOUtils.closeQuietly((Closeable)resource);
+    }
+
+    private void readPoem(InputStreamReader inputStreamReader) throws IOException {
+        int i;
+        Object string;
+        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+        Random random = new Random(8124371L);
+        while ((string = bufferedReader.readLine()) != null) {
+            string = ((String)string).replaceAll("PLAYERNAME", this.client.getSession().getUsername());
+            while ((i = ((String)string).indexOf(OBFUSCATION_PLACEHOLDER)) != -1) {
+                String string2 = ((String)string).substring(0, i);
+                String string3 = ((String)string).substring(i + OBFUSCATION_PLACEHOLDER.length());
+                string = string2 + Formatting.WHITE + Formatting.OBFUSCATED + "XXXXXXXX".substring(0, random.nextInt(4) + 3) + string3;
+            }
+            this.addText((String)string);
+            this.addEmptyLine();
+        }
+        for (i = 0; i < 8; ++i) {
+            this.addEmptyLine();
+        }
+    }
+
+    private void readCredits(InputStreamReader inputStreamReader) {
+        JsonArray jsonArray = JsonHelper.deserializeArray(inputStreamReader);
+        for (JsonElement jsonElement : jsonArray) {
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            String string = jsonObject.get("section").getAsString();
+            this.addText(SEPARATOR_LINE, true);
+            this.addText(new LiteralText(string).formatted(Formatting.YELLOW), true);
+            this.addText(SEPARATOR_LINE, true);
+            this.addEmptyLine();
+            this.addEmptyLine();
+            JsonArray jsonArray2 = jsonObject.getAsJsonArray("titles");
+            for (JsonElement jsonElement2 : jsonArray2) {
+                JsonObject jsonObject2 = jsonElement2.getAsJsonObject();
+                String string2 = jsonObject2.get("title").getAsString();
+                JsonArray jsonArray3 = jsonObject2.getAsJsonArray("names");
+                this.addText(new LiteralText(string2).formatted(Formatting.GRAY), false);
+                for (JsonElement jsonElement3 : jsonArray3) {
+                    String string3 = jsonElement3.getAsString();
+                    this.addText(new LiteralText(CENTERED_LINE_PREFIX).append(string3).formatted(Formatting.WHITE), false);
+                }
+                this.addEmptyLine();
+                this.addEmptyLine();
+            }
         }
     }
 
@@ -262,9 +277,9 @@ extends Screen {
         RenderSystem.setShaderTexture(0, MINECRAFT_TITLE_TEXTURE);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
-        this.drawWithOutline(i, j, (integer, integer2) -> {
-            this.drawTexture(matrices, integer + 0, (int)integer2, 0, 0, 155, 44);
-            this.drawTexture(matrices, integer + 155, (int)integer2, 0, 45, 155, 44);
+        this.drawWithOutline(i, j, (x, y) -> {
+            this.drawTexture(matrices, x + 0, (int)y, 0, 0, 155, 44);
+            this.drawTexture(matrices, x + 155, (int)y, 0, 45, 155, 44);
         });
         RenderSystem.disableBlend();
         RenderSystem.setShaderTexture(0, EDITION_TITLE_TEXTURE);
@@ -302,6 +317,12 @@ extends Screen {
         tessellator.draw();
         RenderSystem.disableBlend();
         super.render(matrices, mouseX, mouseY, delta);
+    }
+
+    @FunctionalInterface
+    @Environment(value=EnvType.CLIENT)
+    static interface CreditsReader {
+        public void read(InputStreamReader var1) throws IOException;
     }
 }
 

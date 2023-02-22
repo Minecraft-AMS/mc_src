@@ -2,18 +2,19 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.opengl.GL11
  *  org.lwjgl.system.MemoryUtil
+ *  org.slf4j.Logger
  */
 package com.mojang.blaze3d.platform;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -30,21 +31,20 @@ import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.util.annotation.DeobfuscateClass;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 @DeobfuscateClass
 public class TextureUtil {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int MIN_MIPMAP_LEVEL = 0;
     private static final int DEFAULT_IMAGE_BUFFER_SIZE = 8192;
 
     public static int generateTextureId() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         if (SharedConstants.isDevelopment) {
             int[] is = new int[ThreadLocalRandom.current().nextInt(15) + 1];
             GlStateManager._genTextures(is);
@@ -56,7 +56,7 @@ public class TextureUtil {
     }
 
     public static void releaseTextureId(int id) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         GlStateManager._deleteTexture(id);
     }
 
@@ -73,7 +73,7 @@ public class TextureUtil {
     }
 
     public static void prepareImage(NativeImage.InternalFormat internalFormat, int id, int maxLevel, int width, int height) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         TextureUtil.bind(id);
         if (maxLevel >= 0) {
             GlStateManager._texParameter(3553, 33085, maxLevel);
@@ -87,7 +87,7 @@ public class TextureUtil {
     }
 
     private static void bind(int id) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         GlStateManager._bindTexture(id);
     }
 
@@ -115,7 +115,7 @@ public class TextureUtil {
      */
     @Nullable
     public static String readResourceAsString(InputStream inputStream) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         ByteBuffer byteBuffer = null;
         try {
             byteBuffer = TextureUtil.readResource(inputStream);
@@ -135,7 +135,7 @@ public class TextureUtil {
     }
 
     public static void writeAsPNG(String string, int i, int j, int k, int l) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         TextureUtil.bind(i);
         for (int m = 0; m <= j; ++m) {
             String string2 = string + "_" + m + ".png";
@@ -154,7 +154,7 @@ public class TextureUtil {
     }
 
     public static void initTexture(IntBuffer imageData, int width, int height) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GL11.glPixelStorei((int)3312, (int)0);
         GL11.glPixelStorei((int)3313, (int)0);
         GL11.glPixelStorei((int)3314, (int)0);

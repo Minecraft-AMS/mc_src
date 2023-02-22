@@ -19,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class EscapeDangerGoal
 extends Goal {
+    public static final int field_36271 = 1;
     protected final PathAwareEntity mob;
     protected final double speed;
     protected double targetX;
@@ -35,16 +36,20 @@ extends Goal {
     @Override
     public boolean canStart() {
         BlockPos blockPos;
-        if (this.mob.getAttacker() == null && !this.mob.isOnFire()) {
+        if (!this.isInDanger()) {
             return false;
         }
-        if (this.mob.isOnFire() && (blockPos = this.locateClosestWater(this.mob.world, this.mob, 5, 4)) != null) {
+        if (this.mob.isOnFire() && (blockPos = this.locateClosestWater(this.mob.world, this.mob, 5)) != null) {
             this.targetX = blockPos.getX();
             this.targetY = blockPos.getY();
             this.targetZ = blockPos.getZ();
             return true;
         }
         return this.findTarget();
+    }
+
+    protected boolean isInDanger() {
+        return this.mob.getAttacker() != null || this.mob.shouldEscapePowderSnow() || this.mob.isOnFire();
     }
 
     protected boolean findTarget() {
@@ -79,26 +84,12 @@ extends Goal {
     }
 
     @Nullable
-    protected BlockPos locateClosestWater(BlockView blockView, Entity entity, int rangeX, int rangeY) {
+    protected BlockPos locateClosestWater(BlockView world, Entity entity, int rangeX) {
         BlockPos blockPos = entity.getBlockPos();
-        int i = blockPos.getX();
-        int j = blockPos.getY();
-        int k = blockPos.getZ();
-        float f = rangeX * rangeX * rangeY * 2;
-        BlockPos blockPos2 = null;
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int l = i - rangeX; l <= i + rangeX; ++l) {
-            for (int m = j - rangeY; m <= j + rangeY; ++m) {
-                for (int n = k - rangeX; n <= k + rangeX; ++n) {
-                    float g;
-                    mutable.set(l, m, n);
-                    if (!blockView.getFluidState(mutable).isIn(FluidTags.WATER) || !((g = (float)((l - i) * (l - i) + (m - j) * (m - j) + (n - k) * (n - k))) < f)) continue;
-                    f = g;
-                    blockPos2 = new BlockPos(mutable);
-                }
-            }
+        if (!world.getBlockState(blockPos).getCollisionShape(world, blockPos).isEmpty()) {
+            return null;
         }
-        return blockPos2;
+        return BlockPos.findClosest(entity.getBlockPos(), rangeX, 1, pos -> world.getFluidState((BlockPos)pos).isIn(FluidTags.WATER)).orElse(null);
     }
 }
 

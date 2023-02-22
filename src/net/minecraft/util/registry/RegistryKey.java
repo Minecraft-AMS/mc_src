@@ -3,12 +3,15 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.util.registry;
 
 import com.google.common.collect.Maps;
+import com.mojang.serialization.Codec;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
@@ -17,6 +20,10 @@ public class RegistryKey<T> {
     private static final Map<String, RegistryKey<?>> INSTANCES = Collections.synchronizedMap(Maps.newIdentityHashMap());
     private final Identifier registry;
     private final Identifier value;
+
+    public static <T> Codec<RegistryKey<T>> createCodec(RegistryKey<? extends Registry<T>> registry) {
+        return Identifier.CODEC.xmap(id -> RegistryKey.of(registry, id), RegistryKey::getValue);
+    }
 
     public static <T> RegistryKey<T> of(RegistryKey<? extends Registry<T>> registry, Identifier value) {
         return RegistryKey.of(registry.value, value);
@@ -27,8 +34,8 @@ public class RegistryKey<T> {
     }
 
     private static <T> RegistryKey<T> of(Identifier registry, Identifier value) {
-        String string2 = (registry + ":" + value).intern();
-        return INSTANCES.computeIfAbsent(string2, string -> new RegistryKey(registry, value));
+        String string = (registry + ":" + value).intern();
+        return INSTANCES.computeIfAbsent(string, id -> new RegistryKey(registry, value));
     }
 
     private RegistryKey(Identifier registry, Identifier value) {
@@ -44,8 +51,16 @@ public class RegistryKey<T> {
         return this.registry.equals(registry.getValue());
     }
 
+    public <E> Optional<RegistryKey<E>> tryCast(RegistryKey<? extends Registry<E>> registryRef) {
+        return this.isOf(registryRef) ? Optional.of(this) : Optional.empty();
+    }
+
     public Identifier getValue() {
         return this.value;
+    }
+
+    public Identifier method_41185() {
+        return this.registry;
     }
 
     public static <T> Function<Identifier, RegistryKey<T>> createKeyFactory(RegistryKey<? extends Registry<T>> registry) {

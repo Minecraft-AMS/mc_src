@@ -21,6 +21,7 @@ extends ServerConfigEntry<T> {
     public static final String FOREVER = "forever";
     protected final Date creationDate;
     protected final String source;
+    @Nullable
     protected final Date expiryDate;
     protected final String reason;
 
@@ -62,6 +63,7 @@ extends ServerConfigEntry<T> {
         return this.source;
     }
 
+    @Nullable
     public Date getExpiryDate() {
         return this.expiryDate;
     }

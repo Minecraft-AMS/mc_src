@@ -58,8 +58,8 @@ extends EntityRenderer<PaintingEntity> {
 
     private void renderPainting(MatrixStack matrices, VertexConsumer vertexConsumer, PaintingEntity entity, int width, int height, Sprite paintingSprite, Sprite backSprite) {
         MatrixStack.Entry entry = matrices.peek();
-        Matrix4f matrix4f = entry.getModel();
-        Matrix3f matrix3f = entry.getNormal();
+        Matrix4f matrix4f = entry.getPositionMatrix();
+        Matrix3f matrix3f = entry.getNormalMatrix();
         float f = (float)(-width) / 2.0f;
         float g = (float)(-height) / 2.0f;
         float h = 0.5f;
@@ -110,10 +110,10 @@ extends EntityRenderer<PaintingEntity> {
                 this.vertex(matrix4f, matrix3f, vertexConsumer, z, ab, ag, ai, -0.5f, 0, 0, -1, af);
                 this.vertex(matrix4f, matrix3f, vertexConsumer, z, aa, ag, aj, -0.5f, 0, 0, -1, af);
                 this.vertex(matrix4f, matrix3f, vertexConsumer, y, aa, ah, aj, -0.5f, 0, 0, -1, af);
-                this.vertex(matrix4f, matrix3f, vertexConsumer, y, aa, i, k, 0.5f, 0, 0, 1, af);
-                this.vertex(matrix4f, matrix3f, vertexConsumer, z, aa, j, k, 0.5f, 0, 0, 1, af);
-                this.vertex(matrix4f, matrix3f, vertexConsumer, z, ab, j, l, 0.5f, 0, 0, 1, af);
-                this.vertex(matrix4f, matrix3f, vertexConsumer, y, ab, i, l, 0.5f, 0, 0, 1, af);
+                this.vertex(matrix4f, matrix3f, vertexConsumer, y, aa, j, k, 0.5f, 0, 0, 1, af);
+                this.vertex(matrix4f, matrix3f, vertexConsumer, z, aa, i, k, 0.5f, 0, 0, 1, af);
+                this.vertex(matrix4f, matrix3f, vertexConsumer, z, ab, i, l, 0.5f, 0, 0, 1, af);
+                this.vertex(matrix4f, matrix3f, vertexConsumer, y, ab, j, l, 0.5f, 0, 0, 1, af);
                 this.vertex(matrix4f, matrix3f, vertexConsumer, y, aa, m, o, -0.5f, 0, 1, 0, af);
                 this.vertex(matrix4f, matrix3f, vertexConsumer, z, aa, n, o, -0.5f, 0, 1, 0, af);
                 this.vertex(matrix4f, matrix3f, vertexConsumer, z, aa, n, p, 0.5f, 0, 1, 0, af);
@@ -134,8 +134,8 @@ extends EntityRenderer<PaintingEntity> {
         }
     }
 
-    private void vertex(Matrix4f modelMatrix, Matrix3f normalMatrix, VertexConsumer vertexConsumer, float x, float y, float u, float v, float z, int normalX, int normalY, int normalZ, int light) {
-        vertexConsumer.vertex(modelMatrix, x, y, z).color(255, 255, 255, 255).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(normalMatrix, normalX, normalY, normalZ).next();
+    private void vertex(Matrix4f positionMatrix, Matrix3f normalMatrix, VertexConsumer vertexConsumer, float x, float y, float u, float v, float z, int normalX, int normalY, int normalZ, int light) {
+        vertexConsumer.vertex(positionMatrix, x, y, z).color(255, 255, 255, 255).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(normalMatrix, normalX, normalY, normalZ).next();
     }
 }
 

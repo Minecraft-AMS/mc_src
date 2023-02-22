@@ -5,15 +5,16 @@
  *  com.google.common.collect.HashBasedTable
  *  com.google.common.collect.Table
  *  com.google.common.primitives.UnsignedLong
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Dynamic
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.timer;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.primitives.UnsignedLong;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,11 +28,10 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.world.timer.TimerCallback;
 import net.minecraft.world.timer.TimerCallbackSerializer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class Timer<T> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String CALLBACK_KEY = "Callback";
     private static final String NAME_KEY = "Name";
     private static final String TRIGGER_TIME_KEY = "TriggerTime";
@@ -81,15 +81,15 @@ public class Timer<T> {
         this.events.add(event);
     }
 
-    public int method_22593(String string) {
-        Collection collection = this.eventsByName.row((Object)string).values();
+    public int remove(String name) {
+        Collection collection = this.eventsByName.row((Object)name).values();
         collection.forEach(this.events::remove);
         int i = collection.size();
         collection.clear();
         return i;
     }
 
-    public Set<String> method_22592() {
+    public Set<String> getEventNames() {
         return Collections.unmodifiableSet(this.eventsByName.rowKeySet());
     }
 
@@ -123,11 +123,11 @@ public class Timer<T> {
         public final String name;
         public final TimerCallback<T> callback;
 
-        Event(long l, UnsignedLong unsignedLong, String string, TimerCallback<T> timerCallback) {
-            this.triggerTime = l;
-            this.id = unsignedLong;
-            this.name = string;
-            this.callback = timerCallback;
+        Event(long triggerTime, UnsignedLong id, String name, TimerCallback<T> callback) {
+            this.triggerTime = triggerTime;
+            this.id = id;
+            this.name = name;
+            this.callback = callback;
         }
     }
 }

@@ -8,13 +8,13 @@
  *  com.mojang.authlib.exceptions.InsufficientPrivilegesException
  *  com.mojang.authlib.exceptions.InvalidCredentialsException
  *  com.mojang.authlib.minecraft.MinecraftSessionService
+ *  com.mojang.logging.LogUtils
  *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.network;
 
@@ -24,6 +24,7 @@ import com.mojang.authlib.exceptions.AuthenticationUnavailableException;
 import com.mojang.authlib.exceptions.InsufficientPrivilegesException;
 import com.mojang.authlib.exceptions.InvalidCredentialsException;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
+import com.mojang.logging.LogUtils;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import java.math.BigInteger;
@@ -55,14 +56,13 @@ import net.minecraft.network.packet.s2c.login.LoginQueryRequestS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientLoginNetworkHandler
 implements ClientLoginPacketListener {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final MinecraftClient client;
     @Nullable
     private final Screen parentScreen;
@@ -135,11 +135,11 @@ implements ClientLoginPacketListener {
     }
 
     @Override
-    public void onLoginSuccess(LoginSuccessS2CPacket packet) {
+    public void onSuccess(LoginSuccessS2CPacket packet) {
         this.statusConsumer.accept(new TranslatableText("connect.joining"));
         this.profile = packet.getProfile();
         this.connection.setState(NetworkState.PLAY);
-        this.connection.setPacketListener(new ClientPlayNetworkHandler(this.client, this.parentScreen, this.connection, this.profile));
+        this.connection.setPacketListener(new ClientPlayNetworkHandler(this.client, this.parentScreen, this.connection, this.profile, this.client.createTelemetrySender()));
     }
 
     @Override

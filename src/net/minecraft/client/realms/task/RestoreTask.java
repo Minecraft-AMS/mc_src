@@ -2,11 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.task;
 
+import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
@@ -18,10 +21,12 @@ import net.minecraft.client.realms.gui.screen.RealmsConfigureWorldScreen;
 import net.minecraft.client.realms.gui.screen.RealmsGenericErrorScreen;
 import net.minecraft.client.realms.task.LongRunningTask;
 import net.minecraft.text.TranslatableText;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RestoreTask
 extends LongRunningTask {
+    private static final Logger field_36359 = LogUtils.getLogger();
     private final Backup backup;
     private final long worldId;
     private final RealmsConfigureWorldScreen lastScreen;
@@ -60,7 +65,7 @@ extends LongRunningTask {
                 if (this.aborted()) {
                     return;
                 }
-                LOGGER.error("Couldn't restore backup", (Throwable)realmsServiceException);
+                field_36359.error("Couldn't restore backup", (Throwable)realmsServiceException);
                 RestoreTask.setScreen(new RealmsGenericErrorScreen(realmsServiceException, (Screen)this.lastScreen));
                 return;
             }
@@ -68,7 +73,7 @@ extends LongRunningTask {
                 if (this.aborted()) {
                     return;
                 }
-                LOGGER.error("Couldn't restore backup", (Throwable)exception);
+                field_36359.error("Couldn't restore backup", (Throwable)exception);
                 this.error(exception.getLocalizedMessage());
                 return;
             }

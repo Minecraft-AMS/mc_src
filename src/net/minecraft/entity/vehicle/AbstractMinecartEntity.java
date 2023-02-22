@@ -109,7 +109,7 @@ extends Entity {
 
     protected AbstractMinecartEntity(EntityType<?> entityType, World world) {
         super(entityType, world);
-        this.inanimate = true;
+        this.intersectionChecked = true;
     }
 
     protected AbstractMinecartEntity(EntityType<?> type, World world, double x, double y, double z) {
@@ -373,7 +373,7 @@ extends Entity {
         this.firstUpdate = false;
     }
 
-    protected double getMaxOffRailSpeed() {
+    protected double getMaxSpeed() {
         return (this.isTouchingWater() ? 4.0 : 8.0) / 20.0;
     }
 
@@ -381,7 +381,7 @@ extends Entity {
     }
 
     protected void moveOffRail() {
-        double d = this.getMaxOffRailSpeed();
+        double d = this.getMaxSpeed();
         Vec3d vec3d = this.getVelocity();
         this.setVelocity(MathHelper.clamp(vec3d.x, -d, d), vec3d.y, MathHelper.clamp(vec3d.z, -d, d));
         if (this.onGround) {
@@ -399,7 +399,7 @@ extends Entity {
         double u;
         double t;
         double s;
-        this.fallDistance = 0.0f;
+        this.onLanding();
         double d = this.getX();
         double e = this.getY();
         double f = this.getZ();
@@ -490,7 +490,7 @@ extends Entity {
         f = p + i * s;
         this.setPosition(d, e, f);
         t = this.hasPassengers() ? 0.75 : 1.0;
-        u = this.getMaxOffRailSpeed();
+        u = this.getMaxSpeed();
         vec3d2 = this.getVelocity();
         this.move(MovementType.SELF, new Vec3d(MathHelper.clamp(t * vec3d2.x, -u, u), 0.0, MathHelper.clamp(t * vec3d2.z, -u, u)));
         if (vec3i.getY() != 0 && MathHelper.floor(this.getX()) - pos.getX() == vec3i.getX() && MathHelper.floor(this.getZ()) - pos.getZ() == vec3i.getZ()) {

@@ -3,6 +3,7 @@
  */
 package net.minecraft.entity;
 
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.NbtCompound;
@@ -45,6 +46,11 @@ extends Entity {
     @Override
     protected void addPassenger(Entity passenger) {
         passenger.stopRiding();
+    }
+
+    @Override
+    public PistonBehavior getPistonBehavior() {
+        return PistonBehavior.IGNORE;
     }
 }
 

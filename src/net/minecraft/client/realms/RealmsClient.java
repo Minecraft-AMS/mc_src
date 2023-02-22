@@ -2,14 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms;
 
+import com.mojang.logging.LogUtils;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.UUID;
@@ -43,9 +44,9 @@ import net.minecraft.client.realms.exception.RealmsHttpException;
 import net.minecraft.client.realms.exception.RealmsServiceException;
 import net.minecraft.client.realms.exception.RetryCallException;
 import net.minecraft.client.realms.gui.screen.ResetWorldInfo;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.client.resource.language.I18n;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @net.fabricmc.api.Environment(value=EnvType.CLIENT)
 public class RealmsClient {
@@ -192,7 +193,7 @@ public class RealmsClient {
             compatibleVersionResponse = CompatibleVersionResponse.valueOf(string2);
         }
         catch (IllegalArgumentException illegalArgumentException) {
-            throw new RealmsServiceException(500, "Could not check compatible version, got response: " + string2, -1, "");
+            throw new RealmsServiceException(500, "Could not check compatible version, got response: " + string2);
         }
         return compatibleVersionResponse;
     }
@@ -371,19 +372,16 @@ public class RealmsClient {
         this.execute(Request.delete(string));
     }
 
-    @Nullable
     private String url(String path) {
         return this.url(path, null);
     }
 
-    @Nullable
     private String url(String path, @Nullable String queryString) {
         try {
             return new URI(RealmsClient.currentEnvironment.protocol, RealmsClient.currentEnvironment.baseUrl, "/" + path, queryString, null).toASCIIString();
         }
         catch (URISyntaxException uRISyntaxException) {
-            uRISyntaxException.printStackTrace();
-            return null;
+            throw new IllegalArgumentException(path, uRISyntaxException);
         }
     }
 
@@ -402,25 +400,33 @@ public class RealmsClient {
                 if (i == 401) {
                     String string2 = r.getHeader("WWW-Authenticate");
                     LOGGER.info("Could not authorize you against Realms server: {}", (Object)string2);
-                    throw new RealmsServiceException(i, string2, -1, string2);
-                }
-                if (string == null || string.length() == 0) {
-                    LOGGER.error("Realms error code: {} message: {}", (Object)i, (Object)string);
-                    throw new RealmsServiceException(i, string, i, "");
+                    throw new RealmsServiceException(i, string2);
                 }
                 RealmsError realmsError = RealmsError.create(string);
-                LOGGER.error("Realms http code: {} -  error code: {} -  message: {} - raw body: {}", (Object)i, (Object)realmsError.getErrorCode(), (Object)realmsError.getErrorMessage(), (Object)string);
-                throw new RealmsServiceException(i, string, realmsError);
+                if (realmsError != null) {
+                    LOGGER.error("Realms http code: {} -  error code: {} -  message: {} - raw body: {}", new Object[]{i, realmsError.getErrorCode(), realmsError.getErrorMessage(), string});
+                    throw new RealmsServiceException(i, string, realmsError);
+                }
+                LOGGER.error("Realms http code: {} - raw body (message failed to parse): {}", (Object)i, (Object)string);
+                String string3 = RealmsClient.getErrorMessage(i);
+                throw new RealmsServiceException(i, string3);
             }
             return string;
         }
         catch (RealmsHttpException realmsHttpException) {
-            throw new RealmsServiceException(500, "Could not connect to Realms: " + realmsHttpException.getMessage(), -1, "");
+            throw new RealmsServiceException(500, "Could not connect to Realms: " + realmsHttpException.getMessage());
         }
     }
 
+    private static String getErrorMessage(int httpResultCode) {
+        return switch (httpResultCode) {
+            case 429 -> I18n.translate("mco.errorMessage.serviceBusy", new Object[0]);
+            default -> "Unknown error";
+        };
+    }
+
     static {
-        LOGGER = LogManager.getLogger();
+        LOGGER = LogUtils.getLogger();
         JSON = new CheckedGson();
     }
 

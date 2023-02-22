@@ -10,7 +10,6 @@ import java.util.List;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.client.gui.hud.BackgroundHelper;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -21,6 +20,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.EntityTypeTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
@@ -126,23 +126,23 @@ extends BlockEntity {
     }
 
     private static void applyGlowToRaiders(World world, BlockPos pos, List<LivingEntity> hearingEntities) {
-        hearingEntities.stream().filter(livingEntity -> BellBlockEntity.isRaiderEntity(pos, livingEntity)).forEach(BellBlockEntity::applyGlowToEntity);
+        hearingEntities.stream().filter(entity -> BellBlockEntity.isRaiderEntity(pos, entity)).forEach(BellBlockEntity::applyGlowToEntity);
     }
 
     private static void applyParticlesToRaiders(World world, BlockPos pos, List<LivingEntity> hearingEntities) {
         MutableInt mutableInt = new MutableInt(16700985);
-        int i = (int)hearingEntities.stream().filter(livingEntity -> pos.isWithinDistance(livingEntity.getPos(), 48.0)).count();
-        hearingEntities.stream().filter(livingEntity -> BellBlockEntity.isRaiderEntity(pos, livingEntity)).forEach(livingEntity -> {
+        int i = (int)hearingEntities.stream().filter(entity -> pos.isWithinDistance(entity.getPos(), 48.0)).count();
+        hearingEntities.stream().filter(entity -> BellBlockEntity.isRaiderEntity(pos, entity)).forEach(entity -> {
             float f = 1.0f;
-            double d = Math.sqrt((livingEntity.getX() - (double)pos.getX()) * (livingEntity.getX() - (double)pos.getX()) + (livingEntity.getZ() - (double)pos.getZ()) * (livingEntity.getZ() - (double)pos.getZ()));
-            double e = (double)((float)pos.getX() + 0.5f) + 1.0 / d * (livingEntity.getX() - (double)pos.getX());
-            double g = (double)((float)pos.getZ() + 0.5f) + 1.0 / d * (livingEntity.getZ() - (double)pos.getZ());
+            double d = Math.sqrt((entity.getX() - (double)pos.getX()) * (entity.getX() - (double)pos.getX()) + (entity.getZ() - (double)pos.getZ()) * (entity.getZ() - (double)pos.getZ()));
+            double e = (double)((float)pos.getX() + 0.5f) + 1.0 / d * (entity.getX() - (double)pos.getX());
+            double g = (double)((float)pos.getZ() + 0.5f) + 1.0 / d * (entity.getZ() - (double)pos.getZ());
             int j = MathHelper.clamp((i - 21) / -2, 3, 15);
             for (int k = 0; k < j; ++k) {
                 int l = mutableInt.addAndGet(5);
-                double h = (double)BackgroundHelper.ColorMixer.getRed(l) / 255.0;
-                double m = (double)BackgroundHelper.ColorMixer.getGreen(l) / 255.0;
-                double n = (double)BackgroundHelper.ColorMixer.getBlue(l) / 255.0;
+                double h = (double)ColorHelper.Argb.getRed(l) / 255.0;
+                double m = (double)ColorHelper.Argb.getGreen(l) / 255.0;
+                double n = (double)ColorHelper.Argb.getBlue(l) / 255.0;
                 world.addParticle(ParticleTypes.ENTITY_EFFECT, e, (float)pos.getY() + 0.5f, g, h, m, n);
             }
         });

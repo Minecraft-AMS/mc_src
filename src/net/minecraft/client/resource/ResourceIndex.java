@@ -6,12 +6,12 @@
  *  com.google.common.io.Files
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.resource;
 
@@ -19,6 +19,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -34,13 +35,12 @@ import net.fabricmc.api.Environment;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ResourceIndex {
-    protected static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<String, File> rootIndex = Maps.newHashMap();
     private final Map<Identifier, File> namespacedIndex = Maps.newHashMap();
 

@@ -6,11 +6,11 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.texture;
 
@@ -20,6 +20,7 @@ import com.google.common.collect.Sets;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,15 +52,14 @@ import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.profiler.Profiler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class SpriteAtlasTexture
 extends AbstractTexture
 implements TextureTickListener {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     @Deprecated
     public static final Identifier BLOCK_ATLAS_TEXTURE = PlayerScreenHandler.BLOCK_ATLAS_TEXTURE;
     @Deprecated
@@ -83,7 +83,7 @@ implements TextureTickListener {
     public void upload(Data data) {
         this.spritesToLoad.clear();
         this.spritesToLoad.addAll(data.spriteIds);
-        LOGGER.info("Created: {}x{}x{} {}-atlas", (Object)data.width, (Object)data.height, (Object)data.maxLevel, (Object)this.id);
+        LOGGER.info("Created: {}x{}x{} {}-atlas", new Object[]{data.width, data.height, data.maxLevel, this.id});
         TextureUtil.prepareImage(this.getGlId(), data.maxLevel, data.width, data.height);
         this.clear();
         for (Sprite sprite : data.sprites) {
@@ -107,8 +107,8 @@ implements TextureTickListener {
     public Data stitch(ResourceManager resourceManager, Stream<Identifier> idStream, Profiler profiler, int mipmapLevel) {
         int l;
         profiler.push("preparing");
-        Set<Identifier> set = idStream.peek(identifier -> {
-            if (identifier == null) {
+        Set<Identifier> set = idStream.peek(id -> {
+            if (id == null) {
                 throw new IllegalArgumentException("Location cannot be null!");
             }
         }).collect(Collectors.toSet());
@@ -117,19 +117,19 @@ implements TextureTickListener {
         int j = Integer.MAX_VALUE;
         int k = 1 << mipmapLevel;
         profiler.swap("extracting_frames");
-        for (Sprite.Info info2 : this.loadSprites(resourceManager, set)) {
-            j = Math.min(j, Math.min(info2.getWidth(), info2.getHeight()));
-            l = Math.min(Integer.lowestOneBit(info2.getWidth()), Integer.lowestOneBit(info2.getHeight()));
+        for (Sprite.Info info : this.loadSprites(resourceManager, set)) {
+            j = Math.min(j, Math.min(info.getWidth(), info.getHeight()));
+            l = Math.min(Integer.lowestOneBit(info.getWidth()), Integer.lowestOneBit(info.getHeight()));
             if (l < k) {
-                LOGGER.warn("Texture {} with size {}x{} limits mip level from {} to {}", (Object)info2.getId(), (Object)info2.getWidth(), (Object)info2.getHeight(), (Object)MathHelper.log2(k), (Object)MathHelper.log2(l));
+                LOGGER.warn("Texture {} with size {}x{} limits mip level from {} to {}", new Object[]{info.getId(), info.getWidth(), info.getHeight(), MathHelper.floorLog2(k), MathHelper.floorLog2(l)});
                 k = l;
             }
-            textureStitcher.add(info2);
+            textureStitcher.add(info);
         }
         int m = Math.min(j, k);
-        int n = MathHelper.log2(m);
+        int n = MathHelper.floorLog2(m);
         if (n < mipmapLevel) {
-            LOGGER.warn("{}: dropping miplevel from {} to {}, because of minimum power of two: {}", (Object)this.id, (Object)mipmapLevel, (Object)n, (Object)m);
+            LOGGER.warn("{}: dropping miplevel from {} to {}, because of minimum power of two: {}", new Object[]{this.id, mipmapLevel, n, m});
             l = n;
         } else {
             l = mipmapLevel;
@@ -143,7 +143,7 @@ implements TextureTickListener {
         catch (TextureStitcherCannotFitException textureStitcherCannotFitException) {
             CrashReport crashReport = CrashReport.create(textureStitcherCannotFitException, "Stitching");
             CrashReportSection crashReportSection = crashReport.addElement("Stitcher");
-            crashReportSection.add("Sprites", textureStitcherCannotFitException.getSprites().stream().map(info -> String.format("%s[%dx%d]", info.getId(), info.getWidth(), info.getHeight())).collect(Collectors.joining(",")));
+            crashReportSection.add("Sprites", textureStitcherCannotFitException.getSprites().stream().map(sprite -> String.format("%s[%dx%d]", sprite.getId(), sprite.getWidth(), sprite.getHeight())).collect(Collectors.joining(",")));
             crashReportSection.add("Max Texture Size", i);
             throw new CrashException(crashReport);
         }

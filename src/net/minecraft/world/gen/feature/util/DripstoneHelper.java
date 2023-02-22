@@ -68,7 +68,10 @@ public class DripstoneHelper {
         }
     }
 
-    protected static void generatePointedDripstone(StructureWorldAccess world, BlockPos pos, Direction direction, int height, boolean merge) {
+    protected static void generatePointedDripstone(WorldAccess world, BlockPos pos, Direction direction, int height, boolean merge) {
+        if (!DripstoneHelper.canReplace(world.getBlockState(pos.offset(direction.getOpposite())))) {
+            return;
+        }
         BlockPos.Mutable mutable = pos.mutableCopy();
         DripstoneHelper.getDripstoneThickness(direction, height, merge, state -> {
             if (state.isOf(Blocks.POINTED_DRIPSTONE)) {
@@ -79,7 +82,7 @@ public class DripstoneHelper {
         });
     }
 
-    protected static boolean generateDripstoneBlock(StructureWorldAccess world, BlockPos pos) {
+    protected static boolean generateDripstoneBlock(WorldAccess world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
         if (blockState.isIn(BlockTags.DRIPSTONE_REPLACEABLE_BLOCKS)) {
             world.setBlockState(pos, Blocks.DRIPSTONE_BLOCK.getDefaultState(), 2);
@@ -102,6 +105,10 @@ public class DripstoneHelper {
 
     public static boolean canGenerate(BlockState state) {
         return state.isAir() || state.isOf(Blocks.WATER);
+    }
+
+    public static boolean cannotGenerate(BlockState state) {
+        return !state.isAir() && !state.isOf(Blocks.WATER);
     }
 
     public static boolean canGenerateOrLava(BlockState state) {

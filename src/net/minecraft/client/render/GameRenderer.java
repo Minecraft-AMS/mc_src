@@ -6,11 +6,11 @@
  *  com.google.common.collect.Maps
  *  com.google.gson.JsonSyntaxException
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.render;
 
@@ -20,6 +20,7 @@ import com.google.gson.JsonSyntaxException;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -31,6 +32,7 @@ import java.util.Random;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.pattern.CachedBlockPosition;
 import net.minecraft.client.MinecraftClient;
@@ -83,20 +85,21 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameMode;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class GameRenderer
 implements SynchronousResourceReloader,
 AutoCloseable {
     private static final Identifier NAUSEA_OVERLAY = new Identifier("textures/misc/nausea.png");
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final boolean field_32688 = false;
     public static final float CAMERA_DEPTH = 0.05f;
     private final MinecraftClient client;
@@ -107,8 +110,8 @@ AutoCloseable {
     private final MapRenderer mapRenderer;
     private final BufferBuilderStorage buffers;
     private int ticks;
-    private float movementFovMultiplier;
-    private float lastMovementFovMultiplier;
+    private float fovMultiplier;
+    private float lastFovMultiplier;
     private float skyDarkness;
     private float lastSkyDarkness;
     private boolean renderHand = true;
@@ -390,7 +393,7 @@ AutoCloseable {
     }
 
     public void loadShaders(ResourceManager manager) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         ArrayList list = Lists.newArrayList();
         list.addAll(Program.Type.FRAGMENT.getProgramCache().values());
         list.addAll(Program.Type.VERTEX.getProgramCache().values());
@@ -573,7 +576,7 @@ AutoCloseable {
     }
 
     private void clearShaders() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         this.shaders.values().forEach(Shader::close);
         this.shaders.clear();
     }
@@ -587,7 +590,7 @@ AutoCloseable {
     }
 
     public void tick() {
-        this.updateMovementFovMultiplier();
+        this.updateFovMultiplier();
         this.lightmapTextureManager.tick();
         if (this.client.getCameraEntity() == null) {
             this.client.setCameraEntity(this.client.player);
@@ -674,19 +677,19 @@ AutoCloseable {
         this.client.getProfiler().pop();
     }
 
-    private void updateMovementFovMultiplier() {
+    private void updateFovMultiplier() {
         float f = 1.0f;
         if (this.client.getCameraEntity() instanceof AbstractClientPlayerEntity) {
             AbstractClientPlayerEntity abstractClientPlayerEntity = (AbstractClientPlayerEntity)this.client.getCameraEntity();
-            f = abstractClientPlayerEntity.getSpeed();
+            f = abstractClientPlayerEntity.getFovMultiplier();
         }
-        this.lastMovementFovMultiplier = this.movementFovMultiplier;
-        this.movementFovMultiplier += (f - this.movementFovMultiplier) * 0.5f;
-        if (this.movementFovMultiplier > 1.5f) {
-            this.movementFovMultiplier = 1.5f;
+        this.lastFovMultiplier = this.fovMultiplier;
+        this.fovMultiplier += (f - this.fovMultiplier) * 0.5f;
+        if (this.fovMultiplier > 1.5f) {
+            this.fovMultiplier = 1.5f;
         }
-        if (this.movementFovMultiplier < 0.1f) {
-            this.movementFovMultiplier = 0.1f;
+        if (this.fovMultiplier < 0.1f) {
+            this.fovMultiplier = 0.1f;
         }
     }
 
@@ -698,7 +701,7 @@ AutoCloseable {
         double d = 70.0;
         if (changingFov) {
             d = this.client.options.fov;
-            d *= (double)MathHelper.lerp(tickDelta, this.lastMovementFovMultiplier, this.movementFovMultiplier);
+            d *= (double)MathHelper.lerp(tickDelta, this.lastFovMultiplier, this.fovMultiplier);
         }
         if (camera.getFocusedEntity() instanceof LivingEntity && ((LivingEntity)camera.getFocusedEntity()).isDead()) {
             float f = Math.min((float)((LivingEntity)camera.getFocusedEntity()).deathTime + tickDelta, 20.0f);
@@ -710,38 +713,38 @@ AutoCloseable {
         return d;
     }
 
-    private void bobViewWhenHurt(MatrixStack matrices, float f) {
+    private void bobViewWhenHurt(MatrixStack matrices, float tickDelta) {
         if (this.client.getCameraEntity() instanceof LivingEntity) {
-            float h;
+            float g;
             LivingEntity livingEntity = (LivingEntity)this.client.getCameraEntity();
-            float g = (float)livingEntity.hurtTime - f;
+            float f = (float)livingEntity.hurtTime - tickDelta;
             if (livingEntity.isDead()) {
-                h = Math.min((float)livingEntity.deathTime + f, 20.0f);
-                matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(40.0f - 8000.0f / (h + 200.0f)));
+                g = Math.min((float)livingEntity.deathTime + tickDelta, 20.0f);
+                matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(40.0f - 8000.0f / (g + 200.0f)));
             }
-            if (g < 0.0f) {
+            if (f < 0.0f) {
                 return;
             }
-            g /= (float)livingEntity.maxHurtTime;
-            g = MathHelper.sin(g * g * g * g * (float)Math.PI);
-            h = livingEntity.knockbackVelocity;
-            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-h));
-            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-g * 14.0f));
-            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(h));
+            f /= (float)livingEntity.maxHurtTime;
+            f = MathHelper.sin(f * f * f * f * (float)Math.PI);
+            g = livingEntity.knockbackVelocity;
+            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-g));
+            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-f * 14.0f));
+            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(g));
         }
     }
 
-    private void bobView(MatrixStack matrices, float f) {
+    private void bobView(MatrixStack matrices, float tickDelta) {
         if (!(this.client.getCameraEntity() instanceof PlayerEntity)) {
             return;
         }
         PlayerEntity playerEntity = (PlayerEntity)this.client.getCameraEntity();
-        float g = playerEntity.horizontalSpeed - playerEntity.prevHorizontalSpeed;
-        float h = -(playerEntity.horizontalSpeed + g * f);
-        float i = MathHelper.lerp(f, playerEntity.prevStrideDistance, playerEntity.strideDistance);
-        matrices.translate(MathHelper.sin(h * (float)Math.PI) * i * 0.5f, -Math.abs(MathHelper.cos(h * (float)Math.PI) * i), 0.0);
-        matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.sin(h * (float)Math.PI) * i * 3.0f));
-        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(Math.abs(MathHelper.cos(h * (float)Math.PI - 0.2f) * i) * 5.0f));
+        float f = playerEntity.horizontalSpeed - playerEntity.prevHorizontalSpeed;
+        float g = -(playerEntity.horizontalSpeed + f * tickDelta);
+        float h = MathHelper.lerp(tickDelta, playerEntity.prevStrideDistance, playerEntity.strideDistance);
+        matrices.translate(MathHelper.sin(g * (float)Math.PI) * h * 0.5f, -Math.abs(MathHelper.cos(g * (float)Math.PI) * h), 0.0);
+        matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.sin(g * (float)Math.PI) * h * 3.0f));
+        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(Math.abs(MathHelper.cos(g * (float)Math.PI - 0.2f) * h) * 5.0f));
     }
 
     public void renderWithZoom(float zoom, float zoomX, float zoomY) {
@@ -761,8 +764,8 @@ AutoCloseable {
         }
         this.loadProjectionMatrix(this.getBasicProjectionMatrix(this.getFov(camera, tickDelta, false)));
         MatrixStack.Entry entry = matrices.peek();
-        entry.getModel().loadIdentity();
-        entry.getNormal().loadIdentity();
+        entry.getPositionMatrix().loadIdentity();
+        entry.getNormalMatrix().loadIdentity();
         matrices.push();
         this.bobViewWhenHurt(matrices, tickDelta);
         if (this.client.options.bobView) {
@@ -784,31 +787,31 @@ AutoCloseable {
         }
     }
 
-    public void loadProjectionMatrix(Matrix4f matrix4f) {
-        RenderSystem.setProjectionMatrix(matrix4f);
+    public void loadProjectionMatrix(Matrix4f projectionMatrix) {
+        RenderSystem.setProjectionMatrix(projectionMatrix);
     }
 
-    public Matrix4f getBasicProjectionMatrix(double d) {
+    public Matrix4f getBasicProjectionMatrix(double fov) {
         MatrixStack matrixStack = new MatrixStack();
-        matrixStack.peek().getModel().loadIdentity();
+        matrixStack.peek().getPositionMatrix().loadIdentity();
         if (this.zoom != 1.0f) {
             matrixStack.translate(this.zoomX, -this.zoomY, 0.0);
             matrixStack.scale(this.zoom, this.zoom, 1.0f);
         }
-        matrixStack.peek().getModel().multiply(Matrix4f.viewboxMatrix(d, (float)this.client.getWindow().getFramebufferWidth() / (float)this.client.getWindow().getFramebufferHeight(), 0.05f, this.method_32796()));
-        return matrixStack.peek().getModel();
+        matrixStack.peek().getPositionMatrix().multiply(Matrix4f.viewboxMatrix(fov, (float)this.client.getWindow().getFramebufferWidth() / (float)this.client.getWindow().getFramebufferHeight(), 0.05f, this.method_32796()));
+        return matrixStack.peek().getPositionMatrix();
     }
 
     public float method_32796() {
         return this.viewDistance * 4.0f;
     }
 
-    public static float getNightVisionStrength(LivingEntity entity, float f) {
+    public static float getNightVisionStrength(LivingEntity entity, float tickDelta) {
         int i = entity.getStatusEffect(StatusEffects.NIGHT_VISION).getDuration();
         if (i > 200) {
             return 1.0f;
         }
-        return 0.7f + MathHelper.sin(((float)i - f) * (float)Math.PI * 0.2f) * 0.3f;
+        return 0.7f + MathHelper.sin(((float)i - tickDelta) * (float)Math.PI * 0.2f) * 0.3f;
     }
 
     public void render(float tickDelta, long startTime, boolean tick) {
@@ -851,7 +854,7 @@ AutoCloseable {
             float f;
             this.client.getProfiler().swap("gui");
             if (this.client.player != null && (f = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength)) > 0.0f && this.client.player.hasStatusEffect(StatusEffects.NAUSEA) && this.client.options.distortionEffectScale < 1.0f) {
-                this.method_31136(f * (1.0f - this.client.options.distortionEffectScale));
+                this.renderNausea(f * (1.0f - this.client.options.distortionEffectScale));
             }
             if (!this.client.options.hudHidden || this.client.currentScreen != null) {
                 this.renderFloatingItem(this.client.getWindow().getScaledWidth(), this.client.getWindow().getScaledHeight(), tickDelta);
@@ -965,14 +968,15 @@ AutoCloseable {
                     bl = blockState.createScreenHandlerFactory(this.client.world, blockPos) != null;
                 } else {
                     CachedBlockPosition cachedBlockPosition = new CachedBlockPosition(this.client.world, blockPos, false);
-                    bl = !itemStack.isEmpty() && (itemStack.canDestroy(this.client.world.getTagManager(), cachedBlockPosition) || itemStack.canPlaceOn(this.client.world.getTagManager(), cachedBlockPosition));
+                    Registry<Block> registry = this.client.world.getRegistryManager().get(Registry.BLOCK_KEY);
+                    bl = !itemStack.isEmpty() && (itemStack.canDestroy(registry, cachedBlockPosition) || itemStack.canPlaceOn(registry, cachedBlockPosition));
                 }
             }
         }
         return bl;
     }
 
-    public void renderWorld(float tickDelta, long limitTime, MatrixStack matrix) {
+    public void renderWorld(float tickDelta, long limitTime, MatrixStack matrices) {
         float f;
         this.lightmapTextureManager.update(tickDelta);
         if (this.client.getCameraEntity() == null) {
@@ -983,10 +987,10 @@ AutoCloseable {
         boolean bl = this.shouldRenderBlockOutline();
         this.client.getProfiler().swap("camera");
         Camera camera = this.camera;
-        this.viewDistance = this.client.options.viewDistance * 16;
+        this.viewDistance = this.client.options.getViewDistance() * 16;
         MatrixStack matrixStack = new MatrixStack();
         double d = this.getFov(camera, tickDelta, true);
-        matrixStack.peek().getModel().multiply(this.getBasicProjectionMatrix(d));
+        matrixStack.peek().getPositionMatrix().multiply(this.getBasicProjectionMatrix(d));
         this.bobViewWhenHurt(matrixStack, tickDelta);
         if (this.client.options.bobView) {
             this.bobView(matrixStack, tickDelta);
@@ -1001,17 +1005,21 @@ AutoCloseable {
             float h = -((float)this.ticks + tickDelta) * (float)i;
             matrixStack.multiply(vec3f.getDegreesQuaternion(h));
         }
-        Matrix4f matrix4f = matrixStack.peek().getModel();
+        Matrix4f matrix4f = matrixStack.peek().getPositionMatrix();
         this.loadProjectionMatrix(matrix4f);
         camera.update(this.client.world, this.client.getCameraEntity() == null ? this.client.player : this.client.getCameraEntity(), !this.client.options.getPerspective().isFirstPerson(), this.client.options.getPerspective().isFrontView(), tickDelta);
-        matrix.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(camera.getPitch()));
-        matrix.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(camera.getYaw() + 180.0f));
-        this.client.worldRenderer.setupFrustum(matrix, camera.getPos(), this.getBasicProjectionMatrix(Math.max(d, this.client.options.fov)));
-        this.client.worldRenderer.render(matrix, tickDelta, limitTime, bl, camera, this, this.lightmapTextureManager, matrix4f);
+        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(camera.getPitch()));
+        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(camera.getYaw() + 180.0f));
+        Matrix3f matrix3f = matrices.peek().getNormalMatrix().copy();
+        if (matrix3f.invert()) {
+            RenderSystem.setInverseViewRotationMatrix(matrix3f);
+        }
+        this.client.worldRenderer.setupFrustum(matrices, camera.getPos(), this.getBasicProjectionMatrix(Math.max(d, this.client.options.fov)));
+        this.client.worldRenderer.render(matrices, tickDelta, limitTime, bl, camera, this, this.lightmapTextureManager, matrix4f);
         this.client.getProfiler().swap("hand");
         if (this.renderHand) {
             RenderSystem.clear(256, MinecraftClient.IS_SYSTEM_MAC);
-            this.renderHand(matrix, camera, tickDelta);
+            this.renderHand(matrices, camera, tickDelta);
         }
         this.client.getProfiler().pop();
     }
@@ -1064,31 +1072,31 @@ AutoCloseable {
         RenderSystem.disableDepthTest();
     }
 
-    private void method_31136(float f) {
+    private void renderNausea(float distortionStrength) {
         int i = this.client.getWindow().getScaledWidth();
         int j = this.client.getWindow().getScaledHeight();
-        double d = MathHelper.lerp((double)f, 2.0, 1.0);
-        float g = 0.2f * f;
-        float h = 0.4f * f;
-        float k = 0.2f * f;
+        double d = MathHelper.lerp((double)distortionStrength, 2.0, 1.0);
+        float f = 0.2f * distortionStrength;
+        float g = 0.4f * distortionStrength;
+        float h = 0.2f * distortionStrength;
         double e = (double)i * d;
-        double l = (double)j * d;
-        double m = ((double)i - e) / 2.0;
-        double n = ((double)j - l) / 2.0;
+        double k = (double)j * d;
+        double l = ((double)i - e) / 2.0;
+        double m = ((double)j - k) / 2.0;
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE);
-        RenderSystem.setShaderColor(g, h, k, 1.0f);
+        RenderSystem.setShaderColor(f, g, h, 1.0f);
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, NAUSEA_OVERLAY);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(m, n + l, -90.0).texture(0.0f, 1.0f).next();
-        bufferBuilder.vertex(m + e, n + l, -90.0).texture(1.0f, 1.0f).next();
-        bufferBuilder.vertex(m + e, n, -90.0).texture(1.0f, 0.0f).next();
-        bufferBuilder.vertex(m, n, -90.0).texture(0.0f, 0.0f).next();
+        bufferBuilder.vertex(l, m + k, -90.0).texture(0.0f, 1.0f).next();
+        bufferBuilder.vertex(l + e, m + k, -90.0).texture(1.0f, 1.0f).next();
+        bufferBuilder.vertex(l + e, m, -90.0).texture(1.0f, 0.0f).next();
+        bufferBuilder.vertex(l, m, -90.0).texture(0.0f, 0.0f).next();
         tessellator.draw();
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.defaultBlendFunc();

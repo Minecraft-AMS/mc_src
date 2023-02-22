@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Ticker
  *  com.google.common.collect.Iterators
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
@@ -10,15 +11,16 @@
  *  com.mojang.datafixers.DataFixUtils
  *  com.mojang.datafixers.types.Type
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  it.unimi.dsi.fastutil.Hash$Strategy
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.util;
 
+import com.google.common.base.Ticker;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -27,6 +29,7 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.Hash;
 import java.io.File;
@@ -45,6 +48,7 @@ import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,7 +62,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
@@ -85,19 +88,27 @@ import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import net.minecraft.util.math.MathHelper;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class Util {
+    static final Logger LOGGER = LogUtils.getLogger();
+    private static final int MAX_PARALLELISM = 255;
+    private static final String MAX_BG_THREADS_PROPERTY = "max.bg.threads";
     private static final AtomicInteger NEXT_WORKER_ID = new AtomicInteger(1);
     private static final ExecutorService BOOTSTRAP_EXECUTOR = Util.createWorker("Bootstrap");
     private static final ExecutorService MAIN_WORKER_EXECUTOR = Util.createWorker("Main");
     private static final ExecutorService IO_WORKER_EXECUTOR = Util.createIoWorker();
     public static LongSupplier nanoTimeSupplier = System::nanoTime;
+    public static final Ticker TICKER = new Ticker(){
+
+        public long read() {
+            return nanoTimeSupplier.getAsLong();
+        }
+    };
     public static final UUID NIL_UUID = new UUID(0L, 0L);
     public static final FileSystemProvider JAR_FILE_SYSTEM_PROVIDER = FileSystemProvider.installedProviders().stream().filter(fileSystemProvider -> fileSystemProvider.getScheme().equalsIgnoreCase("jar")).findFirst().orElseThrow(() -> new IllegalStateException("No jar file system provider found"));
-    static final Logger LOGGER = LogManager.getLogger();
+    private static Consumer<String> missingBreakpointHandler = message -> {};
 
     public static <K, V> Collector<Map.Entry<? extends K, ? extends V>, ?, Map<K, V>> toMap() {
         return Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue);
@@ -127,7 +138,7 @@ public class Util {
     }
 
     private static ExecutorService createWorker(String name) {
-        int i = MathHelper.clamp(Runtime.getRuntime().availableProcessors() - 1, 1, 7);
+        int i = MathHelper.clamp(Runtime.getRuntime().availableProcessors() - 1, 1, Util.getMaxBackgroundThreads());
         Object executorService = i <= 0 ? MoreExecutors.newDirectExecutorService() : new ForkJoinPool(i, forkJoinPool -> {
             ForkJoinWorkerThread forkJoinWorkerThread = new ForkJoinWorkerThread(forkJoinPool){
 
@@ -147,15 +158,32 @@ public class Util {
         return executorService;
     }
 
-    public static Executor getBootstrapExecutor() {
+    private static int getMaxBackgroundThreads() {
+        String string = System.getProperty(MAX_BG_THREADS_PROPERTY);
+        if (string != null) {
+            try {
+                int i = Integer.parseInt(string);
+                if (i >= 1 && i <= 255) {
+                    return i;
+                }
+                LOGGER.error("Wrong {} property value '{}'. Should be an integer value between 1 and {}.", new Object[]{MAX_BG_THREADS_PROPERTY, string, 255});
+            }
+            catch (NumberFormatException numberFormatException) {
+                LOGGER.error("Could not parse {} property value '{}'. Should be an integer value between 1 and {}.", new Object[]{MAX_BG_THREADS_PROPERTY, string, 255});
+            }
+        }
+        return 255;
+    }
+
+    public static ExecutorService getBootstrapExecutor() {
         return BOOTSTRAP_EXECUTOR;
     }
 
-    public static Executor getMainWorkerExecutor() {
+    public static ExecutorService getMainWorkerExecutor() {
         return MAIN_WORKER_EXECUTOR;
     }
 
-    public static Executor getIoWorkerExecutor() {
+    public static ExecutorService getIoWorkerExecutor() {
         return IO_WORKER_EXECUTOR;
     }
 
@@ -251,6 +279,24 @@ public class Util {
         return task;
     }
 
+    public static <V> Supplier<V> debugSupplier(String activeThreadName, Supplier<V> supplier) {
+        if (SharedConstants.isDevelopment) {
+            return () -> {
+                Thread thread = Thread.currentThread();
+                String string2 = thread.getName();
+                thread.setName(activeThreadName);
+                try {
+                    Object t = supplier.get();
+                    return t;
+                }
+                finally {
+                    thread.setName(string2);
+                }
+            };
+        }
+        return supplier;
+    }
+
     public static OperatingSystem getOperatingSystem() {
         String string = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         if (string.contains("win")) {
@@ -328,18 +374,15 @@ public class Util {
         return IdentityHashStrategy.INSTANCE;
     }
 
-    public static <V> CompletableFuture<List<V>> combineSafe(List<? extends CompletableFuture<? extends V>> futures) {
-        return futures.stream().reduce(CompletableFuture.completedFuture(Lists.newArrayList()), (completableFuture, completableFuture2) -> completableFuture2.thenCombine((CompletionStage)completableFuture, (object, list) -> {
-            ArrayList list2 = Lists.newArrayListWithCapacity((int)(list.size() + 1));
-            list2.addAll(list);
-            list2.add(object);
-            return list2;
-        }), (completableFuture, completableFuture2) -> completableFuture.thenCombine((CompletionStage)completableFuture2, (list, list2) -> {
-            ArrayList list3 = Lists.newArrayListWithCapacity((int)(list.size() + list2.size()));
-            list3.addAll(list);
-            list3.addAll(list2);
-            return list3;
-        }));
+    public static <V> CompletableFuture<List<V>> combineSafe(List<? extends CompletableFuture<V>> futures) {
+        if (futures.isEmpty()) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+        if (futures.size() == 1) {
+            return futures.get(0).thenApply(List::of);
+        }
+        CompletableFuture<Void> completableFuture = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        return completableFuture.thenApply(void_ -> futures.stream().map(CompletableFuture::join).toList());
     }
 
     public static <V> CompletableFuture<List<V>> combine(List<? extends CompletableFuture<? extends V>> futures) {
@@ -360,10 +403,6 @@ public class Util {
         return CompletableFuture.allOf(completableFutures).applyToEither((CompletionStage)completableFuture, void_ -> list);
     }
 
-    public static <T> Stream<T> stream(Optional<? extends T> optional) {
-        return (Stream)DataFixUtils.orElseGet(optional.map(Stream::of), Stream::empty);
-    }
-
     public static <T> Optional<T> ifPresentOrElse(Optional<T> optional, Consumer<T> presentAction, Runnable elseAction) {
         if (optional.isPresent()) {
             presentAction.accept(optional.get());
@@ -380,27 +419,36 @@ public class Util {
     public static void error(String message) {
         LOGGER.error(message);
         if (SharedConstants.isDevelopment) {
-            Util.pause();
+            Util.pause(message);
+        }
+    }
+
+    public static void error(String message, Throwable throwable) {
+        LOGGER.error(message, throwable);
+        if (SharedConstants.isDevelopment) {
+            Util.pause(message);
         }
     }
 
     public static <T extends Throwable> T throwOrPause(T t) {
         if (SharedConstants.isDevelopment) {
             LOGGER.error("Trying to throw a fatal exception, pausing in IDE", t);
-            Util.pause();
+            Util.pause(t.getMessage());
         }
         return t;
     }
 
-    private static void pause() {
-        try {
-            while (true) {
-                Thread.sleep(1000L);
-                LOGGER.error("paused");
-            }
-        }
-        catch (InterruptedException interruptedException) {
-            return;
+    public static void setMissingBreakpointHandler(Consumer<String> missingBreakpointHandler) {
+        Util.missingBreakpointHandler = missingBreakpointHandler;
+    }
+
+    private static void pause(String message) {
+        boolean bl;
+        Instant instant = Instant.now();
+        LOGGER.warn("Did you remember to set a breakpoint here?");
+        boolean bl2 = bl = Duration.between(instant, Instant.now()).toMillis() > 500L;
+        if (!bl) {
+            missingBreakpointHandler.accept(message);
         }
     }
 
@@ -424,6 +472,13 @@ public class Util {
 
     public static <T> T getRandom(List<T> list, Random random) {
         return list.get(random.nextInt(list.size()));
+    }
+
+    public static <T> Optional<T> getRandomOrEmpty(List<T> list, Random random) {
+        if (list.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(Util.getRandom(list, random));
     }
 
     private static BooleanSupplier renameTask(final Path src, final Path dest) {
@@ -510,7 +565,7 @@ public class Util {
             if (Util.attemptTasks(tasks)) {
                 return true;
             }
-            LOGGER.error("Failed to {}, retrying {}/{}", (Object)taskName, (Object)i, (Object)retries);
+            LOGGER.error("Failed to {}, retrying {}/{}", new Object[]{taskName, i, retries});
         }
         LOGGER.error("Failed to {}, aborting, progress might be lost", (Object)taskName);
         return false;
@@ -521,6 +576,14 @@ public class Util {
     }
 
     public static void backupAndReplace(Path current, Path newPath, Path backup) {
+        Util.backupAndReplace(current, newPath, backup, false);
+    }
+
+    public static void backupAndReplace(File current, File newPath, File backup, boolean noRestoreOnFail) {
+        Util.backupAndReplace(current.toPath(), newPath.toPath(), backup.toPath(), noRestoreOnFail);
+    }
+
+    public static void backupAndReplace(Path current, Path newPath, Path backup, boolean noRestoreOnFail) {
         int i = 10;
         if (Files.exists(current, new LinkOption[0]) && !Util.attemptTasks(10, "create backup " + backup, Util.deleteTask(backup), Util.renameTask(current, backup), Util.existenceCheckTask(backup))) {
             return;
@@ -528,7 +591,7 @@ public class Util {
         if (!Util.attemptTasks(10, "remove old " + current, Util.deleteTask(current), Util.deletionVerifyTask(current))) {
             return;
         }
-        if (!Util.attemptTasks(10, "replace " + current + " with " + newPath, Util.renameTask(newPath, current), Util.existenceCheckTask(current))) {
+        if (!Util.attemptTasks(10, "replace " + current + " with " + newPath, Util.renameTask(newPath, current), Util.existenceCheckTask(current)) && !noRestoreOnFail) {
             Util.attemptTasks(10, "restore " + current + " from " + backup, Util.renameTask(backup, current), Util.existenceCheckTask(current));
         }
     }
@@ -637,25 +700,29 @@ public class Util {
         };
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     public static class OperatingSystem
     extends Enum<OperatingSystem> {
-        public static final /* enum */ OperatingSystem LINUX = new OperatingSystem();
-        public static final /* enum */ OperatingSystem SOLARIS = new OperatingSystem();
-        public static final /* enum */ OperatingSystem WINDOWS = new OperatingSystem(){
+        public static final /* enum */ OperatingSystem LINUX = new OperatingSystem("linux");
+        public static final /* enum */ OperatingSystem SOLARIS = new OperatingSystem("solaris");
+        public static final /* enum */ OperatingSystem WINDOWS = new OperatingSystem("windows"){
 
             @Override
             protected String[] getURLOpenCommand(URL url) {
                 return new String[]{"rundll32", "url.dll,FileProtocolHandler", url.toString()};
             }
         };
-        public static final /* enum */ OperatingSystem OSX = new OperatingSystem(){
+        public static final /* enum */ OperatingSystem OSX = new OperatingSystem("mac"){
 
             @Override
             protected String[] getURLOpenCommand(URL url) {
                 return new String[]{"open", url.toString()};
             }
         };
-        public static final /* enum */ OperatingSystem UNKNOWN = new OperatingSystem();
+        public static final /* enum */ OperatingSystem UNKNOWN = new OperatingSystem("unknown");
+        private final String name;
         private static final /* synthetic */ OperatingSystem[] field_1136;
 
         public static OperatingSystem[] values() {
@@ -664,6 +731,10 @@ public class Util {
 
         public static OperatingSystem valueOf(String string) {
             return Enum.valueOf(OperatingSystem.class, string);
+        }
+
+        OperatingSystem(String name) {
+            this.name = name;
         }
 
         public void open(URL url) {
@@ -714,6 +785,10 @@ public class Util {
             catch (IllegalArgumentException | MalformedURLException | URISyntaxException exception) {
                 LOGGER.error("Couldn't open uri '{}'", (Object)uri, (Object)exception);
             }
+        }
+
+        public String getName() {
+            return this.name;
         }
 
         private static /* synthetic */ OperatingSystem[] method_36579() {

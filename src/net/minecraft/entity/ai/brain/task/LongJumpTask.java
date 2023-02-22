@@ -28,7 +28,8 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.collection.WeightedPicker;
+import net.minecraft.util.collection.Weighted;
+import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -50,15 +51,15 @@ extends Task<E> {
     private Optional<Target> lastTarget = Optional.empty();
     private int cooldown;
     private long targetTime;
-    private Function<E, SoundEvent> field_33460;
+    private Function<E, SoundEvent> entityToSound;
 
-    public LongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> function) {
+    public LongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.LONG_JUMP_COOLING_DOWN, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), 200);
         this.cooldownRange = cooldownRange;
         this.verticalRange = verticalRange;
         this.horizontalRange = horizontalRange;
         this.maxRange = maxRange;
-        this.field_33460 = function;
+        this.entityToSound = entityToSound;
     }
 
     @Override
@@ -107,11 +108,11 @@ extends Task<E> {
                 double e = d + ((LivingEntity)mobEntity).getJumpBoostVelocityModifier();
                 ((Entity)mobEntity).setVelocity(vec3d.multiply(e / d));
                 ((LivingEntity)mobEntity).getBrain().remember(MemoryModuleType.LONG_JUMP_MID_JUMP, true);
-                serverWorld.playSoundFromEntity(null, (Entity)mobEntity, this.field_33460.apply(mobEntity), SoundCategory.NEUTRAL, 1.0f, 1.0f);
+                serverWorld.playSoundFromEntity(null, (Entity)mobEntity, this.entityToSound.apply(mobEntity), SoundCategory.NEUTRAL, 1.0f, 1.0f);
             }
         } else {
             --this.cooldown;
-            Optional<Target> optional = WeightedPicker.getRandom(serverWorld.random, this.targets);
+            Optional<Target> optional = Weighting.getRandom(serverWorld.random, this.targets);
             if (optional.isPresent()) {
                 this.targets.remove(optional.get());
                 ((LivingEntity)mobEntity).getBrain().remember(MemoryModuleType.LOOK_TARGET, new BlockPosLookTarget(optional.get().getPos()));
@@ -210,7 +211,7 @@ extends Task<E> {
     }
 
     public static class Target
-    extends WeightedPicker.Entry {
+    extends Weighted.Absent {
         private final BlockPos pos;
         private final Vec3d ramVelocity;
 

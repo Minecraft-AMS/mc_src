@@ -6,11 +6,11 @@
  *  com.google.gson.Gson
  *  com.google.gson.GsonBuilder
  *  com.google.gson.reflect.TypeToken
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.sound;
 
@@ -18,6 +18,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -51,15 +52,14 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class SoundManager
 extends SinglePreparationResourceReloader<SoundList> {
     public static final Sound MISSING_SOUND = new Sound("meta:missing_sound", 1.0f, 1.0f, 1, Sound.RegistrationType.FILE, false, false, 16);
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final String SOUNDS_JSON = "sounds.json";
     private static final Gson GSON = new GsonBuilder().registerTypeHierarchyAdapter(Text.class, (Object)new Text.Serializer()).registerTypeAdapter(SoundEntry.class, (Object)new SoundEntryDeserializer()).create();
     private static final TypeToken<Map<String, SoundEntry>> TYPE = new TypeToken<Map<String, SoundEntry>>(){};
@@ -91,7 +91,7 @@ extends SinglePreparationResourceReloader<SoundList> {
                         profiler.pop();
                     }
                     catch (RuntimeException runtimeException) {
-                        LOGGER.warn("Invalid {} in resourcepack: '{}'", (Object)SOUNDS_JSON, (Object)resource.getResourcePackName(), (Object)runtimeException);
+                        LOGGER.warn("Invalid {} in resourcepack: '{}'", new Object[]{SOUNDS_JSON, resource.getResourcePackName(), runtimeException});
                     }
                     profiler.pop();
                 }
@@ -107,7 +107,7 @@ extends SinglePreparationResourceReloader<SoundList> {
 
     @Override
     protected void apply(SoundList soundList, ResourceManager resourceManager, Profiler profiler) {
-        soundList.addTo(this.sounds, this.soundSystem);
+        soundList.reload(this.sounds, this.soundSystem);
         if (SharedConstants.isDevelopment) {
             for (Identifier identifier : this.sounds.keySet()) {
                 String string;
@@ -123,6 +123,10 @@ extends SinglePreparationResourceReloader<SoundList> {
             }
         }
         this.soundSystem.reloadSounds();
+    }
+
+    public List<String> getSoundDevices() {
+        return this.soundSystem.getSoundDevices();
     }
 
     static boolean isSoundResourcePresent(Sound sound, Identifier id, ResourceManager resourceManager) {
@@ -171,8 +175,8 @@ extends SinglePreparationResourceReloader<SoundList> {
         this.soundSystem.stop();
     }
 
-    public void tick(boolean bl) {
-        this.soundSystem.tick(bl);
+    public void tick(boolean paused) {
+        this.soundSystem.tick(paused);
     }
 
     public void resumeAll() {
@@ -208,6 +212,10 @@ extends SinglePreparationResourceReloader<SoundList> {
 
     public String getDebugString() {
         return this.soundSystem.getDebugString();
+    }
+
+    public void reloadSounds() {
+        this.soundSystem.reloadSounds();
     }
 
     @Override
@@ -277,10 +285,10 @@ extends SinglePreparationResourceReloader<SoundList> {
             }
         }
 
-        public void addTo(Map<Identifier, WeightedSoundSet> map, SoundSystem soundSystem) {
-            map.clear();
+        public void reload(Map<Identifier, WeightedSoundSet> sounds, SoundSystem soundSystem) {
+            sounds.clear();
             for (Map.Entry<Identifier, WeightedSoundSet> entry : this.loadedSounds.entrySet()) {
-                map.put(entry.getKey(), entry.getValue());
+                sounds.put(entry.getKey(), entry.getValue());
                 entry.getValue().preload(soundSystem);
             }
         }

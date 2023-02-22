@@ -49,9 +49,9 @@ extends Task<PathAwareEntity> {
 
     @Override
     protected void run(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
-        LivingEntity livingEntity2 = this.findVisibleVillagerBaby(pathAwareEntity);
-        if (livingEntity2 != null) {
-            this.setGroundTarget(serverWorld, pathAwareEntity, livingEntity2);
+        LivingEntity livingEntity = this.findVisibleVillagerBaby(pathAwareEntity);
+        if (livingEntity != null) {
+            this.setGroundTarget(serverWorld, pathAwareEntity, livingEntity);
             return;
         }
         Optional<LivingEntity> optional = this.getLeastPopularBabyInteractionTarget(pathAwareEntity);
@@ -59,7 +59,7 @@ extends Task<PathAwareEntity> {
             PlayWithVillagerBabiesTask.setPlayTarget(pathAwareEntity, optional.get());
             return;
         }
-        this.getVisibleMob(pathAwareEntity).ifPresent(livingEntity -> PlayWithVillagerBabiesTask.setPlayTarget(pathAwareEntity, livingEntity));
+        this.getVisibleMob(pathAwareEntity).ifPresent(target -> PlayWithVillagerBabiesTask.setPlayTarget(pathAwareEntity, target));
     }
 
     private void setGroundTarget(ServerWorld world, PathAwareEntity entity, LivingEntity unusedBaby) {

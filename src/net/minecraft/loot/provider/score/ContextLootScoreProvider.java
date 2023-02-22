@@ -32,8 +32,8 @@ public class ContextLootScoreProvider
 implements LootScoreProvider {
     final LootContext.EntityTarget target;
 
-    ContextLootScoreProvider(LootContext.EntityTarget entityTarget) {
-        this.target = entityTarget;
+    ContextLootScoreProvider(LootContext.EntityTarget target) {
+        this.target = target;
     }
 
     public static LootScoreProvider create(LootContext.EntityTarget target) {

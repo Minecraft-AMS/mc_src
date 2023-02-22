@@ -66,13 +66,12 @@ implements Hopper {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         if (!this.serializeLootTable(nbt)) {
             Inventories.writeNbt(nbt, this.inventory);
         }
         nbt.putInt("TransferCooldown", this.transferCooldown);
-        return nbt;
     }
 
     @Override
@@ -104,7 +103,7 @@ implements Hopper {
         --blockEntity.transferCooldown;
         blockEntity.lastTickTime = world.getTime();
         if (!blockEntity.needsCooldown()) {
-            blockEntity.setCooldown(0);
+            blockEntity.setTransferCooldown(0);
             HopperBlockEntity.insertAndExtract(world, pos, state, blockEntity, () -> HopperBlockEntity.extract(world, blockEntity));
         }
     }
@@ -122,7 +121,7 @@ implements Hopper {
                 bl |= booleanSupplier.getAsBoolean();
             }
             if (bl) {
-                blockEntity.setCooldown(8);
+                blockEntity.setTransferCooldown(8);
                 HopperBlockEntity.markDirty(world, pos, state);
                 return true;
             }
@@ -168,14 +167,14 @@ implements Hopper {
     }
 
     private static boolean isInventoryFull(Inventory inventory, Direction direction) {
-        return HopperBlockEntity.getAvailableSlots(inventory, direction).allMatch(i -> {
-            ItemStack itemStack = inventory.getStack(i);
+        return HopperBlockEntity.getAvailableSlots(inventory, direction).allMatch(slot -> {
+            ItemStack itemStack = inventory.getStack(slot);
             return itemStack.getCount() >= itemStack.getMaxCount();
         });
     }
 
     private static boolean isInventoryEmpty(Inventory inv, Direction facing) {
-        return HopperBlockEntity.getAvailableSlots(inv, facing).allMatch(i -> inv.getStack(i).isEmpty());
+        return HopperBlockEntity.getAvailableSlots(inv, facing).allMatch(slot -> inv.getStack(slot).isEmpty());
     }
 
     public static boolean extract(World world, Hopper hopper) {
@@ -185,7 +184,7 @@ implements Hopper {
             if (HopperBlockEntity.isInventoryEmpty(inventory, direction)) {
                 return false;
             }
-            return HopperBlockEntity.getAvailableSlots(inventory, direction).anyMatch(i -> HopperBlockEntity.extract(hopper, inventory, i, direction));
+            return HopperBlockEntity.getAvailableSlots(inventory, direction).anyMatch(slot -> HopperBlockEntity.extract(hopper, inventory, slot, direction));
         }
         for (ItemEntity itemEntity : HopperBlockEntity.getInputItemEntities(world, hopper)) {
             if (!HopperBlockEntity.extract(hopper, itemEntity)) continue;
@@ -248,9 +247,9 @@ implements Hopper {
         return !(inv instanceof SidedInventory) || ((SidedInventory)inv).canExtract(slot, stack, facing);
     }
 
-    private static ItemStack transfer(@Nullable Inventory from, Inventory to, ItemStack stack, int slot, @Nullable Direction direction) {
+    private static ItemStack transfer(@Nullable Inventory from, Inventory to, ItemStack stack, int slot, @Nullable Direction side) {
         ItemStack itemStack = to.getStack(slot);
-        if (HopperBlockEntity.canInsert(to, stack, slot, direction)) {
+        if (HopperBlockEntity.canInsert(to, stack, slot, side)) {
             int j;
             boolean bl = false;
             boolean bl2 = to.isEmpty();
@@ -275,7 +274,7 @@ implements Hopper {
                             j = 1;
                         }
                     }
-                    hopperBlockEntity.setCooldown(8 - j);
+                    hopperBlockEntity.setTransferCooldown(8 - j);
                 }
                 to.markDirty();
             }
@@ -350,8 +349,8 @@ implements Hopper {
         return (double)this.pos.getZ() + 0.5;
     }
 
-    private void setCooldown(int cooldown) {
-        this.transferCooldown = cooldown;
+    private void setTransferCooldown(int transferCooldown) {
+        this.transferCooldown = transferCooldown;
     }
 
     private boolean needsCooldown() {

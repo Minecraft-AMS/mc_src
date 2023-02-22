@@ -46,7 +46,7 @@ implements FluidDrainable {
     protected final FlowableFluid fluid;
     private final List<FluidState> statesByLevel;
     public static final VoxelShape COLLISION_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
-    public static final ImmutableList<Direction> field_34006 = ImmutableList.of((Object)Direction.DOWN, (Object)Direction.SOUTH, (Object)Direction.NORTH, (Object)Direction.EAST, (Object)Direction.WEST);
+    public static final ImmutableList<Direction> FLOW_DIRECTIONS = ImmutableList.of((Object)Direction.DOWN, (Object)Direction.SOUTH, (Object)Direction.NORTH, (Object)Direction.EAST, (Object)Direction.WEST);
 
     protected FluidBlock(FlowableFluid fluid, AbstractBlock.Settings settings) {
         super(settings);
@@ -62,7 +62,7 @@ implements FluidDrainable {
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        if (context.isAbove(COLLISION_SHAPE, pos, true) && state.get(LEVEL) == 0 && context.canWalkOnFluid(world.getFluidState(pos.up()), this.fluid)) {
+        if (context.isAbove(COLLISION_SHAPE, pos, true) && state.get(LEVEL) == 0 && context.canWalkOnFluid(world.getFluidState(pos.up()), state.getFluidState())) {
             return COLLISION_SHAPE;
         }
         return VoxelShapes.empty();
@@ -117,14 +117,14 @@ implements FluidDrainable {
     @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
         if (this.receiveNeighborFluids(world, pos, state)) {
-            world.getFluidTickScheduler().schedule(pos, state.getFluidState().getFluid(), this.fluid.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, state.getFluidState().getFluid(), this.fluid.getTickRate(world));
         }
     }
 
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.getFluidState().isStill() || neighborState.getFluidState().isStill()) {
-            world.getFluidTickScheduler().schedule(pos, state.getFluidState().getFluid(), this.fluid.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, state.getFluidState().getFluid(), this.fluid.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
@@ -132,14 +132,14 @@ implements FluidDrainable {
     @Override
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
         if (this.receiveNeighborFluids(world, pos, state)) {
-            world.getFluidTickScheduler().schedule(pos, state.getFluidState().getFluid(), this.fluid.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, state.getFluidState().getFluid(), this.fluid.getTickRate(world));
         }
     }
 
     private boolean receiveNeighborFluids(World world, BlockPos pos, BlockState state) {
         if (this.fluid.isIn(FluidTags.LAVA)) {
             boolean bl = world.getBlockState(pos.down()).isOf(Blocks.SOUL_SOIL);
-            for (Direction direction : field_34006) {
+            for (Direction direction : FLOW_DIRECTIONS) {
                 BlockPos blockPos = pos.offset(direction.getOpposite());
                 if (world.getFluidState(blockPos).isIn(FluidTags.WATER)) {
                     Block block = world.getFluidState(pos).isStill() ? Blocks.OBSIDIAN : Blocks.COBBLESTONE;

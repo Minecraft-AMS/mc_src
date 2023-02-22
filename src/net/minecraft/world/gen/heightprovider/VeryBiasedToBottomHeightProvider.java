@@ -4,15 +4,16 @@
  * Could not load the following classes:
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.gen.heightprovider;
 
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Random;
@@ -21,13 +22,12 @@ import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.YOffset;
 import net.minecraft.world.gen.heightprovider.HeightProvider;
 import net.minecraft.world.gen.heightprovider.HeightProviderType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class VeryBiasedToBottomHeightProvider
 extends HeightProvider {
-    public static final Codec<VeryBiasedToBottomHeightProvider> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)YOffset.OFFSET_CODEC.fieldOf("min_inclusive").forGetter(veryBiasedToBottomHeightProvider -> veryBiasedToBottomHeightProvider.minOffset), (App)YOffset.OFFSET_CODEC.fieldOf("max_inclusive").forGetter(veryBiasedToBottomHeightProvider -> veryBiasedToBottomHeightProvider.maxOffset), (App)Codec.intRange((int)1, (int)Integer.MAX_VALUE).optionalFieldOf("inner", (Object)1).forGetter(veryBiasedToBottomHeightProvider -> veryBiasedToBottomHeightProvider.inner)).apply((Applicative)instance, VeryBiasedToBottomHeightProvider::new));
-    private static final Logger LOGGER = LogManager.getLogger();
+    public static final Codec<VeryBiasedToBottomHeightProvider> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)YOffset.OFFSET_CODEC.fieldOf("min_inclusive").forGetter(provider -> provider.minOffset), (App)YOffset.OFFSET_CODEC.fieldOf("max_inclusive").forGetter(provider -> provider.maxOffset), (App)Codec.intRange((int)1, (int)Integer.MAX_VALUE).optionalFieldOf("inner", (Object)1).forGetter(provider -> provider.inner)).apply((Applicative)instance, VeryBiasedToBottomHeightProvider::new));
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final YOffset minOffset;
     private final YOffset maxOffset;
     private final int inner;

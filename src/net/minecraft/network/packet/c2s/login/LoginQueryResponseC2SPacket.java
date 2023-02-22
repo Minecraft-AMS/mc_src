@@ -15,6 +15,7 @@ public class LoginQueryResponseC2SPacket
 implements Packet<ServerLoginPacketListener> {
     private static final int MAX_PAYLOAD_SIZE = 0x100000;
     private final int queryId;
+    @Nullable
     private final PacketByteBuf response;
 
     public LoginQueryResponseC2SPacket(int queryId, @Nullable PacketByteBuf response) {
@@ -55,6 +56,7 @@ implements Packet<ServerLoginPacketListener> {
         return this.queryId;
     }
 
+    @Nullable
     public PacketByteBuf getResponse() {
         return this.response;
     }

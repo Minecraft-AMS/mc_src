@@ -7,9 +7,9 @@
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonSerializationContext
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.loot.function;
 
@@ -18,6 +18,7 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import net.minecraft.entity.Entity;
@@ -33,21 +34,20 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.util.JsonHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class SetNameLootFunction
 extends ConditionalLootFunction {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     final Text name;
     @Nullable
     final LootContext.EntityTarget entity;
 
-    SetNameLootFunction(LootCondition[] lootConditions, @Nullable Text text, @Nullable LootContext.EntityTarget entityTarget) {
-        super(lootConditions);
-        this.name = text;
-        this.entity = entityTarget;
+    SetNameLootFunction(LootCondition[] conditions, @Nullable Text name, @Nullable LootContext.EntityTarget entity) {
+        super(conditions);
+        this.name = name;
+        this.entity = entity;
     }
 
     @Override

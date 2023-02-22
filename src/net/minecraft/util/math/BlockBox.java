@@ -3,13 +3,14 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.MoreObjects
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.math;
 
 import com.google.common.base.MoreObjects;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import java.util.Iterator;
 import java.util.Objects;
@@ -21,11 +22,10 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3i;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class BlockBox {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final Codec<BlockBox> CODEC = Codec.INT_STREAM.comapFlatMap(values -> Util.toArray(values, 6).map(array -> new BlockBox(array[0], array[1], array[2], array[3], array[4], array[5])), box -> IntStream.of(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)).stable();
     private int minX;
     private int minY;
@@ -113,6 +113,7 @@ public class BlockBox {
         return Optional.of(blockBox2);
     }
 
+    @Deprecated
     public BlockBox encompass(BlockBox box) {
         this.minX = Math.min(this.minX, box.minX);
         this.minY = Math.min(this.minY, box.minY);
@@ -123,6 +124,7 @@ public class BlockBox {
         return this;
     }
 
+    @Deprecated
     public BlockBox encompass(BlockPos pos) {
         this.minX = Math.min(this.minX, pos.getX());
         this.minY = Math.min(this.minY, pos.getY());
@@ -133,16 +135,7 @@ public class BlockBox {
         return this;
     }
 
-    public BlockBox expand(int offset) {
-        this.minX -= offset;
-        this.minY -= offset;
-        this.minZ -= offset;
-        this.maxX += offset;
-        this.maxY += offset;
-        this.maxZ += offset;
-        return this;
-    }
-
+    @Deprecated
     public BlockBox move(int dx, int dy, int dz) {
         this.minX += dx;
         this.minY += dy;
@@ -153,12 +146,17 @@ public class BlockBox {
         return this;
     }
 
+    @Deprecated
     public BlockBox move(Vec3i vec) {
         return this.move(vec.getX(), vec.getY(), vec.getZ());
     }
 
     public BlockBox offset(int x, int y, int z) {
         return new BlockBox(this.minX + x, this.minY + y, this.minZ + z, this.maxX + x, this.maxY + y, this.maxZ + z);
+    }
+
+    public BlockBox expand(int offset) {
+        return new BlockBox(this.getMinX() - offset, this.getMinY() - offset, this.getMinZ() - offset, this.getMaxX() + offset, this.getMaxY() + offset, this.getMaxZ() + offset);
     }
 
     public boolean contains(Vec3i vec) {

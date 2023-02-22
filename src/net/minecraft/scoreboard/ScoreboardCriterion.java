@@ -21,7 +21,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 
 public class ScoreboardCriterion {
-    private static final Map<String, ScoreboardCriterion> field_33939 = Maps.newHashMap();
+    private static final Map<String, ScoreboardCriterion> SIMPLE_CRITERIA = Maps.newHashMap();
     private static final Map<String, ScoreboardCriterion> CRITERIA = Maps.newHashMap();
     public static final ScoreboardCriterion DUMMY = ScoreboardCriterion.create("dummy");
     public static final ScoreboardCriterion TRIGGER = ScoreboardCriterion.create("trigger");
@@ -42,7 +42,7 @@ public class ScoreboardCriterion {
 
     private static ScoreboardCriterion create(String name, boolean readOnly, RenderType defaultRenderType) {
         ScoreboardCriterion scoreboardCriterion = new ScoreboardCriterion(name, readOnly, defaultRenderType);
-        field_33939.put(name, scoreboardCriterion);
+        SIMPLE_CRITERIA.put(name, scoreboardCriterion);
         return scoreboardCriterion;
     }
 
@@ -61,8 +61,8 @@ public class ScoreboardCriterion {
         CRITERIA.put(name, this);
     }
 
-    public static Set<String> method_37271() {
-        return ImmutableSet.copyOf(field_33939.keySet());
+    public static Set<String> getAllSimpleCriteria() {
+        return ImmutableSet.copyOf(SIMPLE_CRITERIA.keySet());
     }
 
     public static Optional<ScoreboardCriterion> getOrCreateStatCriterion(String name) {
@@ -74,7 +74,7 @@ public class ScoreboardCriterion {
         if (i < 0) {
             return Optional.empty();
         }
-        return Registry.STAT_TYPE.getOrEmpty(Identifier.splitOn(name.substring(0, i), '.')).flatMap(statType -> ScoreboardCriterion.getOrCreateStatCriterion(statType, Identifier.splitOn(name.substring(i + 1), '.')));
+        return Registry.STAT_TYPE.getOrEmpty(Identifier.splitOn(name.substring(0, i), '.')).flatMap(type -> ScoreboardCriterion.getOrCreateStatCriterion(type, Identifier.splitOn(name.substring(i + 1), '.')));
     }
 
     private static <T> Optional<ScoreboardCriterion> getOrCreateStatCriterion(StatType<T> statType, Identifier id) {

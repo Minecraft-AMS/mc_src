@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.LeavesBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
@@ -27,9 +28,10 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.control.FlightMoveControl;
 import net.minecraft.entity.ai.goal.EscapeDangerGoal;
-import net.minecraft.entity.ai.goal.FlyOntoTreeGoal;
+import net.minecraft.entity.ai.goal.FlyGoal;
 import net.minecraft.entity.ai.goal.FollowMobGoal;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
@@ -48,6 +50,7 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.passive.TameableShoulderEntity;
@@ -65,8 +68,10 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -135,6 +140,7 @@ implements Flutterer {
     private float flapSpeed = 1.0f;
     private float field_28640 = 1.0f;
     private boolean songPlaying;
+    @Nullable
     private BlockPos songSource;
 
     public ParrotEntity(EntityType<? extends ParrotEntity> entityType, World world) {
@@ -216,12 +222,12 @@ implements Flutterer {
     private void flapWings() {
         this.prevFlapProgress = this.flapProgress;
         this.prevMaxWingDeviation = this.maxWingDeviation;
-        this.maxWingDeviation = (float)((double)this.maxWingDeviation + (double)(this.onGround || this.hasVehicle() ? -1 : 4) * 0.3);
+        this.maxWingDeviation += (float)(this.onGround || this.hasVehicle() ? -1 : 4) * 0.3f;
         this.maxWingDeviation = MathHelper.clamp(this.maxWingDeviation, 0.0f, 1.0f);
         if (!this.onGround && this.flapSpeed < 1.0f) {
             this.flapSpeed = 1.0f;
         }
-        this.flapSpeed = (float)((double)this.flapSpeed * 0.9);
+        this.flapSpeed *= 0.9f;
         Vec3d vec3d = this.getVelocity();
         if (!this.onGround && vec3d.y < 0.0) {
             this.setVelocity(vec3d.multiply(1.0, 0.6, 1.0));
@@ -288,8 +294,7 @@ implements Flutterer {
     }
 
     public static boolean canSpawn(EntityType<ParrotEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
-        BlockState blockState = world.getBlockState(pos.down());
-        return (blockState.isIn(BlockTags.LEAVES) || blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isIn(BlockTags.LOGS) || blockState.isOf(Blocks.AIR)) && world.getBaseLightLevel(pos, 0) > 8;
+        return world.getBlockState(pos.down()).isIn(BlockTags.PARROTS_SPAWNABLE_ON) && ParrotEntity.isLightLevelValidForNaturalSpawn(world, pos);
     }
 
     @Override
@@ -352,13 +357,13 @@ implements Flutterer {
 
     @Override
     protected boolean hasWings() {
-        return this.field_28627 > this.field_28640;
+        return this.speed > this.field_28640;
     }
 
     @Override
     protected void addFlapEffects() {
         this.playSound(SoundEvents.ENTITY_PARROT_FLY, 0.15f, 1.0f);
-        this.field_28640 = this.field_28627 + this.maxWingDeviation / 2.0f;
+        this.field_28640 = this.speed + this.maxWingDeviation / 2.0f;
     }
 
     @Override
@@ -393,7 +398,9 @@ implements Flutterer {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        this.setSitting(false);
+        if (!this.world.isClient) {
+            this.setSitting(false);
+        }
         return super.damage(source, amount);
     }
 
@@ -431,6 +438,41 @@ implements Flutterer {
     @Override
     public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.5f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
+    }
+
+    static class FlyOntoTreeGoal
+    extends FlyGoal {
+        public FlyOntoTreeGoal(PathAwareEntity pathAwareEntity, double d) {
+            super(pathAwareEntity, d);
+        }
+
+        @Override
+        @Nullable
+        protected Vec3d getWanderTarget() {
+            Vec3d vec3d = null;
+            if (this.mob.isTouchingWater()) {
+                vec3d = FuzzyTargeting.find(this.mob, 15, 15);
+            }
+            if (this.mob.getRandom().nextFloat() >= this.probability) {
+                vec3d = this.locateTree();
+            }
+            return vec3d == null ? super.getWanderTarget() : vec3d;
+        }
+
+        @Nullable
+        private Vec3d locateTree() {
+            BlockPos blockPos = this.mob.getBlockPos();
+            BlockPos.Mutable mutable = new BlockPos.Mutable();
+            BlockPos.Mutable mutable2 = new BlockPos.Mutable();
+            Iterable<BlockPos> iterable = BlockPos.iterate(MathHelper.floor(this.mob.getX() - 3.0), MathHelper.floor(this.mob.getY() - 6.0), MathHelper.floor(this.mob.getZ() - 3.0), MathHelper.floor(this.mob.getX() + 3.0), MathHelper.floor(this.mob.getY() + 6.0), MathHelper.floor(this.mob.getZ() + 3.0));
+            for (BlockPos blockPos2 : iterable) {
+                BlockState blockState;
+                boolean bl;
+                if (blockPos.equals(blockPos2) || !(bl = (blockState = this.mob.world.getBlockState(mutable2.set((Vec3i)blockPos2, Direction.DOWN))).getBlock() instanceof LeavesBlock || blockState.isIn(BlockTags.LOGS)) || !this.mob.world.isAir(blockPos2) || !this.mob.world.isAir(mutable.set((Vec3i)blockPos2, Direction.UP))) continue;
+                return Vec3d.ofBottomCenter(blockPos2);
+            }
+            return null;
+        }
     }
 }
 

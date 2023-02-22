@@ -3,14 +3,15 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.mojang.util.QueueLogAppender
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogQueues
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.dedicated.gui;
 
 import com.google.common.collect.Lists;
-import com.mojang.util.QueueLogAppender;
+import com.mojang.logging.LogQueues;
+import com.mojang.logging.LogUtils;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -38,13 +39,12 @@ import net.minecraft.server.dedicated.MinecraftDedicatedServer;
 import net.minecraft.server.dedicated.gui.PlayerListGui;
 import net.minecraft.server.dedicated.gui.PlayerStatsGui;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class DedicatedServerGui
 extends JComponent {
     private static final Font FONT_MONOSPACE = new Font("Monospaced", 0, 12);
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String TITLE = "Minecraft server";
     private static final String SHUTTING_DOWN_TITLE = "Minecraft server - shutting down!";
     private final MinecraftDedicatedServer server;
@@ -141,7 +141,7 @@ extends JComponent {
         jPanel.setBorder(new TitledBorder(new EtchedBorder(), "Log and chat"));
         this.consoleUpdateThread = new Thread(() -> {
             String string;
-            while ((string = QueueLogAppender.getNextLogEvent((String)"ServerGuiConsole")) != null) {
+            while ((string = LogQueues.getNextLogEvent((String)"ServerGuiConsole")) != null) {
                 this.appendToConsole(jTextArea, jScrollPane, string);
             }
         });

@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.inventory;
 
@@ -20,12 +21,14 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.recipe.RecipeInputProvider;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.util.collection.DefaultedList;
+import org.jetbrains.annotations.Nullable;
 
 public class SimpleInventory
 implements Inventory,
 RecipeInputProvider {
     private final int size;
     private final DefaultedList<ItemStack> stacks;
+    @Nullable
     private List<InventoryChangedListener> listeners;
 
     public SimpleInventory(int size) {
@@ -46,7 +49,9 @@ RecipeInputProvider {
     }
 
     public void removeListener(InventoryChangedListener listener) {
-        this.listeners.remove(listener);
+        if (this.listeners != null) {
+            this.listeners.remove(listener);
+        }
     }
 
     @Override

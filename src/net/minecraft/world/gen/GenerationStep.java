@@ -73,6 +73,7 @@ public class GenerationStep {
         public static final /* enum */ Feature STRONGHOLDS = new Feature();
         public static final /* enum */ Feature UNDERGROUND_ORES = new Feature();
         public static final /* enum */ Feature UNDERGROUND_DECORATION = new Feature();
+        public static final /* enum */ Feature FLUID_SPRINGS = new Feature();
         public static final /* enum */ Feature VEGETAL_DECORATION = new Feature();
         public static final /* enum */ Feature TOP_LAYER_MODIFICATION = new Feature();
         private static final /* synthetic */ Feature[] field_13181;
@@ -86,7 +87,7 @@ public class GenerationStep {
         }
 
         private static /* synthetic */ Feature[] method_36751() {
-            return new Feature[]{RAW_GENERATION, LAKES, LOCAL_MODIFICATIONS, UNDERGROUND_STRUCTURES, SURFACE_STRUCTURES, STRONGHOLDS, UNDERGROUND_ORES, UNDERGROUND_DECORATION, VEGETAL_DECORATION, TOP_LAYER_MODIFICATION};
+            return new Feature[]{RAW_GENERATION, LAKES, LOCAL_MODIFICATIONS, UNDERGROUND_STRUCTURES, SURFACE_STRUCTURES, STRONGHOLDS, UNDERGROUND_ORES, UNDERGROUND_DECORATION, FLUID_SPRINGS, VEGETAL_DECORATION, TOP_LAYER_MODIFICATION};
         }
 
         static {

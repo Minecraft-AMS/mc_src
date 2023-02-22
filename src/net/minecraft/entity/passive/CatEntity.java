@@ -72,9 +72,12 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
@@ -115,6 +118,7 @@ extends TameableEntity {
         map.put(10, new Identifier("textures/entity/cat/all_black.png"));
     });
     private CatFleeGoal<PlayerEntity> fleeGoal;
+    @Nullable
     private net.minecraft.entity.ai.goal.TemptGoal temptGoal;
     private float sleepAnimation;
     private float prevSleepAnimation;
@@ -373,6 +377,8 @@ extends TameableEntity {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
+        ServerWorld serverWorld;
+        Registry<ConfiguredStructureFeature<?, ?>> registry;
         entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         if (world.getMoonSize() > 0.9f) {
             this.setCatType(this.random.nextInt(11));
@@ -380,7 +386,7 @@ extends TameableEntity {
             this.setCatType(this.random.nextInt(10));
         }
         ServerWorld world2 = world.toServerWorld();
-        if (world2 instanceof ServerWorld && world2.getStructureAccessor().getStructureAt(this.getBlockPos(), true, StructureFeature.SWAMP_HUT).hasChildren()) {
+        if (world2 instanceof ServerWorld && ChunkGenerator.method_41049(registry = (serverWorld = world2).getRegistryManager().get(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY), StructureFeature.SWAMP_HUT).anyMatch(configuredStructureFeature -> serverWorld.getStructureAccessor().getStructureContaining(this.getBlockPos(), (ConfiguredStructureFeature<?, ?>)configuredStructureFeature).hasChildren())) {
             this.setCatType(10);
             this.setPersistent();
         }
@@ -497,9 +503,9 @@ extends TameableEntity {
         @Override
         public void tick() {
             super.tick();
-            if (this.player == null && this.mob.getRandom().nextInt(600) == 0) {
+            if (this.player == null && this.mob.getRandom().nextInt(this.getTickCount(600)) == 0) {
                 this.player = this.closestPlayer;
-            } else if (this.mob.getRandom().nextInt(500) == 0) {
+            } else if (this.mob.getRandom().nextInt(this.getTickCount(500)) == 0) {
                 this.player = null;
             }
         }
@@ -521,7 +527,9 @@ extends TameableEntity {
     static class SleepWithOwnerGoal
     extends Goal {
         private final CatEntity cat;
+        @Nullable
         private PlayerEntity owner;
+        @Nullable
         private BlockPos bedPos;
         private int ticksOnBed;
 
@@ -611,7 +619,7 @@ extends TameableEntity {
                 this.cat.getNavigation().startMovingTo(this.bedPos.getX(), this.bedPos.getY(), this.bedPos.getZ(), 1.1f);
                 if (this.cat.squaredDistanceTo(this.owner) < 2.5) {
                     ++this.ticksOnBed;
-                    if (this.ticksOnBed > 16) {
+                    if (this.ticksOnBed > this.getTickCount(16)) {
                         this.cat.setInSleepingPose(true);
                         this.cat.setHeadDown(false);
                     } else {

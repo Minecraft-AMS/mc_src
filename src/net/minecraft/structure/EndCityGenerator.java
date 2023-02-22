@@ -18,13 +18,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.SimpleStructurePiece;
+import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePlacementData;
-import net.minecraft.structure.StructureStart;
 import net.minecraft.structure.processor.BlockIgnoreStructureProcessor;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
@@ -197,7 +196,7 @@ public class EndCityGenerator {
             int i = random.nextInt();
             for (StructurePiece structurePiece : list) {
                 structurePiece.chainLength = i;
-                StructurePiece structurePiece2 = StructureStart.getIntersecting(pieces, structurePiece.getBoundingBox());
+                StructurePiece structurePiece2 = StructurePiece.firstIntersecting(pieces, structurePiece.getBoundingBox());
                 if (structurePiece2 == null || structurePiece2.chainLength == parent.chainLength) continue;
                 bl = true;
                 break;
@@ -216,8 +215,8 @@ public class EndCityGenerator {
             super(StructurePieceType.END_CITY, 0, manager, Piece.getId(template), template, Piece.createPlacementData(includeAir, rotation), pos);
         }
 
-        public Piece(ServerWorld world, NbtCompound nbtCompound) {
-            super(StructurePieceType.END_CITY, nbtCompound, world, identifier -> Piece.createPlacementData(nbtCompound.getBoolean("OW"), BlockRotation.valueOf(nbtCompound.getString("Rot"))));
+        public Piece(StructureManager manager, NbtCompound nbt) {
+            super(StructurePieceType.END_CITY, nbt, manager, identifier -> Piece.createPlacementData(nbt.getBoolean("OW"), BlockRotation.valueOf(nbt.getString("Rot"))));
         }
 
         private static StructurePlacementData createPlacementData(boolean includeAir, BlockRotation rotation) {
@@ -227,7 +226,7 @@ public class EndCityGenerator {
 
         @Override
         protected Identifier getId() {
-            return Piece.getId(this.identifier);
+            return Piece.getId(this.template);
         }
 
         private static Identifier getId(String template) {
@@ -235,8 +234,8 @@ public class EndCityGenerator {
         }
 
         @Override
-        protected void writeNbt(ServerWorld world, NbtCompound nbt) {
-            super.writeNbt(world, nbt);
+        protected void writeNbt(StructureContext context, NbtCompound nbt) {
+            super.writeNbt(context, nbt);
             nbt.putString("Rot", this.placementData.getRotation().name());
             nbt.putBoolean("OW", this.placementData.getProcessors().get(0) == BlockIgnoreStructureProcessor.IGNORE_STRUCTURE_BLOCKS);
         }

@@ -32,6 +32,7 @@ import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.WitherSkullEntity;
 import net.minecraft.entity.vehicle.TntMinecartEntity;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
@@ -51,7 +52,6 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -66,7 +66,6 @@ import org.jetbrains.annotations.Nullable;
 
 public class BeehiveBlock
 extends BlockWithEntity {
-    private static final Direction[] GENERATE_DIRECTIONS = new Direction[]{Direction.WEST, Direction.EAST, Direction.SOUTH};
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final IntProperty HONEY_LEVEL = Properties.HONEY_LEVEL;
     public static final int FULL_HONEY_LEVEL = 5;
@@ -261,7 +260,7 @@ extends BlockWithEntity {
                 if (bl) {
                     nbtCompound = new NbtCompound();
                     nbtCompound.put("Bees", beehiveBlockEntity.getBees());
-                    itemStack.setSubNbt("BlockEntityTag", nbtCompound);
+                    BlockItem.setBlockEntityNbt(itemStack, BlockEntityType.BEEHIVE, nbtCompound);
                 }
                 nbtCompound = new NbtCompound();
                 nbtCompound.putInt("honey_level", i);
@@ -293,10 +292,6 @@ extends BlockWithEntity {
             beehiveBlockEntity.angerBees(null, state, BeehiveBlockEntity.BeeState.EMERGENCY);
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
-    }
-
-    public static Direction getRandomGenerationDirection(Random random) {
-        return Util.getRandom(GENERATE_DIRECTIONS, random);
     }
 }
 

@@ -5,18 +5,19 @@
  *  com.google.common.collect.Lists
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.structure;
 
 import com.google.common.collect.Lists;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
@@ -34,10 +35,10 @@ import net.minecraft.block.VineBlock;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.structure.SimpleStructurePiece;
 import net.minecraft.structure.Structure;
+import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePlacementData;
@@ -65,12 +66,11 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class RuinedPortalStructurePiece
 extends SimpleStructurePiece {
-    private static final Logger field_24992 = LogManager.getLogger();
+    private static final Logger field_24992 = LogUtils.getLogger();
     private static final float field_31620 = 0.3f;
     private static final float field_31621 = 0.07f;
     private static final float field_31622 = 0.2f;
@@ -78,29 +78,29 @@ extends SimpleStructurePiece {
     private final VerticalPlacement verticalPlacement;
     private final Properties properties;
 
-    public RuinedPortalStructurePiece(StructureManager structureManager, BlockPos blockPos, VerticalPlacement verticalPlacement, Properties properties, Identifier identifier, Structure structure, BlockRotation rotation, BlockMirror mirror, BlockPos blockPos2) {
-        super(StructurePieceType.RUINED_PORTAL, 0, structureManager, identifier, identifier.toString(), RuinedPortalStructurePiece.createPlacementData(mirror, rotation, verticalPlacement, blockPos2, properties), blockPos);
+    public RuinedPortalStructurePiece(StructureManager manager, BlockPos pos, VerticalPlacement verticalPlacement, Properties properties, Identifier id, Structure structure, BlockRotation rotation, BlockMirror mirror, BlockPos blockPos) {
+        super(StructurePieceType.RUINED_PORTAL, 0, manager, id, id.toString(), RuinedPortalStructurePiece.createPlacementData(mirror, rotation, verticalPlacement, blockPos, properties), pos);
         this.verticalPlacement = verticalPlacement;
         this.properties = properties;
     }
 
-    public RuinedPortalStructurePiece(ServerWorld world, NbtCompound nbt) {
-        super(StructurePieceType.RUINED_PORTAL, nbt, world, identifier -> RuinedPortalStructurePiece.createPlacementData(world, nbt, identifier));
+    public RuinedPortalStructurePiece(StructureManager manager, NbtCompound nbt) {
+        super(StructurePieceType.RUINED_PORTAL, nbt, manager, id -> RuinedPortalStructurePiece.createPlacementData(manager, nbt, id));
         this.verticalPlacement = VerticalPlacement.getFromId(nbt.getString("VerticalPlacement"));
         this.properties = (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)field_24992).error(arg_0));
     }
 
     @Override
-    protected void writeNbt(ServerWorld world, NbtCompound nbt) {
-        super.writeNbt(world, nbt);
+    protected void writeNbt(StructureContext context, NbtCompound nbt) {
+        super.writeNbt(context, nbt);
         nbt.putString("Rotation", this.placementData.getRotation().name());
         nbt.putString("Mirror", this.placementData.getMirror().name());
         nbt.putString("VerticalPlacement", this.verticalPlacement.getId());
         Properties.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.properties).resultOrPartial(arg_0 -> ((Logger)field_24992).error(arg_0)).ifPresent(nbtElement -> nbt.put("Properties", (NbtElement)nbtElement));
     }
 
-    private static StructurePlacementData createPlacementData(ServerWorld world, NbtCompound nbt, Identifier id) {
-        Structure structure = world.getStructureManager().getStructureOrBlank(id);
+    private static StructurePlacementData createPlacementData(StructureManager manager, NbtCompound nbt, Identifier id) {
+        Structure structure = manager.getStructureOrBlank(id);
         BlockPos blockPos = new BlockPos(structure.getSize().getX() / 2, 0, structure.getSize().getZ() / 2);
         return RuinedPortalStructurePiece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mirror")), BlockRotation.valueOf(nbt.getString("Rotation")), VerticalPlacement.getFromId(nbt.getString("VerticalPlacement")), blockPos, (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)field_24992).error(arg_0)));
     }
@@ -113,7 +113,7 @@ extends SimpleStructurePiece {
         if (!properties.cold) {
             list.add(RuinedPortalStructurePiece.createReplacementRule(Blocks.NETHERRACK, 0.07f, Blocks.MAGMA_BLOCK));
         }
-        StructurePlacementData structurePlacementData = new StructurePlacementData().setRotation(rotation).setMirror(mirror).setPosition(pos).addProcessor(blockIgnoreStructureProcessor).addProcessor(new RuleStructureProcessor(list)).addProcessor(new BlockAgeStructureProcessor(properties.mossiness)).addProcessor(new ProtectedBlocksStructureProcessor(BlockTags.FEATURES_CANNOT_REPLACE.getId())).addProcessor(new LavaSubmergedBlockStructureProcessor());
+        StructurePlacementData structurePlacementData = new StructurePlacementData().setRotation(rotation).setMirror(mirror).setPosition(pos).addProcessor(blockIgnoreStructureProcessor).addProcessor(new RuleStructureProcessor(list)).addProcessor(new BlockAgeStructureProcessor(properties.mossiness)).addProcessor(new ProtectedBlocksStructureProcessor(BlockTags.FEATURES_CANNOT_REPLACE)).addProcessor(new LavaSubmergedBlockStructureProcessor());
         if (properties.replaceWithBlackstone) {
             structurePlacementData.addProcessor(BlackstoneReplacementStructureProcessor.INSTANCE);
         }
@@ -131,26 +131,25 @@ extends SimpleStructurePiece {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox boundingBox, ChunkPos chunkPos, BlockPos pos) {
+    public void generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox chunkBox, ChunkPos chunkPos, BlockPos pos2) {
         BlockBox blockBox = this.structure.calculateBoundingBox(this.placementData, this.pos);
-        if (!boundingBox.contains(blockBox.getCenter())) {
-            return true;
+        if (!chunkBox.contains(blockBox.getCenter())) {
+            return;
         }
-        boundingBox.encompass(blockBox);
-        boolean bl = super.generate(world, structureAccessor, chunkGenerator, random, boundingBox, chunkPos, pos);
+        chunkBox.encompass(blockBox);
+        super.generate(world, structureAccessor, chunkGenerator, random, chunkBox, chunkPos, pos2);
         this.placeNetherrackBase(random, world);
         this.updateNetherracksInBound(random, world);
         if (this.properties.vines || this.properties.overgrown) {
-            BlockPos.stream(this.getBoundingBox()).forEach(blockPos -> {
+            BlockPos.stream(this.getBoundingBox()).forEach(pos -> {
                 if (this.properties.vines) {
-                    this.generateVines(random, world, (BlockPos)blockPos);
+                    this.generateVines(random, world, (BlockPos)pos);
                 }
                 if (this.properties.overgrown) {
-                    this.generateOvergrownLeaves(random, world, (BlockPos)blockPos);
+                    this.generateOvergrownLeaves(random, world, (BlockPos)pos);
                 }
             });
         }
-        return bl;
     }
 
     @Override
@@ -314,7 +313,7 @@ extends SimpleStructurePiece {
         public Properties() {
         }
 
-        public <T> Properties(boolean cold, float mossiness, boolean airPocket, boolean overgrown, boolean vines, boolean replaceWithBlackstone) {
+        public Properties(boolean cold, float mossiness, boolean airPocket, boolean overgrown, boolean vines, boolean replaceWithBlackstone) {
             this.cold = cold;
             this.mossiness = mossiness;
             this.airPocket = airPocket;

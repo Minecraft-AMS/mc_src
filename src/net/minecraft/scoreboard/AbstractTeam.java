@@ -71,7 +71,7 @@ public abstract class AbstractTeam {
             this.value = value;
         }
 
-        public Text getTranslationKey() {
+        public Text getDisplayName() {
             return new TranslatableText("team.collision." + this.name);
         }
 
@@ -104,8 +104,8 @@ public abstract class AbstractTeam {
             return Enum.valueOf(VisibilityRule.class, string);
         }
 
-        public static String[] method_35595() {
-            return VISIBILITY_RULES.keySet().toArray(new String[VISIBILITY_RULES.size()]);
+        public static String[] getKeys() {
+            return VISIBILITY_RULES.keySet().toArray(new String[0]);
         }
 
         @Nullable
@@ -118,7 +118,7 @@ public abstract class AbstractTeam {
             this.value = value;
         }
 
-        public Text getTranslationKey() {
+        public Text getDisplayName() {
             return new TranslatableText("team.visibility." + this.name);
         }
 

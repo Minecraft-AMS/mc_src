@@ -29,14 +29,14 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.noise.DoublePerlinNoiseSampler;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.gen.ChunkRandom;
-import net.minecraft.world.gen.WorldGenRandom;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.GeodeCrackConfig;
 import net.minecraft.world.gen.feature.GeodeFeatureConfig;
 import net.minecraft.world.gen.feature.GeodeLayerConfig;
 import net.minecraft.world.gen.feature.GeodeLayerThicknessConfig;
 import net.minecraft.world.gen.feature.util.FeatureContext;
+import net.minecraft.world.gen.random.AtomicSimpleRandom;
+import net.minecraft.world.gen.random.ChunkRandom;
 
 public class GeodeFeature
 extends Feature<GeodeFeatureConfig> {
@@ -59,8 +59,8 @@ extends Feature<GeodeFeatureConfig> {
         int j = geodeFeatureConfig.maxGenOffset;
         LinkedList list = Lists.newLinkedList();
         int k = geodeFeatureConfig.distributionPoints.get(random);
-        ChunkRandom chunkRandom = new ChunkRandom(structureWorldAccess.getSeed());
-        DoublePerlinNoiseSampler doublePerlinNoiseSampler = DoublePerlinNoiseSampler.create((WorldGenRandom)chunkRandom, -4, 1.0);
+        ChunkRandom chunkRandom = new ChunkRandom(new AtomicSimpleRandom(structureWorldAccess.getSeed()));
+        DoublePerlinNoiseSampler doublePerlinNoiseSampler = DoublePerlinNoiseSampler.create(chunkRandom, -4, 1.0);
         LinkedList list2 = Lists.newLinkedList();
         double d = (double)k / (double)geodeFeatureConfig.outerWallDistance.getMax();
         GeodeLayerThicknessConfig geodeLayerThicknessConfig = geodeFeatureConfig.layerThicknessConfig;
@@ -124,7 +124,7 @@ extends Feature<GeodeFeatureConfig> {
                     BlockPos blockPos5 = blockPos3.offset(direction);
                     FluidState fluidState = structureWorldAccess.getFluidState(blockPos5);
                     if (fluidState.isEmpty()) continue;
-                    structureWorldAccess.getFluidTickScheduler().schedule(blockPos5, fluidState.getFluid(), 0);
+                    structureWorldAccess.createAndScheduleFluidTick(blockPos5, fluidState.getFluid(), 0);
                 }
                 continue;
             }

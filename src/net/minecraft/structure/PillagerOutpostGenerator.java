@@ -16,9 +16,10 @@ import net.minecraft.structure.pool.StructurePoolElement;
 import net.minecraft.structure.pool.StructurePools;
 import net.minecraft.structure.processor.StructureProcessorLists;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.RegistryEntry;
 
 public class PillagerOutpostGenerator {
-    public static final StructurePool STRUCTURE_POOLS = StructurePools.register(new StructurePool(new Identifier("pillager_outpost/base_plates"), new Identifier("empty"), (List<Pair<Function<StructurePool.Projection, ? extends StructurePoolElement>, Integer>>)ImmutableList.of((Object)Pair.of(StructurePoolElement.ofLegacySingle("pillager_outpost/base_plate"), (Object)1)), StructurePool.Projection.RIGID));
+    public static final RegistryEntry<StructurePool> STRUCTURE_POOLS = StructurePools.register(new StructurePool(new Identifier("pillager_outpost/base_plates"), new Identifier("empty"), (List<Pair<Function<StructurePool.Projection, ? extends StructurePoolElement>, Integer>>)ImmutableList.of((Object)Pair.of(StructurePoolElement.ofLegacySingle("pillager_outpost/base_plate"), (Object)1)), StructurePool.Projection.RIGID));
 
     public static void init() {
     }

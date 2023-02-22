@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.goal;
 
@@ -12,10 +15,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 public class WolfBegGoal
 extends Goal {
     private final WolfEntity wolf;
+    @Nullable
     private PlayerEntity begFrom;
     private final World world;
     private final float begDistance;
@@ -53,7 +58,7 @@ extends Goal {
     @Override
     public void start() {
         this.wolf.setBegging(true);
-        this.timer = 40 + this.wolf.getRandom().nextInt(40);
+        this.timer = this.getTickCount(40 + this.wolf.getRandom().nextInt(40));
     }
 
     @Override
@@ -64,7 +69,7 @@ extends Goal {
 
     @Override
     public void tick() {
-        this.wolf.getLookControl().lookAt(this.begFrom.getX(), this.begFrom.getEyeY(), this.begFrom.getZ(), 10.0f, this.wolf.getLookPitchSpeed());
+        this.wolf.getLookControl().lookAt(this.begFrom.getX(), this.begFrom.getEyeY(), this.begFrom.getZ(), 10.0f, this.wolf.getMaxLookPitchChange());
         --this.timer;
     }
 

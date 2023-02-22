@@ -3,23 +3,23 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ComparisonChain
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.effect;
 
 import com.google.common.collect.ComparisonChain;
+import com.mojang.logging.LogUtils;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.nbt.NbtCompound;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class StatusEffectInstance
 implements Comparable<StatusEffectInstance> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final StatusEffect type;
     private int duration;
     private int amplifier;
@@ -30,8 +30,8 @@ implements Comparable<StatusEffectInstance> {
     @Nullable
     private StatusEffectInstance hiddenEffect;
 
-    public StatusEffectInstance(StatusEffect type) {
-        this(type, 0, 0);
+    public StatusEffectInstance(StatusEffect statusEffect) {
+        this(statusEffect, 0, 0);
     }
 
     public StatusEffectInstance(StatusEffect type, int duration) {
@@ -60,9 +60,9 @@ implements Comparable<StatusEffectInstance> {
         this.hiddenEffect = hiddenEffect;
     }
 
-    public StatusEffectInstance(StatusEffectInstance that) {
-        this.type = that.type;
-        this.copyFrom(that);
+    public StatusEffectInstance(StatusEffectInstance statusEffectInstance) {
+        this.type = statusEffectInstance.type;
+        this.copyFrom(statusEffectInstance);
     }
 
     void copyFrom(StatusEffectInstance that) {

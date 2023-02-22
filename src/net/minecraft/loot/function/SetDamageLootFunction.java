@@ -5,14 +5,15 @@
  *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonSerializationContext
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.loot.function;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
+import com.mojang.logging.LogUtils;
 import java.util.Set;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
@@ -24,19 +25,18 @@ import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.loot.provider.number.LootNumberProvider;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.MathHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class SetDamageLootFunction
 extends ConditionalLootFunction {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     final LootNumberProvider durabilityRange;
     final boolean add;
 
-    SetDamageLootFunction(LootCondition[] lootConditions, LootNumberProvider lootNumberProvider, boolean bl) {
-        super(lootConditions);
-        this.durabilityRange = lootNumberProvider;
-        this.add = bl;
+    SetDamageLootFunction(LootCondition[] conditions, LootNumberProvider durabilityRange, boolean add) {
+        super(conditions);
+        this.durabilityRange = durabilityRange;
+        this.add = add;
     }
 
     @Override

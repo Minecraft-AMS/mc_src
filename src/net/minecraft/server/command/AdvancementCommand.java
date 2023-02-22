@@ -118,6 +118,9 @@ public class AdvancementCommand {
         }
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     static abstract class Operation
     extends Enum<Operation> {
         public static final /* enum */ Operation GRANT = new Operation("grant"){
@@ -169,8 +172,8 @@ public class AdvancementCommand {
             return Enum.valueOf(Operation.class, string);
         }
 
-        Operation(String string2) {
-            this.commandPrefix = "commands.advancement." + string2;
+        Operation(String name) {
+            this.commandPrefix = "commands.advancement." + name;
         }
 
         public int processAll(ServerPlayerEntity player, Iterable<Advancement> advancements) {

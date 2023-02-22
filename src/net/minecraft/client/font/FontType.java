@@ -63,9 +63,9 @@ extends Enum<FontType> {
 
     static {
         field_2316 = FontType.method_36876();
-        REGISTRY = Util.make(Maps.newHashMap(), hashMap -> {
+        REGISTRY = Util.make(Maps.newHashMap(), map -> {
             for (FontType fontType : FontType.values()) {
-                hashMap.put(fontType.id, fontType);
+                map.put(fontType.id, fontType);
             }
         });
     }

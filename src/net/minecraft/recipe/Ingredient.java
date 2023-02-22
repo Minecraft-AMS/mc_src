@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -38,18 +37,20 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.tag.ServerTagManagerHolder;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import org.jetbrains.annotations.Nullable;
 
 public final class Ingredient
 implements Predicate<ItemStack> {
     public static final Ingredient EMPTY = new Ingredient(Stream.empty());
     private final Entry[] entries;
+    @Nullable
     private ItemStack[] matchingStacks;
+    @Nullable
     private IntList ids;
 
     private Ingredient(Stream<? extends Entry> entries) {
@@ -90,7 +91,7 @@ implements Predicate<ItemStack> {
             for (ItemStack itemStack : this.matchingStacks) {
                 this.ids.add(RecipeMatcher.getItemId(itemStack));
             }
-            this.ids.sort((Comparator)IntComparators.NATURAL_COMPARATOR);
+            this.ids.sort(IntComparators.NATURAL_COMPARATOR);
         }
         return this.ids;
     }
@@ -136,7 +137,7 @@ implements Predicate<ItemStack> {
         return Ingredient.ofEntries(stacks.filter(stack -> !stack.isEmpty()).map(StackEntry::new));
     }
 
-    public static Ingredient fromTag(Tag<Item> tag) {
+    public static Ingredient fromTag(TagKey<Item> tag) {
         return Ingredient.ofEntries(Stream.of(new TagEntry(tag)));
     }
 
@@ -170,9 +171,9 @@ implements Predicate<ItemStack> {
             return new StackEntry(new ItemStack(item));
         }
         if (json.has("tag")) {
-            Identifier identifier2 = new Identifier(JsonHelper.getString(json, "tag"));
-            Tag<Item> tag = ServerTagManagerHolder.getTagManager().getTag(Registry.ITEM_KEY, identifier2, identifier -> new JsonSyntaxException("Unknown item tag '" + identifier + "'"));
-            return new TagEntry(tag);
+            Identifier identifier = new Identifier(JsonHelper.getString(json, "tag"));
+            TagKey<Item> tagKey = TagKey.of(Registry.ITEM_KEY, identifier);
+            return new TagEntry(tagKey);
         }
         throw new JsonParseException("An ingredient entry needs either a tag or an item");
     }
@@ -190,17 +191,17 @@ implements Predicate<ItemStack> {
 
     static class TagEntry
     implements Entry {
-        private final Tag<Item> tag;
+        private final TagKey<Item> tag;
 
-        TagEntry(Tag<Item> tag) {
+        TagEntry(TagKey<Item> tag) {
             this.tag = tag;
         }
 
         @Override
         public Collection<ItemStack> getStacks() {
             ArrayList list = Lists.newArrayList();
-            for (Item item : this.tag.values()) {
-                list.add(new ItemStack(item));
+            for (RegistryEntry<Item> registryEntry : Registry.ITEM.iterateEntries(this.tag)) {
+                list.add(new ItemStack(registryEntry));
             }
             return list;
         }
@@ -208,7 +209,7 @@ implements Predicate<ItemStack> {
         @Override
         public JsonObject toJson() {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getTagId(Registry.ITEM_KEY, this.tag, () -> new IllegalStateException("Unknown item tag")).toString());
+            jsonObject.addProperty("tag", this.tag.id().toString());
             return jsonObject;
         }
     }
@@ -217,8 +218,8 @@ implements Predicate<ItemStack> {
     implements Entry {
         private final ItemStack stack;
 
-        StackEntry(ItemStack itemStack) {
-            this.stack = itemStack;
+        StackEntry(ItemStack stack) {
+            this.stack = stack;
         }
 
         @Override

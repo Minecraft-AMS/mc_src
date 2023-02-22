@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.realms;
 
@@ -16,10 +17,12 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.realms.RealmsClientConfig;
 import net.minecraft.client.realms.exception.RealmsHttpException;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class Request<T extends Request<T>> {
@@ -90,8 +93,7 @@ public abstract class Request<T extends Request<T>> {
     public String text() {
         try {
             this.connect();
-            String string = null;
-            string = this.responseCode() >= 400 ? this.read(this.connection.getErrorStream()) : this.read(this.connection.getInputStream());
+            String string = this.responseCode() >= 400 ? this.read(this.connection.getErrorStream()) : this.read(this.connection.getInputStream());
             this.dispose();
             return string;
         }
@@ -100,11 +102,11 @@ public abstract class Request<T extends Request<T>> {
         }
     }
 
-    private String read(InputStream in) throws IOException {
+    private String read(@Nullable InputStream in) throws IOException {
         if (in == null) {
             return "";
         }
-        InputStreamReader inputStreamReader = new InputStreamReader(in, "UTF-8");
+        InputStreamReader inputStreamReader = new InputStreamReader(in, StandardCharsets.UTF_8);
         StringBuilder stringBuilder = new StringBuilder();
         int i = inputStreamReader.read();
         while (i != -1) {

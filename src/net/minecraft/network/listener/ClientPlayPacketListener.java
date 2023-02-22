@@ -84,6 +84,7 @@ import net.minecraft.network.packet.s2c.play.SelectAdvancementTabS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetCameraEntityS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetTradeOffersS2CPacket;
 import net.minecraft.network.packet.s2c.play.SignEditorOpenS2CPacket;
+import net.minecraft.network.packet.s2c.play.SimulationDistanceS2CPacket;
 import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
 import net.minecraft.network.packet.s2c.play.StopSoundS2CPacket;
 import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
@@ -128,7 +129,7 @@ extends PacketListener {
 
     public void onUnlockRecipes(UnlockRecipesS2CPacket var1);
 
-    public void onBlockDestroyProgress(BlockBreakingProgressS2CPacket var1);
+    public void onBlockBreakingProgress(BlockBreakingProgressS2CPacket var1);
 
     public void onSignEditorOpen(SignEditorOpenS2CPacket var1);
 
@@ -178,7 +179,7 @@ extends PacketListener {
 
     public void onGameJoin(GameJoinS2CPacket var1);
 
-    public void onEntityUpdate(EntityS2CPacket var1);
+    public void onEntity(EntityS2CPacket var1);
 
     public void onPlayerPositionLook(PlayerPositionLookS2CPacket var1);
 
@@ -192,21 +193,21 @@ extends PacketListener {
 
     public void onEntitiesDestroy(EntitiesDestroyS2CPacket var1);
 
-    public void onRemoveEntityEffect(RemoveEntityStatusEffectS2CPacket var1);
+    public void onRemoveEntityStatusEffect(RemoveEntityStatusEffectS2CPacket var1);
 
     public void onPlayerRespawn(PlayerRespawnS2CPacket var1);
 
     public void onEntitySetHeadYaw(EntitySetHeadYawS2CPacket var1);
 
-    public void onHeldItemChange(UpdateSelectedSlotS2CPacket var1);
+    public void onUpdateSelectedSlot(UpdateSelectedSlotS2CPacket var1);
 
     public void onScoreboardDisplay(ScoreboardDisplayS2CPacket var1);
 
     public void onEntityTrackerUpdate(EntityTrackerUpdateS2CPacket var1);
 
-    public void onVelocityUpdate(EntityVelocityUpdateS2CPacket var1);
+    public void onEntityVelocityUpdate(EntityVelocityUpdateS2CPacket var1);
 
-    public void onEquipmentUpdate(EntityEquipmentUpdateS2CPacket var1);
+    public void onEntityEquipmentUpdate(EntityEquipmentUpdateS2CPacket var1);
 
     public void onExperienceBarUpdate(ExperienceBarUpdateS2CPacket var1);
 
@@ -284,7 +285,7 @@ extends PacketListener {
 
     public void onLookAt(LookAtS2CPacket var1);
 
-    public void onTagQuery(NbtQueryResponseS2CPacket var1);
+    public void onNbtQueryResponse(NbtQueryResponseS2CPacket var1);
 
     public void onLightUpdate(LightUpdateS2CPacket var1);
 
@@ -295,6 +296,8 @@ extends PacketListener {
     public void onSetTradeOffers(SetTradeOffersS2CPacket var1);
 
     public void onChunkLoadDistance(ChunkLoadDistanceS2CPacket var1);
+
+    public void onSimulationDistance(SimulationDistanceS2CPacket var1);
 
     public void onChunkRenderDistanceCenter(ChunkRenderDistanceCenterS2CPacket var1);
 

@@ -2,13 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.gui.screen;
 
+import com.mojang.logging.LogUtils;
 import java.util.concurrent.locks.ReentrantLock;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -28,13 +29,12 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsTermsScreen
 extends RealmsScreen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Text TITLE = new TranslatableText("mco.terms.title");
     private static final Text SENTENCE_ONE_TEXT = new TranslatableText("mco.terms.sentence.1");
     private static final Text SENTENCE_TWO_TEXT = new LiteralText(" ").append(new TranslatableText("mco.terms.sentence.2").fillStyle(Style.EMPTY.withUnderline(true)));

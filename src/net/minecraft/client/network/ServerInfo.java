@@ -60,8 +60,8 @@ public class ServerInfo {
         return this.resourcePackPolicy;
     }
 
-    public void setResourcePackPolicy(ResourcePackPolicy policy) {
-        this.resourcePackPolicy = policy;
+    public void setResourcePackPolicy(ResourcePackPolicy resourcePackPolicy) {
+        this.resourcePackPolicy = resourcePackPolicy;
     }
 
     public static ServerInfo fromNbt(NbtCompound root) {

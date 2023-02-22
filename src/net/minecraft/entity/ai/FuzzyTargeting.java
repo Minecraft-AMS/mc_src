@@ -25,7 +25,7 @@ public class FuzzyTargeting {
         boolean bl = NavigationConditions.isPositionTargetInRange(entity, horizontalRange);
         return FuzzyPositions.guessBest(() -> {
             BlockPos blockPos = FuzzyPositions.localFuzz(entity.getRandom(), horizontalRange, verticalRange);
-            BlockPos blockPos2 = FuzzyTargeting.tryMake(entity, horizontalRange, bl, blockPos);
+            BlockPos blockPos2 = FuzzyTargeting.towardTarget(entity, horizontalRange, bl, blockPos);
             if (blockPos2 == null) {
                 return null;
             }
@@ -54,7 +54,7 @@ public class FuzzyTargeting {
             if (blockPos == null) {
                 return null;
             }
-            BlockPos blockPos2 = FuzzyTargeting.tryMake(entity, horizontalRange, posTargetInRange, blockPos);
+            BlockPos blockPos2 = FuzzyTargeting.towardTarget(entity, horizontalRange, posTargetInRange, blockPos);
             if (blockPos2 == null) {
                 return null;
             }
@@ -71,7 +71,7 @@ public class FuzzyTargeting {
     }
 
     @Nullable
-    public static BlockPos tryMake(PathAwareEntity entity, int horizontalRange, boolean posTargetInRange, BlockPos relativeInRangePos) {
+    public static BlockPos towardTarget(PathAwareEntity entity, int horizontalRange, boolean posTargetInRange, BlockPos relativeInRangePos) {
         BlockPos blockPos = FuzzyPositions.towardTarget(entity, horizontalRange, entity.getRandom(), relativeInRangePos);
         if (NavigationConditions.isHeightInvalid(blockPos, entity) || NavigationConditions.isPositionTargetOutOfWalkRange(posTargetInRange, entity, blockPos) || NavigationConditions.isInvalidPosition(entity.getNavigation(), blockPos)) {
             return null;

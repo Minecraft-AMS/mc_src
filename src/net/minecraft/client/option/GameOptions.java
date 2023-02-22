@@ -12,14 +12,14 @@
  *  com.google.gson.Gson
  *  com.google.gson.reflect.TypeToken
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.Object2FloatMap
  *  it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.ArrayUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.option;
 
@@ -33,6 +33,7 @@ import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import java.io.BufferedReader;
@@ -68,6 +69,7 @@ import net.minecraft.client.option.Option;
 import net.minecraft.client.option.ParticlesMode;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.client.option.StickyKeyBinding;
+import net.minecraft.client.render.ChunkBuilderMode;
 import net.minecraft.client.render.entity.PlayerModelPart;
 import net.minecraft.client.tutorial.TutorialStep;
 import net.minecraft.client.util.InputUtil;
@@ -81,15 +83,15 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Arm;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Difficulty;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class GameOptions {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new Gson();
     private static final TypeToken<List<String>> STRING_LIST_TYPE = new TypeToken<List<String>>(){};
     public static final int field_32149 = 2;
@@ -100,14 +102,19 @@ public class GameOptions {
     public static final int field_32155 = 32;
     private static final Splitter COLON_SPLITTER = Splitter.on((char)':').limit(2);
     private static final float field_32151 = 1.0f;
+    public static final String field_34785 = "";
     public boolean monochromeLogo;
+    public boolean hideLightningFlashes;
     public double mouseSensitivity = 0.5;
     public int viewDistance;
+    public int simulationDistance;
+    private int serverViewDistance = 0;
     public float entityDistanceScaling = 1.0f;
     public int maxFps = 120;
     public CloudRenderMode cloudRenderMode = CloudRenderMode.FANCY;
     public GraphicsMode graphicsMode = GraphicsMode.FANCY;
     public AoMode ao = AoMode.MAX;
+    public ChunkBuilderMode chunkBuilderMode = ChunkBuilderMode.NONE;
     public List<String> resourcePacks = Lists.newArrayList();
     public List<String> incompatibleResourcePacks = Lists.newArrayList();
     public ChatVisibility chatVisibility = ChatVisibility.FULL;
@@ -151,8 +158,8 @@ public class GameOptions {
     public boolean invertYMouse;
     public boolean discreteMouseScroll;
     public boolean realmsNotifications = true;
+    public boolean allowServerListing = true;
     public boolean reducedDebugInfo;
-    public boolean snooperEnabled = true;
     public boolean showSubtitles;
     public boolean backgroundForChatOnly = true;
     public boolean touchscreen;
@@ -161,34 +168,36 @@ public class GameOptions {
     public boolean sneakToggled;
     public boolean sprintToggled;
     public boolean skipMultiplayerWarning;
+    public boolean skipRealms32BitWarning;
     public boolean hideMatchedNames = true;
-    public final KeyBinding keyForward = new KeyBinding("key.forward", 87, "key.categories.movement");
-    public final KeyBinding keyLeft = new KeyBinding("key.left", 65, "key.categories.movement");
-    public final KeyBinding keyBack = new KeyBinding("key.back", 83, "key.categories.movement");
-    public final KeyBinding keyRight = new KeyBinding("key.right", 68, "key.categories.movement");
-    public final KeyBinding keyJump = new KeyBinding("key.jump", 32, "key.categories.movement");
-    public final KeyBinding keySneak = new StickyKeyBinding("key.sneak", 340, "key.categories.movement", () -> this.sneakToggled);
-    public final KeyBinding keySprint = new StickyKeyBinding("key.sprint", 341, "key.categories.movement", () -> this.sprintToggled);
-    public final KeyBinding keyInventory = new KeyBinding("key.inventory", 69, "key.categories.inventory");
-    public final KeyBinding keySwapHands = new KeyBinding("key.swapOffhand", 70, "key.categories.inventory");
-    public final KeyBinding keyDrop = new KeyBinding("key.drop", 81, "key.categories.inventory");
-    public final KeyBinding keyUse = new KeyBinding("key.use", InputUtil.Type.MOUSE, 1, "key.categories.gameplay");
-    public final KeyBinding keyAttack = new KeyBinding("key.attack", InputUtil.Type.MOUSE, 0, "key.categories.gameplay");
-    public final KeyBinding keyPickItem = new KeyBinding("key.pickItem", InputUtil.Type.MOUSE, 2, "key.categories.gameplay");
-    public final KeyBinding keyChat = new KeyBinding("key.chat", 84, "key.categories.multiplayer");
-    public final KeyBinding keyPlayerList = new KeyBinding("key.playerlist", 258, "key.categories.multiplayer");
-    public final KeyBinding keyCommand = new KeyBinding("key.command", 47, "key.categories.multiplayer");
-    public final KeyBinding keySocialInteractions = new KeyBinding("key.socialInteractions", 80, "key.categories.multiplayer");
-    public final KeyBinding keyScreenshot = new KeyBinding("key.screenshot", 291, "key.categories.misc");
-    public final KeyBinding keyTogglePerspective = new KeyBinding("key.togglePerspective", 294, "key.categories.misc");
-    public final KeyBinding keySmoothCamera = new KeyBinding("key.smoothCamera", InputUtil.UNKNOWN_KEY.getCode(), "key.categories.misc");
-    public final KeyBinding keyFullscreen = new KeyBinding("key.fullscreen", 300, "key.categories.misc");
-    public final KeyBinding keySpectatorOutlines = new KeyBinding("key.spectatorOutlines", InputUtil.UNKNOWN_KEY.getCode(), "key.categories.misc");
-    public final KeyBinding keyAdvancements = new KeyBinding("key.advancements", 76, "key.categories.misc");
-    public final KeyBinding[] keysHotbar = new KeyBinding[]{new KeyBinding("key.hotbar.1", 49, "key.categories.inventory"), new KeyBinding("key.hotbar.2", 50, "key.categories.inventory"), new KeyBinding("key.hotbar.3", 51, "key.categories.inventory"), new KeyBinding("key.hotbar.4", 52, "key.categories.inventory"), new KeyBinding("key.hotbar.5", 53, "key.categories.inventory"), new KeyBinding("key.hotbar.6", 54, "key.categories.inventory"), new KeyBinding("key.hotbar.7", 55, "key.categories.inventory"), new KeyBinding("key.hotbar.8", 56, "key.categories.inventory"), new KeyBinding("key.hotbar.9", 57, "key.categories.inventory")};
-    public final KeyBinding keySaveToolbarActivator = new KeyBinding("key.saveToolbarActivator", 67, "key.categories.creative");
-    public final KeyBinding keyLoadToolbarActivator = new KeyBinding("key.loadToolbarActivator", 88, "key.categories.creative");
-    public final KeyBinding[] keysAll = (KeyBinding[])ArrayUtils.addAll((Object[])new KeyBinding[]{this.keyAttack, this.keyUse, this.keyForward, this.keyLeft, this.keyBack, this.keyRight, this.keyJump, this.keySneak, this.keySprint, this.keyDrop, this.keyInventory, this.keyChat, this.keyPlayerList, this.keyPickItem, this.keyCommand, this.keySocialInteractions, this.keyScreenshot, this.keyTogglePerspective, this.keySmoothCamera, this.keyFullscreen, this.keySpectatorOutlines, this.keySwapHands, this.keySaveToolbarActivator, this.keyLoadToolbarActivator, this.keyAdvancements}, (Object[])this.keysHotbar);
+    public boolean showAutosaveIndicator = true;
+    public final KeyBinding forwardKey = new KeyBinding("key.forward", 87, "key.categories.movement");
+    public final KeyBinding leftKey = new KeyBinding("key.left", 65, "key.categories.movement");
+    public final KeyBinding backKey = new KeyBinding("key.back", 83, "key.categories.movement");
+    public final KeyBinding rightKey = new KeyBinding("key.right", 68, "key.categories.movement");
+    public final KeyBinding jumpKey = new KeyBinding("key.jump", 32, "key.categories.movement");
+    public final KeyBinding sneakKey = new StickyKeyBinding("key.sneak", 340, "key.categories.movement", () -> this.sneakToggled);
+    public final KeyBinding sprintKey = new StickyKeyBinding("key.sprint", 341, "key.categories.movement", () -> this.sprintToggled);
+    public final KeyBinding inventoryKey = new KeyBinding("key.inventory", 69, "key.categories.inventory");
+    public final KeyBinding swapHandsKey = new KeyBinding("key.swapOffhand", 70, "key.categories.inventory");
+    public final KeyBinding dropKey = new KeyBinding("key.drop", 81, "key.categories.inventory");
+    public final KeyBinding useKey = new KeyBinding("key.use", InputUtil.Type.MOUSE, 1, "key.categories.gameplay");
+    public final KeyBinding attackKey = new KeyBinding("key.attack", InputUtil.Type.MOUSE, 0, "key.categories.gameplay");
+    public final KeyBinding pickItemKey = new KeyBinding("key.pickItem", InputUtil.Type.MOUSE, 2, "key.categories.gameplay");
+    public final KeyBinding chatKey = new KeyBinding("key.chat", 84, "key.categories.multiplayer");
+    public final KeyBinding playerListKey = new KeyBinding("key.playerlist", 258, "key.categories.multiplayer");
+    public final KeyBinding commandKey = new KeyBinding("key.command", 47, "key.categories.multiplayer");
+    public final KeyBinding socialInteractionsKey = new KeyBinding("key.socialInteractions", 80, "key.categories.multiplayer");
+    public final KeyBinding screenshotKey = new KeyBinding("key.screenshot", 291, "key.categories.misc");
+    public final KeyBinding togglePerspectiveKey = new KeyBinding("key.togglePerspective", 294, "key.categories.misc");
+    public final KeyBinding smoothCameraKey = new KeyBinding("key.smoothCamera", InputUtil.UNKNOWN_KEY.getCode(), "key.categories.misc");
+    public final KeyBinding fullscreenKey = new KeyBinding("key.fullscreen", 300, "key.categories.misc");
+    public final KeyBinding spectatorOutlinesKey = new KeyBinding("key.spectatorOutlines", InputUtil.UNKNOWN_KEY.getCode(), "key.categories.misc");
+    public final KeyBinding advancementsKey = new KeyBinding("key.advancements", 76, "key.categories.misc");
+    public final KeyBinding[] hotbarKeys = new KeyBinding[]{new KeyBinding("key.hotbar.1", 49, "key.categories.inventory"), new KeyBinding("key.hotbar.2", 50, "key.categories.inventory"), new KeyBinding("key.hotbar.3", 51, "key.categories.inventory"), new KeyBinding("key.hotbar.4", 52, "key.categories.inventory"), new KeyBinding("key.hotbar.5", 53, "key.categories.inventory"), new KeyBinding("key.hotbar.6", 54, "key.categories.inventory"), new KeyBinding("key.hotbar.7", 55, "key.categories.inventory"), new KeyBinding("key.hotbar.8", 56, "key.categories.inventory"), new KeyBinding("key.hotbar.9", 57, "key.categories.inventory")};
+    public final KeyBinding saveToolbarActivatorKey = new KeyBinding("key.saveToolbarActivator", 67, "key.categories.creative");
+    public final KeyBinding loadToolbarActivatorKey = new KeyBinding("key.loadToolbarActivator", 88, "key.categories.creative");
+    public final KeyBinding[] allKeys = (KeyBinding[])ArrayUtils.addAll((Object[])new KeyBinding[]{this.attackKey, this.useKey, this.forwardKey, this.leftKey, this.backKey, this.rightKey, this.jumpKey, this.sneakKey, this.sprintKey, this.dropKey, this.inventoryKey, this.chatKey, this.playerListKey, this.pickItemKey, this.commandKey, this.socialInteractionsKey, this.screenshotKey, this.togglePerspectiveKey, this.smoothCameraKey, this.fullscreenKey, this.spectatorOutlinesKey, this.swapHandsKey, this.saveToolbarActivatorKey, this.loadToolbarActivatorKey, this.advancementsKey}, (Object[])this.hotbarKeys);
     protected MinecraftClient client;
     private final File optionsFile;
     public Difficulty difficulty = Difficulty.NORMAL;
@@ -207,6 +216,7 @@ public class GameOptions {
     public ParticlesMode particles = ParticlesMode.ALL;
     public NarratorMode narrator = NarratorMode.OFF;
     public String language = "en_us";
+    public String soundDevice = "";
     public boolean syncChunkWrites;
 
     public GameOptions(MinecraftClient client, File optionsFile) {
@@ -214,10 +224,14 @@ public class GameOptions {
         this.optionsFile = new File(optionsFile, "options.txt");
         if (client.is64Bit() && Runtime.getRuntime().maxMemory() >= 1000000000L) {
             Option.RENDER_DISTANCE.setMax(32.0f);
+            Option.SIMULATION_DISTANCE.setMax(32.0f);
         } else {
             Option.RENDER_DISTANCE.setMax(16.0f);
+            Option.SIMULATION_DISTANCE.setMax(16.0f);
         }
         this.viewDistance = client.is64Bit() ? 12 : 8;
+        this.simulationDistance = client.is64Bit() ? 12 : 8;
+        this.gamma = 0.5;
         this.syncChunkWrites = Util.getOperatingSystem() == Util.OperatingSystem.WINDOWS;
         this.load();
     }
@@ -252,7 +266,6 @@ public class GameOptions {
         this.invertYMouse = visitor.visitBoolean("invertYMouse", this.invertYMouse);
         this.realmsNotifications = visitor.visitBoolean("realmsNotifications", this.realmsNotifications);
         this.reducedDebugInfo = visitor.visitBoolean("reducedDebugInfo", this.reducedDebugInfo);
-        this.snooperEnabled = visitor.visitBoolean("snooperEnabled", this.snooperEnabled);
         this.showSubtitles = visitor.visitBoolean("showSubtitles", this.showSubtitles);
         this.touchscreen = visitor.visitBoolean("touchscreen", this.touchscreen);
         this.fullscreen = visitor.visitBoolean("fullscreen", this.fullscreen);
@@ -260,12 +273,14 @@ public class GameOptions {
         this.sneakToggled = visitor.visitBoolean("toggleCrouch", this.sneakToggled);
         this.sprintToggled = visitor.visitBoolean("toggleSprint", this.sprintToggled);
         this.monochromeLogo = visitor.visitBoolean("darkMojangStudiosBackground", this.monochromeLogo);
+        this.hideLightningFlashes = visitor.visitBoolean("hideLightningFlashes", this.hideLightningFlashes);
         this.mouseSensitivity = visitor.visitDouble("mouseSensitivity", this.mouseSensitivity);
         this.fov = visitor.visitDouble("fov", (this.fov - 70.0) / 40.0) * 40.0 + 70.0;
         this.distortionEffectScale = visitor.visitFloat("screenEffectScale", this.distortionEffectScale);
         this.fovEffectScale = visitor.visitFloat("fovEffectScale", this.fovEffectScale);
         this.gamma = visitor.visitDouble("gamma", this.gamma);
-        this.viewDistance = visitor.visitInt("renderDistance", this.viewDistance);
+        this.viewDistance = (int)MathHelper.clamp((double)visitor.visitInt("renderDistance", this.viewDistance), Option.RENDER_DISTANCE.getMin(), Option.RENDER_DISTANCE.getMax());
+        this.simulationDistance = (int)MathHelper.clamp((double)visitor.visitInt("simulationDistance", this.simulationDistance), Option.SIMULATION_DISTANCE.getMin(), Option.SIMULATION_DISTANCE.getMax());
         this.entityDistanceScaling = visitor.visitFloat("entityDistanceScaling", this.entityDistanceScaling);
         this.guiScale = visitor.visitInt("guiScale", this.guiScale);
         this.particles = visitor.visitObject("particles", this.particles, ParticlesMode::byId, ParticlesMode::getId);
@@ -273,12 +288,14 @@ public class GameOptions {
         this.difficulty = visitor.visitObject("difficulty", this.difficulty, Difficulty::byOrdinal, Difficulty::getId);
         this.graphicsMode = visitor.visitObject("graphicsMode", this.graphicsMode, GraphicsMode::byId, GraphicsMode::getId);
         this.ao = visitor.visitObject("ao", this.ao, GameOptions::loadAo, ao -> Integer.toString(ao.getId()));
+        this.chunkBuilderMode = visitor.visitObject("prioritizeChunkUpdates", this.chunkBuilderMode, ChunkBuilderMode::get, ChunkBuilderMode::getId);
         this.biomeBlendRadius = visitor.visitInt("biomeBlendRadius", this.biomeBlendRadius);
         this.cloudRenderMode = visitor.visitObject("renderClouds", this.cloudRenderMode, GameOptions::loadCloudRenderMode, GameOptions::saveCloudRenderMode);
         this.resourcePacks = visitor.visitObject("resourcePacks", this.resourcePacks, GameOptions::parseList, arg_0 -> ((Gson)GSON).toJson(arg_0));
         this.incompatibleResourcePacks = visitor.visitObject("incompatibleResourcePacks", this.incompatibleResourcePacks, GameOptions::parseList, arg_0 -> ((Gson)GSON).toJson(arg_0));
         this.lastServer = visitor.visitString("lastServer", this.lastServer);
         this.language = visitor.visitString("lang", this.language);
+        this.soundDevice = visitor.visitString("soundDevice", this.soundDevice);
         this.chatVisibility = visitor.visitObject("chatVisibility", this.chatVisibility, ChatVisibility::byId, ChatVisibility::getId);
         this.chatOpacity = visitor.visitDouble("chatOpacity", this.chatOpacity);
         this.chatLineSpacing = visitor.visitDouble("chatLineSpacing", this.chatLineSpacing);
@@ -305,11 +322,14 @@ public class GameOptions {
         this.rawMouseInput = visitor.visitBoolean("rawMouseInput", this.rawMouseInput);
         this.glDebugVerbosity = visitor.visitInt("glDebugVerbosity", this.glDebugVerbosity);
         this.skipMultiplayerWarning = visitor.visitBoolean("skipMultiplayerWarning", this.skipMultiplayerWarning);
+        this.skipRealms32BitWarning = visitor.visitBoolean("skipRealms32bitWarning", this.skipRealms32BitWarning);
         this.hideMatchedNames = visitor.visitBoolean("hideMatchedNames", this.hideMatchedNames);
         this.joinedFirstServer = visitor.visitBoolean("joinedFirstServer", this.joinedFirstServer);
         this.hideBundleTutorial = visitor.visitBoolean("hideBundleTutorial", this.hideBundleTutorial);
         this.syncChunkWrites = visitor.visitBoolean("syncChunkWrites", this.syncChunkWrites);
-        for (KeyBinding keyBinding : this.keysAll) {
+        this.showAutosaveIndicator = visitor.visitBoolean("showAutosaveIndicator", this.showAutosaveIndicator);
+        this.allowServerListing = visitor.visitBoolean("allowServerListing", this.allowServerListing);
+        for (KeyBinding keyBinding : this.allKeys) {
             String string2;
             String string = keyBinding.getBoundKeyTranslationKey();
             if (string.equals(string2 = visitor.visitString("key_" + keyBinding.getTranslationKey(), string))) continue;
@@ -363,7 +383,7 @@ public class GameOptions {
                             return Integer.parseInt(string);
                         }
                         catch (NumberFormatException numberFormatException) {
-                            LOGGER.warn("Invalid integer value for option {} = {}", (Object)key, (Object)string, (Object)numberFormatException);
+                            LOGGER.warn("Invalid integer value for option {} = {}", new Object[]{key, string, numberFormatException});
                         }
                     }
                     return current;
@@ -394,7 +414,7 @@ public class GameOptions {
                             return Double.parseDouble(string);
                         }
                         catch (NumberFormatException numberFormatException) {
-                            LOGGER.warn("Invalid floating point value for option {} = {}", (Object)key, (Object)string, (Object)numberFormatException);
+                            LOGGER.warn("Invalid floating point value for option {} = {}", new Object[]{key, string, numberFormatException});
                         }
                     }
                     return current;
@@ -414,7 +434,7 @@ public class GameOptions {
                             return Float.parseFloat(string);
                         }
                         catch (NumberFormatException numberFormatException) {
-                            LOGGER.warn("Invalid floating point value for option {} = {}", (Object)key, (Object)string, (Object)numberFormatException);
+                            LOGGER.warn("Invalid floating point value for option {} = {}", new Object[]{key, string, numberFormatException});
                         }
                     }
                     return current;
@@ -434,7 +454,7 @@ public class GameOptions {
                             return decoder.apply(Integer.parseInt(string));
                         }
                         catch (Exception exception) {
-                            LOGGER.warn("Invalid integer value for option {} = {}", (Object)key, (Object)string, (Object)exception);
+                            LOGGER.warn("Invalid integer value for option {} = {}", new Object[]{key, string, exception});
                         }
                     }
                     return current;
@@ -556,7 +576,7 @@ public class GameOptions {
             for (PlayerModelPart playerModelPart : this.enabledPlayerModelParts) {
                 i |= playerModelPart.getBitFlag();
             }
-            this.client.player.networkHandler.sendPacket(new ClientSettingsC2SPacket(this.language, this.viewDistance, this.chatVisibility, this.chatColors, i, this.mainArm, this.client.shouldFilterText()));
+            this.client.player.networkHandler.sendPacket(new ClientSettingsC2SPacket(this.language, this.viewDistance, this.chatVisibility, this.chatColors, i, this.mainArm, this.client.shouldFilterText(), this.allowServerListing));
         }
     }
 
@@ -578,7 +598,7 @@ public class GameOptions {
     }
 
     public CloudRenderMode getCloudRenderMode() {
-        if (this.viewDistance >= 4) {
+        if (this.getViewDistance() >= 4) {
             return this.cloudRenderMode;
         }
         return CloudRenderMode.OFF;
@@ -677,8 +697,16 @@ public class GameOptions {
     }
 
     public String collectProfiledOptions() {
-        ImmutableList immutableList = ImmutableList.builder().add((Object)Pair.of((Object)"ao", (Object)String.valueOf((Object)this.ao))).add((Object)Pair.of((Object)"biomeBlendRadius", (Object)String.valueOf(this.biomeBlendRadius))).add((Object)Pair.of((Object)"enableVsync", (Object)String.valueOf(this.enableVsync))).add((Object)Pair.of((Object)"entityDistanceScaling", (Object)String.valueOf(this.entityDistanceScaling))).add((Object)Pair.of((Object)"entityShadows", (Object)String.valueOf(this.entityShadows))).add((Object)Pair.of((Object)"forceUnicodeFont", (Object)String.valueOf(this.forceUnicodeFont))).add((Object)Pair.of((Object)"fov", (Object)String.valueOf(this.fov))).add((Object)Pair.of((Object)"fovEffectScale", (Object)String.valueOf(this.fovEffectScale))).add((Object)Pair.of((Object)"fullscreen", (Object)String.valueOf(this.fullscreen))).add((Object)Pair.of((Object)"fullscreenResolution", (Object)String.valueOf(this.fullscreenResolution))).add((Object)Pair.of((Object)"gamma", (Object)String.valueOf(this.gamma))).add((Object)Pair.of((Object)"glDebugVerbosity", (Object)String.valueOf(this.glDebugVerbosity))).add((Object)Pair.of((Object)"graphicsMode", (Object)String.valueOf((Object)this.graphicsMode))).add((Object)Pair.of((Object)"guiScale", (Object)String.valueOf(this.guiScale))).add((Object)Pair.of((Object)"maxFps", (Object)String.valueOf(this.maxFps))).add((Object)Pair.of((Object)"mipmapLevels", (Object)String.valueOf(this.mipmapLevels))).add((Object)Pair.of((Object)"narrator", (Object)String.valueOf((Object)this.narrator))).add((Object)Pair.of((Object)"overrideHeight", (Object)String.valueOf(this.overrideHeight))).add((Object)Pair.of((Object)"overrideWidth", (Object)String.valueOf(this.overrideWidth))).add((Object)Pair.of((Object)"particles", (Object)String.valueOf((Object)this.particles))).add((Object)Pair.of((Object)"reducedDebugInfo", (Object)String.valueOf(this.reducedDebugInfo))).add((Object)Pair.of((Object)"renderClouds", (Object)String.valueOf((Object)this.cloudRenderMode))).add((Object)Pair.of((Object)"renderDistance", (Object)String.valueOf(this.viewDistance))).add((Object)Pair.of((Object)"resourcePacks", (Object)String.valueOf(this.resourcePacks))).add((Object)Pair.of((Object)"screenEffectScale", (Object)String.valueOf(this.distortionEffectScale))).add((Object)Pair.of((Object)"syncChunkWrites", (Object)String.valueOf(this.syncChunkWrites))).add((Object)Pair.of((Object)"useNativeTransport", (Object)String.valueOf(this.useNativeTransport))).build();
+        ImmutableList immutableList = ImmutableList.builder().add((Object)Pair.of((Object)"ao", (Object)String.valueOf((Object)this.ao))).add((Object)Pair.of((Object)"biomeBlendRadius", (Object)String.valueOf(this.biomeBlendRadius))).add((Object)Pair.of((Object)"enableVsync", (Object)String.valueOf(this.enableVsync))).add((Object)Pair.of((Object)"entityDistanceScaling", (Object)String.valueOf(this.entityDistanceScaling))).add((Object)Pair.of((Object)"entityShadows", (Object)String.valueOf(this.entityShadows))).add((Object)Pair.of((Object)"forceUnicodeFont", (Object)String.valueOf(this.forceUnicodeFont))).add((Object)Pair.of((Object)"fov", (Object)String.valueOf(this.fov))).add((Object)Pair.of((Object)"fovEffectScale", (Object)String.valueOf(this.fovEffectScale))).add((Object)Pair.of((Object)"prioritizeChunkUpdates", (Object)String.valueOf((Object)this.chunkBuilderMode))).add((Object)Pair.of((Object)"fullscreen", (Object)String.valueOf(this.fullscreen))).add((Object)Pair.of((Object)"fullscreenResolution", (Object)String.valueOf(this.fullscreenResolution))).add((Object)Pair.of((Object)"gamma", (Object)String.valueOf(this.gamma))).add((Object)Pair.of((Object)"glDebugVerbosity", (Object)String.valueOf(this.glDebugVerbosity))).add((Object)Pair.of((Object)"graphicsMode", (Object)String.valueOf((Object)this.graphicsMode))).add((Object)Pair.of((Object)"guiScale", (Object)String.valueOf(this.guiScale))).add((Object)Pair.of((Object)"maxFps", (Object)String.valueOf(this.maxFps))).add((Object)Pair.of((Object)"mipmapLevels", (Object)String.valueOf(this.mipmapLevels))).add((Object)Pair.of((Object)"narrator", (Object)String.valueOf((Object)this.narrator))).add((Object)Pair.of((Object)"overrideHeight", (Object)String.valueOf(this.overrideHeight))).add((Object)Pair.of((Object)"overrideWidth", (Object)String.valueOf(this.overrideWidth))).add((Object)Pair.of((Object)"particles", (Object)String.valueOf((Object)this.particles))).add((Object)Pair.of((Object)"reducedDebugInfo", (Object)String.valueOf(this.reducedDebugInfo))).add((Object)Pair.of((Object)"renderClouds", (Object)String.valueOf((Object)this.cloudRenderMode))).add((Object)Pair.of((Object)"renderDistance", (Object)String.valueOf(this.viewDistance))).add((Object)Pair.of((Object)"simulationDistance", (Object)String.valueOf(this.simulationDistance))).add((Object)Pair.of((Object)"resourcePacks", (Object)String.valueOf(this.resourcePacks))).add((Object)Pair.of((Object)"screenEffectScale", (Object)String.valueOf(this.distortionEffectScale))).add((Object)Pair.of((Object)"syncChunkWrites", (Object)String.valueOf(this.syncChunkWrites))).add((Object)Pair.of((Object)"useNativeTransport", (Object)String.valueOf(this.useNativeTransport))).add((Object)Pair.of((Object)"soundDevice", (Object)String.valueOf(this.soundDevice))).build();
         return immutableList.stream().map(option -> (String)option.getFirst() + ": " + (String)option.getSecond()).collect(Collectors.joining(System.lineSeparator()));
+    }
+
+    public void setServerViewDistance(int serverViewDistance) {
+        this.serverViewDistance = serverViewDistance;
+    }
+
+    public int getViewDistance() {
+        return this.serverViewDistance > 0 ? Math.min(this.viewDistance, this.serverViewDistance) : this.viewDistance;
     }
 
     @Environment(value=EnvType.CLIENT)

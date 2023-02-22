@@ -30,7 +30,7 @@ public class HangingRootsBlock
 extends Block
 implements Waterloggable {
     private static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
-    protected static final VoxelShape SHAPE = Block.createCuboidShape(4.0, 9.0, 4.0, 12.0, 16.0, 12.0);
+    protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 10.0, 2.0, 14.0, 16.0, 14.0);
 
     protected HangingRootsBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -79,7 +79,7 @@ implements Waterloggable {
             return Blocks.AIR.getDefaultState();
         }
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }

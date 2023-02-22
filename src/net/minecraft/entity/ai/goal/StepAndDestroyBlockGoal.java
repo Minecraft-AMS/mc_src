@@ -51,7 +51,7 @@ extends MoveToTargetPosGoal {
             return false;
         }
         if (this.hasAvailableTarget()) {
-            this.cooldown = 20;
+            this.cooldown = StepAndDestroyBlockGoal.toGoalTicks(20);
             return true;
         }
         this.cooldown = this.getInterval(this.mob);

@@ -60,6 +60,10 @@ extends AbstractCriterion<Conditions> {
             return new Conditions(EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.EMPTY, ItemPredicate.ANY);
         }
 
+        public static Conditions create(EntityPredicate.Builder playerPredicate) {
+            return new Conditions(EntityPredicate.Extended.ofLegacy(playerPredicate.build()), EntityPredicate.Extended.EMPTY, ItemPredicate.ANY);
+        }
+
         public boolean matches(LootContext merchantContext, ItemStack stack) {
             if (!this.villager.test(merchantContext)) {
                 return false;

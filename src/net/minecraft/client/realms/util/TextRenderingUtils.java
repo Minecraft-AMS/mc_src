@@ -6,6 +6,7 @@
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.realms.util;
 
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TextRenderingUtils {
@@ -78,7 +80,9 @@ public class TextRenderingUtils {
     @Environment(value=EnvType.CLIENT)
     public static class LineSegment {
         private final String fullText;
+        @Nullable
         private final String linkTitle;
+        @Nullable
         private final String linkUrl;
 
         private LineSegment(String fullText) {
@@ -87,7 +91,7 @@ public class TextRenderingUtils {
             this.linkUrl = null;
         }
 
-        private LineSegment(String fullText, String linkTitle, String linkUrl) {
+        private LineSegment(String fullText, @Nullable String linkTitle, @Nullable String linkUrl) {
             this.fullText = fullText;
             this.linkTitle = linkTitle;
             this.linkUrl = linkUrl;

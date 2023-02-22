@@ -7,9 +7,9 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Range
  *  com.google.common.collect.Sets
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.boss.dragon;
 
@@ -18,6 +18,7 @@ import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -63,24 +64,23 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.gen.feature.ConfiguredFeatures;
+import net.minecraft.world.gen.feature.EndConfiguredFeatures;
 import net.minecraft.world.gen.feature.EndPortalFeature;
 import net.minecraft.world.gen.feature.EndSpikeFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class EnderDragonFight {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int CHECK_DRAGON_SEEN_INTERVAL = 1200;
     private static final int CRYSTAL_COUNTING_INTERVAL = 100;
     private static final int field_31445 = 20;
-    private static final int field_31446 = 8;
+    private static final int ISLAND_SIZE = 8;
     public static final int field_31441 = 9;
-    private static final int field_31447 = 20;
+    private static final int PLAYER_COUNTING_INTERVAL = 20;
     private static final int field_31448 = 96;
-    public static final int field_31442 = 128;
+    public static final int SPAWN_Y = 128;
     private static final Predicate<Entity> VALID_ENTITY = EntityPredicates.VALID_ENTITY.and(EntityPredicates.maxDistance(0.0, 128.0, 0.0, 192.0));
     private final ServerBossBar bossBar = (ServerBossBar)new ServerBossBar(new TranslatableText("entity.minecraft.ender_dragon"), BossBar.Color.PINK, BossBar.Style.PROGRESS).setDragonMusic(true).setThickenFog(true);
     private final ServerWorld world;
@@ -92,11 +92,15 @@ public class EnderDragonFight {
     private int playerUpdateTimer;
     private boolean dragonKilled;
     private boolean previouslyKilled;
+    @Nullable
     private UUID dragonUuid;
     private boolean doLegacyCheck = true;
+    @Nullable
     private BlockPos exitPortalLocation;
+    @Nullable
     private EnderDragonSpawnState dragonSpawnState;
     private int spawnStateTimer;
+    @Nullable
     private List<EndCrystalEntity> crystals;
 
     public EnderDragonFight(ServerWorld world, long gatewaysSeed, NbtCompound nbt) {
@@ -351,7 +355,7 @@ public class EnderDragonFight {
 
     private void generateEndGateway(BlockPos pos) {
         this.world.syncWorldEvent(3000, pos, 0);
-        ConfiguredFeatures.END_GATEWAY_DELAYED.generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), pos);
+        EndConfiguredFeatures.END_GATEWAY_DELAYED.value().generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), pos);
     }
 
     private void generateEndPortal(boolean previouslyKilled) {
@@ -362,7 +366,7 @@ public class EnderDragonFight {
                 this.exitPortalLocation = this.exitPortalLocation.down();
             }
         }
-        endPortalFeature.configure(FeatureConfig.DEFAULT).generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), this.exitPortalLocation);
+        endPortalFeature.generateIfValid(FeatureConfig.DEFAULT, this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), this.exitPortalLocation);
     }
 
     private EnderDragonEntity createDragon() {

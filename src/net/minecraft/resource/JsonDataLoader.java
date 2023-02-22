@@ -6,8 +6,8 @@
  *  com.google.gson.Gson
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParseException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.resource;
 
@@ -15,6 +15,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,12 +30,11 @@ import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public abstract class JsonDataLoader
 extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String FILE_SUFFIX = ".json";
     private static final int FILE_SUFFIX_LENGTH = ".json".length();
     private final Gson gson;
@@ -76,7 +76,7 @@ extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
                 }
             }
             catch (JsonParseException | IOException | IllegalArgumentException exception) {
-                LOGGER.error("Couldn't parse data file {} from {}", (Object)identifier2, (Object)identifier, (Object)exception);
+                LOGGER.error("Couldn't parse data file {} from {}", new Object[]{identifier2, identifier, exception});
             }
         }
         return map;

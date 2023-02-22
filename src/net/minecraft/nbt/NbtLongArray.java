@@ -19,13 +19,14 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtLong;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class NbtLongArray
 extends AbstractNbtList<NbtLong> {
-    private static final int field_33200 = 192;
-    public static final NbtType<NbtLongArray> TYPE = new NbtType<NbtLongArray>(){
+    private static final int SIZE = 192;
+    public static final NbtType<NbtLongArray> TYPE = new NbtType.OfVariableSize<NbtLongArray>(){
 
         @Override
         public NbtLongArray read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
@@ -37,6 +38,21 @@ extends AbstractNbtList<NbtLong> {
                 ls[k] = dataInput.readLong();
             }
             return new NbtLongArray(ls);
+        }
+
+        @Override
+        public NbtScanner.Result doAccept(DataInput input, NbtScanner visitor) throws IOException {
+            int i = input.readInt();
+            long[] ls = new long[i];
+            for (int j = 0; j < i; ++j) {
+                ls[j] = input.readLong();
+            }
+            return visitor.visitLongArray(ls);
+        }
+
+        @Override
+        public void skip(DataInput input) throws IOException {
+            input.skipBytes(input.readInt() * 8);
         }
 
         @Override
@@ -182,6 +198,11 @@ extends AbstractNbtList<NbtLong> {
     @Override
     public void clear() {
         this.value = new long[0];
+    }
+
+    @Override
+    public NbtScanner.Result doAccept(NbtScanner visitor) {
+        return visitor.visitLongArray(this.value);
     }
 
     @Override

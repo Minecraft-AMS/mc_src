@@ -49,6 +49,7 @@ import net.minecraft.client.particle.AshParticle;
 import net.minecraft.client.particle.BlockDustParticle;
 import net.minecraft.client.particle.BlockFallingDustParticle;
 import net.minecraft.client.particle.BlockLeakParticle;
+import net.minecraft.client.particle.BlockMarkerParticle;
 import net.minecraft.client.particle.BubbleColumnUpParticle;
 import net.minecraft.client.particle.BubblePopParticle;
 import net.minecraft.client.particle.CampfireSmokeParticle;
@@ -71,7 +72,6 @@ import net.minecraft.client.particle.FireworksSparkParticle;
 import net.minecraft.client.particle.FishingParticle;
 import net.minecraft.client.particle.FlameParticle;
 import net.minecraft.client.particle.GlowParticle;
-import net.minecraft.client.particle.ItemBillboardParticle;
 import net.minecraft.client.particle.LargeFireSmokeParticle;
 import net.minecraft.client.particle.LavaEmberParticle;
 import net.minecraft.client.particle.NoteParticle;
@@ -158,8 +158,7 @@ implements ResourceReloader {
     private void registerDefaultFactories() {
         this.registerFactory(ParticleTypes.AMBIENT_ENTITY_EFFECT, SpellParticle.EntityAmbientFactory::new);
         this.registerFactory(ParticleTypes.ANGRY_VILLAGER, EmotionParticle.AngryVillagerFactory::new);
-        this.registerFactory(ParticleTypes.BARRIER, new ItemBillboardParticle.BarrierFactory());
-        this.registerFactory(ParticleTypes.LIGHT, new ItemBillboardParticle.LightFactory());
+        this.registerFactory(ParticleTypes.BLOCK_MARKER, new BlockMarkerParticle.Factory());
         this.registerFactory(ParticleTypes.BLOCK, new BlockDustParticle.Factory());
         this.registerFactory(ParticleTypes.BUBBLE, WaterBubbleParticle.Factory::new);
         this.registerFactory(ParticleTypes.BUBBLE_COLUMN_UP, BubbleColumnUpParticle.Factory::new);
@@ -260,8 +259,8 @@ implements ResourceReloader {
     @Override
     public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
         ConcurrentMap map = Maps.newConcurrentMap();
-        CompletableFuture[] completableFutures = (CompletableFuture[])Registry.PARTICLE_TYPE.getIds().stream().map(identifier -> CompletableFuture.runAsync(() -> this.loadTextureList(manager, (Identifier)identifier, map), prepareExecutor)).toArray(CompletableFuture[]::new);
-        return ((CompletableFuture)((CompletableFuture)CompletableFuture.allOf(completableFutures).thenApplyAsync(void_ -> {
+        CompletableFuture[] completableFutures = (CompletableFuture[])Registry.PARTICLE_TYPE.getIds().stream().map(id -> CompletableFuture.runAsync(() -> this.loadTextureList(manager, (Identifier)id, map), prepareExecutor)).toArray(CompletableFuture[]::new);
+        return ((CompletableFuture)((CompletableFuture)CompletableFuture.allOf(completableFutures).thenApplyAsync(v -> {
             prepareProfiler.startTick();
             prepareProfiler.push("stitching");
             SpriteAtlasTexture.Data data = this.particleAtlasTexture.stitch(manager, map.values().stream().flatMap(Collection::stream), prepareProfiler, 0);
@@ -368,7 +367,7 @@ implements ResourceReloader {
         if (!this.newParticles.isEmpty()) {
             Particle particle;
             while ((particle = this.newParticles.poll()) != null) {
-                this.particles.computeIfAbsent(particle.getType(), particleTextureSheet -> EvictingQueue.create((int)16384)).add(particle);
+                this.particles.computeIfAbsent(particle.getType(), sheet -> EvictingQueue.create((int)16384)).add(particle);
             }
         }
     }
@@ -403,12 +402,12 @@ implements ResourceReloader {
         }
     }
 
-    public void renderParticles(MatrixStack matrices, VertexConsumerProvider.Immediate immediate, LightmapTextureManager lightmapTextureManager, Camera camera, float f) {
+    public void renderParticles(MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers, LightmapTextureManager lightmapTextureManager, Camera camera, float tickDelta) {
         lightmapTextureManager.enable();
         RenderSystem.enableDepthTest();
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
-        matrixStack.method_34425(matrices.peek().getModel());
+        matrixStack.multiplyPositionMatrix(matrices.peek().getPositionMatrix());
         RenderSystem.applyModelViewMatrix();
         for (ParticleTextureSheet particleTextureSheet : PARTICLE_TEXTURE_SHEETS) {
             Iterable iterable = this.particles.get(particleTextureSheet);
@@ -420,7 +419,7 @@ implements ResourceReloader {
             particleTextureSheet.begin(bufferBuilder, this.textureManager);
             for (Particle particle : iterable) {
                 try {
-                    particle.buildGeometry(bufferBuilder, camera, f);
+                    particle.buildGeometry(bufferBuilder, camera, tickDelta);
                 }
                 catch (Throwable throwable) {
                     CrashReport crashReport = CrashReport.create(throwable, "Rendering Particle");
@@ -451,24 +450,24 @@ implements ResourceReloader {
             return;
         }
         VoxelShape voxelShape = state.getOutlineShape(this.world, pos);
-        double d2 = 0.25;
-        voxelShape.forEachBox((d, e, f, g, h, i) -> {
-            double j = Math.min(1.0, g - d);
-            double k = Math.min(1.0, h - e);
-            double l = Math.min(1.0, i - f);
-            int m = Math.max(2, MathHelper.ceil(j / 0.25));
-            int n = Math.max(2, MathHelper.ceil(k / 0.25));
-            int o = Math.max(2, MathHelper.ceil(l / 0.25));
-            for (int p = 0; p < m; ++p) {
-                for (int q = 0; q < n; ++q) {
-                    for (int r = 0; r < o; ++r) {
-                        double s = ((double)p + 0.5) / (double)m;
-                        double t = ((double)q + 0.5) / (double)n;
-                        double u = ((double)r + 0.5) / (double)o;
-                        double v = s * j + d;
-                        double w = t * k + e;
-                        double x = u * l + f;
-                        this.addParticle(new BlockDustParticle(this.world, (double)pos.getX() + v, (double)pos.getY() + w, (double)pos.getZ() + x, s - 0.5, t - 0.5, u - 0.5, state, pos));
+        double d = 0.25;
+        voxelShape.forEachBox((minX, minY, minZ, maxX, maxY, maxZ) -> {
+            double d = Math.min(1.0, maxX - minX);
+            double e = Math.min(1.0, maxY - minY);
+            double f = Math.min(1.0, maxZ - minZ);
+            int i = Math.max(2, MathHelper.ceil(d / 0.25));
+            int j = Math.max(2, MathHelper.ceil(e / 0.25));
+            int k = Math.max(2, MathHelper.ceil(f / 0.25));
+            for (int l = 0; l < i; ++l) {
+                for (int m = 0; m < j; ++m) {
+                    for (int n = 0; n < k; ++n) {
+                        double g = ((double)l + 0.5) / (double)i;
+                        double h = ((double)m + 0.5) / (double)j;
+                        double o = ((double)n + 0.5) / (double)k;
+                        double p = g * d + minX;
+                        double q = h * e + minY;
+                        double r = o * f + minZ;
+                        this.addParticle(new BlockDustParticle(this.world, (double)pos.getX() + p, (double)pos.getY() + q, (double)pos.getZ() + r, g - 0.5, h - 0.5, o - 0.5, state, pos));
                     }
                 }
             }
@@ -524,7 +523,7 @@ implements ResourceReloader {
     }
 
     @Environment(value=EnvType.CLIENT)
-    class SimpleSpriteProvider
+    static class SimpleSpriteProvider
     implements SpriteProvider {
         private List<Sprite> sprites;
 

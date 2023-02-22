@@ -3,16 +3,17 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world;
 
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
@@ -26,25 +27,25 @@ import net.minecraft.block.LeavesBlock;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.PackedIntegerArray;
+import net.minecraft.util.collection.PaletteStorage;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.chunk.Chunk;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class Heightmap {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     static final Predicate<BlockState> NOT_AIR = state -> !state.isAir();
     static final Predicate<BlockState> SUFFOCATES = state -> state.getMaterial().blocksMovement();
-    private final PackedIntegerArray storage;
+    private final PaletteStorage storage;
     private final Predicate<BlockState> blockPredicate;
     private final Chunk chunk;
 
     public Heightmap(Chunk chunk, Type type) {
         this.blockPredicate = type.getBlockPredicate();
         this.chunk = chunk;
-        int i = MathHelper.log2DeBruijn(chunk.getHeight() + 1);
+        int i = MathHelper.ceilLog2(chunk.getHeight() + 1);
         this.storage = new PackedIntegerArray(i, 256);
     }
 
@@ -117,7 +118,7 @@ public class Heightmap {
     }
 
     public void setTo(Chunk chunk, Type type, long[] ls) {
-        long[] ms = this.storage.getStorage();
+        long[] ms = this.storage.getData();
         if (ms.length == ls.length) {
             System.arraycopy(ls, 0, ms, 0, ls.length);
             return;
@@ -127,7 +128,7 @@ public class Heightmap {
     }
 
     public long[] asLongArray() {
-        return this.storage.getStorage();
+        return this.storage.getData();
     }
 
     private static int toIndex(int x, int z) {
@@ -141,8 +142,8 @@ public class Heightmap {
         public static final /* enum */ Type WORLD_SURFACE = new Type("WORLD_SURFACE", Purpose.CLIENT, NOT_AIR);
         public static final /* enum */ Type OCEAN_FLOOR_WG = new Type("OCEAN_FLOOR_WG", Purpose.WORLDGEN, SUFFOCATES);
         public static final /* enum */ Type OCEAN_FLOOR = new Type("OCEAN_FLOOR", Purpose.LIVE_WORLD, SUFFOCATES);
-        public static final /* enum */ Type MOTION_BLOCKING = new Type("MOTION_BLOCKING", Purpose.CLIENT, blockState -> blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty());
-        public static final /* enum */ Type MOTION_BLOCKING_NO_LEAVES = new Type("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, blockState -> (blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty()) && !(blockState.getBlock() instanceof LeavesBlock));
+        public static final /* enum */ Type MOTION_BLOCKING = new Type("MOTION_BLOCKING", Purpose.CLIENT, state -> state.getMaterial().blocksMovement() || !state.getFluidState().isEmpty());
+        public static final /* enum */ Type MOTION_BLOCKING_NO_LEAVES = new Type("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, state -> (state.getMaterial().blocksMovement() || !state.getFluidState().isEmpty()) && !(state.getBlock() instanceof LeavesBlock));
         public static final Codec<Type> CODEC;
         private final String name;
         private final Purpose purpose;

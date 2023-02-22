@@ -7,9 +7,9 @@
  *  com.mojang.brigadier.builder.LiteralArgumentBuilder
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+ *  com.mojang.logging.LogUtils
  *  org.apache.commons.io.FileUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.dedicated.command;
 
@@ -18,6 +18,7 @@ import com.mojang.brigadier.Message;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -38,11 +39,10 @@ import net.minecraft.util.ZipCompressor;
 import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.RecordDumper;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class PerfCommand {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final SimpleCommandExceptionType NOT_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.perf.notRunning"));
     private static final SimpleCommandExceptionType ALREADY_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.perf.alreadyRunning"));
 
@@ -79,7 +79,7 @@ public class PerfCommand {
         }
         catch (IOException iOException) {
             source.sendError(new TranslatableText("commands.perf.reportFailed"));
-            LOGGER.error((Object)iOException);
+            LOGGER.error("Failed to create report name", (Throwable)iOException);
             return;
         }
         try (ZipCompressor zipCompressor = new ZipCompressor(RecordDumper.DEBUG_PROFILING_DIRECTORY.resolve(string2));){
@@ -97,7 +97,7 @@ public class PerfCommand {
 
     private static void sendProfilingStoppedMessage(ServerCommandSource source, ProfileResult result) {
         int i = result.getTickSpan();
-        double d = (double)result.getTimeSpan() / (double)TimeHelper.SECOND_IN_MILLIS;
+        double d = (double)result.getTimeSpan() / (double)TimeHelper.SECOND_IN_NANOS;
         source.sendFeedback(new TranslatableText("commands.perf.stopped", String.format(Locale.ROOT, "%.2f", d), i, String.format(Locale.ROOT, "%.2f", (double)i / d)), false);
     }
 }

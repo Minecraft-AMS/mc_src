@@ -56,7 +56,7 @@ implements ArgumentType<ScoreHolder> {
     };
     private static final Collection<String> EXAMPLES = Arrays.asList("Player", "0123", "*", "@e");
     private static final SimpleCommandExceptionType EMPTY_SCORE_HOLDER_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.scoreHolder.empty"));
-    private static final byte field_32470 = 1;
+    private static final byte MULTIPLE_TYPE_MASK = 1;
     final boolean multiple;
 
     public ScoreHolderArgumentType(boolean multiple) {
@@ -106,8 +106,8 @@ implements ArgumentType<ScoreHolder> {
         }
         String string = stringReader.getString().substring(i, stringReader.getCursor());
         if (string.equals("*")) {
-            return (serverCommandSource, supplier) -> {
-                Collection collection = (Collection)supplier.get();
+            return (source, players) -> {
+                Collection collection = (Collection)players.get();
                 if (collection.isEmpty()) {
                     throw EMPTY_SCORE_HOLDER_EXCEPTION.create();
                 }
@@ -115,7 +115,7 @@ implements ArgumentType<ScoreHolder> {
             };
         }
         Set<String> collection = Collections.singleton(string);
-        return (serverCommandSource, supplier) -> collection;
+        return (source, players) -> collection;
     }
 
     public Collection<String> getExamples() {

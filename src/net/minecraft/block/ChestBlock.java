@@ -176,7 +176,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         if (neighborState.isOf(this) && direction.getAxis().isHorizontal()) {
             ChestType chestType = neighborState.get(CHEST_TYPE);
@@ -310,12 +310,12 @@ implements Waterloggable {
         return this.getBlockEntitySource(state, world, pos, false).apply(NAME_RETRIEVER).orElse(null);
     }
 
-    public static DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction> getAnimationProgressRetriever(final ChestAnimationProgress chestAnimationProgress) {
+    public static DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction> getAnimationProgressRetriever(final ChestAnimationProgress progress) {
         return new DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction>(){
 
             @Override
             public Float2FloatFunction getFromBoth(ChestBlockEntity chestBlockEntity, ChestBlockEntity chestBlockEntity2) {
-                return f -> Math.max(chestBlockEntity.getAnimationProgress(f), chestBlockEntity2.getAnimationProgress(f));
+                return tickDelta -> Math.max(chestBlockEntity.getAnimationProgress(tickDelta), chestBlockEntity2.getAnimationProgress(tickDelta));
             }
 
             @Override
@@ -325,7 +325,7 @@ implements Waterloggable {
 
             @Override
             public Float2FloatFunction getFallback() {
-                return chestAnimationProgress::getAnimationProgress;
+                return progress::getAnimationProgress;
             }
 
             @Override

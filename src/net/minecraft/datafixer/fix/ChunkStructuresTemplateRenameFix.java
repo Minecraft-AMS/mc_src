@@ -36,10 +36,10 @@ extends DataFix {
     public TypeRewriteRule makeRule() {
         Type type = this.getInputSchema().getType(TypeReferences.STRUCTURE_FEATURE);
         OpticFinder opticFinder = type.findField("Children");
-        return this.fixTypeEverywhereTyped("ChunkStructuresTemplateRenameFix", type, typed -> typed.updateTyped(opticFinder, typed2 -> typed2.update(DSL.remainderFinder(), dynamic -> this.method_15671((Dynamic<?>)((Dynamic)typed.get(DSL.remainderFinder())), (Dynamic<?>)dynamic))));
+        return this.fixTypeEverywhereTyped("ChunkStructuresTemplateRenameFix", type, typed -> typed.updateTyped(opticFinder, typed2 -> typed2.update(DSL.remainderFinder(), dynamic -> this.fix((Dynamic<?>)((Dynamic)typed.get(DSL.remainderFinder())), (Dynamic<?>)dynamic))));
     }
 
-    private Dynamic<?> method_15671(Dynamic<?> dynamic, Dynamic<?> dynamic2) {
+    private Dynamic<?> fix(Dynamic<?> dynamic, Dynamic<?> dynamic2) {
         Pair pair;
         String string = dynamic.get("id").asString("");
         if (STRUCTURES.containsKey((Object)string) && ((String)(pair = (Pair)STRUCTURES.get((Object)string)).getFirst()).equals(dynamic2.get("id").asString(""))) {

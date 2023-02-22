@@ -21,9 +21,8 @@ import net.minecraft.util.registry.Registry;
 public class ParticleTypes {
     public static final DefaultParticleType AMBIENT_ENTITY_EFFECT = ParticleTypes.register("ambient_entity_effect", false);
     public static final DefaultParticleType ANGRY_VILLAGER = ParticleTypes.register("angry_villager", false);
-    public static final DefaultParticleType BARRIER = ParticleTypes.register("barrier", false);
-    public static final DefaultParticleType LIGHT = ParticleTypes.register("light", false);
-    public static final ParticleType<BlockStateParticleEffect> BLOCK = ParticleTypes.register("block", BlockStateParticleEffect.PARAMETERS_FACTORY, BlockStateParticleEffect::method_29128);
+    public static final ParticleType<BlockStateParticleEffect> BLOCK = ParticleTypes.register("block", BlockStateParticleEffect.PARAMETERS_FACTORY, BlockStateParticleEffect::createCodec);
+    public static final ParticleType<BlockStateParticleEffect> BLOCK_MARKER = ParticleTypes.register("block_marker", BlockStateParticleEffect.PARAMETERS_FACTORY, BlockStateParticleEffect::createCodec);
     public static final DefaultParticleType BUBBLE = ParticleTypes.register("bubble", false);
     public static final DefaultParticleType CLOUD = ParticleTypes.register("cloud", false);
     public static final DefaultParticleType CRIT = ParticleTypes.register("crit", false);
@@ -44,7 +43,7 @@ public class ParticleTypes {
     public static final DefaultParticleType ENTITY_EFFECT = ParticleTypes.register("entity_effect", false);
     public static final DefaultParticleType EXPLOSION_EMITTER = ParticleTypes.register("explosion_emitter", true);
     public static final DefaultParticleType EXPLOSION = ParticleTypes.register("explosion", true);
-    public static final ParticleType<BlockStateParticleEffect> FALLING_DUST = ParticleTypes.register("falling_dust", BlockStateParticleEffect.PARAMETERS_FACTORY, BlockStateParticleEffect::method_29128);
+    public static final ParticleType<BlockStateParticleEffect> FALLING_DUST = ParticleTypes.register("falling_dust", BlockStateParticleEffect.PARAMETERS_FACTORY, BlockStateParticleEffect::createCodec);
     public static final DefaultParticleType FIREWORK = ParticleTypes.register("firework", false);
     public static final DefaultParticleType FISHING = ParticleTypes.register("fishing", false);
     public static final DefaultParticleType FLAME = ParticleTypes.register("flame", false);
@@ -55,7 +54,7 @@ public class ParticleTypes {
     public static final DefaultParticleType COMPOSTER = ParticleTypes.register("composter", false);
     public static final DefaultParticleType HEART = ParticleTypes.register("heart", false);
     public static final DefaultParticleType INSTANT_EFFECT = ParticleTypes.register("instant_effect", false);
-    public static final ParticleType<ItemStackParticleEffect> ITEM = ParticleTypes.register("item", ItemStackParticleEffect.PARAMETERS_FACTORY, ItemStackParticleEffect::method_29136);
+    public static final ParticleType<ItemStackParticleEffect> ITEM = ParticleTypes.register("item", ItemStackParticleEffect.PARAMETERS_FACTORY, ItemStackParticleEffect::createCodec);
     public static final ParticleType<VibrationParticleEffect> VIBRATION = ParticleTypes.register("vibration", VibrationParticleEffect.PARAMETERS_FACTORY, particleType -> VibrationParticleEffect.CODEC);
     public static final DefaultParticleType ITEM_SLIME = ParticleTypes.register("item_slime", false);
     public static final DefaultParticleType ITEM_SNOWBALL = ParticleTypes.register("item_snowball", false);
@@ -108,7 +107,7 @@ public class ParticleTypes {
     public static final DefaultParticleType WAX_OFF = ParticleTypes.register("wax_off", true);
     public static final DefaultParticleType ELECTRIC_SPARK = ParticleTypes.register("electric_spark", true);
     public static final DefaultParticleType SCRAPE = ParticleTypes.register("scrape", true);
-    public static final Codec<ParticleEffect> TYPE_CODEC = Registry.PARTICLE_TYPE.dispatch("type", ParticleEffect::getType, ParticleType::getCodec);
+    public static final Codec<ParticleEffect> TYPE_CODEC = Registry.PARTICLE_TYPE.getCodec().dispatch("type", ParticleEffect::getType, ParticleType::getCodec);
 
     private static DefaultParticleType register(String name, boolean alwaysShow) {
         return Registry.register(Registry.PARTICLE_TYPE, name, new DefaultParticleType(alwaysShow));

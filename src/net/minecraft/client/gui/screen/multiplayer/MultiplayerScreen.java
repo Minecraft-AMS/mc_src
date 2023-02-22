@@ -2,13 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.multiplayer;
 
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -30,13 +32,13 @@ import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class MultiplayerScreen
 extends Screen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final MultiplayerServerListPinger serverListPinger = new MultiplayerServerListPinger();
     private final Screen parent;
     protected MultiplayerServerListWidget serverListWidget;
@@ -44,9 +46,11 @@ extends Screen {
     private ButtonWidget buttonEdit;
     private ButtonWidget buttonJoin;
     private ButtonWidget buttonDelete;
-    private List<Text> tooltipText;
+    @Nullable
+    private List<Text> tooltip;
     private ServerInfo selectedEntry;
     private LanServerQueryManager.LanServerEntryList lanServers;
+    @Nullable
     private LanServerQueryManager.LanServerDetector lanServerDetector;
     private boolean initialized;
 
@@ -199,13 +203,13 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.tooltipText = null;
+        this.tooltip = null;
         this.renderBackground(matrices);
         this.serverListWidget.render(matrices, mouseX, mouseY, delta);
         MultiplayerScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltipText != null) {
-            this.renderTooltip(matrices, this.tooltipText, mouseX, mouseY);
+        if (this.tooltip != null) {
+            this.renderTooltip(matrices, this.tooltip, mouseX, mouseY);
         }
     }
 
@@ -246,8 +250,8 @@ extends Screen {
         return this.serverListPinger;
     }
 
-    public void setTooltip(List<Text> tooltipText) {
-        this.tooltipText = tooltipText;
+    public void setTooltip(List<Text> tooltip) {
+        this.tooltip = tooltip;
     }
 
     public ServerList getServerList() {

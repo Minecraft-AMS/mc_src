@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.util.Util;
@@ -28,29 +29,29 @@ import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.ChunkUpdateState;
 import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.World;
-import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
 public class FeatureUpdater {
-    private static final Map<String, String> OLD_TO_NEW = Util.make(Maps.newHashMap(), hashMap -> {
-        hashMap.put("Village", "Village");
-        hashMap.put("Mineshaft", "Mineshaft");
-        hashMap.put("Mansion", "Mansion");
-        hashMap.put("Igloo", "Temple");
-        hashMap.put("Desert_Pyramid", "Temple");
-        hashMap.put("Jungle_Pyramid", "Temple");
-        hashMap.put("Swamp_Hut", "Temple");
-        hashMap.put("Stronghold", "Stronghold");
-        hashMap.put("Monument", "Monument");
-        hashMap.put("Fortress", "Fortress");
-        hashMap.put("EndCity", "EndCity");
+    private static final Map<String, String> OLD_TO_NEW = Util.make(Maps.newHashMap(), map -> {
+        map.put("Village", "Village");
+        map.put("Mineshaft", "Mineshaft");
+        map.put("Mansion", "Mansion");
+        map.put("Igloo", "Temple");
+        map.put("Desert_Pyramid", "Temple");
+        map.put("Jungle_Pyramid", "Temple");
+        map.put("Swamp_Hut", "Temple");
+        map.put("Stronghold", "Stronghold");
+        map.put("Monument", "Monument");
+        map.put("Fortress", "Fortress");
+        map.put("EndCity", "EndCity");
     });
-    private static final Map<String, String> ANCIENT_TO_OLD = Util.make(Maps.newHashMap(), hashMap -> {
-        hashMap.put("Iglu", "Igloo");
-        hashMap.put("TeDP", "Desert_Pyramid");
-        hashMap.put("TeJP", "Jungle_Pyramid");
-        hashMap.put("TeSH", "Swamp_Hut");
+    private static final Map<String, String> ANCIENT_TO_OLD = Util.make(Maps.newHashMap(), map -> {
+        map.put("Iglu", "Igloo");
+        map.put("TeDP", "Desert_Pyramid");
+        map.put("TeJP", "Jungle_Pyramid");
+        map.put("TeSH", "Swamp_Hut");
     });
+    private static final Set<String> field_37194 = Set.of("pillager_outpost", "mineshaft", "mansion", "jungle_pyramid", "desert_pyramid", "igloo", "ruined_portal", "shipwreck", "swamp_hut", "stronghold", "monument", "ocean_ruin", "fortress", "endcity", "buried_treasure", "village", "nether_fossil", "bastion_remnant");
     private final boolean needsUpdate;
     private final Map<String, Long2ObjectMap<NbtCompound>> featureIdToChunkNbt = Maps.newHashMap();
     private final Map<String, ChunkUpdateState> updateStates = Maps.newHashMap();
@@ -86,8 +87,8 @@ public class FeatureUpdater {
         NbtCompound nbtCompound2 = nbtCompound.getCompound("Structures");
         NbtCompound nbtCompound3 = nbtCompound2.getCompound("References");
         for (String string : this.field_17659) {
-            StructureFeature structureFeature = (StructureFeature)StructureFeature.STRUCTURES.get((Object)string.toLowerCase(Locale.ROOT));
-            if (nbtCompound3.contains(string, 12) || structureFeature == null) continue;
+            boolean bl = field_37194.contains(string.toLowerCase(Locale.ROOT));
+            if (nbtCompound3.contains(string, 12) || !bl) continue;
             int i = 8;
             LongArrayList longList = new LongArrayList();
             for (int j = chunkPos.x - 8; j <= chunkPos.x + 8; ++j) {

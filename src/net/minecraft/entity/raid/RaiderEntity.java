@@ -266,8 +266,8 @@ extends PatrolEntity {
         return this.outOfRaidCounter;
     }
 
-    public void setOutOfRaidCounter(int counter) {
-        this.outOfRaidCounter = counter;
+    public void setOutOfRaidCounter(int outOfRaidCounter) {
+        this.outOfRaidCounter = outOfRaidCounter;
     }
 
     @Override
@@ -350,7 +350,7 @@ extends PatrolEntity {
         private boolean tryFindHome() {
             ServerWorld serverWorld = (ServerWorld)this.raider.world;
             BlockPos blockPos = this.raider.getBlockPos();
-            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(pointOfInterestType -> pointOfInterestType == PointOfInterestType.HOME, this::canLootHome, PointOfInterestStorage.OccupationStatus.ANY, blockPos, 48, this.raider.random);
+            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(poiType -> poiType == PointOfInterestType.HOME, this::canLootHome, PointOfInterestStorage.OccupationStatus.ANY, blockPos, 48, this.raider.random);
             if (!optional.isPresent()) {
                 return false;
             }
@@ -385,9 +385,9 @@ extends PatrolEntity {
         public void tick() {
             if (this.raider.getNavigation().isIdle()) {
                 Vec3d vec3d = Vec3d.ofBottomCenter(this.home);
-                Vec3d vec3d2 = NoPenaltyTargeting.find(this.raider, 16, 7, vec3d, 0.3141592741012573);
+                Vec3d vec3d2 = NoPenaltyTargeting.findTo(this.raider, 16, 7, vec3d, 0.3141592741012573);
                 if (vec3d2 == null) {
-                    vec3d2 = NoPenaltyTargeting.find(this.raider, 8, 7, vec3d, 1.5707963705062866);
+                    vec3d2 = NoPenaltyTargeting.findTo(this.raider, 8, 7, vec3d, 1.5707963705062866);
                 }
                 if (vec3d2 == null) {
                     this.finished = true;
@@ -441,10 +441,10 @@ extends PatrolEntity {
 
         @Override
         public void tick() {
-            if (!this.raider.isSilent() && this.raider.random.nextInt(100) == 0) {
+            if (!this.raider.isSilent() && this.raider.random.nextInt(this.getTickCount(100)) == 0) {
                 RaiderEntity.this.playSound(RaiderEntity.this.getCelebratingSound(), RaiderEntity.this.getSoundVolume(), RaiderEntity.this.getSoundPitch());
             }
-            if (!this.raider.hasVehicle() && this.raider.random.nextInt(50) == 0) {
+            if (!this.raider.hasVehicle() && this.raider.random.nextInt(this.getTickCount(50)) == 0) {
                 this.raider.getJumpControl().setActive();
             }
             super.tick();
@@ -491,6 +491,11 @@ extends PatrolEntity {
                 }
                 this.raider.setAttacking(true);
             }
+        }
+
+        @Override
+        public boolean shouldRunEveryTick() {
+            return true;
         }
 
         @Override

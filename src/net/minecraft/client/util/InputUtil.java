@@ -204,11 +204,11 @@ public class InputUtil {
         GLFW.glfwSetCharModsCallback((long)handle, (GLFWCharModsCallbackI)charModsCallback);
     }
 
-    public static void setMouseCallbacks(long handle, GLFWCursorPosCallbackI cursorPosCallback, GLFWMouseButtonCallbackI mouseButtonCallback, GLFWScrollCallbackI scrollCallback, GLFWDropCallbackI gLFWDropCallbackI) {
+    public static void setMouseCallbacks(long handle, GLFWCursorPosCallbackI cursorPosCallback, GLFWMouseButtonCallbackI mouseButtonCallback, GLFWScrollCallbackI scrollCallback, GLFWDropCallbackI dropCallback) {
         GLFW.glfwSetCursorPosCallback((long)handle, (GLFWCursorPosCallbackI)cursorPosCallback);
         GLFW.glfwSetMouseButtonCallback((long)handle, (GLFWMouseButtonCallbackI)mouseButtonCallback);
         GLFW.glfwSetScrollCallback((long)handle, (GLFWScrollCallbackI)scrollCallback);
-        GLFW.glfwSetDropCallback((long)handle, (GLFWDropCallbackI)gLFWDropCallbackI);
+        GLFW.glfwSetDropCallback((long)handle, (GLFWDropCallbackI)dropCallback);
     }
 
     public static void setCursorParameters(long handler, int inputModeValue, double x, double y) {

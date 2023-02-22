@@ -2,14 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen;
 
+import com.mojang.logging.LogUtils;
 import java.net.InetSocketAddress;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,15 +36,14 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ConnectScreen
 extends Screen {
     private static final AtomicInteger CONNECTOR_THREADS_COUNT = new AtomicInteger(0);
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final long NARRATOR_INTERVAL = 2000L;
     public static final Text BLOCKED_HOST_TEXT = new TranslatableText("disconnect.genericReason", new TranslatableText("disconnect.unknownHost"));
     @Nullable
@@ -61,6 +61,7 @@ extends Screen {
     public static void connect(Screen screen, MinecraftClient client, ServerAddress address, @Nullable ServerInfo info) {
         ConnectScreen connectScreen = new ConnectScreen(screen);
         client.disconnect();
+        client.loadBlockList();
         client.setCurrentServerEntry(info);
         client.setScreen(connectScreen);
         connectScreen.connect(client, address);
@@ -92,11 +93,14 @@ extends Screen {
                     ConnectScreen.this.connection.send(new LoginHelloC2SPacket(client.getSession().getProfile()));
                 }
                 catch (Exception exception) {
+                    Exception exception2;
                     if (ConnectScreen.this.connectingCancelled) {
                         return;
                     }
+                    Throwable throwable = exception.getCause();
+                    Exception exception3 = throwable instanceof Exception ? (exception2 = (Exception)throwable) : exception;
                     LOGGER.error("Couldn't connect to server", (Throwable)exception);
-                    String string = inetSocketAddress == null ? exception.toString() : exception.toString().replaceAll(inetSocketAddress.getHostName() + ":" + inetSocketAddress.getPort(), "");
+                    String string = inetSocketAddress == null ? exception3.getMessage() : exception3.getMessage().replaceAll(inetSocketAddress.getHostName() + ":" + inetSocketAddress.getPort(), "").replaceAll(inetSocketAddress.toString(), "");
                     client.execute(() -> client.setScreen(new DisconnectedScreen(ConnectScreen.this.parent, ScreenTexts.CONNECT_FAILED, new TranslatableText("disconnect.genericReason", string))));
                 }
             }

@@ -100,7 +100,7 @@ implements Waterloggable {
         state = (BlockState)state.cycle(OPEN);
         world.setBlockState(pos, state, 2);
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         this.playToggleSound(player, world, pos, state.get(OPEN));
         return ActionResult.success(world.isClient);
@@ -130,7 +130,7 @@ implements Waterloggable {
             }
             world.setBlockState(pos, (BlockState)state.with(POWERED, bl), 2);
             if (state.get(WATERLOGGED).booleanValue()) {
-                world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+                world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
             }
         }
     }
@@ -163,7 +163,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }

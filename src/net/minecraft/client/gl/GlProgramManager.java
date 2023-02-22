@@ -2,40 +2,40 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gl;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.GlShader;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class GlProgramManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void useProgram(int program) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GlStateManager._glUseProgram(program);
     }
 
     public static void deleteProgram(GlShader shader) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         shader.getFragmentShader().release();
         shader.getVertexShader().release();
         GlStateManager.glDeleteProgram(shader.getProgramRef());
     }
 
     public static int createProgram() throws IOException {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         int i = GlStateManager.glCreateProgram();
         if (i <= 0) {
             throw new IOException("Could not create shader program (returned program ID " + i + ")");
@@ -44,7 +44,7 @@ public class GlProgramManager {
     }
 
     public static void linkProgram(GlShader shader) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         shader.attachReferencedShaders();
         GlStateManager.glLinkProgram(shader.getProgramRef());
         int i = GlStateManager.glGetProgrami(shader.getProgramRef(), 35714);

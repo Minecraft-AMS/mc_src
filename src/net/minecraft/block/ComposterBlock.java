@@ -98,7 +98,7 @@ implements InventoryProvider {
         ComposterBlock.registerCompostableItem(0.3f, Items.HANGING_ROOTS);
         ComposterBlock.registerCompostableItem(0.5f, Items.DRIED_KELP_BLOCK);
         ComposterBlock.registerCompostableItem(0.5f, Items.TALL_GRASS);
-        ComposterBlock.registerCompostableItem(0.5f, Items.AZALEA_LEAVES_FLOWERS);
+        ComposterBlock.registerCompostableItem(0.5f, Items.FLOWERING_AZALEA_LEAVES);
         ComposterBlock.registerCompostableItem(0.5f, Items.CACTUS);
         ComposterBlock.registerCompostableItem(0.5f, Items.SUGAR_CANE);
         ComposterBlock.registerCompostableItem(0.5f, Items.VINE);
@@ -205,7 +205,7 @@ implements InventoryProvider {
     @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
         if (state.get(LEVEL) == 7) {
-            world.getBlockTickScheduler().schedule(pos, state.getBlock(), 20);
+            world.createAndScheduleBlockTick(pos, state.getBlock(), 20);
         }
     }
 
@@ -270,7 +270,7 @@ implements InventoryProvider {
             BlockState blockState = (BlockState)state.with(LEVEL, j);
             world.setBlockState(pos, blockState, 3);
             if (j == 7) {
-                world.getBlockTickScheduler().schedule(pos, state.getBlock(), 20);
+                world.createAndScheduleBlockTick(pos, state.getBlock(), 20);
             }
             return blockState;
         }

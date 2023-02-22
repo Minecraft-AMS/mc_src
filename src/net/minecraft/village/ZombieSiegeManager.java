@@ -2,12 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.village;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.mob.HostileEntity;
@@ -19,14 +20,13 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.Spawner;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.world.spawner.Spawner;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ZombieSiegeManager
 implements Spawner {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private boolean spawned;
     private State state = State.SIEGE_DONE;
     private int remaining;
@@ -73,7 +73,7 @@ implements Spawner {
     private boolean spawn(ServerWorld world) {
         for (PlayerEntity playerEntity : world.getPlayers()) {
             BlockPos blockPos;
-            if (playerEntity.isSpectator() || !world.isNearOccupiedPointOfInterest(blockPos = playerEntity.getBlockPos()) || world.getBiome(blockPos).getCategory() == Biome.Category.MUSHROOM) continue;
+            if (playerEntity.isSpectator() || !world.isNearOccupiedPointOfInterest(blockPos = playerEntity.getBlockPos()) || Biome.getCategory(world.getBiome(blockPos)) == Biome.Category.MUSHROOM) continue;
             for (int i = 0; i < 10; ++i) {
                 float f = world.random.nextFloat() * ((float)Math.PI * 2);
                 this.startX = blockPos.getX() + MathHelper.floor(MathHelper.cos(f) * 32.0f);

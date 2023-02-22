@@ -3,15 +3,16 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  io.netty.buffer.Unpooled
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.network;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.ArrayList;
@@ -50,10 +51,9 @@ import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureStart;
-import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Nameable;
-import net.minecraft.util.Util;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -66,12 +66,11 @@ import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.GameEventListener;
 import net.minecraft.world.poi.PointOfInterest;
 import net.minecraft.world.poi.PointOfInterestType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class DebugInfoSender {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void addGameTestMarker(ServerWorld world, BlockPos pos, String message, int color, int duration) {
         PacketByteBuf packetByteBuf = new PacketByteBuf(Unpooled.buffer());
@@ -111,7 +110,7 @@ public class DebugInfoSender {
     public static void sendNeighborUpdate(World world, BlockPos pos) {
     }
 
-    public static void sendStructureStart(StructureWorldAccess world, StructureStart<?> structureStart) {
+    public static void sendStructureStart(StructureWorldAccess world, StructureStart structureStart) {
     }
 
     public static void sendGoalSelector(World world, MobEntity mob, GoalSelector goalSelector) {
@@ -165,17 +164,17 @@ public class DebugInfoSender {
         Set set = brain.getRunningTasks().stream().map(Task::toString).collect(Collectors.toSet());
         buf2.writeCollection(set, PacketByteBuf::writeString);
         buf2.writeCollection(DebugInfoSender.listMemories(entity, l), (buf, memory) -> {
-            String string = ChatUtil.truncate(memory, 255, true);
+            String string = StringHelper.truncate(memory, 255, true);
             buf.writeString(string);
         });
         if (entity instanceof VillagerEntity) {
-            Set set2 = Stream.of(MemoryModuleType.JOB_SITE, MemoryModuleType.HOME, MemoryModuleType.MEETING_POINT).map(brain::getOptionalMemory).flatMap(Util::stream).map(GlobalPos::getPos).collect(Collectors.toSet());
+            Set set2 = Stream.of(MemoryModuleType.JOB_SITE, MemoryModuleType.HOME, MemoryModuleType.MEETING_POINT).map(brain::getOptionalMemory).flatMap(Optional::stream).map(GlobalPos::getPos).collect(Collectors.toSet());
             buf2.writeCollection(set2, PacketByteBuf::writeBlockPos);
         } else {
             buf2.writeVarInt(0);
         }
         if (entity instanceof VillagerEntity) {
-            Set set2 = Stream.of(MemoryModuleType.POTENTIAL_JOB_SITE).map(brain::getOptionalMemory).flatMap(Util::stream).map(GlobalPos::getPos).collect(Collectors.toSet());
+            Set set2 = Stream.of(MemoryModuleType.POTENTIAL_JOB_SITE).map(brain::getOptionalMemory).flatMap(Optional::stream).map(GlobalPos::getPos).collect(Collectors.toSet());
             buf2.writeCollection(set2, PacketByteBuf::writeBlockPos);
         } else {
             buf2.writeVarInt(0);

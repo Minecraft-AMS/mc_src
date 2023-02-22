@@ -171,7 +171,7 @@ extends HostileEntity {
     @Override
     protected int getXpToDrop(PlayerEntity player) {
         if (this.isBaby()) {
-            this.experiencePoints = (int)((float)this.experiencePoints * 2.5f);
+            this.experiencePoints = (int)((double)this.experiencePoints * 2.5);
         }
         return super.getXpToDrop(player);
     }
@@ -298,7 +298,7 @@ extends HostileEntity {
                 SpawnRestriction.Location location = SpawnRestriction.getLocation(entityType);
                 if (!SpawnHelper.canSpawn(location, this.world, blockPos, entityType) || !SpawnRestriction.canSpawn(entityType, serverWorld, SpawnReason.REINFORCEMENT, blockPos, this.world.random)) continue;
                 zombieEntity.setPosition(m, n, o);
-                if (this.world.isPlayerInRange(m, n, o, 7.0) || !this.world.intersectsEntities(zombieEntity) || !this.world.isSpaceEmpty(zombieEntity) || this.world.containsFluid(zombieEntity.getBoundingBox())) continue;
+                if (this.world.isPlayerInRange(m, n, o, 7.0) || !this.world.doesNotIntersectEntities(zombieEntity) || !this.world.isSpaceEmpty(zombieEntity) || this.world.containsFluid(zombieEntity.getBoundingBox())) continue;
                 zombieEntity.setTarget(livingEntity);
                 zombieEntity.initialize(serverWorld, this.world.getLocalDifficulty(zombieEntity.getBlockPos()), SpawnReason.REINFORCEMENT, null, null);
                 serverWorld.spawnEntityAndPassengers(zombieEntity);
@@ -535,7 +535,7 @@ extends HostileEntity {
         }
 
         @Override
-        public double getDesiredSquaredDistanceToTarget() {
+        public double getDesiredDistanceToTarget() {
             return 1.14;
         }
     }

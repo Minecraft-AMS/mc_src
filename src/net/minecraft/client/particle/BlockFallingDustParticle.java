@@ -28,21 +28,21 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class BlockFallingDustParticle
 extends SpriteBillboardParticle {
-    private final float field_3809;
+    private final float rotationSpeed;
     private final SpriteProvider spriteProvider;
 
-    BlockFallingDustParticle(ClientWorld clientWorld, double d, double e, double f, float g, float h, float i, SpriteProvider spriteProvider) {
-        super(clientWorld, d, e, f);
+    BlockFallingDustParticle(ClientWorld world, double x, double y, double z, float red, float green, float blue, SpriteProvider spriteProvider) {
+        super(world, x, y, z);
         this.spriteProvider = spriteProvider;
-        this.colorRed = g;
-        this.colorGreen = h;
-        this.colorBlue = i;
-        float j = 0.9f;
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+        float f = 0.9f;
         this.scale *= 0.67499995f;
-        int k = (int)(32.0 / (Math.random() * 0.8 + 0.2));
-        this.maxAge = (int)Math.max((float)k * 0.9f, 1.0f);
+        int i = (int)(32.0 / (Math.random() * 0.8 + 0.2));
+        this.maxAge = (int)Math.max((float)i * 0.9f, 1.0f);
         this.setSpriteForAge(spriteProvider);
-        this.field_3809 = ((float)Math.random() - 0.5f) * 0.1f;
+        this.rotationSpeed = ((float)Math.random() - 0.5f) * 0.1f;
         this.angle = (float)Math.random() * ((float)Math.PI * 2);
     }
 
@@ -67,7 +67,7 @@ extends SpriteBillboardParticle {
         }
         this.setSpriteForAge(this.spriteProvider);
         this.prevAngle = this.angle;
-        this.angle += (float)Math.PI * this.field_3809 * 2.0f;
+        this.angle += (float)Math.PI * this.rotationSpeed * 2.0f;
         if (this.onGround) {
             this.angle = 0.0f;
             this.prevAngle = 0.0f;

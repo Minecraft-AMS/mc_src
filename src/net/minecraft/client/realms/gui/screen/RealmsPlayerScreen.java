@@ -2,15 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.gui.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
@@ -38,14 +39,13 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsPlayerScreen
 extends RealmsScreen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Identifier OP_ICON = new Identifier("realms", "textures/gui/realms/op_icon.png");
     private static final Identifier USER_ICON = new Identifier("realms", "textures/gui/realms/user_icon.png");
     private static final Identifier CROSS_PLAYER_ICON = new Identifier("realms", "textures/gui/realms/cross_player_icon.png");
@@ -54,7 +54,8 @@ extends RealmsScreen {
     private static final Text OPERATOR_TOOLTIP = new TranslatableText("mco.configure.world.invites.ops.tooltip");
     private static final Text REMOVE_TOOLTIP = new TranslatableText("mco.configure.world.invites.remove.tooltip");
     private static final Text INVITED_TEXT = new TranslatableText("mco.configure.world.invited");
-    private Text tooltipText;
+    @Nullable
+    private Text tooltip;
     private final RealmsConfigureWorldScreen parent;
     final RealmsServer serverData;
     private InvitedObjectSelectionList invitedObjectSelectionList;
@@ -193,7 +194,7 @@ extends RealmsScreen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.tooltipText = null;
+        this.tooltip = null;
         this.operation = PlayerOperation.NONE;
         this.renderBackground(matrices);
         if (this.invitedObjectSelectionList != null) {
@@ -222,7 +223,7 @@ extends RealmsScreen {
         if (this.serverData == null) {
             return;
         }
-        this.renderMousehoverTooltip(matrices, this.tooltipText, mouseX, mouseY);
+        this.renderMousehoverTooltip(matrices, this.tooltip, mouseX, mouseY);
     }
 
     protected void renderMousehoverTooltip(MatrixStack matrices, @Nullable Text tooltip, int mouseX, int mouseY) {
@@ -243,7 +244,7 @@ extends RealmsScreen {
         float f = bl ? 7.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, f, 8, 7, 8, 14);
         if (bl) {
-            this.tooltipText = REMOVE_TOOLTIP;
+            this.tooltip = REMOVE_TOOLTIP;
             this.operation = PlayerOperation.REMOVE;
         }
     }
@@ -255,7 +256,7 @@ extends RealmsScreen {
         float f = bl ? 8.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, f, 8, 8, 8, 16);
         if (bl) {
-            this.tooltipText = OPERATOR_TOOLTIP;
+            this.tooltip = OPERATOR_TOOLTIP;
             this.operation = PlayerOperation.TOGGLE_OP;
         }
     }
@@ -267,7 +268,7 @@ extends RealmsScreen {
         float f = bl ? 8.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, f, 8, 8, 8, 16);
         if (bl) {
-            this.tooltipText = NORMAL_TOOLTIP;
+            this.tooltip = NORMAL_TOOLTIP;
             this.operation = PlayerOperation.TOGGLE_OP;
         }
     }

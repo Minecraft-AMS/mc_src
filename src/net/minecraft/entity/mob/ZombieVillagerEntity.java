@@ -2,14 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.mob;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
@@ -55,12 +57,13 @@ import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ZombieVillagerEntity
 extends ZombieEntity
 implements VillagerDataContainer {
+    private static final Logger field_36334 = LogUtils.getLogger();
     private static final TrackedData<Boolean> CONVERTING = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
     private static final int field_30523 = 3600;
@@ -68,14 +71,17 @@ implements VillagerDataContainer {
     private static final int field_30521 = 14;
     private static final int field_30522 = 4;
     private int conversionTimer;
+    @Nullable
     private UUID converter;
+    @Nullable
     private NbtElement gossipData;
+    @Nullable
     private NbtCompound offerData;
     private int xp;
 
     public ZombieVillagerEntity(EntityType<? extends ZombieVillagerEntity> entityType, World world) {
         super((EntityType<? extends ZombieEntity>)entityType, world);
-        this.setVillagerData(this.getVillagerData().withProfession(Registry.VILLAGER_PROFESSION.getRandom(this.random)));
+        Registry.VILLAGER_PROFESSION.getRandom(this.random).ifPresent(registryEntry -> this.setVillagerData(this.getVillagerData().withProfession((VillagerProfession)registryEntry.value())));
     }
 
     @Override
@@ -88,7 +94,7 @@ implements VillagerDataContainer {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
+        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)field_36334).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
         if (this.offerData != null) {
             nbt.put("Offers", this.offerData);
         }
@@ -107,7 +113,7 @@ implements VillagerDataContainer {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("VillagerData", 10)) {
             DataResult dataResult = VillagerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("VillagerData")));
-            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(this::setVillagerData);
+            dataResult.resultOrPartial(arg_0 -> ((Logger)field_36334).error(arg_0)).ifPresent(this::setVillagerData);
         }
         if (nbt.contains("Offers", 10)) {
             this.offerData = nbt.getCompound("Offers");
@@ -275,18 +281,18 @@ implements VillagerDataContainer {
         return ItemStack.EMPTY;
     }
 
-    public void setOfferData(NbtCompound offerTag) {
-        this.offerData = offerTag;
+    public void setOfferData(NbtCompound offerData) {
+        this.offerData = offerData;
     }
 
-    public void setGossipData(NbtElement gossipTag) {
-        this.gossipData = gossipTag;
+    public void setGossipData(NbtElement gossipData) {
+        this.gossipData = gossipData;
     }
 
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiomeKey(this.getBlockPos()))));
+        this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiome(this.getBlockPos()))));
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 

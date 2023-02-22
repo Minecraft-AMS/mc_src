@@ -2,14 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Predicates
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  */
 package net.minecraft.state.property;
 
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -75,7 +73,7 @@ extends Property<T> {
     }
 
     public static <T extends Enum<T>> EnumProperty<T> of(String name, Class<T> type) {
-        return EnumProperty.of(name, type, Predicates.alwaysTrue());
+        return EnumProperty.of(name, type, (T enum_) -> true);
     }
 
     public static <T extends Enum<T>> EnumProperty<T> of(String name, Class<T> type, Predicate<T> filter) {

@@ -48,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class EvokerEntity
 extends SpellcastingIllagerEntity {
+    @Nullable
     private SheepEntity wololoTarget;
 
     public EvokerEntity(EntityType<? extends EvokerEntity> entityType, World world) {
@@ -137,8 +138,8 @@ extends SpellcastingIllagerEntity {
         return SoundEvents.ENTITY_EVOKER_HURT;
     }
 
-    void setWololoTarget(@Nullable SheepEntity sheep) {
-        this.wololoTarget = sheep;
+    void setWololoTarget(@Nullable SheepEntity wololoTarget) {
+        this.wololoTarget = wololoTarget;
     }
 
     @Nullable
@@ -164,9 +165,9 @@ extends SpellcastingIllagerEntity {
         @Override
         public void tick() {
             if (EvokerEntity.this.getTarget() != null) {
-                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getTarget(), EvokerEntity.this.getBodyYawSpeed(), EvokerEntity.this.getLookPitchSpeed());
+                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getTarget(), EvokerEntity.this.getMaxHeadRotation(), EvokerEntity.this.getMaxLookPitchChange());
             } else if (EvokerEntity.this.getWololoTarget() != null) {
-                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getWololoTarget(), EvokerEntity.this.getBodyYawSpeed(), EvokerEntity.this.getLookPitchSpeed());
+                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getWololoTarget(), EvokerEntity.this.getMaxHeadRotation(), EvokerEntity.this.getMaxLookPitchChange());
             }
         }
     }

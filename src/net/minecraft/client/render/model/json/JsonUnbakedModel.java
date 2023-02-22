@@ -17,11 +17,11 @@
  *  com.google.gson.JsonParseException
  *  com.mojang.datafixers.util.Either
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.render.model.json;
 
@@ -40,6 +40,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import java.io.Reader;
 import java.io.StringReader;
 import java.lang.reflect.Type;
@@ -80,14 +81,13 @@ import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.Direction;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class JsonUnbakedModel
 implements UnbakedModel {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final BakedQuadFactory QUAD_FACTORY = new BakedQuadFactory();
     @VisibleForTesting
     static final Gson GSON = new GsonBuilder().registerTypeAdapter(JsonUnbakedModel.class, (Object)new Deserializer()).registerTypeAdapter(ModelElement.class, (Object)new ModelElement.Deserializer()).registerTypeAdapter(ModelElementFace.class, (Object)new ModelElementFace.Deserializer()).registerTypeAdapter(ModelElementTexture.class, (Object)new ModelElementTexture.Deserializer()).registerTypeAdapter(Transformation.class, (Object)new Transformation.Deserializer()).registerTypeAdapter(ModelTransformation.class, (Object)new ModelTransformation.Deserializer()).registerTypeAdapter(ModelOverride.class, (Object)new ModelOverride.Deserializer()).create();
@@ -187,7 +187,7 @@ implements UnbakedModel {
                 LOGGER.warn("No parent '{}' while loading model '{}'", (Object)this.parentId, (Object)jsonUnbakedModel);
             }
             if (set.contains(unbakedModel)) {
-                LOGGER.warn("Found 'parent' loop while loading model '{}' in chain: {} -> {}", (Object)jsonUnbakedModel, (Object)set.stream().map(Object::toString).collect(Collectors.joining(" -> ")), (Object)this.parentId);
+                LOGGER.warn("Found 'parent' loop while loading model '{}' in chain: {} -> {}", new Object[]{jsonUnbakedModel, set.stream().map(Object::toString).collect(Collectors.joining(" -> ")), this.parentId});
                 unbakedModel = null;
             }
             if (unbakedModel == null) {
@@ -266,7 +266,7 @@ implements UnbakedModel {
         while (!(optional = (either = this.resolveTexture(spriteName)).left()).isPresent()) {
             spriteName = (String)either.right().get();
             if (list.contains(spriteName)) {
-                LOGGER.warn("Unable to resolve texture due to reference chain {}->{} in {}", (Object)Joiner.on((String)"->").join((Iterable)list), (Object)spriteName, (Object)this.id);
+                LOGGER.warn("Unable to resolve texture due to reference chain {}->{} in {}", new Object[]{Joiner.on((String)"->").join((Iterable)list), spriteName, this.id});
                 return new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, MissingSprite.getMissingSpriteId());
             }
             list.add(spriteName);

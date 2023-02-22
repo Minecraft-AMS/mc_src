@@ -10,102 +10,77 @@ package net.minecraft.world.gen.feature;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import java.util.LinkedList;
+import java.util.Optional;
 import java.util.Random;
-import java.util.Set;
 import net.minecraft.block.Blocks;
-import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.StructureStart;
+import net.minecraft.structure.StructureGeneratorFactory;
+import net.minecraft.structure.StructurePiecesGenerator;
+import net.minecraft.structure.StructurePiecesList;
 import net.minecraft.structure.WoodlandMansionGenerator;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeSource;
-import net.minecraft.world.gen.ChunkRandom;
+import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
+import net.minecraft.world.gen.random.AtomicSimpleRandom;
+import net.minecraft.world.gen.random.ChunkRandom;
 
 public class WoodlandMansionFeature
 extends StructureFeature<DefaultFeatureConfig> {
-    public WoodlandMansionFeature(Codec<DefaultFeatureConfig> codec) {
-        super(codec);
+    public WoodlandMansionFeature(Codec<DefaultFeatureConfig> configCodec) {
+        super(configCodec, WoodlandMansionFeature::addPieces, WoodlandMansionFeature::postPlace);
     }
 
-    @Override
-    protected boolean isUniformDistribution() {
-        return false;
-    }
-
-    @Override
-    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long l, ChunkRandom chunkRandom, ChunkPos chunkPos, Biome biome, ChunkPos chunkPos2, DefaultFeatureConfig defaultFeatureConfig, HeightLimitView heightLimitView) {
-        Set<Biome> set = biomeSource.getBiomesInArea(chunkPos.getOffsetX(9), chunkGenerator.getSeaLevel(), chunkPos.getOffsetZ(9), 32);
-        for (Biome biome2 : set) {
-            if (biome2.getGenerationSettings().hasStructureFeature(this)) continue;
-            return false;
+    private static Optional<StructurePiecesGenerator<DefaultFeatureConfig>> addPieces(StructureGeneratorFactory.Context<DefaultFeatureConfig> context2) {
+        ChunkRandom chunkRandom = new ChunkRandom(new AtomicSimpleRandom(0L));
+        chunkRandom.setCarverSeed(context2.seed(), context2.chunkPos().x, context2.chunkPos().z);
+        BlockRotation blockRotation = BlockRotation.random(chunkRandom);
+        int i = 5;
+        int j = 5;
+        if (blockRotation == BlockRotation.CLOCKWISE_90) {
+            i = -5;
+        } else if (blockRotation == BlockRotation.CLOCKWISE_180) {
+            i = -5;
+            j = -5;
+        } else if (blockRotation == BlockRotation.COUNTERCLOCKWISE_90) {
+            j = -5;
         }
-        return true;
-    }
-
-    @Override
-    public StructureFeature.StructureStartFactory<DefaultFeatureConfig> getStructureStartFactory() {
-        return Start::new;
-    }
-
-    public static class Start
-    extends StructureStart<DefaultFeatureConfig> {
-        public Start(StructureFeature<DefaultFeatureConfig> structureFeature, ChunkPos chunkPos, int i, long l) {
-            super(structureFeature, chunkPos, i, l);
+        int k = context2.chunkPos().getOffsetX(7);
+        int l = context2.chunkPos().getOffsetZ(7);
+        int[] is = context2.getCornerHeights(k, i, l, j);
+        int m = Math.min(Math.min(is[0], is[1]), Math.min(is[2], is[3]));
+        if (m < 60) {
+            return Optional.empty();
         }
-
-        @Override
-        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, ChunkPos chunkPos, Biome biome, DefaultFeatureConfig defaultFeatureConfig, HeightLimitView heightLimitView) {
-            BlockRotation blockRotation = BlockRotation.random(this.random);
-            int i = 5;
-            int j = 5;
-            if (blockRotation == BlockRotation.CLOCKWISE_90) {
-                i = -5;
-            } else if (blockRotation == BlockRotation.CLOCKWISE_180) {
-                i = -5;
-                j = -5;
-            } else if (blockRotation == BlockRotation.COUNTERCLOCKWISE_90) {
-                j = -5;
-            }
-            int k = chunkPos.getOffsetX(7);
-            int l = chunkPos.getOffsetZ(7);
-            int m = chunkGenerator.getHeightInGround(k, l, Heightmap.Type.WORLD_SURFACE_WG, heightLimitView);
-            int n = chunkGenerator.getHeightInGround(k, l + j, Heightmap.Type.WORLD_SURFACE_WG, heightLimitView);
-            int o = chunkGenerator.getHeightInGround(k + i, l, Heightmap.Type.WORLD_SURFACE_WG, heightLimitView);
-            int p = chunkGenerator.getHeightInGround(k + i, l + j, Heightmap.Type.WORLD_SURFACE_WG, heightLimitView);
-            int q = Math.min(Math.min(m, n), Math.min(o, p));
-            if (q < 60) {
-                return;
-            }
-            BlockPos blockPos = new BlockPos(chunkPos.getOffsetX(8), q + 1, chunkPos.getOffsetZ(8));
+        if (!context2.validBiome().test(context2.chunkGenerator().getBiomeForNoiseGen(BiomeCoords.fromBlock(k), BiomeCoords.fromBlock(is[0]), BiomeCoords.fromBlock(l)))) {
+            return Optional.empty();
+        }
+        BlockPos blockPos = new BlockPos(context2.chunkPos().getCenterX(), m + 1, context2.chunkPos().getCenterZ());
+        return Optional.of((collector, context) -> {
             LinkedList list = Lists.newLinkedList();
-            WoodlandMansionGenerator.addPieces(structureManager, blockPos, blockRotation, list, this.random);
-            list.forEach(this::addPiece);
-        }
+            WoodlandMansionGenerator.addPieces(context.structureManager(), blockPos, blockRotation, list, chunkRandom);
+            list.forEach(collector::addPiece);
+        });
+    }
 
-        @Override
-        public void generateStructure(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox box, ChunkPos chunkPos) {
-            super.generateStructure(world, structureAccessor, chunkGenerator, random, box, chunkPos);
-            BlockBox blockBox = this.setBoundingBoxFromChildren();
-            int i = blockBox.getMinY();
-            for (int j = box.getMinX(); j <= box.getMaxX(); ++j) {
-                for (int k = box.getMinZ(); k <= box.getMaxZ(); ++k) {
-                    BlockPos blockPos2;
-                    BlockPos blockPos = new BlockPos(j, i, k);
-                    if (world.isAir(blockPos) || !blockBox.contains(blockPos) || !this.contains(blockPos)) continue;
-                    for (int l = i - 1; l > 1 && (world.isAir(blockPos2 = new BlockPos(j, l, k)) || world.getBlockState(blockPos2).getMaterial().isLiquid()); --l) {
-                        world.setBlockState(blockPos2, Blocks.COBBLESTONE.getDefaultState(), 2);
-                    }
+    private static void postPlace(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox chunkBox, ChunkPos chunkPos, StructurePiecesList children) {
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        int i = world.getBottomY();
+        BlockBox blockBox = children.getBoundingBox();
+        int j = blockBox.getMinY();
+        for (int k = chunkBox.getMinX(); k <= chunkBox.getMaxX(); ++k) {
+            block1: for (int l = chunkBox.getMinZ(); l <= chunkBox.getMaxZ(); ++l) {
+                mutable.set(k, j, l);
+                if (world.isAir(mutable) || !blockBox.contains(mutable) || !children.contains(mutable)) continue;
+                for (int m = j - 1; m > i; --m) {
+                    mutable.setY(m);
+                    if (!world.isAir(mutable) && !world.getBlockState(mutable).getMaterial().isLiquid()) continue block1;
+                    world.setBlockState(mutable, Blocks.COBBLESTONE.getDefaultState(), 2);
                 }
             }
         }

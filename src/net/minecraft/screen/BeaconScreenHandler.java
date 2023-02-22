@@ -19,6 +19,7 @@ import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.tag.ItemTags;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class BeaconScreenHandler
@@ -141,6 +142,7 @@ extends ScreenHandler {
             this.propertyDelegate.set(1, primaryEffectId);
             this.propertyDelegate.set(2, secondaryEffectId);
             this.paymentSlot.takeStack(1);
+            this.context.run(World::markDirty);
         }
     }
 

@@ -118,7 +118,7 @@ public abstract class ItemGroup {
     }.setTexture("inventory.png").setNoScrollbar().hideName();
     private final int index;
     private final String id;
-    private final Text translationKey;
+    private final Text displayName;
     private String name;
     private String texture = "items.png";
     private boolean scrollbar = true;
@@ -129,7 +129,7 @@ public abstract class ItemGroup {
     public ItemGroup(int index, String id) {
         this.index = index;
         this.id = id;
-        this.translationKey = new TranslatableText("itemGroup." + id);
+        this.displayName = new TranslatableText("itemGroup." + id);
         this.icon = ItemStack.EMPTY;
         ItemGroup.GROUPS[index] = this;
     }
@@ -142,8 +142,8 @@ public abstract class ItemGroup {
         return this.name == null ? this.id : this.name;
     }
 
-    public Text getTranslationKey() {
-        return this.translationKey;
+    public Text getDisplayName() {
+        return this.displayName;
     }
 
     public ItemStack getIcon() {

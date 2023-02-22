@@ -14,11 +14,16 @@ import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.math.BlockPos;
 
 @Environment(value=EnvType.CLIENT)
 public class DownloadingTerrainScreen
 extends Screen {
     private static final Text TEXT = new TranslatableText("multiplayer.downloadingTerrain");
+    private static final long MIN_LOAD_TIME_MS = 2000L;
+    private boolean ready = false;
+    private boolean closeOnNextTick = false;
+    private final long loadStartTime = System.currentTimeMillis();
 
     public DownloadingTerrainScreen() {
         super(NarratorManager.EMPTY);
@@ -37,7 +42,29 @@ extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() {
+    public void tick() {
+        boolean bl2;
+        boolean bl;
+        boolean bl3 = bl = this.closeOnNextTick || System.currentTimeMillis() > this.loadStartTime + 2000L;
+        if (!bl || this.client == null || this.client.player == null) {
+            return;
+        }
+        BlockPos blockPos = this.client.player.getBlockPos();
+        boolean bl4 = bl2 = this.client.world != null && this.client.world.isOutOfHeightLimit(blockPos.getY());
+        if (bl2 || this.client.worldRenderer.isRenderingReady(blockPos)) {
+            this.close();
+        }
+        if (this.ready) {
+            this.closeOnNextTick = true;
+        }
+    }
+
+    public void setReady() {
+        this.ready = true;
+    }
+
+    @Override
+    public boolean shouldPause() {
         return false;
     }
 }

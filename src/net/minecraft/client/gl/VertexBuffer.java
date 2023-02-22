@@ -27,12 +27,12 @@ public class VertexBuffer
 implements AutoCloseable {
     private int vertexBufferId;
     private int indexBufferId;
-    private VertexFormat.IntType vertexFormat;
+    private VertexFormat.IntType elementFormat;
     private int vertexArrayId;
     private int vertexCount;
     private VertexFormat.DrawMode drawMode;
-    private boolean usesTexture;
-    private VertexFormat elementFormat;
+    private boolean hasNoIndexBuffer;
+    private VertexFormat vertexFormat;
 
     public VertexBuffer() {
         RenderSystem.glGenBuffers(id -> {
@@ -48,10 +48,10 @@ implements AutoCloseable {
 
     public void bind() {
         RenderSystem.glBindBuffer(34962, () -> this.vertexBufferId);
-        if (this.usesTexture) {
+        if (this.hasNoIndexBuffer) {
             RenderSystem.glBindBuffer(34963, () -> {
                 RenderSystem.IndexBuffer indexBuffer = RenderSystem.getSequentialBuffer(this.drawMode, this.vertexCount);
-                this.vertexFormat = indexBuffer.getElementFormat();
+                this.elementFormat = indexBuffer.getElementFormat();
                 return indexBuffer.getId();
             });
         } else {
@@ -83,25 +83,25 @@ implements AutoCloseable {
         BufferRenderer.unbindAll();
         BufferBuilder.DrawArrayParameters drawArrayParameters = (BufferBuilder.DrawArrayParameters)pair.getFirst();
         ByteBuffer byteBuffer = (ByteBuffer)pair.getSecond();
-        int i = drawArrayParameters.getLimit();
+        int i = drawArrayParameters.getIndexBufferStart();
         this.vertexCount = drawArrayParameters.getVertexCount();
-        this.vertexFormat = drawArrayParameters.getElementFormat();
-        this.elementFormat = drawArrayParameters.getVertexFormat();
+        this.elementFormat = drawArrayParameters.getElementFormat();
+        this.vertexFormat = drawArrayParameters.getVertexFormat();
         this.drawMode = drawArrayParameters.getMode();
-        this.usesTexture = drawArrayParameters.isTextured();
+        this.hasNoIndexBuffer = drawArrayParameters.hasNoIndexBuffer();
         this.bindVertexArray();
         this.bind();
-        if (!drawArrayParameters.isCameraOffset()) {
+        if (!drawArrayParameters.hasNoVertexBuffer()) {
             byteBuffer.limit(i);
             RenderSystem.glBufferData(34962, byteBuffer, 35044);
             byteBuffer.position(i);
         }
-        if (!this.usesTexture) {
-            byteBuffer.limit(drawArrayParameters.getDrawStart());
+        if (!this.hasNoIndexBuffer) {
+            byteBuffer.limit(drawArrayParameters.getIndexBufferEnd());
             RenderSystem.glBufferData(34963, byteBuffer, 35044);
             byteBuffer.position(0);
         } else {
-            byteBuffer.limit(drawArrayParameters.getDrawStart());
+            byteBuffer.limit(drawArrayParameters.getIndexBufferEnd());
             byteBuffer.position(0);
         }
         VertexBuffer.unbind();
@@ -120,7 +120,7 @@ implements AutoCloseable {
         if (this.vertexCount == 0) {
             return;
         }
-        RenderSystem.drawElements(this.drawMode.mode, this.vertexCount, this.vertexFormat.count);
+        RenderSystem.drawElements(this.drawMode.mode, this.vertexCount, this.elementFormat.type);
     }
 
     public void setShader(Matrix4f viewMatrix, Matrix4f projectionMatrix, Shader shader) {
@@ -135,7 +135,7 @@ implements AutoCloseable {
         if (this.vertexCount == 0) {
             return;
         }
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         BufferRenderer.unbindAll();
         for (int i = 0; i < 12; ++i) {
             int j = RenderSystem.getShaderTexture(i);
@@ -146,6 +146,9 @@ implements AutoCloseable {
         }
         if (shader.projectionMat != null) {
             shader.projectionMat.set(projectionMatrix);
+        }
+        if (shader.viewRotationMat != null) {
+            shader.viewRotationMat.method_39978(RenderSystem.getInverseViewRotationMatrix());
         }
         if (shader.colorModulator != null) {
             shader.colorModulator.set(RenderSystem.getShaderColor());
@@ -158,6 +161,9 @@ implements AutoCloseable {
         }
         if (shader.fogColor != null) {
             shader.fogColor.set(RenderSystem.getShaderFogColor());
+        }
+        if (shader.fogShape != null) {
+            shader.fogShape.set(RenderSystem.getShaderFogShape().getId());
         }
         if (shader.textureMat != null) {
             shader.textureMat.set(RenderSystem.getTextureMatrix());
@@ -175,11 +181,11 @@ implements AutoCloseable {
         RenderSystem.setupShaderLights(shader);
         this.bindVertexArray();
         this.bind();
-        this.getElementFormat().startDrawing();
+        this.getVertexFormat().startDrawing();
         shader.bind();
-        RenderSystem.drawElements(this.drawMode.mode, this.vertexCount, this.vertexFormat.count);
+        RenderSystem.drawElements(this.drawMode.mode, this.vertexCount, this.elementFormat.type);
         shader.unbind();
-        this.getElementFormat().endDrawing();
+        this.getVertexFormat().endDrawing();
         VertexBuffer.unbind();
         VertexBuffer.unbindVertexArray();
     }
@@ -188,11 +194,11 @@ implements AutoCloseable {
         if (this.vertexCount == 0) {
             return;
         }
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         this.bindVertexArray();
         this.bind();
-        this.elementFormat.startDrawing();
-        RenderSystem.drawElements(this.drawMode.mode, this.vertexCount, this.vertexFormat.count);
+        this.vertexFormat.startDrawing();
+        RenderSystem.drawElements(this.drawMode.mode, this.vertexCount, this.elementFormat.type);
     }
 
     public static void unbind() {
@@ -216,8 +222,8 @@ implements AutoCloseable {
         }
     }
 
-    public VertexFormat getElementFormat() {
-        return this.elementFormat;
+    public VertexFormat getVertexFormat() {
+        return this.vertexFormat;
     }
 }
 

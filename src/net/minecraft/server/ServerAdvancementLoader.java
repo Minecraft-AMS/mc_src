@@ -7,10 +7,9 @@
  *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
- *  com.google.gson.JsonParseException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server;
 
@@ -19,7 +18,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,13 +32,12 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ServerAdvancementLoader
 extends JsonDataLoader {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().create();
     private AdvancementManager manager = new AdvancementManager();
     private final LootConditionManager conditionManager;
@@ -55,11 +53,11 @@ extends JsonDataLoader {
         map.forEach((id, json) -> {
             try {
                 JsonObject jsonObject = JsonHelper.asObject(json, "advancement");
-                Advancement.Task task = Advancement.Task.fromJson(jsonObject, new AdvancementEntityPredicateDeserializer((Identifier)id, this.conditionManager));
-                map2.put(id, task);
+                Advancement.Builder builder = Advancement.Builder.fromJson(jsonObject, new AdvancementEntityPredicateDeserializer((Identifier)id, this.conditionManager));
+                map2.put(id, builder);
             }
-            catch (JsonParseException | IllegalArgumentException runtimeException) {
-                LOGGER.error("Parsing error loading custom advancement {}: {}", id, (Object)runtimeException.getMessage());
+            catch (Exception exception) {
+                LOGGER.error("Parsing error loading custom advancement {}: {}", id, (Object)exception.getMessage());
             }
         });
         AdvancementManager advancementManager = new AdvancementManager();

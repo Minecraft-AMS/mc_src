@@ -4,13 +4,14 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.DataFixer
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.structure;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.logging.LogUtils;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -35,11 +36,10 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.InvalidIdentifierException;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.world.level.storage.LevelStorage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class StructureManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String STRUCTURES_DIRECTORY = "structures";
     private static final String NBT_FILE_EXTENSION = ".nbt";
     private static final String SNBT_FILE_EXTENSION = ".snbt";

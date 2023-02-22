@@ -2,17 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.FileUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.texture;
 
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -29,14 +30,13 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class PlayerSkinTexture
 extends ResourceTexture {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int WIDTH = 64;
     private static final int HEIGHT = 64;
     private static final int OLD_HEIGHT = 32;
@@ -157,42 +157,42 @@ extends ResourceTexture {
     }
 
     @Nullable
-    private NativeImage remapTexture(NativeImage nativeImage) {
+    private NativeImage remapTexture(NativeImage image) {
         boolean bl;
-        int i = nativeImage.getHeight();
-        int j = nativeImage.getWidth();
+        int i = image.getHeight();
+        int j = image.getWidth();
         if (j != 64 || i != 32 && i != 64) {
-            nativeImage.close();
-            LOGGER.warn("Discarding incorrectly sized ({}x{}) skin texture from {}", (Object)j, (Object)i, (Object)this.url);
+            image.close();
+            LOGGER.warn("Discarding incorrectly sized ({}x{}) skin texture from {}", new Object[]{j, i, this.url});
             return null;
         }
         boolean bl2 = bl = i == 32;
         if (bl) {
-            NativeImage nativeImage2 = new NativeImage(64, 64, true);
-            nativeImage2.copyFrom(nativeImage);
-            nativeImage.close();
-            nativeImage = nativeImage2;
-            nativeImage.fillRect(0, 32, 64, 32, 0);
-            nativeImage.copyRect(4, 16, 16, 32, 4, 4, true, false);
-            nativeImage.copyRect(8, 16, 16, 32, 4, 4, true, false);
-            nativeImage.copyRect(0, 20, 24, 32, 4, 12, true, false);
-            nativeImage.copyRect(4, 20, 16, 32, 4, 12, true, false);
-            nativeImage.copyRect(8, 20, 8, 32, 4, 12, true, false);
-            nativeImage.copyRect(12, 20, 16, 32, 4, 12, true, false);
-            nativeImage.copyRect(44, 16, -8, 32, 4, 4, true, false);
-            nativeImage.copyRect(48, 16, -8, 32, 4, 4, true, false);
-            nativeImage.copyRect(40, 20, 0, 32, 4, 12, true, false);
-            nativeImage.copyRect(44, 20, -8, 32, 4, 12, true, false);
-            nativeImage.copyRect(48, 20, -16, 32, 4, 12, true, false);
-            nativeImage.copyRect(52, 20, -8, 32, 4, 12, true, false);
+            NativeImage nativeImage = new NativeImage(64, 64, true);
+            nativeImage.copyFrom(image);
+            image.close();
+            image = nativeImage;
+            image.fillRect(0, 32, 64, 32, 0);
+            image.copyRect(4, 16, 16, 32, 4, 4, true, false);
+            image.copyRect(8, 16, 16, 32, 4, 4, true, false);
+            image.copyRect(0, 20, 24, 32, 4, 12, true, false);
+            image.copyRect(4, 20, 16, 32, 4, 12, true, false);
+            image.copyRect(8, 20, 8, 32, 4, 12, true, false);
+            image.copyRect(12, 20, 16, 32, 4, 12, true, false);
+            image.copyRect(44, 16, -8, 32, 4, 4, true, false);
+            image.copyRect(48, 16, -8, 32, 4, 4, true, false);
+            image.copyRect(40, 20, 0, 32, 4, 12, true, false);
+            image.copyRect(44, 20, -8, 32, 4, 12, true, false);
+            image.copyRect(48, 20, -16, 32, 4, 12, true, false);
+            image.copyRect(52, 20, -8, 32, 4, 12, true, false);
         }
-        PlayerSkinTexture.stripAlpha(nativeImage, 0, 0, 32, 16);
+        PlayerSkinTexture.stripAlpha(image, 0, 0, 32, 16);
         if (bl) {
-            PlayerSkinTexture.stripColor(nativeImage, 32, 0, 64, 32);
+            PlayerSkinTexture.stripColor(image, 32, 0, 64, 32);
         }
-        PlayerSkinTexture.stripAlpha(nativeImage, 0, 16, 64, 32);
-        PlayerSkinTexture.stripAlpha(nativeImage, 16, 48, 48, 64);
-        return nativeImage;
+        PlayerSkinTexture.stripAlpha(image, 0, 16, 64, 32);
+        PlayerSkinTexture.stripAlpha(image, 16, 48, 48, 64);
+        return image;
     }
 
     private static void stripColor(NativeImage image, int x1, int y1, int x2, int y2) {

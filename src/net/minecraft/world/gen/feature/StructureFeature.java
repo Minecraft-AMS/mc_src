@@ -2,55 +2,55 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.BiMap
- *  com.google.common.collect.HashBiMap
- *  com.google.common.collect.ImmutableList
- *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.serialization.Keyable
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
-import java.util.List;
-import java.util.Locale;
+import com.mojang.serialization.Keyable;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Map;
+import java.util.function.Predicate;
+import net.minecraft.entity.SpawnGroup;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.structure.PostPlacementProcessor;
+import net.minecraft.structure.StructureContext;
+import net.minecraft.structure.StructureGeneratorFactory;
 import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.StructurePiece;
-import net.minecraft.structure.StructurePieceType;
+import net.minecraft.structure.StructurePiecesList;
 import net.minecraft.structure.StructureStart;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.collection.Pool;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.registry.BuiltinRegistries;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryCodecs;
+import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.WorldView;
+import net.minecraft.world.StructureSpawns;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.SpawnSettings;
 import net.minecraft.world.biome.source.BiomeSource;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.ProbabilityConfig;
-import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.StructureConfig;
-import net.minecraft.world.gen.decorator.RangeDecoratorConfig;
+import net.minecraft.world.gen.chunk.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.gen.feature.BastionRemnantFeature;
 import net.minecraft.world.gen.feature.BuriedTreasureFeature;
 import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
@@ -68,6 +68,7 @@ import net.minecraft.world.gen.feature.OceanMonumentFeature;
 import net.minecraft.world.gen.feature.OceanRuinFeature;
 import net.minecraft.world.gen.feature.OceanRuinFeatureConfig;
 import net.minecraft.world.gen.feature.PillagerOutpostFeature;
+import net.minecraft.world.gen.feature.RangeFeatureConfig;
 import net.minecraft.world.gen.feature.RuinedPortalFeature;
 import net.minecraft.world.gen.feature.RuinedPortalFeatureConfig;
 import net.minecraft.world.gen.feature.ShipwreckFeature;
@@ -77,46 +78,47 @@ import net.minecraft.world.gen.feature.StructurePoolFeatureConfig;
 import net.minecraft.world.gen.feature.SwampHutFeature;
 import net.minecraft.world.gen.feature.VillageFeature;
 import net.minecraft.world.gen.feature.WoodlandMansionFeature;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
-public abstract class StructureFeature<C extends FeatureConfig> {
-    public static final BiMap<String, StructureFeature<?>> STRUCTURES = HashBiMap.create();
+public class StructureFeature<C extends FeatureConfig> {
     private static final Map<StructureFeature<?>, GenerationStep.Feature> STRUCTURE_TO_GENERATION_STEP = Maps.newHashMap();
-    private static final Logger LOGGER = LogManager.getLogger();
-    public static final StructureFeature<StructurePoolFeatureConfig> PILLAGER_OUTPOST = StructureFeature.register("Pillager_Outpost", new PillagerOutpostFeature(StructurePoolFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<MineshaftFeatureConfig> MINESHAFT = StructureFeature.register("Mineshaft", new MineshaftFeature(MineshaftFeatureConfig.CODEC), GenerationStep.Feature.UNDERGROUND_STRUCTURES);
-    public static final StructureFeature<DefaultFeatureConfig> MANSION = StructureFeature.register("Mansion", new WoodlandMansionFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<DefaultFeatureConfig> JUNGLE_PYRAMID = StructureFeature.register("Jungle_Pyramid", new JungleTempleFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<DefaultFeatureConfig> DESERT_PYRAMID = StructureFeature.register("Desert_Pyramid", new DesertPyramidFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<DefaultFeatureConfig> IGLOO = StructureFeature.register("Igloo", new IglooFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<RuinedPortalFeatureConfig> RUINED_PORTAL = StructureFeature.register("Ruined_Portal", new RuinedPortalFeature(RuinedPortalFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<ShipwreckFeatureConfig> SHIPWRECK = StructureFeature.register("Shipwreck", new ShipwreckFeature(ShipwreckFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final SwampHutFeature SWAMP_HUT = StructureFeature.register("Swamp_Hut", new SwampHutFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<DefaultFeatureConfig> STRONGHOLD = StructureFeature.register("Stronghold", new StrongholdFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.STRONGHOLDS);
-    public static final StructureFeature<DefaultFeatureConfig> MONUMENT = StructureFeature.register("Monument", new OceanMonumentFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<OceanRuinFeatureConfig> OCEAN_RUIN = StructureFeature.register("Ocean_Ruin", new OceanRuinFeature(OceanRuinFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<DefaultFeatureConfig> FORTRESS = StructureFeature.register("Fortress", new NetherFortressFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.UNDERGROUND_DECORATION);
-    public static final StructureFeature<DefaultFeatureConfig> END_CITY = StructureFeature.register("EndCity", new EndCityFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<ProbabilityConfig> BURIED_TREASURE = StructureFeature.register("Buried_Treasure", new BuriedTreasureFeature(ProbabilityConfig.CODEC), GenerationStep.Feature.UNDERGROUND_STRUCTURES);
-    public static final StructureFeature<StructurePoolFeatureConfig> VILLAGE = StructureFeature.register("Village", new VillageFeature(StructurePoolFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final StructureFeature<RangeDecoratorConfig> NETHER_FOSSIL = StructureFeature.register("Nether_Fossil", new NetherFossilFeature(RangeDecoratorConfig.CODEC), GenerationStep.Feature.UNDERGROUND_DECORATION);
-    public static final StructureFeature<StructurePoolFeatureConfig> BASTION_REMNANT = StructureFeature.register("Bastion_Remnant", new BastionRemnantFeature(StructurePoolFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
-    public static final List<StructureFeature<?>> LAND_MODIFYING_STRUCTURES = ImmutableList.of(PILLAGER_OUTPOST, VILLAGE, NETHER_FOSSIL, STRONGHOLD);
-    private static final Identifier JIGSAW_ID = new Identifier("jigsaw");
-    private static final Map<Identifier, Identifier> JIGSAW_STRUCTURE_PIECES = ImmutableMap.builder().put((Object)new Identifier("nvi"), (Object)JIGSAW_ID).put((Object)new Identifier("pcp"), (Object)JIGSAW_ID).put((Object)new Identifier("bastionremnant"), (Object)JIGSAW_ID).put((Object)new Identifier("runtime"), (Object)JIGSAW_ID).build();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final StructureFeature<StructurePoolFeatureConfig> PILLAGER_OUTPOST = StructureFeature.register("pillager_outpost", new PillagerOutpostFeature(StructurePoolFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<MineshaftFeatureConfig> MINESHAFT = StructureFeature.register("mineshaft", new MineshaftFeature(MineshaftFeatureConfig.CODEC), GenerationStep.Feature.UNDERGROUND_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> MANSION = StructureFeature.register("mansion", new WoodlandMansionFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> JUNGLE_PYRAMID = StructureFeature.register("jungle_pyramid", new JungleTempleFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> DESERT_PYRAMID = StructureFeature.register("desert_pyramid", new DesertPyramidFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> IGLOO = StructureFeature.register("igloo", new IglooFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<RuinedPortalFeatureConfig> RUINED_PORTAL = StructureFeature.register("ruined_portal", new RuinedPortalFeature(RuinedPortalFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<ShipwreckFeatureConfig> SHIPWRECK = StructureFeature.register("shipwreck", new ShipwreckFeature(ShipwreckFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> SWAMP_HUT = StructureFeature.register("swamp_hut", new SwampHutFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> STRONGHOLD = StructureFeature.register("stronghold", new StrongholdFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.STRONGHOLDS);
+    public static final StructureFeature<DefaultFeatureConfig> MONUMENT = StructureFeature.register("monument", new OceanMonumentFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<OceanRuinFeatureConfig> OCEAN_RUIN = StructureFeature.register("ocean_ruin", new OceanRuinFeature(OceanRuinFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<DefaultFeatureConfig> FORTRESS = StructureFeature.register("fortress", new NetherFortressFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.UNDERGROUND_DECORATION);
+    public static final StructureFeature<DefaultFeatureConfig> ENDCITY = StructureFeature.register("endcity", new EndCityFeature(DefaultFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<ProbabilityConfig> BURIED_TREASURE = StructureFeature.register("buried_treasure", new BuriedTreasureFeature(ProbabilityConfig.CODEC), GenerationStep.Feature.UNDERGROUND_STRUCTURES);
+    public static final StructureFeature<StructurePoolFeatureConfig> VILLAGE = StructureFeature.register("village", new VillageFeature(StructurePoolFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
+    public static final StructureFeature<RangeFeatureConfig> NETHER_FOSSIL = StructureFeature.register("nether_fossil", new NetherFossilFeature(RangeFeatureConfig.CODEC), GenerationStep.Feature.UNDERGROUND_DECORATION);
+    public static final StructureFeature<StructurePoolFeatureConfig> BASTION_REMNANT = StructureFeature.register("bastion_remnant", new BastionRemnantFeature(StructurePoolFeatureConfig.CODEC), GenerationStep.Feature.SURFACE_STRUCTURES);
     public static final int field_31518 = 8;
-    private final Codec<ConfiguredStructureFeature<C, StructureFeature<C>>> codec;
+    private final Codec<ConfiguredStructureFeature<C, StructureFeature<C>>> codec = RecordCodecBuilder.create(instance -> instance.group((App)configCodec.fieldOf("config").forGetter(configuredStructureFeature -> configuredStructureFeature.config), (App)RegistryCodecs.entryList(Registry.BIOME_KEY).fieldOf("biomes").forGetter(ConfiguredStructureFeature::getBiomes), (App)Codec.BOOL.optionalFieldOf("adapt_noise", (Object)false).forGetter(configuredStructureFeature -> configuredStructureFeature.field_37144), (App)Codec.simpleMap(SpawnGroup.CODEC, StructureSpawns.CODEC, (Keyable)StringIdentifiable.toKeyable(SpawnGroup.values())).fieldOf("spawn_overrides").forGetter(configuredStructureFeature -> configuredStructureFeature.field_37143)).apply((Applicative)instance, (featureConfig, registryEntryList, boolean_, map) -> new ConfiguredStructureFeature<FeatureConfig, StructureFeature>(this, (FeatureConfig)featureConfig, (RegistryEntryList<Biome>)registryEntryList, (boolean)boolean_, (Map<SpawnGroup, StructureSpawns>)map)));
+    private final StructureGeneratorFactory<C> piecesGenerator;
+    private final PostPlacementProcessor postProcessor;
 
     private static <F extends StructureFeature<?>> F register(String name, F structureFeature, GenerationStep.Feature step) {
-        STRUCTURES.put((Object)name.toLowerCase(Locale.ROOT), structureFeature);
         STRUCTURE_TO_GENERATION_STEP.put(structureFeature, step);
-        return (F)Registry.register(Registry.STRUCTURE_FEATURE, name.toLowerCase(Locale.ROOT), structureFeature);
+        return (F)Registry.register(Registry.STRUCTURE_FEATURE, name, structureFeature);
     }
 
-    public StructureFeature(Codec<C> codec) {
-        this.codec = codec.fieldOf("config").xmap(featureConfig -> new ConfiguredStructureFeature<FeatureConfig, StructureFeature>(this, (FeatureConfig)featureConfig), configuredStructureFeature -> configuredStructureFeature.config).codec();
+    public StructureFeature(Codec<C> configCodec, StructureGeneratorFactory<C> piecesGenerator) {
+        this(configCodec, piecesGenerator, PostPlacementProcessor.EMPTY);
+    }
+
+    public StructureFeature(Codec<C> configCodec, StructureGeneratorFactory<C> piecesGenerator, PostPlacementProcessor postPlacementProcessor) {
+        this.piecesGenerator = piecesGenerator;
+        this.postProcessor = postPlacementProcessor;
     }
 
     public GenerationStep.Feature getGenerationStep() {
@@ -127,13 +129,14 @@ public abstract class StructureFeature<C extends FeatureConfig> {
     }
 
     @Nullable
-    public static StructureStart<?> readStructureStart(ServerWorld world, NbtCompound nbt, long worldSeed) {
+    public static StructureStart readStructureStart(StructureContext context, NbtCompound nbt, long worldSeed) {
         String string = nbt.getString("id");
         if ("INVALID".equals(string)) {
             return StructureStart.DEFAULT;
         }
-        StructureFeature<?> structureFeature = Registry.STRUCTURE_FEATURE.get(new Identifier(string.toLowerCase(Locale.ROOT)));
-        if (structureFeature == null) {
+        Registry<ConfiguredStructureFeature<?, ?>> registry = context.registryManager().get(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY);
+        ConfiguredStructureFeature<?, ?> configuredStructureFeature = registry.get(new Identifier(string));
+        if (configuredStructureFeature == null) {
             LOGGER.error("Unknown feature id: {}", (Object)string);
             return null;
         }
@@ -141,30 +144,14 @@ public abstract class StructureFeature<C extends FeatureConfig> {
         int i = nbt.getInt("references");
         NbtList nbtList = nbt.getList("Children", 10);
         try {
-            StructureStart<?> structureStart = structureFeature.createStart(chunkPos, i, worldSeed);
-            for (int j = 0; j < nbtList.size(); ++j) {
-                NbtCompound nbtCompound = nbtList.getCompound(j);
-                String string2 = nbtCompound.getString("id").toLowerCase(Locale.ROOT);
-                Identifier identifier = new Identifier(string2);
-                Identifier identifier2 = JIGSAW_STRUCTURE_PIECES.getOrDefault(identifier, identifier);
-                StructurePieceType structurePieceType = Registry.STRUCTURE_PIECE.get(identifier2);
-                if (structurePieceType == null) {
-                    LOGGER.error("Unknown structure piece id: {}", (Object)identifier2);
-                    continue;
-                }
-                try {
-                    StructurePiece structurePiece = structurePieceType.load(world, nbtCompound);
-                    structureStart.addPiece(structurePiece);
-                    continue;
-                }
-                catch (Exception exception) {
-                    LOGGER.error("Exception loading structure piece with id {}", (Object)identifier2, (Object)exception);
-                }
+            StructurePiecesList structurePiecesList = StructurePiecesList.fromNbt(nbtList, context);
+            if (configuredStructureFeature.feature == MONUMENT) {
+                structurePiecesList = OceanMonumentFeature.modifyPiecesOnRead(chunkPos, worldSeed, structurePiecesList);
             }
-            return structureStart;
+            return new StructureStart(configuredStructureFeature, chunkPos, i, structurePiecesList);
         }
-        catch (Exception exception2) {
-            LOGGER.error("Failed Start with id {}", (Object)string, (Object)exception2);
+        catch (Exception exception) {
+            LOGGER.error("Failed Start with id {}", (Object)string, (Object)exception);
             return null;
         }
     }
@@ -173,108 +160,36 @@ public abstract class StructureFeature<C extends FeatureConfig> {
         return this.codec;
     }
 
-    public ConfiguredStructureFeature<C, ? extends StructureFeature<C>> configure(C config) {
-        return new ConfiguredStructureFeature<C, StructureFeature>(this, config);
+    public ConfiguredStructureFeature<C, ? extends StructureFeature<C>> configure(C config, TagKey<Biome> biomeTag) {
+        return this.configure(config, biomeTag, false);
     }
 
-    @Nullable
-    public BlockPos locateStructure(WorldView world, StructureAccessor structureAccessor, BlockPos searchStartPos, int searchRadius, boolean skipExistingChunks, long worldSeed, StructureConfig config) {
-        int i = config.getSpacing();
-        int j = ChunkSectionPos.getSectionCoord(searchStartPos.getX());
-        int k = ChunkSectionPos.getSectionCoord(searchStartPos.getZ());
-        ChunkRandom chunkRandom = new ChunkRandom();
-        block0: for (int l = 0; l <= searchRadius; ++l) {
-            for (int m = -l; m <= l; ++m) {
-                boolean bl = m == -l || m == l;
-                for (int n = -l; n <= l; ++n) {
-                    Chunk chunk;
-                    StructureStart<?> structureStart;
-                    boolean bl2;
-                    boolean bl3 = bl2 = n == -l || n == l;
-                    if (!bl && !bl2) continue;
-                    int o = j + i * m;
-                    int p = k + i * n;
-                    ChunkPos chunkPos = this.getStartChunk(config, worldSeed, chunkRandom, o, p);
-                    boolean bl32 = world.getBiomeAccess().getBiomeForNoiseGen(chunkPos).getGenerationSettings().hasStructureFeature(this);
-                    if (bl32 && (structureStart = structureAccessor.getStructureStart(ChunkSectionPos.from(chunk = world.getChunk(chunkPos.x, chunkPos.z, ChunkStatus.STRUCTURE_STARTS)), this, chunk)) != null && structureStart.hasChildren()) {
-                        if (skipExistingChunks && structureStart.isInExistingChunk()) {
-                            structureStart.incrementReferences();
-                            return structureStart.getBlockPos();
-                        }
-                        if (!skipExistingChunks) {
-                            return structureStart.getBlockPos();
-                        }
-                    }
-                    if (l == 0) break;
-                }
-                if (l == 0) continue block0;
-            }
-        }
-        return null;
+    public ConfiguredStructureFeature<C, ? extends StructureFeature<C>> configure(C config, TagKey<Biome> biomeTag, boolean bl) {
+        return new ConfiguredStructureFeature<C, StructureFeature>(this, config, BuiltinRegistries.BIOME.getOrCreateEntryList(biomeTag), bl, Map.of());
     }
 
-    protected boolean isUniformDistribution() {
-        return true;
+    public ConfiguredStructureFeature<C, ? extends StructureFeature<C>> configure(C config, TagKey<Biome> biomeTag, Map<SpawnGroup, StructureSpawns> map) {
+        return new ConfiguredStructureFeature<C, StructureFeature>(this, config, BuiltinRegistries.BIOME.getOrCreateEntryList(biomeTag), false, map);
     }
 
-    public final ChunkPos getStartChunk(StructureConfig config, long worldSeed, ChunkRandom placementRandom, int chunkX, int chunkY) {
-        int n;
-        int m;
-        int i = config.getSpacing();
-        int j = config.getSeparation();
-        int k = Math.floorDiv(chunkX, i);
-        int l = Math.floorDiv(chunkY, i);
-        placementRandom.setRegionSeed(worldSeed, k, l, config.getSalt());
-        if (this.isUniformDistribution()) {
-            m = placementRandom.nextInt(i - j);
-            n = placementRandom.nextInt(i - j);
-        } else {
-            m = (placementRandom.nextInt(i - j) + placementRandom.nextInt(i - j)) / 2;
-            n = (placementRandom.nextInt(i - j) + placementRandom.nextInt(i - j)) / 2;
-        }
-        return new ChunkPos(k * i + m, l * i + n);
+    public ConfiguredStructureFeature<C, ? extends StructureFeature<C>> configure(C config, TagKey<Biome> biomeTag, boolean bl, Map<SpawnGroup, StructureSpawns> map) {
+        return new ConfiguredStructureFeature<C, StructureFeature>(this, config, BuiltinRegistries.BIOME.getOrCreateEntryList(biomeTag), bl, map);
     }
 
-    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long worldSeed, ChunkRandom random, ChunkPos pos, Biome biome, ChunkPos chunkPos, C config, HeightLimitView world) {
-        return true;
+    public static BlockPos getLocatedPos(RandomSpreadStructurePlacement placement, ChunkPos chunkPos) {
+        return new BlockPos(chunkPos.getStartX(), 0, chunkPos.getStartZ()).add(placement.locateOffset());
     }
 
-    private StructureStart<C> createStart(ChunkPos pos, int i, long l) {
-        return this.getStructureStartFactory().create(this, pos, i, l);
+    public boolean canGenerate(DynamicRegistryManager registryManager, ChunkGenerator chunkGenerator, BiomeSource biomeSource, StructureManager structureManager, long worldSeed, ChunkPos pos, C config, HeightLimitView world, Predicate<RegistryEntry<Biome>> biomePredicate) {
+        return this.piecesGenerator.createGenerator(new StructureGeneratorFactory.Context<C>(chunkGenerator, biomeSource, worldSeed, pos, config, world, biomePredicate, structureManager, registryManager)).isPresent();
     }
 
-    public StructureStart<?> tryPlaceStart(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator generator, BiomeSource biomeSource, StructureManager manager, long worldSeed, ChunkPos pos, Biome biome, int referenceCount, ChunkRandom random, StructureConfig structureConfig, C config, HeightLimitView world) {
-        ChunkPos chunkPos = this.getStartChunk(structureConfig, worldSeed, random, pos.x, pos.z);
-        if (pos.x == chunkPos.x && pos.z == chunkPos.z && this.shouldStartAt(generator, biomeSource, worldSeed, random, pos, biome, chunkPos, config, world)) {
-            StructureStart<C> structureStart = this.createStart(pos, referenceCount, worldSeed);
-            structureStart.init(dynamicRegistryManager, generator, manager, pos, biome, config, world);
-            if (structureStart.hasChildren()) {
-                return structureStart;
-            }
-        }
-        return StructureStart.DEFAULT;
+    public StructureGeneratorFactory<C> method_41138() {
+        return this.piecesGenerator;
     }
 
-    public abstract StructureStartFactory<C> getStructureStartFactory();
-
-    public String getName() {
-        return (String)STRUCTURES.inverse().get((Object)this);
-    }
-
-    public Pool<SpawnSettings.SpawnEntry> getMonsterSpawns() {
-        return SpawnSettings.EMPTY_ENTRY_POOL;
-    }
-
-    public Pool<SpawnSettings.SpawnEntry> getCreatureSpawns() {
-        return SpawnSettings.EMPTY_ENTRY_POOL;
-    }
-
-    public Pool<SpawnSettings.SpawnEntry> getUndergroundWaterCreatureSpawns() {
-        return SpawnSettings.EMPTY_ENTRY_POOL;
-    }
-
-    public static interface StructureStartFactory<C extends FeatureConfig> {
-        public StructureStart<C> create(StructureFeature<C> var1, ChunkPos var2, int var3, long var4);
+    public PostPlacementProcessor getPostProcessor() {
+        return this.postProcessor;
     }
 }
 

@@ -379,7 +379,7 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.cancel();
     }
 
@@ -434,7 +434,7 @@ extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() {
+    public boolean shouldPause() {
         return false;
     }
 }

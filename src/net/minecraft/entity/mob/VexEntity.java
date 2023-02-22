@@ -51,6 +51,7 @@ extends HostileEntity {
     public static final int field_28645 = MathHelper.ceil(3.9269907f);
     protected static final TrackedData<Byte> VEX_FLAGS = DataTracker.registerData(VexEntity.class, TrackedDataHandlerRegistry.BYTE);
     private static final int CHARGING_FLAG = 1;
+    @Nullable
     MobEntity owner;
     @Nullable
     private BlockPos bounds;
@@ -133,6 +134,7 @@ extends HostileEntity {
         }
     }
 
+    @Nullable
     public MobEntity getOwner() {
         return this.owner;
     }
@@ -142,8 +144,8 @@ extends HostileEntity {
         return this.bounds;
     }
 
-    public void setBounds(@Nullable BlockPos pos) {
-        this.bounds = pos;
+    public void setBounds(@Nullable BlockPos bounds) {
+        this.bounds = bounds;
     }
 
     private boolean areFlagsSet(int mask) {
@@ -248,7 +250,7 @@ extends HostileEntity {
 
         @Override
         public boolean canStart() {
-            if (VexEntity.this.getTarget() != null && !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(7) == 0) {
+            if (VexEntity.this.getTarget() != null && !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(ChargeTargetGoal.toGoalTicks(7)) == 0) {
                 return VexEntity.this.squaredDistanceTo(VexEntity.this.getTarget()) > 4.0;
             }
             return false;
@@ -262,8 +264,10 @@ extends HostileEntity {
         @Override
         public void start() {
             LivingEntity livingEntity = VexEntity.this.getTarget();
-            Vec3d vec3d = livingEntity.getEyePos();
-            VexEntity.this.moveControl.moveTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
+            if (livingEntity != null) {
+                Vec3d vec3d = livingEntity.getEyePos();
+                VexEntity.this.moveControl.moveTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
+            }
             VexEntity.this.setCharging(true);
             VexEntity.this.playSound(SoundEvents.ENTITY_VEX_CHARGE, 1.0f, 1.0f);
         }
@@ -274,8 +278,16 @@ extends HostileEntity {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
             LivingEntity livingEntity = VexEntity.this.getTarget();
+            if (livingEntity == null) {
+                return;
+            }
             if (VexEntity.this.getBoundingBox().intersects(livingEntity.getBoundingBox())) {
                 VexEntity.this.tryAttack(livingEntity);
                 VexEntity.this.setCharging(false);
@@ -297,7 +309,7 @@ extends HostileEntity {
 
         @Override
         public boolean canStart() {
-            return !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(7) == 0;
+            return !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(LookAtTargetGoal.toGoalTicks(7)) == 0;
         }
 
         @Override
@@ -324,16 +336,16 @@ extends HostileEntity {
 
     class TrackOwnerTargetGoal
     extends TrackTargetGoal {
-        private final TargetPredicate TRACK_OWNER_PREDICATE;
+        private final TargetPredicate targetPredicate;
 
         public TrackOwnerTargetGoal(PathAwareEntity mob) {
             super(mob, false);
-            this.TRACK_OWNER_PREDICATE = TargetPredicate.createNonAttackable().ignoreVisibility().ignoreDistanceScalingFactor();
+            this.targetPredicate = TargetPredicate.createNonAttackable().ignoreVisibility().ignoreDistanceScalingFactor();
         }
 
         @Override
         public boolean canStart() {
-            return VexEntity.this.owner != null && VexEntity.this.owner.getTarget() != null && this.canTrack(VexEntity.this.owner.getTarget(), this.TRACK_OWNER_PREDICATE);
+            return VexEntity.this.owner != null && VexEntity.this.owner.getTarget() != null && this.canTrack(VexEntity.this.owner.getTarget(), this.targetPredicate);
         }
 
         @Override

@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class SystemToast
 implements Toast {
-    private static final long field_32218 = 5000L;
-    private static final int field_32219 = 200;
+    private static final long DURATION = 5000L;
+    private static final int MIN_WIDTH = 200;
     private final Type type;
     private Text title;
     private List<OrderedText> lines;
@@ -38,7 +38,7 @@ implements Toast {
     private final int width;
 
     public SystemToast(Type type, Text title, @Nullable Text description) {
-        this(type, title, (List<OrderedText>)SystemToast.getTextAsList(description), 160);
+        this(type, title, (List<OrderedText>)SystemToast.getTextAsList(description), Math.max(160, 30 + Math.max(MinecraftClient.getInstance().textRenderer.getWidth(title), description == null ? 0 : MinecraftClient.getInstance().textRenderer.getWidth(description))));
     }
 
     public static SystemToast create(MinecraftClient client, Type type, Text title, Text description) {
@@ -88,11 +88,11 @@ implements Toast {
             this.drawPart(matrices, manager, i, 32 - m, k - m, m);
         }
         if (this.lines == null) {
-            manager.getGame().textRenderer.draw(matrices, this.title, 18.0f, 12.0f, -256);
+            manager.getClient().textRenderer.draw(matrices, this.title, 18.0f, 12.0f, -256);
         } else {
-            manager.getGame().textRenderer.draw(matrices, this.title, 18.0f, 7.0f, -256);
+            manager.getClient().textRenderer.draw(matrices, this.title, 18.0f, 7.0f, -256);
             for (k = 0; k < this.lines.size(); ++k) {
-                manager.getGame().textRenderer.draw(matrices, this.lines.get(k), 18.0f, (float)(18 + k * 12), -1);
+                manager.getClient().textRenderer.draw(matrices, this.lines.get(k), 18.0f, (float)(18 + k * 12), -1);
             }
         }
         return startTime - this.startTime < 5000L ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
@@ -158,6 +158,7 @@ implements Toast {
         public static final /* enum */ Type PACK_LOAD_FAILURE = new Type();
         public static final /* enum */ Type WORLD_ACCESS_FAILURE = new Type();
         public static final /* enum */ Type PACK_COPY_FAILURE = new Type();
+        public static final /* enum */ Type PERIODIC_NOTIFICATION = new Type();
         private static final /* synthetic */ Type[] field_2221;
 
         public static Type[] values() {
@@ -169,7 +170,7 @@ implements Toast {
         }
 
         private static /* synthetic */ Type[] method_36871() {
-            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE};
+            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION};
         }
 
         static {

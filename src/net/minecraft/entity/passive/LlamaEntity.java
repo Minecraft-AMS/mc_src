@@ -27,6 +27,7 @@ import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.ProjectileAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
+import net.minecraft.entity.ai.goal.TemptGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -125,10 +126,11 @@ implements RangedAttackMob {
         this.goalSelector.add(3, new ProjectileAttackGoal(this, 1.25, 40, 20.0f));
         this.goalSelector.add(3, new EscapeDangerGoal(this, 1.2));
         this.goalSelector.add(4, new AnimalMateGoal(this, 1.0));
-        this.goalSelector.add(5, new FollowParentGoal(this, 1.0));
-        this.goalSelector.add(6, new WanderAroundFarGoal(this, 0.7));
-        this.goalSelector.add(7, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
-        this.goalSelector.add(8, new LookAroundGoal(this));
+        this.goalSelector.add(5, new TemptGoal(this, 1.25, Ingredient.ofItems(Items.HAY_BLOCK), false));
+        this.goalSelector.add(6, new FollowParentGoal(this, 1.0));
+        this.goalSelector.add(7, new WanderAroundFarGoal(this, 0.7));
+        this.goalSelector.add(8, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
+        this.goalSelector.add(9, new LookAroundGoal(this));
         this.targetSelector.add(1, new SpitRevengeGoal(this));
         this.targetSelector.add(2, new ChaseWolvesGoal(this));
     }
@@ -174,7 +176,7 @@ implements RangedAttackMob {
 
     @Override
     public double getMountedHeightOffset() {
-        return (double)this.getHeight() * 0.67;
+        return (double)this.getHeight() * 0.6;
     }
 
     @Override

@@ -1,32 +1,33 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
+import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.collection.IndexedIterable;
+import net.minecraft.world.chunk.PaletteResizeListener;
 
 public interface Palette<T> {
-    public int getIndex(T var1);
+    public int index(T var1);
 
-    public boolean accepts(Predicate<T> var1);
+    public boolean hasAny(Predicate<T> var1);
 
-    @Nullable
-    public T getByIndex(int var1);
+    public T get(int var1);
 
-    public void fromPacket(PacketByteBuf var1);
+    public void readPacket(PacketByteBuf var1);
 
-    public void toPacket(PacketByteBuf var1);
+    public void writePacket(PacketByteBuf var1);
 
     public int getPacketSize();
 
-    public int getIndexBits();
+    public int getSize();
 
-    public void readNbt(NbtList var1);
+    public Palette<T> copy();
+
+    public static interface Factory {
+        public <A> Palette<A> create(int var1, IndexedIterable<A> var2, PaletteResizeListener<A> var3, List<A> var4);
+    }
 }
 

@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Queues
  *  com.google.common.util.concurrent.ThreadFactoryBuilder
+ *  com.mojang.logging.LogUtils
  *  io.netty.bootstrap.Bootstrap
  *  io.netty.channel.Channel
  *  io.netty.channel.ChannelException
@@ -29,16 +30,16 @@
  *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
  *  org.apache.commons.lang3.Validate
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- *  org.apache.logging.log4j.Marker
- *  org.apache.logging.log4j.MarkerManager
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
+ *  org.slf4j.Marker
+ *  org.slf4j.MarkerFactory
  */
 package net.minecraft.network;
 
 import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.mojang.logging.LogUtils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -66,6 +67,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Queue;
+import java.util.concurrent.RejectedExecutionException;
 import javax.crypto.Cipher;
 import net.minecraft.network.DecoderHandler;
 import net.minecraft.network.NetworkSide;
@@ -89,20 +91,22 @@ import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Lazy;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import org.apache.commons.lang3.Validate;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 public class ClientConnection
 extends SimpleChannelInboundHandler<Packet<?>> {
     private static final float CURRENT_PACKET_COUNTER_WEIGHT = 0.75f;
-    private static final Logger LOGGER = LogManager.getLogger();
-    public static final Marker NETWORK_MARKER = MarkerManager.getMarker((String)"NETWORK");
-    public static final Marker NETWORK_PACKETS_MARKER = MarkerManager.getMarker((String)"NETWORK_PACKETS", (Marker)NETWORK_MARKER);
+    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final Marker NETWORK_MARKER = MarkerFactory.getMarker((String)"NETWORK");
+    public static final Marker NETWORK_PACKETS_MARKER = Util.make(MarkerFactory.getMarker((String)"NETWORK_PACKETS"), marker -> marker.add(NETWORK_MARKER));
+    public static final Marker PACKET_RECEIVED_MARKER = Util.make(MarkerFactory.getMarker((String)"PACKET_RECEIVED"), marker -> marker.add(NETWORK_PACKETS_MARKER));
+    public static final Marker PACKET_SENT_MARKER = Util.make(MarkerFactory.getMarker((String)"PACKET_SENT"), marker -> marker.add(NETWORK_PACKETS_MARKER));
     public static final AttributeKey<NetworkState> PROTOCOL_ATTRIBUTE_KEY = AttributeKey.valueOf((String)"protocol");
     public static final Lazy<NioEventLoopGroup> CLIENT_IO_GROUP = new Lazy<NioEventLoopGroup>(() -> new NioEventLoopGroup(0, new ThreadFactoryBuilder().setNameFormat("Netty Client IO #%d").setDaemon(true).build()));
     public static final Lazy<EpollEventLoopGroup> EPOLL_CLIENT_IO_GROUP = new Lazy<EpollEventLoopGroup>(() -> new EpollEventLoopGroup(0, new ThreadFactoryBuilder().setNameFormat("Netty Epoll Client IO #%d").setDaemon(true).build()));
@@ -134,7 +138,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
             this.setState(NetworkState.HANDSHAKING);
         }
         catch (Throwable throwable) {
-            LOGGER.fatal((Object)throwable);
+            LOGGER.error(LogUtils.FATAL_MARKER, "Failed to change protocol to handshake", throwable);
         }
     }
 
@@ -183,6 +187,9 @@ extends SimpleChannelInboundHandler<Packet<?>> {
             }
             catch (OffThreadException offThreadException) {
             }
+            catch (RejectedExecutionException rejectedExecutionException) {
+                this.disconnect(new TranslatableText("multiplayer.disconnect.server_shutdown"));
+            }
             catch (ClassCastException classCastException) {
                 LOGGER.error("Received {} that couldn't be processed", packet.getClass(), (Object)classCastException);
                 this.disconnect(new TranslatableText("multiplayer.disconnect.invalid_packet"));
@@ -228,9 +235,9 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         }
     }
 
-    private void sendInternal(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback, NetworkState networkState, NetworkState networkState2) {
-        if (networkState != networkState2) {
-            this.setState(networkState);
+    private void sendInternal(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback, NetworkState packetState, NetworkState currentState) {
+        if (packetState != currentState) {
+            this.setState(packetState);
         }
         ChannelFuture channelFuture = this.channel.writeAndFlush(packet);
         if (callback != null) {

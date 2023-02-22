@@ -7,25 +7,25 @@
 package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
-import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
+import net.minecraft.world.gen.feature.PlacedFeature;
 
 public class SimpleRandomFeatureConfig
 implements FeatureConfig {
-    public static final Codec<SimpleRandomFeatureConfig> CODEC = Codecs.nonEmptyList(ConfiguredFeature.field_26756).fieldOf("features").xmap(SimpleRandomFeatureConfig::new, simpleRandomFeatureConfig -> simpleRandomFeatureConfig.features).codec();
-    public final List<Supplier<ConfiguredFeature<?, ?>>> features;
+    public static final Codec<SimpleRandomFeatureConfig> CODEC = Codecs.nonEmptyEntryList(PlacedFeature.LIST_CODEC).fieldOf("features").xmap(SimpleRandomFeatureConfig::new, config -> config.features).codec();
+    public final RegistryEntryList<PlacedFeature> features;
 
-    public SimpleRandomFeatureConfig(List<Supplier<ConfiguredFeature<?, ?>>> features) {
+    public SimpleRandomFeatureConfig(RegistryEntryList<PlacedFeature> features) {
         this.features = features;
     }
 
     @Override
     public Stream<ConfiguredFeature<?, ?>> getDecoratedFeatures() {
-        return this.features.stream().flatMap(supplier -> ((ConfiguredFeature)supplier.get()).getDecoratedFeatures());
+        return this.features.stream().flatMap(feature -> ((PlacedFeature)feature.value()).getDecoratedFeatures());
     }
 }
 

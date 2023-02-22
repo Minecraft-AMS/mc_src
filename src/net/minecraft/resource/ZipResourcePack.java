@@ -6,6 +6,7 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
  *  org.apache.commons.io.IOUtils
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.resource;
 
@@ -31,10 +32,12 @@ import net.minecraft.resource.ResourceNotFoundException;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
 import org.apache.commons.io.IOUtils;
+import org.jetbrains.annotations.Nullable;
 
 public class ZipResourcePack
 extends AbstractFileResourcePack {
     public static final Splitter TYPE_NAMESPACE_SPLITTER = Splitter.on((char)'/').omitEmptyStrings().limit(3);
+    @Nullable
     private ZipFile file;
 
     public ZipResourcePack(File file) {

@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.goal;
 
@@ -9,11 +12,13 @@ import net.minecraft.entity.ai.RangedAttackMob;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 public class ProjectileAttackGoal
 extends Goal {
     private final MobEntity mob;
     private final RangedAttackMob owner;
+    @Nullable
     private LivingEntity target;
     private int updateCountdownTicks = -1;
     private final double mobSpeed;
@@ -61,6 +66,11 @@ extends Goal {
         this.target = null;
         this.seenTargetTicks = 0;
         this.updateCountdownTicks = -1;
+    }
+
+    @Override
+    public boolean shouldRunEveryTick() {
+        return true;
     }
 
     @Override

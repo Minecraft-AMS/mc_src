@@ -3,8 +3,8 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  *  oshi.SystemInfo
  *  oshi.hardware.CentralProcessor
  *  oshi.hardware.CentralProcessor$ProcessorIdentifier
@@ -17,14 +17,14 @@
 package net.minecraft.util;
 
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.minecraft.SharedConstants;
 import net.minecraft.util.Util;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GlobalMemory;
@@ -36,7 +36,7 @@ import oshi.hardware.VirtualMemory;
 public class SystemDetails {
     public static final long MEBI = 0x100000L;
     private static final long GIGA = 1000000000L;
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String OPERATING_SYSTEM = System.getProperty("os.name") + " (" + System.getProperty("os.arch") + ") version " + System.getProperty("os.version");
     private static final String JAVA_VERSION = System.getProperty("java.version") + ", " + System.getProperty("java.vendor");
     private static final String JVM_VERSION = System.getProperty("java.vm.name") + " (" + System.getProperty("java.vm.info") + "), " + System.getProperty("java.vm.vendor");
@@ -106,7 +106,7 @@ public class SystemDetails {
         }
     }
 
-    private void addVertualMemoryGroup(VirtualMemory virtualMemory) {
+    private void addVirtualMemoryGroup(VirtualMemory virtualMemory) {
         this.addSection("Virtual memory max (MB)", () -> String.format("%.2f", Float.valueOf((float)virtualMemory.getVirtualMax() / 1048576.0f)));
         this.addSection("Virtual memory used (MB)", () -> String.format("%.2f", Float.valueOf((float)virtualMemory.getVirtualInUse() / 1048576.0f)));
         this.addSection("Swap memory total (MB)", () -> String.format("%.2f", Float.valueOf((float)virtualMemory.getSwapTotal() / 1048576.0f)));
@@ -115,7 +115,7 @@ public class SystemDetails {
 
     private void addGlobalMemoryGroup(GlobalMemory globalMemory) {
         this.tryAddGroup("physical memory", () -> this.addPhysicalMemoryGroup(globalMemory.getPhysicalMemory()));
-        this.tryAddGroup("virtual memory", () -> this.addVertualMemoryGroup(globalMemory.getVirtualMemory()));
+        this.tryAddGroup("virtual memory", () -> this.addVirtualMemoryGroup(globalMemory.getVirtualMemory()));
     }
 
     private void addGraphicsCardGroup(List<GraphicsCard> graphicsCards) {

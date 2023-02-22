@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.util.concurrent.ThreadFactoryBuilder
+ *  com.mojang.logging.LogUtils
  *  io.netty.bootstrap.ServerBootstrap
  *  io.netty.channel.Channel
  *  io.netty.channel.ChannelException
@@ -27,14 +28,14 @@
  *  io.netty.util.Timer
  *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.mojang.logging.LogUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -81,12 +82,11 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.util.Lazy;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ServerNetworkIo {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final Lazy<NioEventLoopGroup> DEFAULT_CHANNEL = new Lazy<NioEventLoopGroup>(() -> new NioEventLoopGroup(0, new ThreadFactoryBuilder().setNameFormat("Netty Server IO #%d").setDaemon(true).build()));
     public static final Lazy<EpollEventLoopGroup> EPOLL_CHANNEL = new Lazy<EpollEventLoopGroup>(() -> new EpollEventLoopGroup(0, new ThreadFactoryBuilder().setNameFormat("Netty Epoll Server IO #%d").setDaemon(true).build()));
     final MinecraftServer server;
@@ -202,6 +202,10 @@ public class ServerNetworkIo {
 
     public MinecraftServer getServer() {
         return this.server;
+    }
+
+    public List<ClientConnection> getConnections() {
+        return this.connections;
     }
 
     static class DelayingChannelInboundHandler

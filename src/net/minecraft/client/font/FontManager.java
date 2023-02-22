@@ -9,12 +9,12 @@
  *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonObject
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntCollection
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.font;
 
@@ -25,6 +25,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntCollection;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.io.BufferedReader;
@@ -53,13 +54,12 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiler.Profiler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class FontManager
 implements AutoCloseable {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final String FONTS_JSON = "fonts.json";
     public static final Identifier MISSING_STORAGE_ID = new Identifier("minecraft", "missing");
     private final FontStorage missingStorage;
@@ -100,19 +100,19 @@ implements AutoCloseable {
                                     continue;
                                 }
                                 catch (RuntimeException runtimeException) {
-                                    LOGGER.warn("Unable to read definition '{}' in {} in resourcepack: '{}': {}", (Object)identifier2, (Object)FontManager.FONTS_JSON, (Object)resource.getResourcePackName(), (Object)runtimeException.getMessage());
+                                    LOGGER.warn("Unable to read definition '{}' in {} in resourcepack: '{}': {}", new Object[]{identifier2, FontManager.FONTS_JSON, resource.getResourcePackName(), runtimeException.getMessage()});
                                 }
                             }
                             profiler.pop();
                         }
                         catch (RuntimeException runtimeException2) {
-                            LOGGER.warn("Unable to load font '{}' in {} in resourcepack: '{}': {}", (Object)identifier2, (Object)FontManager.FONTS_JSON, (Object)resource.getResourcePackName(), (Object)runtimeException2.getMessage());
+                            LOGGER.warn("Unable to load font '{}' in {} in resourcepack: '{}': {}", new Object[]{identifier2, FontManager.FONTS_JSON, resource.getResourcePackName(), runtimeException2.getMessage()});
                         }
                         profiler.pop();
                     }
                 }
                 catch (IOException iOException) {
-                    LOGGER.warn("Unable to load font '{}' in {}: {}", (Object)identifier2, (Object)FontManager.FONTS_JSON, (Object)iOException.getMessage());
+                    LOGGER.warn("Unable to load font '{}' in {}: {}", new Object[]{identifier2, FontManager.FONTS_JSON, iOException.getMessage()});
                 }
                 profiler.push("caching");
                 IntOpenHashSet intSet = new IntOpenHashSet();
@@ -167,8 +167,8 @@ implements AutoCloseable {
         this.missingStorage = Util.make(new FontStorage(manager, MISSING_STORAGE_ID), fontStorage -> fontStorage.setFonts(Lists.newArrayList((Object[])new Font[]{new BlankFont()})));
     }
 
-    public void setIdOverrides(Map<Identifier, Identifier> overrides) {
-        this.idOverrides = overrides;
+    public void setIdOverrides(Map<Identifier, Identifier> idOverrides) {
+        this.idOverrides = idOverrides;
     }
 
     public TextRenderer createTextRenderer() {

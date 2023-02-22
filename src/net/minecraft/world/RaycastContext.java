@@ -9,6 +9,8 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.Entity;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.tag.BlockTags;
+import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
@@ -52,6 +54,12 @@ public class RaycastContext {
         public static final /* enum */ ShapeType COLLIDER = new ShapeType(AbstractBlock.AbstractBlockState::getCollisionShape);
         public static final /* enum */ ShapeType OUTLINE = new ShapeType(AbstractBlock.AbstractBlockState::getOutlineShape);
         public static final /* enum */ ShapeType VISUAL = new ShapeType(AbstractBlock.AbstractBlockState::getCameraCollisionShape);
+        public static final /* enum */ ShapeType FALLDAMAGE_RESETTING = new ShapeType((state, world, pos, context) -> {
+            if (state.isIn(BlockTags.FALL_DAMAGE_RESETTING)) {
+                return VoxelShapes.fullCube();
+            }
+            return VoxelShapes.empty();
+        });
         private final ShapeProvider provider;
         private static final /* synthetic */ ShapeType[] field_17561;
 
@@ -73,7 +81,7 @@ public class RaycastContext {
         }
 
         private static /* synthetic */ ShapeType[] method_36690() {
-            return new ShapeType[]{COLLIDER, OUTLINE, VISUAL};
+            return new ShapeType[]{COLLIDER, OUTLINE, VISUAL, FALLDAMAGE_RESETTING};
         }
 
         static {
@@ -83,9 +91,10 @@ public class RaycastContext {
 
     public static final class FluidHandling
     extends Enum<FluidHandling> {
-        public static final /* enum */ FluidHandling NONE = new FluidHandling(fluidState -> false);
+        public static final /* enum */ FluidHandling NONE = new FluidHandling(state -> false);
         public static final /* enum */ FluidHandling SOURCE_ONLY = new FluidHandling(FluidState::isStill);
-        public static final /* enum */ FluidHandling ANY = new FluidHandling(fluidState -> !fluidState.isEmpty());
+        public static final /* enum */ FluidHandling ANY = new FluidHandling(state -> !state.isEmpty());
+        public static final /* enum */ FluidHandling WATER = new FluidHandling(state -> state.isIn(FluidTags.WATER));
         private final Predicate<FluidState> predicate;
         private static final /* synthetic */ FluidHandling[] field_1349;
 
@@ -106,7 +115,7 @@ public class RaycastContext {
         }
 
         private static /* synthetic */ FluidHandling[] method_36691() {
-            return new FluidHandling[]{NONE, SOURCE_ONLY, ANY};
+            return new FluidHandling[]{NONE, SOURCE_ONLY, ANY, WATER};
         }
 
         static {

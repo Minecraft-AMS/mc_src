@@ -23,12 +23,12 @@ public class LeapingChargeTask
 extends Task<MobEntity> {
     public static final int RUN_TIME = 100;
     private final UniformIntProvider cooldownRange;
-    private SoundEvent field_33459;
+    private SoundEvent sound;
 
-    public LeapingChargeTask(UniformIntProvider cooldownRange, SoundEvent soundEvent) {
+    public LeapingChargeTask(UniformIntProvider cooldownRange, SoundEvent sound) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_PRESENT)), 100);
         this.cooldownRange = cooldownRange;
-        this.field_33459 = soundEvent;
+        this.sound = sound;
     }
 
     @Override
@@ -46,7 +46,7 @@ extends Task<MobEntity> {
     protected void finishRunning(ServerWorld serverWorld, MobEntity mobEntity, long l) {
         if (mobEntity.isOnGround()) {
             mobEntity.setVelocity(mobEntity.getVelocity().multiply(0.1f));
-            serverWorld.playSoundFromEntity(null, mobEntity, this.field_33459, SoundCategory.NEUTRAL, 2.0f, 1.0f);
+            serverWorld.playSoundFromEntity(null, mobEntity, this.sound, SoundCategory.NEUTRAL, 2.0f, 1.0f);
         }
         mobEntity.setNoDrag(false);
         mobEntity.setPose(EntityPose.STANDING);

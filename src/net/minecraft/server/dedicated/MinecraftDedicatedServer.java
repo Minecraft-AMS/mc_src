@@ -8,9 +8,9 @@
  *  com.mojang.authlib.GameProfileRepository
  *  com.mojang.authlib.minecraft.MinecraftSessionService
  *  com.mojang.datafixers.DataFixer
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.dedicated;
 
@@ -20,6 +20,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -33,7 +34,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 import net.minecraft.SharedConstants;
@@ -42,9 +42,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.Items;
 import net.minecraft.resource.ResourcePackManager;
-import net.minecraft.resource.ServerResourceManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
+import net.minecraft.server.SaveLoader;
 import net.minecraft.server.ServerConfigHandler;
 import net.minecraft.server.WorldGenerationProgressListenerFactory;
 import net.minecraft.server.command.ServerCommandSource;
@@ -72,27 +72,25 @@ import net.minecraft.util.logging.UncaughtExceptionHandler;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.snooper.Snooper;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.SaveProperties;
 import net.minecraft.world.World;
 import net.minecraft.world.level.storage.LevelStorage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class MinecraftDedicatedServer
 extends MinecraftServer
 implements DedicatedServer {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_29662 = 5000;
     private static final int field_29663 = 2;
     private static final Pattern SHA1_PATTERN = Pattern.compile("^[a-fA-F0-9]{40}$");
     private final List<PendingServerCommand> commandQueue = Collections.synchronizedList(Lists.newArrayList());
+    @Nullable
     private QueryResponseHandler queryResponseHandler;
     private final RconCommandOutput rconCommandOutput;
+    @Nullable
     private RconListener rconServer;
     private final ServerPropertiesLoader propertiesLoader;
     @Nullable
@@ -102,8 +100,8 @@ implements DedicatedServer {
     @Nullable
     private final Text resourcePackPrompt;
 
-    public MinecraftDedicatedServer(Thread serverThread, DynamicRegistryManager.Impl registryManager, LevelStorage.Session session, ResourcePackManager dataPackManager, ServerResourceManager serverResourceManager, SaveProperties saveProperties, ServerPropertiesLoader propertiesLoader, DataFixer dataFixer, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
-        super(serverThread, registryManager, session, saveProperties, dataPackManager, Proxy.NO_PROXY, dataFixer, serverResourceManager, sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
+    public MinecraftDedicatedServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, ServerPropertiesLoader propertiesLoader, DataFixer dataFixer, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
+        super(serverThread, session, dataPackManager, saveLoader, Proxy.NO_PROXY, dataFixer, sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
         this.propertiesLoader = propertiesLoader;
         this.rconCommandOutput = new RconCommandOutput(this);
         this.filterer = TextFilterer.load(propertiesLoader.getPropertiesHandler().textFilteringConfig);
@@ -182,11 +180,9 @@ implements DedicatedServer {
         if (!ServerConfigHandler.checkSuccess(this)) {
             return false;
         }
-        this.setPlayerManager(new DedicatedPlayerManager(this, this.registryManager, this.saveHandler));
+        this.setPlayerManager(new DedicatedPlayerManager(this, this.getRegistryManager(), this.saveHandler));
         long l = Util.getMeasuringTimeNano();
-        SkullBlockEntity.setUserCache(this.getUserCache());
-        SkullBlockEntity.setSessionService(this.getSessionService());
-        SkullBlockEntity.setExecutor(this);
+        SkullBlockEntity.setServices(this.getUserCache(), this.getSessionService(), this);
         UserCache.setUseRemote(this.isOnlineMode());
         LOGGER.info("Preparing level \"{}\"", (Object)this.getLevelName());
         this.loadWorld();
@@ -274,7 +270,7 @@ implements DedicatedServer {
 
     @Override
     public SystemDetails addExtraSystemDetails(SystemDetails details) {
-        details.addSection("Is Modded", () -> this.getModdedStatusMessage().orElse("Unknown (can't tell)"));
+        details.addSection("Is Modded", () -> this.getModStatus().getMessage());
         details.addSection("Type", () -> "Dedicated Server (map_server.txt)");
         return details;
     }
@@ -290,20 +286,12 @@ implements DedicatedServer {
             writer.write(String.format("max-world-size=%d%n", serverPropertiesHandler.maxWorldSize));
             writer.write(String.format("spawn-npcs=%s%n", serverPropertiesHandler.spawnNpcs));
             writer.write(String.format("view-distance=%d%n", serverPropertiesHandler.viewDistance));
+            writer.write(String.format("simulation-distance=%d%n", serverPropertiesHandler.simulationDistance));
             writer.write(String.format("spawn-animals=%s%n", serverPropertiesHandler.spawnAnimals));
-            writer.write(String.format("generate-structures=%s%n", serverPropertiesHandler.method_37371(this.registryManager).shouldGenerateStructures()));
+            writer.write(String.format("generate-structures=%s%n", serverPropertiesHandler.getGeneratorOptions(this.getRegistryManager()).shouldGenerateStructures()));
             writer.write(String.format("use-native=%s%n", serverPropertiesHandler.useNativeTransport));
             writer.write(String.format("rate-limit=%d%n", serverPropertiesHandler.rateLimit));
         }
-    }
-
-    @Override
-    public Optional<String> getModdedStatusMessage() {
-        String string = this.getServerModName();
-        if (!"vanilla".equals(string)) {
-            return Optional.of("Definitely; Server brand changed to '" + string + "'");
-        }
-        return Optional.empty();
     }
 
     @Override
@@ -331,18 +319,6 @@ implements DedicatedServer {
     @Override
     public boolean isNetherAllowed() {
         return this.getProperties().allowNether;
-    }
-
-    @Override
-    public void addSnooperInfo(Snooper snooper) {
-        snooper.addInfo("whitelist_enabled", this.getPlayerManager().isWhitelistEnabled());
-        snooper.addInfo("whitelist_count", this.getPlayerManager().getWhitelistedNames().length);
-        super.addSnooperInfo(snooper);
-    }
-
-    @Override
-    public boolean isSnooperEnabled() {
-        return this.getProperties().snooperEnabled;
     }
 
     public void enqueueCommand(String command, ServerCommandSource commandSource) {
@@ -441,6 +417,11 @@ implements DedicatedServer {
     @Override
     public boolean acceptsStatusQuery() {
         return this.getProperties().enableStatus;
+    }
+
+    @Override
+    public boolean hideOnlinePlayers() {
+        return this.getProperties().hideOnlinePlayers;
     }
 
     @Override
@@ -557,6 +538,7 @@ implements DedicatedServer {
     public void shutdown() {
         super.shutdown();
         Util.shutdownExecutors();
+        SkullBlockEntity.clearServices();
     }
 
     @Override

@@ -279,7 +279,10 @@ implements RangedAttackMob {
         @Override
         public void start() {
             super.start();
-            this.targetId = IllusionerEntity.this.getTarget().getId();
+            LivingEntity livingEntity = IllusionerEntity.this.getTarget();
+            if (livingEntity != null) {
+                this.targetId = livingEntity.getId();
+            }
         }
 
         @Override

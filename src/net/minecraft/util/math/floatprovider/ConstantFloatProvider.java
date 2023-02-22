@@ -22,7 +22,7 @@ import net.minecraft.util.math.floatprovider.FloatProviderType;
 public class ConstantFloatProvider
 extends FloatProvider {
     public static final ConstantFloatProvider ZERO = new ConstantFloatProvider(0.0f);
-    public static final Codec<ConstantFloatProvider> CODEC = Codec.either((Codec)Codec.FLOAT, (Codec)RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("value").forGetter(constantFloatProvider -> Float.valueOf(constantFloatProvider.value))).apply((Applicative)instance, ConstantFloatProvider::new))).xmap(either -> (ConstantFloatProvider)either.map(ConstantFloatProvider::create, constantFloatProvider -> constantFloatProvider), constantFloatProvider -> Either.left((Object)Float.valueOf(constantFloatProvider.value)));
+    public static final Codec<ConstantFloatProvider> CODEC = Codec.either((Codec)Codec.FLOAT, (Codec)RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("value").forGetter(provider -> Float.valueOf(provider.value))).apply((Applicative)instance, ConstantFloatProvider::new))).xmap(either -> (ConstantFloatProvider)either.map(ConstantFloatProvider::create, provider -> provider), provider -> Either.left((Object)Float.valueOf(provider.value)));
     private final float value;
 
     public static ConstantFloatProvider create(float value) {

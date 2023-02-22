@@ -136,9 +136,9 @@ implements SynchronousResourceReloader {
                 matrices.push();
                 MatrixStack.Entry entry = matrices.peek();
                 if (renderMode == ModelTransformation.Mode.GUI) {
-                    entry.getModel().multiply(0.5f);
+                    entry.getPositionMatrix().multiply(0.5f);
                 } else if (renderMode.isFirstPerson()) {
-                    entry.getModel().multiply(0.75f);
+                    entry.getPositionMatrix().multiply(0.75f);
                 }
                 vertexConsumer = bl22 ? ItemRenderer.getDirectCompassGlintConsumer(vertexConsumers, renderLayer, entry) : ItemRenderer.getCompassGlintConsumer(vertexConsumers, renderLayer, entry);
                 matrices.pop();
@@ -158,11 +158,11 @@ implements SynchronousResourceReloader {
     }
 
     public static VertexConsumer getCompassGlintConsumer(VertexConsumerProvider provider, RenderLayer layer, MatrixStack.Entry entry) {
-        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getGlint()), entry.getModel(), entry.getNormal()), provider.getBuffer(layer));
+        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getGlint()), entry.getPositionMatrix(), entry.getNormalMatrix()), provider.getBuffer(layer));
     }
 
     public static VertexConsumer getDirectCompassGlintConsumer(VertexConsumerProvider provider, RenderLayer layer, MatrixStack.Entry entry) {
-        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getDirectGlint()), entry.getModel(), entry.getNormal()), provider.getBuffer(layer));
+        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getDirectGlint()), entry.getPositionMatrix(), entry.getNormalMatrix()), provider.getBuffer(layer));
     }
 
     public static VertexConsumer getItemGlintConsumer(VertexConsumerProvider vertexConsumers, RenderLayer layer, boolean solid, boolean glint) {
@@ -197,7 +197,7 @@ implements SynchronousResourceReloader {
         }
     }
 
-    public BakedModel getHeldItemModel(ItemStack stack, @Nullable World world, @Nullable LivingEntity entity, int seed) {
+    public BakedModel getModel(ItemStack stack, @Nullable World world, @Nullable LivingEntity entity, int seed) {
         BakedModel bakedModel = stack.isOf(Items.TRIDENT) ? this.models.getModelManager().getModel(new ModelIdentifier("minecraft:trident_in_hand#inventory")) : (stack.isOf(Items.SPYGLASS) ? this.models.getModelManager().getModel(new ModelIdentifier("minecraft:spyglass_in_hand#inventory")) : this.models.getModel(stack));
         ClientWorld clientWorld = world instanceof ClientWorld ? (ClientWorld)world : null;
         BakedModel bakedModel2 = bakedModel.getOverrides().apply(bakedModel, stack, clientWorld, entity, seed);
@@ -212,12 +212,12 @@ implements SynchronousResourceReloader {
         if (item.isEmpty()) {
             return;
         }
-        BakedModel bakedModel = this.getHeldItemModel(item, world, entity, seed);
+        BakedModel bakedModel = this.getModel(item, world, entity, seed);
         this.renderItem(item, renderMode, leftHanded, matrices, vertexConsumers, light, overlay, bakedModel);
     }
 
     public void renderGuiItemIcon(ItemStack stack, int x, int y) {
-        this.renderGuiItemModel(stack, x, y, this.getHeldItemModel(stack, null, null, 0));
+        this.renderGuiItemModel(stack, x, y, this.getModel(stack, null, null, 0));
     }
 
     protected void renderGuiItemModel(ItemStack stack, int x, int y, BakedModel model) {
@@ -278,7 +278,7 @@ implements SynchronousResourceReloader {
         if (itemStack.isEmpty()) {
             return;
         }
-        BakedModel bakedModel = this.getHeldItemModel(itemStack, null, entity, seed);
+        BakedModel bakedModel = this.getModel(itemStack, null, entity, seed);
         this.zOffset = bakedModel.hasDepth() ? this.zOffset + 50.0f + (float)depth : this.zOffset + 50.0f;
         try {
             this.renderGuiItemModel(itemStack, x, y, bakedModel);
@@ -310,7 +310,7 @@ implements SynchronousResourceReloader {
             String string = countLabel == null ? String.valueOf(stack.getCount()) : countLabel;
             matrixStack.translate(0.0, 0.0, this.zOffset + 200.0f);
             VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-            renderer.draw(string, (float)(x + 19 - 2 - renderer.getWidth(string)), (float)(y + 6 + 3), 0xFFFFFF, true, matrixStack.peek().getModel(), (VertexConsumerProvider)immediate, false, 0, 0xF000F0);
+            renderer.draw(string, (float)(x + 19 - 2 - renderer.getWidth(string)), (float)(y + 6 + 3), 0xFFFFFF, true, matrixStack.peek().getPositionMatrix(), (VertexConsumerProvider)immediate, false, 0, 0xF000F0);
             immediate.draw();
         }
         if (stack.isItemBarVisible()) {

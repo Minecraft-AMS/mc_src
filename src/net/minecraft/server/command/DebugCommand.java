@@ -8,8 +8,8 @@
  *  com.mojang.brigadier.context.CommandContext
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.brigadier.exceptions.SimpleCommandExceptionType
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.command;
 
@@ -19,6 +19,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -47,11 +48,10 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiler.ProfileResult;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class DebugCommand {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final SimpleCommandExceptionType NOT_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.debug.notRunning"));
     private static final SimpleCommandExceptionType ALREADY_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.debug.alreadyRunning"));
 
@@ -75,7 +75,7 @@ public class DebugCommand {
             throw NOT_RUNNING_EXCEPTION.create();
         }
         ProfileResult profileResult = minecraftServer.stopDebug();
-        double d = (double)profileResult.getTimeSpan() / (double)TimeHelper.SECOND_IN_MILLIS;
+        double d = (double)profileResult.getTimeSpan() / (double)TimeHelper.SECOND_IN_NANOS;
         double e = (double)profileResult.getTickSpan() / d;
         source.sendFeedback(new TranslatableText("commands.debug.stopped", String.format(Locale.ROOT, "%.2f", d), profileResult.getTickSpan(), String.format("%.2f", e)), true);
         return (int)e;

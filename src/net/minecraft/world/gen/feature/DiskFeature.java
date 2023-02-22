@@ -30,10 +30,10 @@ extends Feature<DiskFeatureConfig> {
         StructureWorldAccess structureWorldAccess = context.getWorld();
         boolean bl = false;
         int i = blockPos.getY();
-        int j = i + diskFeatureConfig.halfHeight;
-        int k = i - diskFeatureConfig.halfHeight - 1;
-        boolean bl2 = diskFeatureConfig.state.getBlock() instanceof FallingBlock;
-        int l = diskFeatureConfig.radius.get(context.getRandom());
+        int j = i + diskFeatureConfig.halfHeight();
+        int k = i - diskFeatureConfig.halfHeight() - 1;
+        boolean bl2 = diskFeatureConfig.state().getBlock() instanceof FallingBlock;
+        int l = diskFeatureConfig.radius().get(context.getRandom());
         for (int m = blockPos.getX() - l; m <= blockPos.getX() + l; ++m) {
             for (int n = blockPos.getZ() - l; n <= blockPos.getZ() + l; ++n) {
                 int p;
@@ -46,9 +46,9 @@ extends Feature<DiskFeatureConfig> {
                     Block block = blockState.getBlock();
                     boolean bl4 = false;
                     if (q > k) {
-                        for (BlockState blockState2 : diskFeatureConfig.targets) {
+                        for (BlockState blockState2 : diskFeatureConfig.targets()) {
                             if (!blockState2.isOf(block)) continue;
-                            structureWorldAccess.setBlockState(blockPos2, diskFeatureConfig.state, 2);
+                            structureWorldAccess.setBlockState(blockPos2, diskFeatureConfig.state(), 2);
                             this.markBlocksAboveForPostProcessing(structureWorldAccess, blockPos2);
                             bl = true;
                             bl4 = true;
@@ -56,7 +56,7 @@ extends Feature<DiskFeatureConfig> {
                         }
                     }
                     if (bl2 && bl3 && blockState.isAir()) {
-                        BlockState blockState3 = diskFeatureConfig.state.isOf(Blocks.RED_SAND) ? Blocks.RED_SANDSTONE.getDefaultState() : Blocks.SANDSTONE.getDefaultState();
+                        BlockState blockState3 = diskFeatureConfig.state().isOf(Blocks.RED_SAND) ? Blocks.RED_SANDSTONE.getDefaultState() : Blocks.SANDSTONE.getDefaultState();
                         structureWorldAccess.setBlockState(new BlockPos(m, q + 1, n), blockState3, 2);
                     }
                     bl3 = bl4;

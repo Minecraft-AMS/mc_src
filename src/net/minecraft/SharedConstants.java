@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.bridge.game.GameVersion
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  io.netty.util.ResourceLeakDetector
  *  io.netty.util.ResourceLeakDetector$Level
@@ -10,46 +9,46 @@
  */
 package net.minecraft;
 
-import com.mojang.bridge.game.GameVersion;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.netty.util.ResourceLeakDetector;
 import java.time.Duration;
+import net.minecraft.GameVersion;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.command.TranslatableBuiltInExceptions;
+import net.minecraft.util.math.ChunkPos;
 import org.jetbrains.annotations.Nullable;
 
 public class SharedConstants {
     @Deprecated
     public static final boolean IS_DEVELOPMENT_VERSION = false;
     @Deprecated
-    public static final int WORLD_VERSION = 2730;
+    public static final int WORLD_VERSION = 2975;
     @Deprecated
-    public static final String VERSION_NAME = "1.17.1";
+    public static final String CURRENT_SERIES = "main";
     @Deprecated
-    public static final String RELEASE_TARGET = "1.17.1";
+    public static final String VERSION_NAME = "1.18.2";
     @Deprecated
-    public static final int RELEASE_TARGET_PROTOCOL_VERSION = 756;
+    public static final String RELEASE_TARGET = "1.18.2";
     @Deprecated
-    public static final int field_29736 = 40;
-    public static final int SNBT_TOO_OLD_THRESHOLD = 2678;
+    public static final int RELEASE_TARGET_PROTOCOL_VERSION = 758;
+    @Deprecated
+    public static final int field_29736 = 73;
+    public static final int SNBT_TOO_OLD_THRESHOLD = 2965;
     private static final int field_29708 = 30;
+    public static final boolean field_36325 = false;
     @Deprecated
-    public static final int field_29738 = 7;
+    public static final int RESOURCE_PACK_VERSION = 8;
     @Deprecated
-    public static final int field_29739 = 7;
+    public static final int DATA_PACK_VERSION = 9;
     public static final String DATA_VERSION_KEY = "DataVersion";
-    public static final boolean field_33711 = false;
     public static final boolean field_33712 = false;
-    public static final boolean field_29741 = false;
-    public static final boolean field_29742 = false;
-    public static final boolean field_33556 = false;
     public static final boolean field_29743 = false;
     public static final boolean field_29744 = false;
     public static final boolean field_29745 = false;
     public static final boolean field_33851 = false;
-    public static final boolean field_29746 = false;
     public static final boolean field_29747 = false;
-    public static final boolean field_33557 = false;
+    public static final boolean field_35006 = false;
+    public static final boolean field_35563 = false;
     public static final boolean field_29748 = false;
     public static final boolean field_33753 = false;
     public static final boolean field_29749 = false;
@@ -86,18 +85,23 @@ public class SharedConstants {
     public static final boolean field_29699 = false;
     public static final boolean field_29700 = false;
     public static final boolean field_33554 = false;
+    public static final boolean field_34368 = false;
     public static final boolean field_29701 = false;
     public static final boolean field_29710 = false;
+    public static final boolean field_34369 = false;
+    public static final boolean field_34370 = false;
+    public static boolean DEBUG_BIOME_SOURCE = false;
+    public static boolean DEBUG_NOISE = false;
     public static final boolean field_29711 = false;
     public static final boolean field_29712 = false;
     public static final boolean field_29713 = false;
-    public static final boolean field_29714 = false;
     public static final boolean field_29715 = false;
     public static final boolean field_29716 = false;
     public static final boolean field_29717 = false;
     public static final boolean field_29718 = false;
     public static final boolean field_33555 = false;
-    public static final boolean field_33640 = false;
+    public static final boolean field_35438 = false;
+    public static final boolean field_35439 = false;
     public static final int DEFAULT_PORT = 25565;
     public static final boolean field_29720 = false;
     public static final boolean field_29721 = false;
@@ -108,7 +112,7 @@ public class SharedConstants {
     public static final boolean field_29725 = false;
     public static final boolean field_29726 = false;
     public static final boolean field_29727 = false;
-    public static final float field_29728 = 0.15f;
+    public static final boolean field_35652 = false;
     public static final long field_22251 = Duration.ofMillis(300L).toNanos();
     public static boolean useChoiceTypeRegistrations = true;
     public static boolean isDevelopment;
@@ -138,10 +142,10 @@ public class SharedConstants {
         return stringBuilder.toString();
     }
 
-    public static void setGameVersion(GameVersion version) {
-        if (gameVersion == null) {
-            gameVersion = version;
-        } else if (version != gameVersion) {
+    public static void setGameVersion(GameVersion gameVersion) {
+        if (SharedConstants.gameVersion == null) {
+            SharedConstants.gameVersion = gameVersion;
+        } else if (gameVersion != SharedConstants.gameVersion) {
             throw new IllegalStateException("Cannot override the current game version!");
         }
     }
@@ -160,7 +164,16 @@ public class SharedConstants {
     }
 
     public static int getProtocolVersion() {
-        return 756;
+        return 758;
+    }
+
+    public static boolean method_37896(ChunkPos chunkPos) {
+        int i = chunkPos.getStartX();
+        int j = chunkPos.getStartZ();
+        if (DEBUG_BIOME_SOURCE) {
+            return i > 8192 || i < 0 || j > 1024 || j < 0;
+        }
+        return false;
     }
 
     static {

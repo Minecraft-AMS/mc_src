@@ -6,8 +6,6 @@
  */
 package net.minecraft.item;
 
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -23,7 +21,8 @@ import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.biome.Biome;
@@ -91,15 +90,18 @@ extends Item {
             for (int j = 0; j < i / 16; ++j) {
                 if (world.getBlockState(blockPos2 = blockPos2.add(random.nextInt(3) - 1, (random.nextInt(3) - 1) * random.nextInt(3) / 2, random.nextInt(3) - 1)).isFullCube(world, blockPos2)) continue block0;
             }
-            Optional<RegistryKey<Biome>> optional = world.getBiomeKey(blockPos2);
-            if (Objects.equals(optional, Optional.of(BiomeKeys.WARM_OCEAN)) || Objects.equals(optional, Optional.of(BiomeKeys.DEEP_WARM_OCEAN))) {
+            RegistryEntry<Biome> registryEntry = world.getBiome(blockPos2);
+            if (registryEntry.matchesKey(BiomeKeys.WARM_OCEAN)) {
                 if (i == 0 && facing != null && facing.getAxis().isHorizontal()) {
-                    blockState = (BlockState)((Block)BlockTags.WALL_CORALS.getRandom(world.random)).getDefaultState().with(DeadCoralWallFanBlock.FACING, facing);
+                    blockState = Registry.BLOCK.getEntryList(BlockTags.WALL_CORALS).flatMap(blocks -> blocks.getRandom(world.random)).map(blockEntry -> ((Block)blockEntry.value()).getDefaultState()).orElse(blockState);
+                    if (blockState.contains(DeadCoralWallFanBlock.FACING)) {
+                        blockState = (BlockState)blockState.with(DeadCoralWallFanBlock.FACING, facing);
+                    }
                 } else if (random.nextInt(4) == 0) {
-                    blockState = ((Block)BlockTags.UNDERWATER_BONEMEALS.getRandom(random)).getDefaultState();
+                    blockState = Registry.BLOCK.getEntryList(BlockTags.UNDERWATER_BONEMEALS).flatMap(blocks -> blocks.getRandom(world.random)).map(blockEntry -> ((Block)blockEntry.value()).getDefaultState()).orElse(blockState);
                 }
             }
-            if (blockState.isIn(BlockTags.WALL_CORALS)) {
+            if (blockState.isIn(BlockTags.WALL_CORALS, state -> state.contains(DeadCoralWallFanBlock.FACING))) {
                 for (int k = 0; !blockState.canPlaceAt(world, blockPos2) && k < 4; ++k) {
                     blockState = (BlockState)blockState.with(DeadCoralWallFanBlock.FACING, Direction.Type.HORIZONTAL.random(random));
                 }

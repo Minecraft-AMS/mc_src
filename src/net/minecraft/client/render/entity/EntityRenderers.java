@@ -5,15 +5,16 @@
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.render.entity;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -121,12 +122,11 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.passive.GlowSquidEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class EntityRenderers {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final String DEFAULT = "default";
     private static final Map<EntityType<?>, EntityRendererFactory<?>> RENDERER_FACTORIES = Maps.newHashMap();
     private static final Map<String, EntityRendererFactory<AbstractClientPlayerEntity>> PLAYER_RENDERER_FACTORIES = ImmutableMap.of((Object)"default", context -> new PlayerEntityRenderer(context, false), (Object)"slim", context -> new PlayerEntityRenderer(context, true));
@@ -137,9 +137,9 @@ public class EntityRenderers {
 
     public static Map<EntityType<?>, EntityRenderer<?>> reloadEntityRenderers(EntityRendererFactory.Context ctx) {
         ImmutableMap.Builder builder = ImmutableMap.builder();
-        RENDERER_FACTORIES.forEach((entityType, entityRendererFactory) -> {
+        RENDERER_FACTORIES.forEach((entityType, factory) -> {
             try {
-                builder.put(entityType, entityRendererFactory.create(ctx));
+                builder.put(entityType, factory.create(ctx));
             }
             catch (Exception exception) {
                 throw new IllegalArgumentException("Failed to create model for " + Registry.ENTITY_TYPE.getId((EntityType<?>)entityType), exception);
@@ -150,12 +150,12 @@ public class EntityRenderers {
 
     public static Map<String, EntityRenderer<? extends PlayerEntity>> reloadPlayerRenderers(EntityRendererFactory.Context ctx) {
         ImmutableMap.Builder builder = ImmutableMap.builder();
-        PLAYER_RENDERER_FACTORIES.forEach((string, entityRendererFactory) -> {
+        PLAYER_RENDERER_FACTORIES.forEach((type, factory) -> {
             try {
-                builder.put(string, entityRendererFactory.create(ctx));
+                builder.put(type, factory.create(ctx));
             }
             catch (Exception exception) {
-                throw new IllegalArgumentException("Failed to create player model for " + string, exception);
+                throw new IllegalArgumentException("Failed to create player model for " + type, exception);
             }
         });
         return builder.build();

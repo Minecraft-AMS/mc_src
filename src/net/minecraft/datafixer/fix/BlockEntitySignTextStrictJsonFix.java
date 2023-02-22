@@ -82,14 +82,14 @@ extends ChoiceFix {
                     text = LiteralText.EMPTY;
                 }
             }
-            catch (JsonParseException jsonParseException) {
+            catch (Exception exception) {
                 // empty catch block
             }
             if (text == null) {
                 try {
                     text = Text.Serializer.fromJson(string);
                 }
-                catch (JsonParseException jsonParseException) {
+                catch (Exception exception) {
                     // empty catch block
                 }
             }
@@ -97,7 +97,7 @@ extends ChoiceFix {
                 try {
                     text = Text.Serializer.fromLenientJson(string);
                 }
-                catch (JsonParseException jsonParseException) {
+                catch (Exception exception) {
                     // empty catch block
                 }
             }

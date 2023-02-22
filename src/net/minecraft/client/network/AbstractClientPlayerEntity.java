@@ -26,8 +26,8 @@ import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
@@ -46,6 +46,7 @@ extends PlayerEntity {
     public static final int field_32663 = 8;
     public static final int field_32664 = 64;
     public static final int field_32665 = 64;
+    @Nullable
     private PlayerListEntry cachedScoreboardEntry;
     public float elytraPitch;
     public float elytraYaw;
@@ -111,13 +112,13 @@ extends PlayerEntity {
         TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
         AbstractTexture abstractTexture = textureManager.getOrDefault(id, MissingSprite.getMissingSpriteTexture());
         if (abstractTexture == MissingSprite.getMissingSpriteTexture()) {
-            abstractTexture = new PlayerSkinTexture(null, String.format(SKIN_URL, ChatUtil.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), true, null);
+            abstractTexture = new PlayerSkinTexture(null, String.format(SKIN_URL, StringHelper.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), true, null);
             textureManager.registerTexture(id, abstractTexture);
         }
     }
 
     public static Identifier getSkinId(String playerName) {
-        return new Identifier("skins/" + Hashing.sha1().hashUnencodedChars((CharSequence)ChatUtil.stripTextFormat(playerName)));
+        return new Identifier("skins/" + Hashing.sha1().hashUnencodedChars((CharSequence)StringHelper.stripTextFormat(playerName)));
     }
 
     public String getModel() {
@@ -125,13 +126,12 @@ extends PlayerEntity {
         return playerListEntry == null ? DefaultSkinHelper.getModel(this.getUuid()) : playerListEntry.getModel();
     }
 
-    public float getSpeed() {
+    public float getFovMultiplier() {
         float f = 1.0f;
         if (this.getAbilities().flying) {
             f *= 1.1f;
         }
-        f = (float)((double)f * ((this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) / (double)this.getAbilities().getWalkSpeed() + 1.0) / 2.0));
-        if (this.getAbilities().getWalkSpeed() == 0.0f || Float.isNaN(f) || Float.isInfinite(f)) {
+        if (this.getAbilities().getWalkSpeed() == 0.0f || Float.isNaN(f *= ((float)this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) / this.getAbilities().getWalkSpeed() + 1.0f) / 2.0f) || Float.isInfinite(f)) {
             f = 1.0f;
         }
         ItemStack itemStack = this.getActiveItem();

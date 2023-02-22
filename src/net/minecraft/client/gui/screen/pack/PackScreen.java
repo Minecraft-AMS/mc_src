@@ -4,17 +4,18 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.google.common.hash.Hashing
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.mutable.MutableBoolean
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.pack;
 
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hashing;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -57,14 +58,13 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class PackScreen
 extends Screen {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_32395 = 200;
     private static final Text DROP_INFO = new TranslatableText("pack.dropInfo").formatted(Formatting.GRAY);
     static final Text FOLDER_INFO = new TranslatableText("pack.folderInfo");
@@ -90,7 +90,7 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.organizer.apply();
         this.client.setScreen(this.parent);
         this.closeDirectoryWatcher();
@@ -110,7 +110,7 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 48, 150, 20, ScreenTexts.DONE, button -> this.onClose()));
+        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 48, 150, 20, ScreenTexts.DONE, button -> this.close()));
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 48, 150, 20, new TranslatableText("pack.openFolder"), button -> Util.getOperatingSystem().open(this.file), new ButtonWidget.TooltipSupplier(){
 
             @Override
@@ -187,7 +187,7 @@ extends Screen {
                         Util.relativeCopy(src.getParent(), destPath, toCopy);
                     }
                     catch (IOException iOException) {
-                        LOGGER.warn("Failed to copy datapack file  from {} to {}", toCopy, (Object)destPath, (Object)iOException);
+                        LOGGER.warn("Failed to copy datapack file  from {} to {}", new Object[]{toCopy, destPath, iOException});
                         mutableBoolean.setTrue();
                     }
                 });

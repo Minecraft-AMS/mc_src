@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.longs.LongArrayList
  *  it.unimi.dsi.fastutil.longs.LongList
  *  it.unimi.dsi.fastutil.objects.Object2LongMap
@@ -11,15 +12,14 @@
  *  it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
  *  it.unimi.dsi.fastutil.objects.ObjectArraySet
  *  org.apache.commons.lang3.tuple.Pair
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- *  org.apache.logging.log4j.util.Supplier
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.profiler;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiler.ProfileLocationInfo;
 import net.minecraft.util.profiler.ProfileResult;
@@ -39,15 +40,13 @@ import net.minecraft.util.profiler.ProfileResultImpl;
 import net.minecraft.util.profiler.ReadableProfiler;
 import net.minecraft.util.profiler.SampleType;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.util.Supplier;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ProfilerSystem
 implements ReadableProfiler {
     private static final long TIMEOUT_NANOSECONDS = Duration.ofMillis(100L).toNanos();
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final List<String> path = Lists.newArrayList();
     private final LongList timeList = new LongArrayList();
     private final Map<String, LocatedInfo> locationInfos = Maps.newHashMap();
@@ -91,7 +90,7 @@ implements ReadableProfiler {
         this.pop();
         this.tickStarted = false;
         if (!this.fullPath.isEmpty()) {
-            LOGGER.error("Profiler tick ended before path was fully popped (remainder: '{}'). Mismatched push/pop?", new Supplier[]{() -> ProfileResult.getHumanReadableName(this.fullPath)});
+            LOGGER.error("Profiler tick ended before path was fully popped (remainder: '{}'). Mismatched push/pop?", LogUtils.defer(() -> ProfileResult.getHumanReadableName(this.fullPath)));
         }
     }
 
@@ -111,7 +110,7 @@ implements ReadableProfiler {
     }
 
     @Override
-    public void push(java.util.function.Supplier<String> locationGetter) {
+    public void push(Supplier<String> locationGetter) {
         this.push(locationGetter.get());
     }
 
@@ -140,7 +139,7 @@ implements ReadableProfiler {
         locatedInfo.maxTime = Math.max(locatedInfo.maxTime, n);
         locatedInfo.minTime = Math.min(locatedInfo.minTime, n);
         if (this.checkTimeout && n > TIMEOUT_NANOSECONDS) {
-            LOGGER.warn("Something's taking too long! '{}' took aprox {} ms", new Supplier[]{() -> ProfileResult.getHumanReadableName(this.fullPath), () -> (double)n / 1000000.0});
+            LOGGER.warn("Something's taking too long! '{}' took aprox {} ms", LogUtils.defer(() -> ProfileResult.getHumanReadableName(this.fullPath)), LogUtils.defer(() -> (double)n / 1000000.0));
         }
         this.fullPath = this.path.isEmpty() ? "" : this.path.get(this.path.size() - 1);
         this.currentInfo = null;
@@ -153,7 +152,7 @@ implements ReadableProfiler {
     }
 
     @Override
-    public void swap(java.util.function.Supplier<String> locationGetter) {
+    public void swap(Supplier<String> locationGetter) {
         this.pop();
         this.push(locationGetter);
     }
@@ -166,13 +165,13 @@ implements ReadableProfiler {
     }
 
     @Override
-    public void visit(String marker) {
-        this.getCurrentInfo().counts.addTo((Object)marker, 1L);
+    public void visit(String marker, int i) {
+        this.getCurrentInfo().counts.addTo((Object)marker, (long)i);
     }
 
     @Override
-    public void visit(java.util.function.Supplier<String> markerGetter) {
-        this.getCurrentInfo().counts.addTo((Object)markerGetter.get(), 1L);
+    public void visit(Supplier<String> markerGetter, int i) {
+        this.getCurrentInfo().counts.addTo((Object)markerGetter.get(), (long)i);
     }
 
     @Override

@@ -24,6 +24,8 @@ import com.google.gson.JsonSyntaxException;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import net.minecraft.block.entity.BannerPattern;
+import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
@@ -41,16 +43,19 @@ extends ConditionalLootFunction {
     final List<Pair<BannerPattern, DyeColor>> patterns;
     final boolean append;
 
-    SetBannerPatternFunction(LootCondition[] lootConditions, List<Pair<BannerPattern, DyeColor>> list, boolean bl) {
-        super(lootConditions);
-        this.patterns = list;
-        this.append = bl;
+    SetBannerPatternFunction(LootCondition[] conditions, List<Pair<BannerPattern, DyeColor>> patterns, boolean append) {
+        super(conditions);
+        this.patterns = patterns;
+        this.append = append;
     }
 
     @Override
     protected ItemStack process(ItemStack stack, LootContext context) {
         NbtList nbtList2;
-        NbtCompound nbtCompound = stack.getOrCreateSubNbt("BlockEntityTag");
+        NbtCompound nbtCompound = BlockItem.getBlockEntityNbt(stack);
+        if (nbtCompound == null) {
+            nbtCompound = new NbtCompound();
+        }
         BannerPattern.Patterns patterns = new BannerPattern.Patterns();
         this.patterns.forEach(patterns::add);
         NbtList nbtList = patterns.toNbt();
@@ -61,6 +66,7 @@ extends ConditionalLootFunction {
             nbtList2 = nbtList;
         }
         nbtCompound.put("Patterns", nbtList2);
+        BlockItem.setBlockEntityNbt(stack, BlockEntityType.BANNER, nbtCompound);
         return stack;
     }
 
@@ -69,8 +75,8 @@ extends ConditionalLootFunction {
         return LootFunctionTypes.SET_BANNER_PATTERN;
     }
 
-    public static Builder method_35531(boolean bl) {
-        return new Builder(bl);
+    public static Builder builder(boolean append) {
+        return new Builder(append);
     }
 
     public static class Builder
@@ -78,8 +84,8 @@ extends ConditionalLootFunction {
         private final ImmutableList.Builder<Pair<BannerPattern, DyeColor>> patterns = ImmutableList.builder();
         private final boolean append;
 
-        Builder(boolean bl) {
-            this.append = bl;
+        Builder(boolean append) {
+            this.append = append;
         }
 
         @Override

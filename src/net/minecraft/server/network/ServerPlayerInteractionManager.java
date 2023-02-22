@@ -2,16 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.network;
 
+import com.mojang.logging.LogUtils;
 import java.util.Objects;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.OperatorBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.item.ItemStack;
@@ -27,15 +29,15 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ServerPlayerInteractionManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     protected ServerWorld world;
     protected final ServerPlayerEntity player;
     private GameMode gameMode = GameMode.DEFAULT;
@@ -52,7 +54,7 @@ public class ServerPlayerInteractionManager {
 
     public ServerPlayerInteractionManager(ServerPlayerEntity player) {
         this.player = player;
-        this.world = player.getServerWorld();
+        this.world = player.getWorld();
     }
 
     public boolean changeGameMode(GameMode gameMode) {
@@ -131,7 +133,8 @@ public class ServerPlayerInteractionManager {
         double d = this.player.getX() - ((double)pos.getX() + 0.5);
         double g = d * d + (e = this.player.getY() - ((double)pos.getY() + 0.5) + 1.5) * e + (f = this.player.getZ() - ((double)pos.getZ() + 0.5)) * f;
         if (g > 36.0) {
-            this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, false, "too far"));
+            BlockState blockState = this.player.world.getServer() != null && this.player.getChunkPos().getChebyshevDistance(new ChunkPos(pos)) < this.player.world.getServer().getPlayerManager().getViewDistance() ? this.world.getBlockState(pos) : Blocks.AIR.getDefaultState();
+            this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, blockState, action, false, "too far"));
             return;
         }
         if (pos.getY() >= worldHeight) {
@@ -153,12 +156,12 @@ public class ServerPlayerInteractionManager {
             }
             this.startMiningTime = this.tickCounter;
             float h = 1.0f;
-            BlockState blockState = this.world.getBlockState(pos);
-            if (!blockState.isAir()) {
-                blockState.onBlockBreakStart(this.world, pos, this.player);
-                h = blockState.calcBlockBreakingDelta(this.player, this.player.world, pos);
+            BlockState blockState2 = this.world.getBlockState(pos);
+            if (!blockState2.isAir()) {
+                blockState2.onBlockBreakStart(this.world, pos, this.player);
+                h = blockState2.calcBlockBreakingDelta(this.player, this.player.world, pos);
             }
-            if (!blockState.isAir() && h >= 1.0f) {
+            if (!blockState2.isAir() && h >= 1.0f) {
                 this.finishMining(pos, action, "insta mine");
             } else {
                 if (this.mining) {
@@ -174,9 +177,9 @@ public class ServerPlayerInteractionManager {
         } else if (action == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) {
             if (pos.equals(this.miningPos)) {
                 int j = this.tickCounter - this.startMiningTime;
-                BlockState blockState = this.world.getBlockState(pos);
-                if (!blockState.isAir()) {
-                    float k = blockState.calcBlockBreakingDelta(this.player, this.player.world, pos) * (float)(j + 1);
+                BlockState blockState2 = this.world.getBlockState(pos);
+                if (!blockState2.isAir()) {
+                    float k = blockState2.calcBlockBreakingDelta(this.player, this.player.world, pos) * (float)(j + 1);
                     if (k >= 0.7f) {
                         this.mining = false;
                         this.world.setBlockBreakingInfo(this.player.getId(), pos, -1);

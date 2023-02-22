@@ -4,13 +4,13 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.exception;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsDefaultUncaughtExceptionHandler
@@ -23,8 +23,7 @@ implements Thread.UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(Thread t, Throwable e) {
-        this.logger.error("Caught previously unhandled exception :");
-        this.logger.error((Object)e);
+        this.logger.error("Caught previously unhandled exception", e);
     }
 }
 

@@ -8,13 +8,13 @@
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.render;
 
@@ -26,6 +26,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.io.Closeable;
 import java.io.IOException;
@@ -33,6 +34,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,9 +57,8 @@ import net.minecraft.util.FileNameUtil;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class Shader
@@ -65,7 +66,7 @@ implements GlShader,
 AutoCloseable {
     private static final String CORE_DIRECTORY = "shaders/core/";
     private static final String INCLUDE_DIRECTORY = "shaders/include/";
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final Uniform DEFAULT_UNIFORM = new Uniform();
     private static final boolean field_32780 = true;
     private static Shader activeShader;
@@ -90,6 +91,8 @@ AutoCloseable {
     @Nullable
     public final GlUniform projectionMat;
     @Nullable
+    public final GlUniform viewRotationMat;
+    @Nullable
     public final GlUniform textureMat;
     @Nullable
     public final GlUniform screenSize;
@@ -105,6 +108,8 @@ AutoCloseable {
     public final GlUniform fogEnd;
     @Nullable
     public final GlUniform fogColor;
+    @Nullable
+    public final GlUniform fogShape;
     @Nullable
     public final GlUniform lineWidth;
     @Nullable
@@ -198,6 +203,7 @@ AutoCloseable {
         this.markUniformsDirty();
         this.modelViewMat = this.getUniform("ModelViewMat");
         this.projectionMat = this.getUniform("ProjMat");
+        this.viewRotationMat = this.getUniform("IViewRotMat");
         this.textureMat = this.getUniform("TextureMat");
         this.screenSize = this.getUniform("ScreenSize");
         this.colorModulator = this.getUniform("ColorModulator");
@@ -206,6 +212,7 @@ AutoCloseable {
         this.fogStart = this.getUniform("FogStart");
         this.fogEnd = this.getUniform("FogEnd");
         this.fogColor = this.getUniform("FogColor");
+        this.fogShape = this.getUniform("FogShape");
         this.lineWidth = this.getUniform("LineWidth");
         this.gameTime = this.getUniform("GameTime");
         this.chunkOffset = this.getUniform("ChunkOffset");
@@ -324,7 +331,7 @@ AutoCloseable {
     }
 
     public void unbind() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GlProgramManager.useProgram(0);
         activeShaderId = -1;
         activeShader = null;
@@ -338,7 +345,7 @@ AutoCloseable {
     }
 
     public void bind() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         this.dirty = false;
         activeShader = this;
         this.blendState.enable();
@@ -379,19 +386,19 @@ AutoCloseable {
 
     @Nullable
     public GlUniform getUniform(String name) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         return this.loadedUniforms.get(name);
     }
 
     public Uniform getUniformOrDefault(String name) {
-        RenderSystem.assertThread(RenderSystem::isOnGameThread);
+        RenderSystem.assertOnGameThread();
         GlUniform glUniform = this.getUniform(name);
         return glUniform == null ? DEFAULT_UNIFORM : glUniform;
     }
 
     private void loadReferences() {
         int i;
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         IntArrayList intList = new IntArrayList();
         for (i = 0; i < this.samplerNames.size(); ++i) {
             String string = this.samplerNames.get(i);
@@ -416,7 +423,7 @@ AutoCloseable {
                 continue;
             }
             this.loadedUniformIds.add(l);
-            glUniform.setLoc(l);
+            glUniform.setLocation(l);
             this.loadedUniforms.put(string2, glUniform);
         }
     }
@@ -472,7 +479,7 @@ AutoCloseable {
         } else if (i <= 7) {
             glUniform.setForDataType(fs[0], fs[1], fs[2], fs[3]);
         } else {
-            glUniform.set(fs);
+            glUniform.set(Arrays.copyOfRange(fs, 0, j));
         }
         this.uniforms.add(glUniform);
     }

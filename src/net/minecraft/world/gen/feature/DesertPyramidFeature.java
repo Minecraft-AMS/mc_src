@@ -8,38 +8,29 @@ package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.structure.DesertTempleGenerator;
-import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.StructureStart;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.structure.StructureGeneratorFactory;
+import net.minecraft.structure.StructurePiecesCollector;
+import net.minecraft.structure.StructurePiecesGenerator;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
+import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class DesertPyramidFeature
 extends StructureFeature<DefaultFeatureConfig> {
-    public DesertPyramidFeature(Codec<DefaultFeatureConfig> codec) {
-        super(codec);
+    public DesertPyramidFeature(Codec<DefaultFeatureConfig> configCodec) {
+        super(configCodec, StructureGeneratorFactory.simple(DesertPyramidFeature::canGenerate, DesertPyramidFeature::addPieces));
     }
 
-    @Override
-    public StructureFeature.StructureStartFactory<DefaultFeatureConfig> getStructureStartFactory() {
-        return Start::new;
+    private static <C extends FeatureConfig> boolean canGenerate(StructureGeneratorFactory.Context<C> context) {
+        if (!context.isBiomeValid(Heightmap.Type.WORLD_SURFACE_WG)) {
+            return false;
+        }
+        return context.getMinCornerHeight(21, 21) >= context.chunkGenerator().getSeaLevel();
     }
 
-    public static class Start
-    extends StructureStart<DefaultFeatureConfig> {
-        public Start(StructureFeature<DefaultFeatureConfig> structureFeature, ChunkPos chunkPos, int i, long l) {
-            super(structureFeature, chunkPos, i, l);
-        }
-
-        @Override
-        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, ChunkPos chunkPos, Biome biome, DefaultFeatureConfig defaultFeatureConfig, HeightLimitView heightLimitView) {
-            DesertTempleGenerator desertTempleGenerator = new DesertTempleGenerator(this.random, chunkPos.getStartX(), chunkPos.getStartZ());
-            this.addPiece(desertTempleGenerator);
-        }
+    private static void addPieces(StructurePiecesCollector collector, StructurePiecesGenerator.Context<DefaultFeatureConfig> context) {
+        collector.addPiece(new DesertTempleGenerator(context.random(), context.chunkPos().getStartX(), context.chunkPos().getStartZ()));
     }
 }
 

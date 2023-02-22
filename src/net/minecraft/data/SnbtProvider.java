@@ -3,14 +3,15 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.data;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,15 +36,14 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.util.Util;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class SnbtProvider
 implements DataProvider {
     @Nullable
     private static final Path DEBUG_OUTPUT_DIRECTORY = null;
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final DataGenerator root;
     private final List<Tweaker> write = Lists.newArrayList();
 
@@ -102,12 +102,12 @@ implements DataProvider {
             BufferedReader bufferedReader = Files.newBufferedReader(path);
             try {
                 String string = IOUtils.toString((Reader)bufferedReader);
-                NbtCompound nbtCompound = this.write(name, NbtHelper.method_32260(string));
+                NbtCompound nbtCompound = this.write(name, NbtHelper.fromNbtProviderString(string));
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 NbtIo.writeCompressed(nbtCompound, byteArrayOutputStream);
                 byte[] bs = byteArrayOutputStream.toByteArray();
                 String string2 = SHA1.hashBytes(bs).toString();
-                String string3 = DEBUG_OUTPUT_DIRECTORY != null ? NbtHelper.toPrettyPrintedString(nbtCompound) : null;
+                String string3 = DEBUG_OUTPUT_DIRECTORY != null ? NbtHelper.toNbtProviderString(nbtCompound) : null;
                 compressedData = new CompressedData(name, bs, string3, string2);
                 if (bufferedReader == null) break block8;
             }
@@ -140,7 +140,7 @@ implements DataProvider {
                 NbtProvider.writeTo(path, data.snbtContent);
             }
             catch (IOException iOException) {
-                LOGGER.error("Couldn't write structure SNBT {} at {}", (Object)data.name, (Object)path, (Object)iOException);
+                LOGGER.error("Couldn't write structure SNBT {} at {}", new Object[]{data.name, path, iOException});
             }
         }
         path = root.resolve(data.name + ".nbt");
@@ -154,7 +154,7 @@ implements DataProvider {
             cache.updateSha1(path, data.sha1);
         }
         catch (IOException iOException) {
-            LOGGER.error("Couldn't write structure {} at {}", (Object)data.name, (Object)path, (Object)iOException);
+            LOGGER.error("Couldn't write structure {} at {}", new Object[]{data.name, path, iOException});
         }
     }
 

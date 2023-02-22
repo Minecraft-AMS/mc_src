@@ -2,17 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  io.netty.buffer.ByteBuf
  *  io.netty.buffer.Unpooled
  *  io.netty.channel.ChannelFutureListener
  *  io.netty.channel.ChannelHandlerContext
  *  io.netty.channel.ChannelInboundHandlerAdapter
  *  io.netty.util.concurrent.GenericFutureListener
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.network;
 
+import com.mojang.logging.LogUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -23,12 +24,11 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerNetworkIo;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class LegacyQueryHandler
 extends ChannelInboundHandlerAdapter {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int field_29771 = 127;
     private final ServerNetworkIo networkIo;
 

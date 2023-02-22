@@ -27,6 +27,7 @@ public class Path {
     private final List<PathNode> nodes;
     private PathNode[] debugNodes = new PathNode[0];
     private PathNode[] debugSecondNodes = new PathNode[0];
+    @Nullable
     private Set<TargetPathNode> debugTargetNodes;
     private int currentNodeIndex;
     private final BlockPos target;
@@ -82,8 +83,8 @@ public class Path {
         return this.currentNodeIndex;
     }
 
-    public void setCurrentNodeIndex(int index) {
-        this.currentNodeIndex = index;
+    public void setCurrentNodeIndex(int nodeIndex) {
+        this.currentNodeIndex = nodeIndex;
     }
 
     public Vec3d getNodePosition(Entity entity, int index) {

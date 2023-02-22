@@ -6,15 +6,16 @@
  *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Sets
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.resource;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -51,13 +52,13 @@ import net.minecraft.resource.metadata.PackResourceMetadata;
 import net.minecraft.resource.metadata.ResourceMetadataReader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class DefaultResourcePack
 implements ResourcePack,
 ResourceFactory {
+    @Nullable
     public static Path resourcePath;
     private static final Logger LOGGER;
     public static Class<?> resourceClass;
@@ -250,7 +251,7 @@ ResourceFactory {
     }
 
     @Override
-    public Resource getResource(final Identifier id) throws IOException {
+    public Resource getResource(final Identifier identifier) throws IOException {
         return new Resource(){
             @Nullable
             InputStream stream;
@@ -264,13 +265,13 @@ ResourceFactory {
 
             @Override
             public Identifier getId() {
-                return id;
+                return identifier;
             }
 
             @Override
             public InputStream getInputStream() {
                 try {
-                    this.stream = DefaultResourcePack.this.open(ResourceType.CLIENT_RESOURCES, id);
+                    this.stream = DefaultResourcePack.this.open(ResourceType.CLIENT_RESOURCES, identifier);
                 }
                 catch (IOException iOException) {
                     throw new UncheckedIOException("Could not get client resource from vanilla pack", iOException);
@@ -291,13 +292,13 @@ ResourceFactory {
 
             @Override
             public String getResourcePackName() {
-                return id.toString();
+                return identifier.toString();
             }
         };
     }
 
     static {
-        LOGGER = LogManager.getLogger();
+        LOGGER = LogUtils.getLogger();
         TYPE_TO_FILE_SYSTEM = (Map)Util.make(() -> {
             Class<DefaultResourcePack> clazz = DefaultResourcePack.class;
             synchronized (DefaultResourcePack.class) {

@@ -6,6 +6,7 @@
  */
 package net.minecraft.entity.passive;
 
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
@@ -14,9 +15,11 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.AttackWithOwnerGoal;
+import net.minecraft.entity.ai.goal.EscapeDangerGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
@@ -31,6 +34,7 @@ import net.minecraft.entity.ai.goal.UniversalAngerGoal;
 import net.minecraft.entity.ai.goal.UntamedActiveTargetGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
 import net.minecraft.entity.ai.goal.WolfBegGoal;
+import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
@@ -59,6 +63,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
@@ -68,6 +73,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -90,16 +96,20 @@ implements Angerable {
     private float shakeProgress;
     private float lastShakeProgress;
     private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
-    private UUID targetUuid;
+    @Nullable
+    private UUID angryAt;
 
     public WolfEntity(EntityType<? extends WolfEntity> entityType, World world) {
         super((EntityType<? extends TameableEntity>)entityType, world);
         this.setTamed(false);
+        this.setPathfindingPenalty(PathNodeType.POWDER_SNOW, -1.0f);
+        this.setPathfindingPenalty(PathNodeType.DANGER_POWDER_SNOW, -1.0f);
     }
 
     @Override
     protected void initGoals() {
         this.goalSelector.add(1, new SwimGoal(this));
+        this.goalSelector.add(1, new WolfEscapeDangerGoal(1.5));
         this.goalSelector.add(2, new SitGoal(this));
         this.goalSelector.add(3, new AvoidLlamaGoal<LlamaEntity>(this, LlamaEntity.class, 24.0f, 1.5, 1.5));
         this.goalSelector.add(4, new PounceAtTargetGoal(this, 0.4f));
@@ -279,11 +289,11 @@ implements Angerable {
     }
 
     @Override
-    public int getLookPitchSpeed() {
+    public int getMaxLookPitchChange() {
         if (this.isInSittingPose()) {
             return 20;
         }
-        return super.getLookPitchSpeed();
+        return super.getMaxLookPitchChange();
     }
 
     @Override
@@ -292,7 +302,9 @@ implements Angerable {
             return false;
         }
         Entity entity = source.getAttacker();
-        this.setSitting(false);
+        if (!this.world.isClient) {
+            this.setSitting(false);
+        }
         if (entity != null && !(entity instanceof PlayerEntity) && !(entity instanceof PersistentProjectileEntity)) {
             amount = (amount + 1.0f) / 2.0f;
         }
@@ -414,8 +426,8 @@ implements Angerable {
     }
 
     @Override
-    public void setAngerTime(int ticks) {
-        this.dataTracker.set(ANGER_TIME, ticks);
+    public void setAngerTime(int angerTime) {
+        this.dataTracker.set(ANGER_TIME, angerTime);
     }
 
     @Override
@@ -426,12 +438,12 @@ implements Angerable {
     @Override
     @Nullable
     public UUID getAngryAt() {
-        return this.targetUuid;
+        return this.angryAt;
     }
 
     @Override
-    public void setAngryAt(@Nullable UUID uuid) {
-        this.targetUuid = uuid;
+    public void setAngryAt(@Nullable UUID angryAt) {
+        this.angryAt = angryAt;
     }
 
     public DyeColor getCollarColor() {
@@ -510,9 +522,25 @@ implements Angerable {
         return new Vec3d(0.0, 0.6f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 
+    public static boolean canSpawn(EntityType<WolfEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return world.getBlockState(pos.down()).isIn(BlockTags.WOLVES_SPAWNABLE_ON) && WolfEntity.isLightLevelValidForNaturalSpawn(world, pos);
+    }
+
     @Override
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
+    }
+
+    class WolfEscapeDangerGoal
+    extends EscapeDangerGoal {
+        public WolfEscapeDangerGoal(double speed) {
+            super(WolfEntity.this, speed);
+        }
+
+        @Override
+        protected boolean isInDanger() {
+            return this.mob.shouldEscapePowderSnow() || this.mob.isOnFire();
+        }
     }
 
     class AvoidLlamaGoal<T extends LivingEntity>

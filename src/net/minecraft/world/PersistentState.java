@@ -2,21 +2,21 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.world;
 
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.IOException;
 import net.minecraft.SharedConstants;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public abstract class PersistentState {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private boolean dirty;
 
     public abstract NbtCompound writeNbt(NbtCompound var1);

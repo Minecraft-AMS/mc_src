@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonParseException
  *  com.mojang.brigadier.ImmutableStringReader
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.arguments.ArgumentType
@@ -12,7 +11,6 @@
  */
 package net.minecraft.command.argument;
 
-import com.google.gson.JsonParseException;
 import com.mojang.brigadier.ImmutableStringReader;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -50,8 +48,8 @@ implements ArgumentType<Text> {
             }
             return text;
         }
-        catch (JsonParseException jsonParseException) {
-            String string = jsonParseException.getCause() != null ? jsonParseException.getCause().getMessage() : jsonParseException.getMessage();
+        catch (Exception exception) {
+            String string = exception.getCause() != null ? exception.getCause().getMessage() : exception.getMessage();
             throw INVALID_COMPONENT_EXCEPTION.createWithContext((ImmutableStringReader)stringReader, (Object)string);
         }
     }

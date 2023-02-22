@@ -1,23 +1,25 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
-import java.util.stream.Stream;
-import net.minecraft.structure.StructureStart;
+import java.util.function.Supplier;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.ServerWorldAccess;
-import net.minecraft.world.gen.feature.StructureFeature;
+import org.jetbrains.annotations.Nullable;
 
 public interface StructureWorldAccess
 extends ServerWorldAccess {
     public long getSeed();
 
-    public Stream<? extends StructureStart<?>> getStructures(ChunkSectionPos var1, StructureFeature<?> var2);
-
     default public boolean isValidForSetBlock(BlockPos pos) {
         return true;
+    }
+
+    default public void setCurrentlyGeneratingStructureName(@Nullable Supplier<String> structureName) {
     }
 }
 

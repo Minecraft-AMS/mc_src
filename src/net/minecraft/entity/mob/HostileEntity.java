@@ -6,6 +6,7 @@ package net.minecraft.entity.mob;
 import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -81,11 +82,8 @@ implements Monster {
     }
 
     @Override
-    protected SoundEvent getFallSound(int distance) {
-        if (distance > 4) {
-            return SoundEvents.ENTITY_HOSTILE_BIG_FALL;
-        }
-        return SoundEvents.ENTITY_HOSTILE_SMALL_FALL;
+    public LivingEntity.FallSounds getFallSounds() {
+        return new LivingEntity.FallSounds(SoundEvents.ENTITY_HOSTILE_SMALL_FALL, SoundEvents.ENTITY_HOSTILE_BIG_FALL);
     }
 
     @Override
@@ -95,6 +93,9 @@ implements Monster {
 
     public static boolean isSpawnDark(ServerWorldAccess world, BlockPos pos, Random random) {
         if (world.getLightLevel(LightType.SKY, pos) > random.nextInt(32)) {
+            return false;
+        }
+        if (world.getLightLevel(LightType.BLOCK, pos) > 0) {
             return false;
         }
         int i = world.toServerWorld().isThundering() ? world.getLightLevel(pos, 10) : world.getLightLevel(pos);

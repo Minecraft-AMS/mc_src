@@ -1,10 +1,15 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.google.common.base.Preconditions
  */
 package net.minecraft.block;
 
+import com.google.common.base.Preconditions;
+
 public class MapColor {
-    public static final MapColor[] COLORS = new MapColor[64];
+    private static final MapColor[] COLORS = new MapColor[64];
     public static final MapColor CLEAR = new MapColor(0, 0);
     public static final MapColor PALE_GREEN = new MapColor(1, 8368696);
     public static final MapColor PALE_YELLOW = new MapColor(2, 16247203);
@@ -79,24 +84,77 @@ public class MapColor {
         MapColor.COLORS[id] = this;
     }
 
-    public int getRenderColor(int shade) {
-        int i = 220;
-        if (shade == 3) {
-            i = 135;
+    public int getRenderColor(Brightness brightness) {
+        if (this == CLEAR) {
+            return 0;
         }
-        if (shade == 2) {
-            i = 255;
-        }
-        if (shade == 1) {
-            i = 220;
-        }
-        if (shade == 0) {
-            i = 180;
-        }
+        int i = brightness.brightness;
         int j = (this.color >> 16 & 0xFF) * i / 255;
         int k = (this.color >> 8 & 0xFF) * i / 255;
         int l = (this.color & 0xFF) * i / 255;
         return 0xFF000000 | l << 16 | k << 8 | j;
+    }
+
+    public static MapColor get(int id) {
+        Preconditions.checkPositionIndex((int)id, (int)COLORS.length, (String)"material id");
+        return MapColor.getUnchecked(id);
+    }
+
+    private static MapColor getUnchecked(int id) {
+        MapColor mapColor = COLORS[id];
+        return mapColor != null ? mapColor : CLEAR;
+    }
+
+    public static int getRenderColor(int colorByte) {
+        int i = colorByte & 0xFF;
+        return MapColor.getUnchecked(i >> 2).getRenderColor(Brightness.get(i & 3));
+    }
+
+    public byte getRenderColorByte(Brightness brightness) {
+        return (byte)(this.id << 2 | brightness.id & 3);
+    }
+
+    public static final class Brightness
+    extends Enum<Brightness> {
+        public static final /* enum */ Brightness LOW = new Brightness(0, 180);
+        public static final /* enum */ Brightness NORMAL = new Brightness(1, 220);
+        public static final /* enum */ Brightness HIGH = new Brightness(2, 255);
+        public static final /* enum */ Brightness LOWEST = new Brightness(3, 135);
+        private static final Brightness[] VALUES;
+        public final int id;
+        public final int brightness;
+        private static final /* synthetic */ Brightness[] field_34766;
+
+        public static Brightness[] values() {
+            return (Brightness[])field_34766.clone();
+        }
+
+        public static Brightness valueOf(String string) {
+            return Enum.valueOf(Brightness.class, string);
+        }
+
+        private Brightness(int id, int brightness) {
+            this.id = id;
+            this.brightness = brightness;
+        }
+
+        public static Brightness validateAndGet(int id) {
+            Preconditions.checkPositionIndex((int)id, (int)VALUES.length, (String)"brightness id");
+            return Brightness.get(id);
+        }
+
+        static Brightness get(int id) {
+            return VALUES[id];
+        }
+
+        private static /* synthetic */ Brightness[] method_38483() {
+            return new Brightness[]{LOW, NORMAL, HIGH, LOWEST};
+        }
+
+        static {
+            field_34766 = Brightness.method_38483();
+            VALUES = new Brightness[]{LOW, NORMAL, HIGH, LOWEST};
+        }
     }
 }
 

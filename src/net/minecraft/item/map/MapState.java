@@ -4,16 +4,17 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.item.map;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import java.util.Collection;
@@ -42,13 +43,12 @@ import net.minecraft.world.PersistentState;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.dimension.DimensionType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class MapState
 extends PersistentState {
-    private static final Logger field_25019 = LogManager.getLogger();
+    private static final Logger field_25019 = LogUtils.getLogger();
     private static final int field_31832 = 128;
     private static final int field_31833 = 64;
     public static final int field_31831 = 4;

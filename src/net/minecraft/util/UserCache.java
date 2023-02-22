@@ -16,9 +16,9 @@
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.GameProfileRepository
  *  com.mojang.authlib.ProfileLookupCallback
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.util;
 
@@ -36,6 +36,7 @@ import com.mojang.authlib.Agent;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.ProfileLookupCallback;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -64,12 +65,11 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Util;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class UserCache {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int MAX_SAVED_ENTRIES = 1000;
     private static final int field_29789 = 1;
     private static boolean useRemote;
@@ -195,6 +195,10 @@ public class UserCache {
 
     public void setExecutor(Executor executor) {
         this.executor = executor;
+    }
+
+    public void clearExecutor() {
+        this.executor = null;
     }
 
     private static DateFormat getDateFormat() {

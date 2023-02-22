@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonParseException
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
  *  com.mojang.datafixers.DataFixUtils
@@ -15,7 +14,6 @@
  */
 package net.minecraft.datafixer.fix;
 
-import com.google.gson.JsonParseException;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
@@ -54,14 +52,14 @@ extends DataFix {
                         text = LiteralText.EMPTY;
                     }
                 }
-                catch (JsonParseException jsonParseException) {
+                catch (Exception exception) {
                     // empty catch block
                 }
                 if (text == null) {
                     try {
                         text = Text.Serializer.fromJson(string);
                     }
-                    catch (JsonParseException jsonParseException) {
+                    catch (Exception exception) {
                         // empty catch block
                     }
                 }
@@ -69,7 +67,7 @@ extends DataFix {
                     try {
                         text = Text.Serializer.fromLenientJson(string);
                     }
-                    catch (JsonParseException jsonParseException) {
+                    catch (Exception exception) {
                         // empty catch block
                     }
                 }

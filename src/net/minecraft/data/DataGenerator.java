@@ -4,13 +4,14 @@
  * Could not load the following classes:
  *  com.google.common.base.Stopwatch
  *  com.google.common.collect.Lists
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.data;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -19,11 +20,10 @@ import java.util.concurrent.TimeUnit;
 import net.minecraft.Bootstrap;
 import net.minecraft.data.DataCache;
 import net.minecraft.data.DataProvider;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class DataGenerator {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Collection<Path> inputs;
     private final Path output;
     private final List<DataProvider> providers = Lists.newArrayList();

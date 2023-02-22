@@ -5,12 +5,12 @@
  *  com.google.common.collect.Lists
  *  com.google.common.hash.Hashing
  *  com.google.common.util.concurrent.ThreadFactoryBuilder
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.Validate
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.multiplayer;
 
@@ -18,6 +18,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
@@ -51,14 +52,13 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import org.apache.commons.lang3.Validate;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class MultiplayerServerListWidget
 extends AlwaysSelectedEntryListWidget<Entry> {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     static final ThreadPoolExecutor SERVER_PINGER_THREAD_POOL = new ScheduledThreadPoolExecutor(5, new ThreadFactoryBuilder().setNameFormat("Server Pinger #%d").setDaemon(true).setUncaughtExceptionHandler((Thread.UncaughtExceptionHandler)new UncaughtExceptionLogger(LOGGER)).build());
     static final Identifier UNKNOWN_SERVER_TEXTURE = new Identifier("textures/misc/unknown_server.png");
     static final Identifier SERVER_SELECTION_TEXTURE = new Identifier("textures/gui/server_selection.png");
@@ -94,7 +94,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         Entry entry = (Entry)this.getSelectedOrNull();
-        return entry != null ? entry.keyPressed(keyCode, scanCode, modifiers) : super.keyPressed(keyCode, scanCode, modifiers);
+        return entry != null && entry.keyPressed(keyCode, scanCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -176,6 +176,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         private final MinecraftClient client;
         private final ServerInfo server;
         private final Identifier iconTextureId;
+        @Nullable
         private String iconUri;
         @Nullable
         private NativeImageBackedTexture icon;
@@ -340,7 +341,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                     this.client.getTextureManager().registerTexture(this.iconTextureId, this.icon);
                 }
                 catch (Throwable throwable) {
-                    LOGGER.error("Invalid icon for server {} ({})", (Object)this.server.name, (Object)this.server.address, (Object)throwable);
+                    LOGGER.error("Invalid icon for server {} ({})", new Object[]{this.server.name, this.server.address, throwable});
                     return false;
                 }
             }
@@ -352,6 +353,9 @@ extends AlwaysSelectedEntryListWidget<Entry> {
             if (Screen.hasShiftDown()) {
                 MultiplayerServerListWidget multiplayerServerListWidget = this.screen.serverListWidget;
                 int i = multiplayerServerListWidget.children().indexOf(this);
+                if (i == -1) {
+                    return true;
+                }
                 if (keyCode == 264 && i < this.screen.getServerList().size() - 1 || keyCode == 265 && i > 0) {
                     this.swapEntries(i, keyCode == 264 ? i + 1 : i - 1);
                     return true;

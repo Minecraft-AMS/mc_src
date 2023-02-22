@@ -2,15 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.openal.AL10
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.sound;
 
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,14 +22,13 @@ import net.minecraft.client.sound.AlUtil;
 import net.minecraft.client.sound.AudioStream;
 import net.minecraft.client.sound.StaticSound;
 import net.minecraft.util.math.Vec3d;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.openal.AL10;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class Source {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_31895 = 4;
     public static final int field_31894 = 1;
     private final int pointer;
@@ -100,7 +100,7 @@ public class Source {
         }
     }
 
-    public boolean method_35598() {
+    public boolean isPlaying() {
         return this.getSourceState() == 4114;
     }
 
@@ -147,20 +147,20 @@ public class Source {
         this.stream = stream;
         AudioFormat audioFormat = stream.getFormat();
         this.bufferSize = Source.getBufferSize(audioFormat, 1);
-        this.method_19640(4);
+        this.read(4);
     }
 
     private static int getBufferSize(AudioFormat format, int time) {
         return (int)((float)(time * format.getSampleSizeInBits()) / 8.0f * (float)format.getChannels() * format.getSampleRate());
     }
 
-    private void method_19640(int i2) {
+    private void read(int count) {
         if (this.stream != null) {
             try {
-                for (int j = 0; j < i2; ++j) {
+                for (int i = 0; i < count; ++i) {
                     ByteBuffer byteBuffer = this.stream.getBuffer(this.bufferSize);
                     if (byteBuffer == null) continue;
-                    new StaticSound(byteBuffer, this.stream.getFormat()).takeStreamBufferPointer().ifPresent(i -> AL10.alSourceQueueBuffers((int)this.pointer, (int[])new int[]{i}));
+                    new StaticSound(byteBuffer, this.stream.getFormat()).takeStreamBufferPointer().ifPresent(pointer -> AL10.alSourceQueueBuffers((int)this.pointer, (int[])new int[]{pointer}));
                 }
             }
             catch (IOException iOException) {
@@ -172,7 +172,7 @@ public class Source {
     public void tick() {
         if (this.stream != null) {
             int i = this.removeProcessedBuffers();
-            this.method_19640(i);
+            this.read(i);
         }
     }
 

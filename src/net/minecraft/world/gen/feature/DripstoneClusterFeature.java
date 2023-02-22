@@ -67,7 +67,7 @@ extends Feature<DripstoneClusterFeatureConfig> {
         boolean bl2;
         CaveSurface caveSurface;
         boolean bl;
-        Optional<CaveSurface> optional = CaveSurface.create(world, pos, config.floorToCeilingSearchRange, DripstoneHelper::canGenerate, DripstoneHelper::canReplaceOrLava);
+        Optional<CaveSurface> optional = CaveSurface.create(world, pos, config.floorToCeilingSearchRange, DripstoneHelper::canGenerate, DripstoneHelper::cannotGenerate);
         if (!optional.isPresent()) {
             return;
         }
@@ -98,7 +98,7 @@ extends Feature<DripstoneClusterFeatureConfig> {
         if (optionalInt3.isPresent() && bl3 && !this.isLava(world, pos.withY(optionalInt3.getAsInt()))) {
             m = config.dripstoneBlockLayerThickness.get(random);
             this.placeDripstoneBlocks(world, pos.withY(optionalInt3.getAsInt()), m, Direction.DOWN);
-            j = Math.max(0, l + MathHelper.nextBetween(random, -config.maxStalagmiteStalactiteHeightDiff, config.maxStalagmiteStalactiteHeightDiff));
+            j = optionalInt.isPresent() ? Math.max(0, l + MathHelper.nextBetween(random, -config.maxStalagmiteStalactiteHeightDiff, config.maxStalagmiteStalactiteHeightDiff)) : this.getHeight(random, localX, localZ, density, height, config);
         } else {
             j = 0;
         }
@@ -133,13 +133,16 @@ extends Feature<DripstoneClusterFeatureConfig> {
             return 0;
         }
         int i = Math.abs(localX) + Math.abs(localZ);
-        float f = (float)MathHelper.clampedLerpFromProgress(i, 0.0, config.maxDistanceFromCenterAffectingHeightBias, (double)height / 2.0, 0.0);
+        float f = (float)MathHelper.clampedLerpFromProgress((double)i, 0.0, (double)config.maxDistanceFromCenterAffectingHeightBias, (double)height / 2.0, 0.0);
         return (int)DripstoneClusterFeature.clampedGaussian(random, 0.0f, height, f, config.heightDeviation);
     }
 
     private boolean canWaterSpawn(StructureWorldAccess world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
         if (blockState.isOf(Blocks.WATER) || blockState.isOf(Blocks.DRIPSTONE_BLOCK) || blockState.isOf(Blocks.POINTED_DRIPSTONE)) {
+            return false;
+        }
+        if (world.getBlockState(pos.up()).getFluidState().isIn(FluidTags.WATER)) {
             return false;
         }
         for (Direction direction : Direction.Type.HORIZONTAL) {
@@ -168,7 +171,7 @@ extends Feature<DripstoneClusterFeatureConfig> {
         int i = radiusX - Math.abs(localX);
         int j = radiusZ - Math.abs(localZ);
         int k = Math.min(i, j);
-        return MathHelper.clampedLerpFromProgress(k, 0.0, config.maxDistanceFromCenterAffectingChanceOfDripstoneColumn, config.chanceOfDripstoneColumnAtMaxDistanceFromCenter, 1.0);
+        return MathHelper.clampedLerpFromProgress(k, 0.0f, config.maxDistanceFromCenterAffectingChanceOfDripstoneColumn, config.chanceOfDripstoneColumnAtMaxDistanceFromCenter, 1.0f);
     }
 
     private static float clampedGaussian(Random random, float min, float max, float mean, float deviation) {

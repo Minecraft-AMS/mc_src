@@ -19,7 +19,7 @@ import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
 
 public abstract class TreeDecorator {
-    public static final Codec<TreeDecorator> TYPE_CODEC = Registry.TREE_DECORATOR_TYPE.dispatch(TreeDecorator::getType, TreeDecoratorType::getCodec);
+    public static final Codec<TreeDecorator> TYPE_CODEC = Registry.TREE_DECORATOR_TYPE.getCodec().dispatch(TreeDecorator::getType, TreeDecoratorType::getCodec);
 
     protected abstract TreeDecoratorType<?> getType();
 

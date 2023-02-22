@@ -3,7 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block.entity;
 
@@ -17,6 +16,7 @@ import net.minecraft.block.JigsawBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.PoolStructurePiece;
@@ -35,7 +35,6 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import org.jetbrains.annotations.Nullable;
 
 public class JigsawBlockEntity
 extends BlockEntity {
@@ -74,11 +73,11 @@ extends BlockEntity {
         return this.joint;
     }
 
-    public void setAttachmentType(Identifier value) {
-        this.name = value;
+    public void setName(Identifier name) {
+        this.name = name;
     }
 
-    public void setTargetPool(Identifier target) {
+    public void setTarget(Identifier target) {
         this.target = target;
     }
 
@@ -95,14 +94,13 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.putString(NAME_KEY, this.name.toString());
         nbt.putString(TARGET_KEY, this.target.toString());
         nbt.putString(POOL_KEY, this.pool.toString());
         nbt.putString(FINAL_STATE_KEY, this.finalState);
         nbt.putString(JOINT_KEY, this.joint.asString());
-        return nbt;
     }
 
     @Override
@@ -115,15 +113,13 @@ extends BlockEntity {
         this.joint = Joint.byName(nbt.getString(JOINT_KEY)).orElseGet(() -> JigsawBlock.getFacing(this.getCachedState()).getAxis().isHorizontal() ? Joint.ALIGNED : Joint.ROLLABLE);
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 12, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     public void generate(ServerWorld world, int maxDepth, boolean keepJigsaws) {
@@ -137,10 +133,14 @@ extends BlockEntity {
         structure.saveFromWorld(world, blockPos, new Vec3i(1, 1, 1), false, null);
         SinglePoolElement structurePoolElement = new SinglePoolElement(structure);
         PoolStructurePiece poolStructurePiece = new PoolStructurePiece(structureManager, structurePoolElement, blockPos, 1, BlockRotation.NONE, new BlockBox(blockPos));
-        StructurePoolBasedGenerator.method_27230(world.getRegistryManager(), poolStructurePiece, maxDepth, PoolStructurePiece::new, chunkGenerator, structureManager, list, random, world);
+        StructurePoolBasedGenerator.generate(world.getRegistryManager(), poolStructurePiece, maxDepth, PoolStructurePiece::new, chunkGenerator, structureManager, list, random, world);
         for (PoolStructurePiece poolStructurePiece2 : list) {
             poolStructurePiece2.generate((StructureWorldAccess)world, structureAccessor, chunkGenerator, random, BlockBox.infinite(), blockPos, keepJigsaws);
         }
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 
     public static final class Joint

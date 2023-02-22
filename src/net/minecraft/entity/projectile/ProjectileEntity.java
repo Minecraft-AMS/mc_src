@@ -121,13 +121,13 @@ extends Entity {
         this.prevPitch = this.getPitch();
     }
 
-    public void setProperties(Entity user, float pitch, float yaw, float roll, float modifierZ, float modifierXYZ) {
+    public void setVelocity(Entity shooter, float pitch, float yaw, float roll, float speed, float divergence) {
         float f = -MathHelper.sin(yaw * ((float)Math.PI / 180)) * MathHelper.cos(pitch * ((float)Math.PI / 180));
         float g = -MathHelper.sin((pitch + roll) * ((float)Math.PI / 180));
         float h = MathHelper.cos(yaw * ((float)Math.PI / 180)) * MathHelper.cos(pitch * ((float)Math.PI / 180));
-        this.setVelocity(f, g, h, modifierZ, modifierXYZ);
-        Vec3d vec3d = user.getVelocity();
-        this.setVelocity(this.getVelocity().add(vec3d.x, user.isOnGround() ? 0.0 : vec3d.y, vec3d.z));
+        this.setVelocity(f, g, h, speed, divergence);
+        Vec3d vec3d = shooter.getVelocity();
+        this.setVelocity(this.getVelocity().add(vec3d.x, shooter.isOnGround() ? 0.0 : vec3d.y, vec3d.z));
     }
 
     protected void onCollision(HitResult hitResult) {

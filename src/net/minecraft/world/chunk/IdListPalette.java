@@ -3,45 +3,52 @@
  */
 package net.minecraft.world.chunk;
 
+import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.collection.IdList;
+import net.minecraft.util.collection.IndexedIterable;
+import net.minecraft.world.chunk.EntryMissingException;
 import net.minecraft.world.chunk.Palette;
+import net.minecraft.world.chunk.PaletteResizeListener;
 
 public class IdListPalette<T>
 implements Palette<T> {
-    private final IdList<T> idList;
-    private final T defaultValue;
+    private final IndexedIterable<T> idList;
 
-    public IdListPalette(IdList<T> idList, T defaultValue) {
+    public IdListPalette(IndexedIterable<T> idList) {
         this.idList = idList;
-        this.defaultValue = defaultValue;
+    }
+
+    public static <A> Palette<A> create(int bits, IndexedIterable<A> idList, PaletteResizeListener<A> listener, List<A> list) {
+        return new IdListPalette<A>(idList);
     }
 
     @Override
-    public int getIndex(T object) {
+    public int index(T object) {
         int i = this.idList.getRawId(object);
         return i == -1 ? 0 : i;
     }
 
     @Override
-    public boolean accepts(Predicate<T> predicate) {
+    public boolean hasAny(Predicate<T> predicate) {
         return true;
     }
 
     @Override
-    public T getByIndex(int index) {
-        T object = this.idList.get(index);
-        return object == null ? this.defaultValue : object;
+    public T get(int id) {
+        T object = this.idList.get(id);
+        if (object == null) {
+            throw new EntryMissingException(id);
+        }
+        return object;
     }
 
     @Override
-    public void fromPacket(PacketByteBuf buf) {
+    public void readPacket(PacketByteBuf buf) {
     }
 
     @Override
-    public void toPacket(PacketByteBuf buf) {
+    public void writePacket(PacketByteBuf buf) {
     }
 
     @Override
@@ -50,12 +57,13 @@ implements Palette<T> {
     }
 
     @Override
-    public int getIndexBits() {
+    public int getSize() {
         return this.idList.size();
     }
 
     @Override
-    public void readNbt(NbtList nbt) {
+    public Palette<T> copy() {
+        return this;
     }
 }
 

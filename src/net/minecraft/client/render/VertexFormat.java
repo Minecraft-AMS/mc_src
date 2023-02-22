@@ -187,7 +187,7 @@ public class VertexFormat {
         public static final /* enum */ IntType BYTE = new IntType(5121, 1);
         public static final /* enum */ IntType SHORT = new IntType(5123, 2);
         public static final /* enum */ IntType INT = new IntType(5125, 4);
-        public final int count;
+        public final int type;
         public final int size;
         private static final /* synthetic */ IntType[] field_27376;
 
@@ -199,8 +199,8 @@ public class VertexFormat {
             return Enum.valueOf(IntType.class, string);
         }
 
-        private IntType(int count, int size) {
-            this.count = count;
+        private IntType(int type, int size) {
+            this.type = type;
             this.size = size;
         }
 

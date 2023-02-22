@@ -229,6 +229,7 @@ extends HostileEntity {
 
     public static class SpiderData
     implements EntityData {
+        @Nullable
         public StatusEffect effect;
 
         public void setEffect(Random random) {

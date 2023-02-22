@@ -50,7 +50,7 @@ extends RealmsScreen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         MinecraftClient.getInstance().setScreen(this.parent);
     }
 

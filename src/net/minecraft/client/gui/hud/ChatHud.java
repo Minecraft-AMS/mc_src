@@ -4,17 +4,18 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Queues
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.hud;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.util.Deque;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -31,15 +32,14 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.MathHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ChatHud
 extends DrawableHelper {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final int field_32180 = 100;
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final int MAX_MESSAGES = 100;
     private final MinecraftClient client;
     private final List<String> messageHistory = Lists.newArrayList();
     private final List<ChatHudLine<Text>> messages = Lists.newArrayList();
@@ -170,7 +170,7 @@ extends DrawableHelper {
         for (OrderedText orderedText : list) {
             if (bl && this.scrolledLines > 0) {
                 this.hasUnreadNewMessages = true;
-                this.scroll(1.0);
+                this.scroll(1);
             }
             this.visibleMessages.add(0, new ChatHudLine<OrderedText>(timestamp, orderedText, messageId));
         }
@@ -209,11 +209,11 @@ extends DrawableHelper {
         this.hasUnreadNewMessages = false;
     }
 
-    public void scroll(double amount) {
-        this.scrolledLines = (int)((double)this.scrolledLines + amount);
-        int i = this.visibleMessages.size();
-        if (this.scrolledLines > i - this.getVisibleLineCount()) {
-            this.scrolledLines = i - this.getVisibleLineCount();
+    public void scroll(int i) {
+        this.scrolledLines += i;
+        int j = this.visibleMessages.size();
+        if (this.scrolledLines > j - this.getVisibleLineCount()) {
+            this.scrolledLines = j - this.getVisibleLineCount();
         }
         if (this.scrolledLines <= 0) {
             this.scrolledLines = 0;

@@ -4,13 +4,14 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Queues
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.thread;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Queues;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -23,15 +24,14 @@ import net.minecraft.util.profiler.Sampler;
 import net.minecraft.util.thread.ExecutorSampling;
 import net.minecraft.util.thread.MessageListener;
 import net.minecraft.util.thread.SampleableExecutor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public abstract class ThreadExecutor<R extends Runnable>
 implements SampleableExecutor,
 MessageListener<R>,
 Executor {
     private final String name;
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Queue<R> tasks = Queues.newConcurrentLinkedQueue();
     private int executionsInProgress;
 
@@ -108,6 +108,10 @@ Executor {
         }
     }
 
+    public void executeSync(Runnable runnable) {
+        this.execute(runnable);
+    }
+
     protected void cancelTasks() {
         this.tasks.clear();
     }
@@ -152,7 +156,7 @@ Executor {
             task.run();
         }
         catch (Exception exception) {
-            LOGGER.fatal("Error executing task on {}", (Object)this.getName(), (Object)exception);
+            LOGGER.error(LogUtils.FATAL_MARKER, "Error executing task on {}", (Object)this.getName(), (Object)exception);
         }
     }
 

@@ -33,7 +33,6 @@ implements ArgumentType<String> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "*", "012");
     private static final DynamicCommandExceptionType UNKNOWN_OBJECTIVE_EXCEPTION = new DynamicCommandExceptionType(name -> new TranslatableText("arguments.objective.notFound", name));
     private static final DynamicCommandExceptionType READONLY_OBJECTIVE_EXCEPTION = new DynamicCommandExceptionType(name -> new TranslatableText("arguments.objective.readonly", name));
-    public static final DynamicCommandExceptionType LONG_NAME_EXCEPTION = new DynamicCommandExceptionType(maxLength -> new TranslatableText("commands.scoreboard.objectives.add.longName", maxLength));
 
     public static ScoreboardObjectiveArgumentType scoreboardObjective() {
         return new ScoreboardObjectiveArgumentType();
@@ -58,20 +57,18 @@ implements ArgumentType<String> {
     }
 
     public String parse(StringReader stringReader) throws CommandSyntaxException {
-        String string = stringReader.readUnquotedString();
-        if (string.length() > 16) {
-            throw LONG_NAME_EXCEPTION.create((Object)16);
-        }
-        return string;
+        return stringReader.readUnquotedString();
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-        if (context.getSource() instanceof ServerCommandSource) {
-            return CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getScoreboard().getObjectiveNames(), builder);
+        Object object = context.getSource();
+        if (object instanceof ServerCommandSource) {
+            ServerCommandSource serverCommandSource = (ServerCommandSource)object;
+            return CommandSource.suggestMatching(serverCommandSource.getServer().getScoreboard().getObjectiveNames(), builder);
         }
-        if (context.getSource() instanceof CommandSource) {
-            CommandSource commandSource = (CommandSource)context.getSource();
-            return commandSource.getCompletions(context, builder);
+        if (object instanceof CommandSource) {
+            CommandSource commandSource = (CommandSource)object;
+            return commandSource.getCompletions(context);
         }
         return Suggestions.empty();
     }

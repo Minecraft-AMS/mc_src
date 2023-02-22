@@ -15,18 +15,15 @@ extends NearestVisibleLivingEntitySensor {
 
     @Override
     protected boolean matches(LivingEntity entity, LivingEntity target) {
-        if (Sensor.testAttackableTargetPredicate(entity, target) && (this.isAlwaysHostileTo(target) || this.canHunt(entity, target))) {
-            return this.isInRange(entity, target) && target.isInsideWaterOrBubbleColumn();
-        }
-        return false;
+        return this.isInRange(entity, target) && target.isInsideWaterOrBubbleColumn() && (this.isAlwaysHostileTo(target) || this.canHunt(entity, target)) && Sensor.testAttackableTargetPredicate(entity, target);
     }
 
     private boolean canHunt(LivingEntity axolotl, LivingEntity target) {
-        return !axolotl.getBrain().hasMemoryModule(MemoryModuleType.HAS_HUNTING_COOLDOWN) && EntityTypeTags.AXOLOTL_HUNT_TARGETS.contains(target.getType());
+        return !axolotl.getBrain().hasMemoryModule(MemoryModuleType.HAS_HUNTING_COOLDOWN) && target.getType().isIn(EntityTypeTags.AXOLOTL_HUNT_TARGETS);
     }
 
     private boolean isAlwaysHostileTo(LivingEntity axolotl) {
-        return EntityTypeTags.AXOLOTL_ALWAYS_HOSTILES.contains(axolotl.getType());
+        return axolotl.getType().isIn(EntityTypeTags.AXOLOTL_ALWAYS_HOSTILES);
     }
 
     private boolean isInRange(LivingEntity axolotl, LivingEntity target) {

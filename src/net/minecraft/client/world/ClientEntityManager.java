@@ -2,14 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.longs.Long2ObjectFunction
  *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
  *  it.unimi.dsi.fastutil.longs.LongSet
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.world;
 
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.Long2ObjectFunction;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -27,11 +28,10 @@ import net.minecraft.world.entity.EntityTrackingSection;
 import net.minecraft.world.entity.EntityTrackingStatus;
 import net.minecraft.world.entity.SectionedEntityCache;
 import net.minecraft.world.entity.SimpleEntityLookup;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class ClientEntityManager<T extends EntityLike> {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     final EntityHandler<T> handler;
     final EntityIndex<T> index;
     final SectionedEntityCache<T> cache;
@@ -76,7 +76,7 @@ public class ClientEntityManager<T extends EntityLike> {
         long l = ChunkSectionPos.toLong(entity.getBlockPos());
         EntityTrackingSection<T> entityTrackingSection = this.cache.getTrackingSection(l);
         entityTrackingSection.add(entity);
-        entity.setListener(new Listener(this, entity, l, entityTrackingSection));
+        entity.setChangeListener(new Listener(this, entity, l, entityTrackingSection));
         this.handler.create(entity);
         this.handler.startTracking(entity);
         if (entity.isPlayer() || entityTrackingSection.getStatus().shouldTick()) {
@@ -127,7 +127,7 @@ public class ClientEntityManager<T extends EntityLike> {
             if (l != this.lastSectionPos) {
                 EntityTrackingStatus entityTrackingStatus = this.section.getStatus();
                 if (!this.section.remove(this.entity)) {
-                    LOGGER.warn("Entity {} wasn't found in section {} (moving to {})", this.entity, (Object)ChunkSectionPos.from(this.lastSectionPos), (Object)l);
+                    LOGGER.warn("Entity {} wasn't found in section {} (moving to {})", new Object[]{this.entity, ChunkSectionPos.from(this.lastSectionPos), l});
                 }
                 this.manager.removeIfEmpty(this.lastSectionPos, this.section);
                 EntityTrackingSection entityTrackingSection = this.manager.cache.getTrackingSection(l);
@@ -150,7 +150,7 @@ public class ClientEntityManager<T extends EntityLike> {
         public void remove(Entity.RemovalReason reason) {
             EntityTrackingStatus entityTrackingStatus;
             if (!this.section.remove(this.entity)) {
-                LOGGER.warn("Entity {} wasn't found in section {} (destroying due to {})", this.entity, (Object)ChunkSectionPos.from(this.lastSectionPos), (Object)reason);
+                LOGGER.warn("Entity {} wasn't found in section {} (destroying due to {})", new Object[]{this.entity, ChunkSectionPos.from(this.lastSectionPos), reason});
             }
             if ((entityTrackingStatus = this.section.getStatus()).shouldTick() || this.entity.isPlayer()) {
                 this.manager.handler.stopTicking(this.entity);
@@ -158,7 +158,7 @@ public class ClientEntityManager<T extends EntityLike> {
             this.manager.handler.stopTracking(this.entity);
             this.manager.handler.destroy(this.entity);
             this.manager.index.remove(this.entity);
-            this.entity.setListener(NONE);
+            this.entity.setChangeListener(NONE);
             this.manager.removeIfEmpty(this.lastSectionPos, this.section);
         }
     }

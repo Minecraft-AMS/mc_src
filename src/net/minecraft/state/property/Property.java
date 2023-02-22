@@ -6,6 +6,7 @@
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DynamicOps
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.state.property;
 
@@ -17,13 +18,15 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.Stream;
 import net.minecraft.state.State;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class Property<T extends Comparable<T>> {
     private final Class<T> type;
     private final String name;
+    @Nullable
     private Integer hashCodeCache;
     private final Codec<T> codec = Codec.STRING.comapFlatMap(value -> this.parse((String)value).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unable to read property: " + this + " with value: " + value))), this::name);
-    private final Codec<Value<T>> valueCodec = this.codec.xmap(this::createValue, Value::getValue);
+    private final Codec<Value<T>> valueCodec = this.codec.xmap(this::createValue, Value::value);
 
     protected Property(String name, Class<T> type) {
         this.type = type;
@@ -90,50 +93,21 @@ public abstract class Property<T extends Comparable<T>> {
         return 31 * this.type.hashCode() + this.name.hashCode();
     }
 
-    public <U, S extends State<?, S>> DataResult<S> method_35307(DynamicOps<U> dynamicOps, S state, U object) {
-        DataResult dataResult = this.codec.parse(dynamicOps, object);
-        return dataResult.map(comparable -> (State)state.with(this, comparable)).setPartial(state);
+    public <U, S extends State<?, S>> DataResult<S> parse(DynamicOps<U> ops, S state, U input) {
+        DataResult dataResult = this.codec.parse(ops, input);
+        return dataResult.map(property -> (State)state.with(this, property)).setPartial(state);
     }
 
-    public static final class Value<T extends Comparable<T>> {
-        private final Property<T> property;
-        private final T value;
-
-        Value(Property<T> property, T value) {
+    public record Value<T extends Comparable<T>>(Property<T> property, T value) {
+        public Value {
             if (!property.getValues().contains(value)) {
                 throw new IllegalArgumentException("Value " + value + " does not belong to property " + property);
             }
-            this.property = property;
-            this.value = value;
         }
 
-        public Property<T> getProperty() {
-            return this.property;
-        }
-
-        public T getValue() {
-            return this.value;
-        }
-
+        @Override
         public String toString() {
             return this.property.getName() + "=" + this.property.name(this.value);
-        }
-
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof Value)) {
-                return false;
-            }
-            Value value = (Value)o;
-            return this.property == value.property && this.value.equals(value.value);
-        }
-
-        public int hashCode() {
-            int i = this.property.hashCode();
-            i = 31 * i + this.value.hashCode();
-            return i;
         }
     }
 }

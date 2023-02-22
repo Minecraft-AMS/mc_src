@@ -18,10 +18,10 @@ import net.minecraft.util.math.intprovider.IntProviderType;
 import net.minecraft.util.registry.Registry;
 
 public abstract class IntProvider {
-    private static final Codec<Either<Integer, IntProvider>> INT_CODEC = Codec.either((Codec)Codec.INT, (Codec)Registry.INT_PROVIDER_TYPE.dispatch(IntProvider::getType, IntProviderType::codec));
-    public static final Codec<IntProvider> VALUE_CODEC = INT_CODEC.xmap(either -> (IntProvider)either.map(ConstantIntProvider::create, intProvider -> intProvider), intProvider -> intProvider.getType() == IntProviderType.CONSTANT ? Either.left((Object)((ConstantIntProvider)intProvider).getValue()) : Either.right((Object)intProvider));
-    public static final Codec<IntProvider> field_33450 = IntProvider.createValidatingCodec(0, Integer.MAX_VALUE);
-    public static final Codec<IntProvider> field_33451 = IntProvider.createValidatingCodec(1, Integer.MAX_VALUE);
+    private static final Codec<Either<Integer, IntProvider>> INT_CODEC = Codec.either((Codec)Codec.INT, (Codec)Registry.INT_PROVIDER_TYPE.getCodec().dispatch(IntProvider::getType, IntProviderType::codec));
+    public static final Codec<IntProvider> VALUE_CODEC = INT_CODEC.xmap(either -> (IntProvider)either.map(ConstantIntProvider::create, provider -> provider), provider -> provider.getType() == IntProviderType.CONSTANT ? Either.left((Object)((ConstantIntProvider)provider).getValue()) : Either.right((Object)provider));
+    public static final Codec<IntProvider> NON_NEGATIVE_CODEC = IntProvider.createValidatingCodec(0, Integer.MAX_VALUE);
+    public static final Codec<IntProvider> POSITIVE_CODEC = IntProvider.createValidatingCodec(1, Integer.MAX_VALUE);
 
     public static Codec<IntProvider> createValidatingCodec(int min, int max) {
         Function<IntProvider, DataResult> function = provider -> {

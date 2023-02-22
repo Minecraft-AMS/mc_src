@@ -7,13 +7,12 @@
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  it.unimi.dsi.fastutil.shorts.Short2ObjectMap
  *  it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- *  org.apache.logging.log4j.util.Supplier
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.poi;
 
@@ -22,6 +21,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
@@ -42,12 +42,10 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.poi.PointOfInterest;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.util.Supplier;
+import org.slf4j.Logger;
 
 public class PointOfInterestSet {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Short2ObjectMap<PointOfInterest> pointsOfInterestByPos = new Short2ObjectOpenHashMap();
     private final Map<PointOfInterestType, Set<PointOfInterest>> pointsOfInterestByType = Maps.newHashMap();
     private final Runnable updateListener;
@@ -61,10 +59,10 @@ public class PointOfInterestSet {
         this(updateListener, true, (List<PointOfInterest>)ImmutableList.of());
     }
 
-    private PointOfInterestSet(Runnable updateListener, boolean valid, List<PointOfInterest> list) {
+    private PointOfInterestSet(Runnable updateListener, boolean valid, List<PointOfInterest> pois) {
         this.updateListener = updateListener;
         this.valid = valid;
-        list.forEach(this::add);
+        pois.forEach(this::add);
     }
 
     public Stream<PointOfInterest> get(Predicate<PointOfInterestType> predicate, PointOfInterestStorage.OccupationStatus occupationStatus) {
@@ -73,7 +71,7 @@ public class PointOfInterestSet {
 
     public void add(BlockPos pos, PointOfInterestType type) {
         if (this.add(new PointOfInterest(pos, type, this.updateListener))) {
-            LOGGER.debug("Added POI of type {} @ {}", new Supplier[]{() -> type, () -> pos});
+            LOGGER.debug("Added POI of type {} @ {}", (Object)type, (Object)pos);
             this.updateListener.run();
         }
     }
@@ -101,17 +99,14 @@ public class PointOfInterestSet {
             return;
         }
         this.pointsOfInterestByType.get(pointOfInterest.getType()).remove(pointOfInterest);
-        Supplier[] supplierArray = new Supplier[2];
-        supplierArray[0] = pointOfInterest::getType;
-        supplierArray[1] = pointOfInterest::getPos;
-        LOGGER.debug("Removed POI of type {} @ {}", supplierArray);
+        LOGGER.debug("Removed POI of type {} @ {}", LogUtils.defer(pointOfInterest::getType), LogUtils.defer(pointOfInterest::getPos));
         this.updateListener.run();
     }
 
     @Deprecated
     @Debug
-    public int method_35157(BlockPos blockPos) {
-        return this.get(blockPos).map(PointOfInterest::getFreeTickets).orElse(0);
+    public int getFreeTickets(BlockPos pos) {
+        return this.get(pos).map(PointOfInterest::getFreeTickets).orElse(0);
     }
 
     public boolean releaseTicket(BlockPos pos) {
@@ -156,8 +151,8 @@ public class PointOfInterestSet {
     }
 
     private /* synthetic */ void method_20352(Short2ObjectMap short2ObjectMap, BlockPos pos, PointOfInterestType poiType) {
-        short s = ChunkSectionPos.packLocal(pos);
-        PointOfInterest pointOfInterest = (PointOfInterest)short2ObjectMap.computeIfAbsent(s, i -> new PointOfInterest(pos, poiType, this.updateListener));
+        short s2 = ChunkSectionPos.packLocal(pos);
+        PointOfInterest pointOfInterest = (PointOfInterest)short2ObjectMap.computeIfAbsent(s2, s -> new PointOfInterest(pos, poiType, this.updateListener));
         this.add(pointOfInterest);
     }
 }

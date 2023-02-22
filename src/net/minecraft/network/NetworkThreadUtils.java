@@ -2,21 +2,21 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.network;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.network.OffThreadException;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.thread.ThreadExecutor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class NetworkThreadUtils {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static <T extends PacketListener> void forceMainThread(Packet<T> packet, T listener, ServerWorld world) throws OffThreadException {
         NetworkThreadUtils.forceMainThread(packet, listener, world.getServer());
@@ -24,9 +24,17 @@ public class NetworkThreadUtils {
 
     public static <T extends PacketListener> void forceMainThread(Packet<T> packet, T listener, ThreadExecutor<?> engine) throws OffThreadException {
         if (!engine.isOnThread()) {
-            engine.execute(() -> {
+            engine.executeSync(() -> {
                 if (listener.getConnection().isOpen()) {
-                    packet.apply(listener);
+                    try {
+                        packet.apply(listener);
+                    }
+                    catch (Exception exception) {
+                        if (listener.shouldCrashOnException()) {
+                            throw exception;
+                        }
+                        LOGGER.error("Failed to handle packet {}, suppressing error", (Object)packet, (Object)exception);
+                    }
                 } else {
                     LOGGER.debug("Ignoring packet due to disconnection: {}", (Object)packet);
                 }

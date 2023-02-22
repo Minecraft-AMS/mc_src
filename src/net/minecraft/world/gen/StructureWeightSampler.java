@@ -23,10 +23,11 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.StructureWeightType;
-import net.minecraft.world.gen.feature.StructureFeature;
+import net.minecraft.world.gen.densityfunction.DensityFunction;
+import net.minecraft.world.gen.densityfunction.DensityFunctionTypes;
 
-public class StructureWeightSampler {
-    public static final StructureWeightSampler INSTANCE = new StructureWeightSampler();
+public class StructureWeightSampler
+implements DensityFunctionTypes.class_7050 {
     public static final int field_31461 = 12;
     private static final int field_31462 = 24;
     private static final float[] STRUCTURE_WEIGHT_TABLE = Util.make(new float[13824], array -> {
@@ -43,73 +44,78 @@ public class StructureWeightSampler {
     private final ObjectListIterator<StructurePiece> pieceIterator;
     private final ObjectListIterator<JigsawJunction> junctionIterator;
 
-    protected StructureWeightSampler(StructureAccessor accessor, Chunk chunk) {
+    protected StructureWeightSampler(StructureAccessor structureAccessor, Chunk chunk) {
         ChunkPos chunkPos = chunk.getPos();
         int i = chunkPos.getStartX();
         int j = chunkPos.getStartZ();
         this.junctions = new ObjectArrayList(32);
         this.pieces = new ObjectArrayList(10);
-        for (StructureFeature<?> structureFeature : StructureFeature.LAND_MODIFYING_STRUCTURES) {
-            accessor.getStructuresWithChildren(ChunkSectionPos.from(chunk), structureFeature).forEach(start -> {
-                for (StructurePiece structurePiece : start.getChildren()) {
-                    if (!structurePiece.intersectsChunk(chunkPos, 12)) continue;
-                    if (structurePiece instanceof PoolStructurePiece) {
-                        PoolStructurePiece poolStructurePiece = (PoolStructurePiece)structurePiece;
-                        StructurePool.Projection projection = poolStructurePiece.getPoolElement().getProjection();
-                        if (projection == StructurePool.Projection.RIGID) {
-                            this.pieces.add((Object)poolStructurePiece);
-                        }
-                        for (JigsawJunction jigsawJunction : poolStructurePiece.getJunctions()) {
-                            int k = jigsawJunction.getSourceX();
-                            int l = jigsawJunction.getSourceZ();
-                            if (k <= i - 12 || l <= j - 12 || k >= i + 15 + 12 || l >= j + 15 + 12) continue;
-                            this.junctions.add((Object)jigsawJunction);
-                        }
-                        continue;
+        structureAccessor.method_41035(ChunkSectionPos.from(chunk), configuredStructureFeature -> configuredStructureFeature.field_37144).forEach(start -> {
+            for (StructurePiece structurePiece : start.getChildren()) {
+                if (!structurePiece.intersectsChunk(chunkPos, 12)) continue;
+                if (structurePiece instanceof PoolStructurePiece) {
+                    PoolStructurePiece poolStructurePiece = (PoolStructurePiece)structurePiece;
+                    StructurePool.Projection projection = poolStructurePiece.getPoolElement().getProjection();
+                    if (projection == StructurePool.Projection.RIGID) {
+                        this.pieces.add((Object)poolStructurePiece);
                     }
-                    this.pieces.add((Object)structurePiece);
+                    for (JigsawJunction jigsawJunction : poolStructurePiece.getJunctions()) {
+                        int k = jigsawJunction.getSourceX();
+                        int l = jigsawJunction.getSourceZ();
+                        if (k <= i - 12 || l <= j - 12 || k >= i + 15 + 12 || l >= j + 15 + 12) continue;
+                        this.junctions.add((Object)jigsawJunction);
+                    }
+                    continue;
                 }
-            });
-        }
+                this.pieces.add((Object)structurePiece);
+            }
+        });
         this.pieceIterator = this.pieces.iterator();
         this.junctionIterator = this.junctions.iterator();
     }
 
-    private StructureWeightSampler() {
-        this.junctions = new ObjectArrayList();
-        this.pieces = new ObjectArrayList();
-        this.pieceIterator = this.pieces.iterator();
-        this.junctionIterator = this.junctions.iterator();
-    }
-
-    protected double getWeight(int x, int y, int z) {
-        int j;
-        int i;
+    @Override
+    public double sample(DensityFunction.NoisePos pos) {
+        int m;
+        int l;
+        int i = pos.blockX();
+        int j = pos.blockY();
+        int k = pos.blockZ();
         double d = 0.0;
         while (this.pieceIterator.hasNext()) {
             StructurePiece structurePiece = (StructurePiece)this.pieceIterator.next();
             BlockBox blockBox = structurePiece.getBoundingBox();
-            i = Math.max(0, Math.max(blockBox.getMinX() - x, x - blockBox.getMaxX()));
-            j = y - (blockBox.getMinY() + (structurePiece instanceof PoolStructurePiece ? ((PoolStructurePiece)structurePiece).getGroundLevelDelta() : 0));
-            int k = Math.max(0, Math.max(blockBox.getMinZ() - z, z - blockBox.getMaxZ()));
-            StructureWeightType structureWeightType = structurePiece.method_33882();
+            l = Math.max(0, Math.max(blockBox.getMinX() - i, i - blockBox.getMaxX()));
+            m = j - (blockBox.getMinY() + (structurePiece instanceof PoolStructurePiece ? ((PoolStructurePiece)structurePiece).getGroundLevelDelta() : 0));
+            int n = Math.max(0, Math.max(blockBox.getMinZ() - k, k - blockBox.getMaxZ()));
+            StructureWeightType structureWeightType = structurePiece.getWeightType();
             if (structureWeightType == StructureWeightType.BURY) {
-                d += StructureWeightSampler.getMagnitudeWeight(i, j, k);
+                d += StructureWeightSampler.getMagnitudeWeight(l, m, n);
                 continue;
             }
             if (structureWeightType != StructureWeightType.BEARD) continue;
-            d += StructureWeightSampler.getStructureWeight(i, j, k) * 0.8;
+            d += StructureWeightSampler.getStructureWeight(l, m, n) * 0.8;
         }
         this.pieceIterator.back(this.pieces.size());
         while (this.junctionIterator.hasNext()) {
             JigsawJunction jigsawJunction = (JigsawJunction)this.junctionIterator.next();
-            int l = x - jigsawJunction.getSourceX();
-            i = y - jigsawJunction.getSourceGroundY();
-            j = z - jigsawJunction.getSourceZ();
-            d += StructureWeightSampler.getStructureWeight(l, i, j) * 0.4;
+            int o = i - jigsawJunction.getSourceX();
+            l = j - jigsawJunction.getSourceGroundY();
+            m = k - jigsawJunction.getSourceZ();
+            d += StructureWeightSampler.getStructureWeight(o, l, m) * 0.4;
         }
         this.junctionIterator.back(this.junctions.size());
         return d;
+    }
+
+    @Override
+    public double minValue() {
+        return Double.NEGATIVE_INFINITY;
+    }
+
+    @Override
+    public double maxValue() {
+        return Double.POSITIVE_INFINITY;
     }
 
     private static double getMagnitudeWeight(int x, int y, int z) {

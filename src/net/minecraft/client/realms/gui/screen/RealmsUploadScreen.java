@@ -4,20 +4,22 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.util.concurrent.RateLimiter
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.compress.archivers.ArchiveEntry
  *  org.apache.commons.compress.archivers.tar.TarArchiveEntry
  *  org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
  *  org.apache.commons.compress.utils.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.gui.screen;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.RateLimiter;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -61,13 +63,13 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsUploadScreen
 extends RealmsScreen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final ReentrantLock UPLOAD_LOCK = new ReentrantLock();
     private static final String[] DOTS = new String[]{"", ".", ". .", ". . ."};
     private static final Text VERIFYING_TEXT = new TranslatableText("mco.upload.verifying");
@@ -77,6 +79,7 @@ extends RealmsScreen {
     private final int slotId;
     private final UploadStatus uploadStatus;
     private final RateLimiter narrationRateLimiter;
+    @Nullable
     private volatile Text[] statusTexts;
     private volatile Text status = new TranslatableText("mco.upload.preparing");
     private volatile String progress;
@@ -87,7 +90,9 @@ extends RealmsScreen {
     private ButtonWidget backButton;
     private ButtonWidget cancelButton;
     private int animTick;
+    @Nullable
     private Long previousWrittenBytes;
+    @Nullable
     private Long previousTimeSnapshot;
     private long bytesPerSecond;
     private final Runnable onBack;

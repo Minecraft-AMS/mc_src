@@ -7,9 +7,9 @@
  *  com.google.common.collect.Maps
  *  com.mojang.brigadier.CommandDispatcher
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.function;
 
@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -36,7 +37,6 @@ import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.minecraft.tag.Tag;
-import net.minecraft.tag.TagGroup;
 import net.minecraft.tag.TagGroupLoader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Identifier;
@@ -44,18 +44,17 @@ import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class FunctionLoader
 implements ResourceReloader {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String EXTENSION = ".mcfunction";
     private static final int PATH_PREFIX_LENGTH = "functions/".length();
     private static final int EXTENSION_LENGTH = ".mcfunction".length();
     private volatile Map<Identifier, CommandFunction> functions = ImmutableMap.of();
     private final TagGroupLoader<CommandFunction> tagLoader = new TagGroupLoader(this::get, "tags/functions");
-    private volatile TagGroup<CommandFunction> tags = TagGroup.createEmpty();
+    private volatile Map<Identifier, Tag<CommandFunction>> tags = Map.of();
     private final int level;
     private final CommandDispatcher<ServerCommandSource> commandDispatcher;
 
@@ -67,12 +66,12 @@ implements ResourceReloader {
         return this.functions;
     }
 
-    public TagGroup<CommandFunction> getTags() {
-        return this.tags;
+    public Tag<CommandFunction> getTagOrEmpty(Identifier id) {
+        return this.tags.getOrDefault(id, Tag.empty());
     }
 
-    public Tag<CommandFunction> getTagOrEmpty(Identifier id) {
-        return this.tags.getTagOrEmpty(id);
+    public Iterable<Identifier> getTags() {
+        return this.tags.keySet();
     }
 
     public FunctionLoader(int level, CommandDispatcher<ServerCommandSource> commandDispatcher) {

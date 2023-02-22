@@ -69,9 +69,9 @@ extends ButtonWidget {
             return Enum.valueOf(IconLocation.class, string);
         }
 
-        private IconLocation(int j, int k) {
-            this.u = j;
-            this.v = k;
+        private IconLocation(int u, int v) {
+            this.u = u;
+            this.v = v;
         }
 
         public int getU() {

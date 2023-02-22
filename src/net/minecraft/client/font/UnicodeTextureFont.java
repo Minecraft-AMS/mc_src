@@ -5,19 +5,20 @@
  *  com.google.common.collect.Maps
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  it.unimi.dsi.fastutil.ints.IntSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.font;
 
 import com.google.common.collect.Maps;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.IOException;
@@ -35,14 +36,13 @@ import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class UnicodeTextureFont
 implements Font {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_32232 = 256;
     private static final int field_32233 = 256;
     private static final int field_32234 = 256;

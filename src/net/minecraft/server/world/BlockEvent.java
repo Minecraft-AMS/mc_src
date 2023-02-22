@@ -3,56 +3,25 @@
  */
 package net.minecraft.server.world;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import net.minecraft.block.Block;
 import net.minecraft.util.math.BlockPos;
 
-public class BlockEvent {
-    private final BlockPos pos;
-    private final Block block;
-    private final int type;
-    private final int data;
-
-    public BlockEvent(BlockPos pos, Block block, int type, int data) {
-        this.pos = pos;
-        this.block = block;
-        this.type = type;
-        this.data = data;
+public record BlockEvent(BlockPos pos, Block block, int type, int data) {
+    @Override
+    public final String toString() {
+        return ObjectMethods.bootstrap("toString", new MethodHandle[]{BlockEvent.class, "pos;block;paramA;paramB", "pos", "block", "type", "data"}, this);
     }
 
-    public BlockPos getPos() {
-        return this.pos;
+    @Override
+    public final int hashCode() {
+        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{BlockEvent.class, "pos;block;paramA;paramB", "pos", "block", "type", "data"}, this);
     }
 
-    public Block getBlock() {
-        return this.block;
-    }
-
-    public int getType() {
-        return this.type;
-    }
-
-    public int getData() {
-        return this.data;
-    }
-
-    public boolean equals(Object o) {
-        if (o instanceof BlockEvent) {
-            BlockEvent blockEvent = (BlockEvent)o;
-            return this.pos.equals(blockEvent.pos) && this.type == blockEvent.type && this.data == blockEvent.data && this.block == blockEvent.block;
-        }
-        return false;
-    }
-
-    public int hashCode() {
-        int i = this.pos.hashCode();
-        i = 31 * i + this.block.hashCode();
-        i = 31 * i + this.type;
-        i = 31 * i + this.data;
-        return i;
-    }
-
-    public String toString() {
-        return "TE(" + this.pos + ")," + this.type + "," + this.data + "," + this.block;
+    @Override
+    public final boolean equals(Object object) {
+        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{BlockEvent.class, "pos;block;paramA;paramB", "pos", "block", "type", "data"}, this, object);
     }
 }
 

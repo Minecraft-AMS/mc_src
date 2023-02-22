@@ -5,15 +5,16 @@
  *  com.google.common.collect.ImmutableMultimap
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.item;
 
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,26 +58,29 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class Item
 implements ItemConvertible {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final Map<Block, Item> BLOCK_ITEMS = Maps.newHashMap();
     protected static final UUID ATTACK_DAMAGE_MODIFIER_ID = UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF");
     protected static final UUID ATTACK_SPEED_MODIFIER_ID = UUID.fromString("FA233E1C-4180-4865-B01B-BCCE9785ACA3");
     public static final int DEFAULT_MAX_COUNT = 64;
     public static final int field_30888 = 32;
     public static final int field_30889 = 13;
+    private final RegistryEntry.Reference<Item> registryEntry = Registry.ITEM.createEntry(this);
+    @Nullable
     protected final ItemGroup group;
     private final Rarity rarity;
     private final int maxCount;
     private final int maxDamage;
     private final boolean fireproof;
+    @Nullable
     private final Item recipeRemainder;
     @Nullable
     private String translationKey;
@@ -108,6 +112,11 @@ implements ItemConvertible {
         if (SharedConstants.isDevelopment && !(string = this.getClass().getSimpleName()).endsWith("Item")) {
             LOGGER.error("Item classes should end with Item and {} doesn't.", (Object)string);
         }
+    }
+
+    @Deprecated
+    public RegistryEntry.Reference<Item> getRegistryEntry() {
+        return this.registryEntry;
     }
 
     public void usageTick(World world, LivingEntity user, ItemStack stack, int remainingUseTicks) {
@@ -388,9 +397,12 @@ implements ItemConvertible {
     public static class Settings {
         int maxCount = 64;
         int maxDamage;
+        @Nullable
         Item recipeRemainder;
+        @Nullable
         ItemGroup group;
         Rarity rarity = Rarity.COMMON;
+        @Nullable
         FoodComponent foodComponent;
         boolean fireproof;
 

@@ -23,8 +23,10 @@ import net.minecraft.village.raid.RaidManager;
 
 public class MoveToRaidCenterGoal<T extends RaiderEntity>
 extends Goal {
+    private static final int FREE_RAIDER_CHECK_INTERVAL = 20;
     private static final float WALK_SPEED = 1.0f;
     private final T actor;
+    private int nextFreeRaiderCheckAge;
 
     public MoveToRaidCenterGoal(T actor) {
         this.actor = actor;
@@ -46,10 +48,11 @@ extends Goal {
         if (((RaiderEntity)this.actor).hasActiveRaid()) {
             Vec3d vec3d;
             Raid raid = ((RaiderEntity)this.actor).getRaid();
-            if (((RaiderEntity)this.actor).age % 20 == 0) {
+            if (((RaiderEntity)this.actor).age > this.nextFreeRaiderCheckAge) {
+                this.nextFreeRaiderCheckAge = ((RaiderEntity)this.actor).age + 20;
                 this.includeFreeRaiders(raid);
             }
-            if (!((PathAwareEntity)this.actor).isNavigating() && (vec3d = NoPenaltyTargeting.find(this.actor, 15, 4, Vec3d.ofBottomCenter(raid.getCenter()), 1.5707963705062866)) != null) {
+            if (!((PathAwareEntity)this.actor).isNavigating() && (vec3d = NoPenaltyTargeting.findTo(this.actor, 15, 4, Vec3d.ofBottomCenter(raid.getCenter()), 1.5707963705062866)) != null) {
                 ((MobEntity)this.actor).getNavigation().startMovingTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
             }
         }
@@ -58,10 +61,10 @@ extends Goal {
     private void includeFreeRaiders(Raid raid) {
         if (raid.isActive()) {
             HashSet set = Sets.newHashSet();
-            List<RaiderEntity> list = ((RaiderEntity)this.actor).world.getEntitiesByClass(RaiderEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0), raiderEntity -> !raiderEntity.hasActiveRaid() && RaidManager.isValidRaiderFor(raiderEntity, raid));
+            List<RaiderEntity> list = ((RaiderEntity)this.actor).world.getEntitiesByClass(RaiderEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0), raider -> !raider.hasActiveRaid() && RaidManager.isValidRaiderFor(raider, raid));
             set.addAll(list);
-            for (RaiderEntity raiderEntity2 : set) {
-                raid.addRaider(raid.getGroupsSpawned(), raiderEntity2, null, true);
+            for (RaiderEntity raiderEntity : set) {
+                raid.addRaider(raid.getGroupsSpawned(), raiderEntity, null, true);
             }
         }
     }

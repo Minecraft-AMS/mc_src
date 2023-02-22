@@ -19,7 +19,7 @@ import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class DeltaFeatureConfig
 implements FeatureConfig {
-    public static final Codec<DeltaFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BlockState.CODEC.fieldOf("contents").forGetter(deltaFeatureConfig -> deltaFeatureConfig.contents), (App)BlockState.CODEC.fieldOf("rim").forGetter(deltaFeatureConfig -> deltaFeatureConfig.rim), (App)IntProvider.createValidatingCodec(0, 16).fieldOf("size").forGetter(deltaFeatureConfig -> deltaFeatureConfig.size), (App)IntProvider.createValidatingCodec(0, 16).fieldOf("rim_size").forGetter(deltaFeatureConfig -> deltaFeatureConfig.rimSize)).apply((Applicative)instance, DeltaFeatureConfig::new));
+    public static final Codec<DeltaFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BlockState.CODEC.fieldOf("contents").forGetter(config -> config.contents), (App)BlockState.CODEC.fieldOf("rim").forGetter(config -> config.rim), (App)IntProvider.createValidatingCodec(0, 16).fieldOf("size").forGetter(config -> config.size), (App)IntProvider.createValidatingCodec(0, 16).fieldOf("rim_size").forGetter(config -> config.rimSize)).apply((Applicative)instance, DeltaFeatureConfig::new));
     private final BlockState contents;
     private final BlockState rim;
     private final IntProvider size;

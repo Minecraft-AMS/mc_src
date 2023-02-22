@@ -2,10 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.projectile;
 
+import com.mojang.logging.LogUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -49,9 +52,11 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class FishingBobberEntity
 extends ProjectileEntity {
+    private static final Logger field_36336 = LogUtils.getLogger();
     private final Random velocityRandom = new Random();
     private boolean caughtFish;
     private int outOfOpenWaterTicks;
@@ -70,19 +75,19 @@ extends ProjectileEntity {
     private final int luckOfTheSeaLevel;
     private final int lureLevel;
 
-    private FishingBobberEntity(EntityType<? extends FishingBobberEntity> type, World world, int lureLevel, int luckOfTheSeaLevel) {
+    private FishingBobberEntity(EntityType<? extends FishingBobberEntity> type, World world, int luckOfTheSeaLevel, int lureLevel) {
         super((EntityType<? extends ProjectileEntity>)type, world);
         this.ignoreCameraFrustum = true;
-        this.luckOfTheSeaLevel = Math.max(0, lureLevel);
-        this.lureLevel = Math.max(0, luckOfTheSeaLevel);
+        this.luckOfTheSeaLevel = Math.max(0, luckOfTheSeaLevel);
+        this.lureLevel = Math.max(0, lureLevel);
     }
 
     public FishingBobberEntity(EntityType<? extends FishingBobberEntity> entityType, World world) {
         this(entityType, world, 0, 0);
     }
 
-    public FishingBobberEntity(PlayerEntity thrower, World world, int lureLevel, int luckOfTheSeaLevel) {
-        this(EntityType.FISHING_BOBBER, world, lureLevel, luckOfTheSeaLevel);
+    public FishingBobberEntity(PlayerEntity thrower, World world, int luckOfTheSeaLevel, int lureLevel) {
+        this(EntityType.FISHING_BOBBER, world, luckOfTheSeaLevel, lureLevel);
         this.setOwner(thrower);
         float f = thrower.getPitch();
         float g = thrower.getYaw();
@@ -285,7 +290,7 @@ extends ProjectileEntity {
             if (this.fishTravelCountdown > 0) {
                 double j;
                 double e;
-                this.fishAngle = (float)((double)this.fishAngle + this.random.nextGaussian() * 4.0);
+                this.fishAngle += (float)(this.random.nextGaussian() * 4.0);
                 float f = this.fishAngle * ((float)Math.PI / 180);
                 float g = MathHelper.sin(f);
                 float h = MathHelper.cos(f);
@@ -312,19 +317,19 @@ extends ProjectileEntity {
             this.waitCountdown -= i;
             float f = 0.15f;
             if (this.waitCountdown < 20) {
-                f = (float)((double)f + (double)(20 - this.waitCountdown) * 0.05);
+                f += (float)(20 - this.waitCountdown) * 0.05f;
             } else if (this.waitCountdown < 40) {
-                f = (float)((double)f + (double)(40 - this.waitCountdown) * 0.02);
+                f += (float)(40 - this.waitCountdown) * 0.02f;
             } else if (this.waitCountdown < 60) {
-                f = (float)((double)f + (double)(60 - this.waitCountdown) * 0.01);
+                f += (float)(60 - this.waitCountdown) * 0.01f;
             }
             if (this.random.nextFloat() < f) {
                 double j;
                 double e;
                 float g = MathHelper.nextFloat(this.random, 0.0f, 360.0f) * ((float)Math.PI / 180);
                 float h = MathHelper.nextFloat(this.random, 25.0f, 60.0f);
-                double d = this.getX() + (double)(MathHelper.sin(g) * h * 0.1f);
-                BlockState blockState = serverWorld.getBlockState(new BlockPos(d, (e = (double)((float)MathHelper.floor(this.getY()) + 1.0f)) - 1.0, j = this.getZ() + (double)(MathHelper.cos(g) * h * 0.1f)));
+                double d = this.getX() + (double)(MathHelper.sin(g) * h) * 0.1;
+                BlockState blockState = serverWorld.getBlockState(new BlockPos(d, (e = (double)((float)MathHelper.floor(this.getY()) + 1.0f)) - 1.0, j = this.getZ() + (double)(MathHelper.cos(g) * h) * 0.1));
                 if (blockState.isOf(Blocks.WATER)) {
                     serverWorld.spawnParticles(ParticleTypes.SPLASH, d, e, j, 2 + this.random.nextInt(2), 0.1f, 0.0, 0.1f, 0.0);
                 }
@@ -499,7 +504,7 @@ extends ProjectileEntity {
         super.onSpawnPacket(packet);
         if (this.getPlayerOwner() == null) {
             int i = packet.getEntityData();
-            LOGGER.error("Failed to recreate fishing hook on client. {} (id: {}) is not a valid owner.", (Object)this.world.getEntityById(i), (Object)i);
+            field_36336.error("Failed to recreate fishing hook on client. {} (id: {}) is not a valid owner.", (Object)this.world.getEntityById(i), (Object)i);
             this.kill();
         }
     }

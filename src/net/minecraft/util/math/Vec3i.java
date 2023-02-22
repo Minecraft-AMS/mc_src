@@ -4,12 +4,15 @@
  * Could not load the following classes:
  *  com.google.common.base.MoreObjects
  *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.DataResult
  *  org.jetbrains.annotations.Unmodifiable
  */
 package net.minecraft.util.math;
 
 import com.google.common.base.MoreObjects;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
@@ -25,6 +28,19 @@ implements Comparable<Vec3i> {
     private int x;
     private int y;
     private int z;
+
+    private static Function<Vec3i, DataResult<Vec3i>> createRangeValidator(int maxAbsValue) {
+        return vec -> {
+            if (Math.abs(vec.getX()) < maxAbsValue && Math.abs(vec.getY()) < maxAbsValue && Math.abs(vec.getZ()) < maxAbsValue) {
+                return DataResult.success((Object)vec);
+            }
+            return DataResult.error((String)("Position out of range, expected at most " + maxAbsValue + ": " + vec));
+        };
+    }
+
+    public static Codec<Vec3i> createOffsetCodec(int maxAbsValue) {
+        return CODEC.flatXmap(Vec3i.createRangeValidator(maxAbsValue), Vec3i.createRangeValidator(maxAbsValue));
+    }
 
     public Vec3i(int x, int y, int z) {
         this.x = x;
@@ -201,31 +217,33 @@ implements Comparable<Vec3i> {
     }
 
     public boolean isWithinDistance(Vec3i vec, double distance) {
-        return this.getSquaredDistance(vec.getX(), vec.getY(), vec.getZ(), false) < distance * distance;
+        return this.getSquaredDistance(vec) < MathHelper.square(distance);
     }
 
     public boolean isWithinDistance(Position pos, double distance) {
-        return this.getSquaredDistance(pos.getX(), pos.getY(), pos.getZ(), true) < distance * distance;
+        return this.getSquaredDistance(pos) < MathHelper.square(distance);
     }
 
     public double getSquaredDistance(Vec3i vec) {
-        return this.getSquaredDistance(vec.getX(), vec.getY(), vec.getZ(), true);
+        return this.getSquaredDistance(vec.getX(), vec.getY(), vec.getZ());
     }
 
-    public double getSquaredDistance(Position pos, boolean treatAsBlockPos) {
-        return this.getSquaredDistance(pos.getX(), pos.getY(), pos.getZ(), treatAsBlockPos);
+    public double getSquaredDistance(Position pos) {
+        return this.getSquaredDistanceFromCenter(pos.getX(), pos.getY(), pos.getZ());
     }
 
-    public double getSquaredDistance(Vec3i vec, boolean treatAsBlockPos) {
-        return this.getSquaredDistance(vec.x, vec.y, vec.z, treatAsBlockPos);
+    public double getSquaredDistanceFromCenter(double x, double y, double z) {
+        double d = (double)this.getX() + 0.5 - x;
+        double e = (double)this.getY() + 0.5 - y;
+        double f = (double)this.getZ() + 0.5 - z;
+        return d * d + e * e + f * f;
     }
 
-    public double getSquaredDistance(double x, double y, double z, boolean treatAsBlockPos) {
-        double d = treatAsBlockPos ? 0.5 : 0.0;
-        double e = (double)this.getX() + d - x;
-        double f = (double)this.getY() + d - y;
-        double g = (double)this.getZ() + d - z;
-        return e * e + f * f + g * g;
+    public double getSquaredDistance(double x, double y, double z) {
+        double d = (double)this.getX() - x;
+        double e = (double)this.getY() - y;
+        double f = (double)this.getZ() - z;
+        return d * d + e * e + f * f;
     }
 
     public int getManhattanDistance(Vec3i vec) {

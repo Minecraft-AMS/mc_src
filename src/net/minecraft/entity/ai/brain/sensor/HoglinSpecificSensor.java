@@ -10,11 +10,11 @@ package net.minecraft.entity.ai.brain.sensor;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.mob.HoglinEntity;
@@ -37,16 +37,18 @@ extends Sensor<HoglinEntity> {
         Optional<Object> optional = Optional.empty();
         int i = 0;
         ArrayList list = Lists.newArrayList();
-        List<LivingEntity> list2 = brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse(Lists.newArrayList());
-        for (LivingEntity livingEntity : list2) {
-            if (livingEntity instanceof PiglinEntity && !livingEntity.isBaby()) {
+        LivingTargetCache livingTargetCache = brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse(LivingTargetCache.empty());
+        for (LivingEntity livingEntity2 : livingTargetCache.iterate(livingEntity -> !livingEntity.isBaby() && (livingEntity instanceof PiglinEntity || livingEntity instanceof HoglinEntity))) {
+            if (livingEntity2 instanceof PiglinEntity) {
+                PiglinEntity piglinEntity = (PiglinEntity)livingEntity2;
                 ++i;
-                if (!optional.isPresent()) {
-                    optional = Optional.of((PiglinEntity)livingEntity);
+                if (optional.isEmpty()) {
+                    optional = Optional.of(piglinEntity);
                 }
             }
-            if (!(livingEntity instanceof HoglinEntity) || livingEntity.isBaby()) continue;
-            list.add((HoglinEntity)livingEntity);
+            if (!(livingEntity2 instanceof HoglinEntity)) continue;
+            HoglinEntity hoglinEntity2 = (HoglinEntity)livingEntity2;
+            list.add(hoglinEntity2);
         }
         brain.remember(MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLIN, optional);
         brain.remember(MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS, list);
@@ -55,7 +57,7 @@ extends Sensor<HoglinEntity> {
     }
 
     private Optional<BlockPos> findNearestWarpedFungus(ServerWorld world, HoglinEntity hoglin) {
-        return BlockPos.findClosest(hoglin.getBlockPos(), 8, 4, blockPos -> world.getBlockState((BlockPos)blockPos).isIn(BlockTags.HOGLIN_REPELLENTS));
+        return BlockPos.findClosest(hoglin.getBlockPos(), 8, 4, pos -> world.getBlockState((BlockPos)pos).isIn(BlockTags.HOGLIN_REPELLENTS));
     }
 }
 

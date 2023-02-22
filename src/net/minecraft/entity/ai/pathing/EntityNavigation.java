@@ -46,9 +46,10 @@ public abstract class EntityNavigation {
     protected long lastActiveTickMs;
     protected double currentNodeTimeout;
     protected float nodeReachProximity = 0.5f;
-    protected boolean shouldRecalculate;
+    protected boolean inRecalculationCooldown;
     protected long lastRecalculateTime;
     protected PathNodeMaker nodeMaker;
+    @Nullable
     private BlockPos currentTarget;
     private int currentDistance;
     private float rangeMultiplier = 1.0f;
@@ -70,6 +71,7 @@ public abstract class EntityNavigation {
         this.rangeMultiplier = rangeMultiplier;
     }
 
+    @Nullable
     public BlockPos getTargetPos() {
         return this.currentTarget;
     }
@@ -80,20 +82,16 @@ public abstract class EntityNavigation {
         this.speed = speed;
     }
 
-    public boolean shouldRecalculatePath() {
-        return this.shouldRecalculate;
-    }
-
     public void recalculatePath() {
         if (this.world.getTime() - this.lastRecalculateTime > 20L) {
             if (this.currentTarget != null) {
                 this.currentPath = null;
                 this.currentPath = this.findPathTo(this.currentTarget, this.currentDistance);
                 this.lastRecalculateTime = this.world.getTime();
-                this.shouldRecalculate = false;
+                this.inRecalculationCooldown = false;
             }
         } else {
-            this.shouldRecalculate = true;
+            this.inRecalculationCooldown = true;
         }
     }
 
@@ -199,7 +197,7 @@ public abstract class EntityNavigation {
     public void tick() {
         Vec3d vec3d;
         ++this.tickCount;
-        if (this.shouldRecalculate) {
+        if (this.inRecalculationCooldown) {
             this.recalculatePath();
         }
         if (this.isIdle()) {
@@ -219,8 +217,12 @@ public abstract class EntityNavigation {
             return;
         }
         vec3d = this.currentPath.getNodePosition(this.entity);
-        BlockPos blockPos = new BlockPos(vec3d);
-        this.entity.getMoveControl().moveTo(vec3d.x, this.world.getBlockState(blockPos.down()).isAir() ? vec3d.y : LandPathNodeMaker.getFeetY(this.world, blockPos), vec3d.z, this.speed);
+        this.entity.getMoveControl().moveTo(vec3d.x, this.adjustTargetY(vec3d), vec3d.z, this.speed);
+    }
+
+    protected double adjustTargetY(Vec3d pos) {
+        BlockPos blockPos = new BlockPos(pos);
+        return this.world.getBlockState(blockPos.down()).isAir() ? pos.y : LandPathNodeMaker.getFeetY(this.world, blockPos);
     }
 
     protected void continueFollowingPath() {
@@ -246,6 +248,9 @@ public abstract class EntityNavigation {
         Vec3d vec3d = Vec3d.ofBottomCenter(this.currentPath.getCurrentNodePos());
         if (!currentPos.isInRange(vec3d, 2.0)) {
             return false;
+        }
+        if (this.canPathDirectlyThrough(currentPos, this.currentPath.getNodePosition(this.entity))) {
+            return true;
         }
         Vec3d vec3d2 = Vec3d.ofBottomCenter(this.currentPath.getNodePos(this.currentPath.getCurrentNodeIndex() + 1));
         Vec3d vec3d3 = vec3d2.subtract(vec3d);
@@ -326,7 +331,9 @@ public abstract class EntityNavigation {
         }
     }
 
-    protected abstract boolean canPathDirectlyThrough(Vec3d var1, Vec3d var2, int var3, int var4, int var5);
+    protected boolean canPathDirectlyThrough(Vec3d origin, Vec3d target) {
+        return false;
+    }
 
     public boolean isValidPosition(BlockPos pos) {
         BlockPos blockPos = pos.down();
@@ -345,15 +352,16 @@ public abstract class EntityNavigation {
         return this.nodeMaker.canSwim();
     }
 
-    public void onBlockChanged(BlockPos pos) {
+    public boolean shouldRecalculatePath(BlockPos pos) {
+        if (this.inRecalculationCooldown) {
+            return false;
+        }
         if (this.currentPath == null || this.currentPath.isFinished() || this.currentPath.getLength() == 0) {
-            return;
+            return false;
         }
         PathNode pathNode = this.currentPath.getEnd();
         Vec3d vec3d = new Vec3d(((double)pathNode.x + this.entity.getX()) / 2.0, ((double)pathNode.y + this.entity.getY()) / 2.0, ((double)pathNode.z + this.entity.getZ()) / 2.0);
-        if (pos.isWithinDistance(vec3d, (double)(this.currentPath.getLength() - this.currentPath.getCurrentNodeIndex()))) {
-            this.recalculatePath();
-        }
+        return pos.isWithinDistance(vec3d, (double)(this.currentPath.getLength() - this.currentPath.getCurrentNodeIndex()));
     }
 
     public float getNodeReachProximity() {

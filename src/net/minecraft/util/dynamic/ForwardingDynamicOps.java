@@ -6,8 +6,10 @@
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.ListBuilder
+ *  com.mojang.serialization.ListBuilder$Builder
  *  com.mojang.serialization.MapLike
  *  com.mojang.serialization.RecordBuilder
+ *  com.mojang.serialization.RecordBuilder$MapBuilder
  */
 package net.minecraft.util.dynamic;
 
@@ -37,12 +39,12 @@ implements DynamicOps<T> {
         return (T)this.delegate.empty();
     }
 
-    public <U> U convertTo(DynamicOps<U> dynamicOps, T object) {
-        return (U)this.delegate.convertTo(dynamicOps, object);
+    public <U> U convertTo(DynamicOps<U> outputOps, T input) {
+        return (U)this.delegate.convertTo(outputOps, input);
     }
 
-    public DataResult<Number> getNumberValue(T object) {
-        return this.delegate.getNumberValue(object);
+    public DataResult<Number> getNumberValue(T input) {
+        return this.delegate.getNumberValue(input);
     }
 
     public T createNumeric(Number number) {
@@ -73,92 +75,92 @@ implements DynamicOps<T> {
         return (T)this.delegate.createDouble(d);
     }
 
-    public DataResult<Boolean> getBooleanValue(T object) {
-        return this.delegate.getBooleanValue(object);
+    public DataResult<Boolean> getBooleanValue(T input) {
+        return this.delegate.getBooleanValue(input);
     }
 
     public T createBoolean(boolean bl) {
         return (T)this.delegate.createBoolean(bl);
     }
 
-    public DataResult<String> getStringValue(T object) {
-        return this.delegate.getStringValue(object);
+    public DataResult<String> getStringValue(T input) {
+        return this.delegate.getStringValue(input);
     }
 
     public T createString(String string) {
         return (T)this.delegate.createString(string);
     }
 
-    public DataResult<T> mergeToList(T object, T object2) {
-        return this.delegate.mergeToList(object, object2);
+    public DataResult<T> mergeToList(T list, T value) {
+        return this.delegate.mergeToList(list, value);
     }
 
-    public DataResult<T> mergeToList(T object, List<T> list) {
-        return this.delegate.mergeToList(object, list);
+    public DataResult<T> mergeToList(T list, List<T> values) {
+        return this.delegate.mergeToList(list, values);
     }
 
-    public DataResult<T> mergeToMap(T object, T object2, T object3) {
-        return this.delegate.mergeToMap(object, object2, object3);
+    public DataResult<T> mergeToMap(T map, T key, T value) {
+        return this.delegate.mergeToMap(map, key, value);
     }
 
-    public DataResult<T> mergeToMap(T object, MapLike<T> mapLike) {
-        return this.delegate.mergeToMap(object, mapLike);
+    public DataResult<T> mergeToMap(T map, MapLike<T> values) {
+        return this.delegate.mergeToMap(map, values);
     }
 
-    public DataResult<Stream<Pair<T, T>>> getMapValues(T object) {
-        return this.delegate.getMapValues(object);
+    public DataResult<Stream<Pair<T, T>>> getMapValues(T input) {
+        return this.delegate.getMapValues(input);
     }
 
-    public DataResult<Consumer<BiConsumer<T, T>>> getMapEntries(T object) {
-        return this.delegate.getMapEntries(object);
+    public DataResult<Consumer<BiConsumer<T, T>>> getMapEntries(T input) {
+        return this.delegate.getMapEntries(input);
     }
 
-    public T createMap(Stream<Pair<T, T>> stream) {
-        return (T)this.delegate.createMap(stream);
+    public T createMap(Stream<Pair<T, T>> map) {
+        return (T)this.delegate.createMap(map);
     }
 
-    public DataResult<MapLike<T>> getMap(T object) {
-        return this.delegate.getMap(object);
+    public DataResult<MapLike<T>> getMap(T input) {
+        return this.delegate.getMap(input);
     }
 
-    public DataResult<Stream<T>> getStream(T object) {
-        return this.delegate.getStream(object);
+    public DataResult<Stream<T>> getStream(T input) {
+        return this.delegate.getStream(input);
     }
 
-    public DataResult<Consumer<Consumer<T>>> getList(T object) {
-        return this.delegate.getList(object);
+    public DataResult<Consumer<Consumer<T>>> getList(T input) {
+        return this.delegate.getList(input);
     }
 
     public T createList(Stream<T> stream) {
         return (T)this.delegate.createList(stream);
     }
 
-    public DataResult<ByteBuffer> getByteBuffer(T object) {
-        return this.delegate.getByteBuffer(object);
+    public DataResult<ByteBuffer> getByteBuffer(T input) {
+        return this.delegate.getByteBuffer(input);
     }
 
-    public T createByteList(ByteBuffer byteBuffer) {
-        return (T)this.delegate.createByteList(byteBuffer);
+    public T createByteList(ByteBuffer buf) {
+        return (T)this.delegate.createByteList(buf);
     }
 
-    public DataResult<IntStream> getIntStream(T object) {
-        return this.delegate.getIntStream(object);
+    public DataResult<IntStream> getIntStream(T input) {
+        return this.delegate.getIntStream(input);
     }
 
-    public T createIntList(IntStream intStream) {
-        return (T)this.delegate.createIntList(intStream);
+    public T createIntList(IntStream stream) {
+        return (T)this.delegate.createIntList(stream);
     }
 
-    public DataResult<LongStream> getLongStream(T object) {
-        return this.delegate.getLongStream(object);
+    public DataResult<LongStream> getLongStream(T input) {
+        return this.delegate.getLongStream(input);
     }
 
-    public T createLongList(LongStream longStream) {
-        return (T)this.delegate.createLongList(longStream);
+    public T createLongList(LongStream stream) {
+        return (T)this.delegate.createLongList(stream);
     }
 
-    public T remove(T object, String string) {
-        return (T)this.delegate.remove(object, string);
+    public T remove(T input, String key) {
+        return (T)this.delegate.remove(input, key);
     }
 
     public boolean compressMaps() {
@@ -166,11 +168,11 @@ implements DynamicOps<T> {
     }
 
     public ListBuilder<T> listBuilder() {
-        return this.delegate.listBuilder();
+        return new ListBuilder.Builder((DynamicOps)this);
     }
 
     public RecordBuilder<T> mapBuilder() {
-        return this.delegate.mapBuilder();
+        return new RecordBuilder.MapBuilder((DynamicOps)this);
     }
 }
 

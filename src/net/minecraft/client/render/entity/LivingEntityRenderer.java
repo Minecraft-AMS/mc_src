@@ -3,15 +3,16 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.render.entity;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -39,15 +40,14 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3f;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class LivingEntityRenderer<T extends LivingEntity, M extends EntityModel<T>>
 extends EntityRenderer<T>
 implements FeatureRendererContext<T, M> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final float field_32939 = 0.1f;
     protected M model;
     protected final List<FeatureRenderer<T, M>> features = Lists.newArrayList();
@@ -96,6 +96,10 @@ implements FeatureRendererContext<T, M> {
             k = j - h;
         }
         float m = MathHelper.lerp(g, ((LivingEntity)livingEntity).prevPitch, ((Entity)livingEntity).getPitch());
+        if (LivingEntityRenderer.shouldFlipUpsideDown(livingEntity)) {
+            m *= -1.0f;
+            k *= -1.0f;
+        }
         if (((Entity)livingEntity).getPose() == EntityPose.SLEEPING && (direction = ((LivingEntity)livingEntity).getSleepingDirection()) != null) {
             n = ((Entity)livingEntity).getEyeHeight(EntityPose.STANDING) - 0.1f;
             matrixStack.translate((float)(-direction.getOffsetX()) * n, 0.0, (float)(-direction.getOffsetZ()) * n);
@@ -180,11 +184,10 @@ implements FeatureRendererContext<T, M> {
     }
 
     protected boolean isShaking(T entity) {
-        return ((Entity)entity).isFreezing();
+        return ((Entity)entity).isFrozen();
     }
 
     protected void setupTransforms(T entity, MatrixStack matrices, float animationProgress, float bodyYaw, float tickDelta) {
-        String string;
         EntityPose entityPose;
         if (this.isShaking(entity)) {
             bodyYaw += (float)(Math.cos((double)((LivingEntity)entity).age * 3.25) * Math.PI * (double)0.4f);
@@ -207,7 +210,7 @@ implements FeatureRendererContext<T, M> {
             matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(g));
             matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(this.getLyingAngle(entity)));
             matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(270.0f));
-        } else if ((((Entity)entity).hasCustomName() || entity instanceof PlayerEntity) && ("Dinnerbone".equals(string = Formatting.strip(((Entity)entity).getName().getString())) || "Grumm".equals(string)) && (!(entity instanceof PlayerEntity) || ((PlayerEntity)entity).isPartVisible(PlayerModelPart.CAPE))) {
+        } else if (LivingEntityRenderer.shouldFlipUpsideDown(entity)) {
             matrices.translate(0.0, ((Entity)entity).getHeight() + 0.1f, 0.0);
             matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
         }
@@ -267,6 +270,14 @@ implements FeatureRendererContext<T, M> {
             }
         }
         return MinecraftClient.isHudEnabled() && livingEntity != minecraftClient.getCameraEntity() && bl && !((Entity)livingEntity).hasPassengers();
+    }
+
+    public static boolean shouldFlipUpsideDown(LivingEntity entity) {
+        String string;
+        if ((entity instanceof PlayerEntity || entity.hasCustomName()) && ("Dinnerbone".equals(string = Formatting.strip(entity.getName().getString())) || "Grumm".equals(string))) {
+            return !(entity instanceof PlayerEntity) || ((PlayerEntity)entity).isPartVisible(PlayerModelPart.CAPE);
+        }
+        return false;
     }
 }
 

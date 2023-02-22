@@ -14,7 +14,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.event.PositionSourceType;
 
 public interface PositionSource {
-    public static final Codec<PositionSource> CODEC = Registry.POSITION_SOURCE_TYPE.dispatch(PositionSource::getType, PositionSourceType::getCodec);
+    public static final Codec<PositionSource> CODEC = Registry.POSITION_SOURCE_TYPE.getCodec().dispatch(PositionSource::getType, PositionSourceType::getCodec);
 
     public Optional<BlockPos> getPos(World var1);
 

@@ -116,7 +116,7 @@ extends WallMountedBlock {
     public void powerOn(BlockState state, World world, BlockPos pos) {
         world.setBlockState(pos, (BlockState)state.with(POWERED, true), 3);
         this.updateNeighbors(state, world, pos);
-        world.getBlockTickScheduler().schedule(pos, this, this.getPressTicks());
+        world.createAndScheduleBlockTick(pos, this, this.getPressTicks());
     }
 
     protected void playClickSound(@Nullable PlayerEntity player, WorldAccess world, BlockPos pos, boolean powered) {
@@ -188,7 +188,7 @@ extends WallMountedBlock {
             world.emitGameEvent((Entity)list.stream().findFirst().orElse(null), bl ? GameEvent.BLOCK_PRESS : GameEvent.BLOCK_UNPRESS, pos);
         }
         if (bl) {
-            world.getBlockTickScheduler().schedule(new BlockPos(pos), this, this.getPressTicks());
+            world.createAndScheduleBlockTick(new BlockPos(pos), this, this.getPressTicks());
         }
     }
 

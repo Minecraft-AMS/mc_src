@@ -4,14 +4,15 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.DataFixer
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.logging.LogUtils;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,12 +27,11 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.world.PersistentState;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class PersistentStateManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<String, PersistentState> loadedStates = Maps.newHashMap();
     private final DataFixer dataFixer;
     private final File directory;
@@ -45,33 +45,33 @@ public class PersistentStateManager {
         return new File(this.directory, id + ".dat");
     }
 
-    public <T extends PersistentState> T getOrCreate(Function<NbtCompound, T> function, Supplier<T> supplier, String string) {
-        T persistentState = this.get(function, string);
+    public <T extends PersistentState> T getOrCreate(Function<NbtCompound, T> readFunction, Supplier<T> supplier, String id) {
+        T persistentState = this.get(readFunction, id);
         if (persistentState != null) {
             return persistentState;
         }
         PersistentState persistentState2 = (PersistentState)supplier.get();
-        this.set(string, persistentState2);
+        this.set(id, persistentState2);
         return (T)persistentState2;
     }
 
     @Nullable
-    public <T extends PersistentState> T get(Function<NbtCompound, T> function, String id) {
+    public <T extends PersistentState> T get(Function<NbtCompound, T> readFunction, String id) {
         PersistentState persistentState = this.loadedStates.get(id);
         if (persistentState == null && !this.loadedStates.containsKey(id)) {
-            persistentState = this.readFromFile(function, id);
+            persistentState = this.readFromFile(readFunction, id);
             this.loadedStates.put(id, persistentState);
         }
         return (T)persistentState;
     }
 
     @Nullable
-    private <T extends PersistentState> T readFromFile(Function<NbtCompound, T> function, String id) {
+    private <T extends PersistentState> T readFromFile(Function<NbtCompound, T> readFunction, String id) {
         try {
             File file = this.getFile(id);
             if (file.exists()) {
                 NbtCompound nbtCompound = this.readNbt(id, SharedConstants.getGameVersion().getWorldVersion());
-                return (T)((PersistentState)function.apply(nbtCompound.getCompound("data")));
+                return (T)((PersistentState)readFunction.apply(nbtCompound.getCompound("data")));
             }
         }
         catch (Exception exception) {
@@ -80,8 +80,8 @@ public class PersistentStateManager {
         return null;
     }
 
-    public void set(String string, PersistentState persistentState) {
-        this.loadedStates.put(string, persistentState);
+    public void set(String id, PersistentState state) {
+        this.loadedStates.put(id, state);
     }
 
     public NbtCompound readNbt(String id, int dataVersion) throws IOException {
@@ -119,9 +119,9 @@ public class PersistentStateManager {
     }
 
     public void save() {
-        this.loadedStates.forEach((string, persistentState) -> {
-            if (persistentState != null) {
-                persistentState.save(this.getFile((String)string));
+        this.loadedStates.forEach((id, state) -> {
+            if (state != null) {
+                state.save(this.getFile((String)id));
             }
         });
     }

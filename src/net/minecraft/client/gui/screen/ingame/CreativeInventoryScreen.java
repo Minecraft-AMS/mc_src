@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
  *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -14,15 +13,16 @@ package net.minecraft.client.gui.screen.ingame;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -54,9 +54,7 @@ import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.tag.ItemTags;
-import net.minecraft.tag.Tag;
-import net.minecraft.tag.TagGroup;
+import net.minecraft.tag.TagKey;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -73,8 +71,8 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
     private static final Identifier TEXTURE = new Identifier("textures/gui/container/creative_inventory/tabs.png");
     private static final String TAB_TEXTURE_PREFIX = "textures/gui/container/creative_inventory/tab_";
     private static final String CUSTOM_CREATIVE_LOCK_KEY = "CustomCreativeLock";
-    private static final int field_32337 = 5;
-    private static final int field_32338 = 9;
+    private static final int ROWS_COUNT = 5;
+    private static final int COLUMNS_COUNT = 9;
     private static final int TAB_WIDTH = 28;
     private static final int TAB_HEIGHT = 32;
     private static final int SCROLLBAR_WIDTH = 12;
@@ -93,7 +91,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
     private CreativeInventoryListener listener;
     private boolean ignoreTypedCharacter;
     private boolean lastClickOutsideBounds;
-    private final Map<Identifier, Tag<Item>> searchResultTags = Maps.newTreeMap();
+    private final Set<TagKey<Item>> searchResultTags = new HashSet<TagKey<Item>>();
 
     public CreativeInventoryScreen(PlayerEntity player) {
         super(new CreativeScreenHandler(player), player.getInventory(), LiteralText.EMPTY);
@@ -239,15 +237,6 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
     }
 
     @Override
-    protected void applyStatusEffectOffset() {
-        int i = this.x;
-        super.applyStatusEffectOffset();
-        if (this.searchBox != null && this.x != i) {
-            this.searchBox.setX(this.x + 82);
-        }
-    }
-
-    @Override
     protected void init() {
         if (this.client.interactionManager.hasCreativeInventory()) {
             super.init();
@@ -310,7 +299,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         this.ignoreTypedCharacter = false;
         if (selectedTab != ItemGroup.SEARCH.getIndex()) {
-            if (this.client.options.keyChat.matchesKey(keyCode, scanCode)) {
+            if (this.client.options.chatKey.matchesKey(keyCode, scanCode)) {
                 this.ignoreTypedCharacter = true;
                 this.setSelectedTab(ItemGroup.SEARCH);
                 return true;
@@ -375,8 +364,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
             String string2 = id2.substring(i + 1).trim();
             predicate = id -> id.getNamespace().contains(string) && id.getPath().contains(string2);
         }
-        TagGroup<Item> tagGroup = ItemTags.getTagGroup();
-        tagGroup.getTagIds().stream().filter(predicate).forEach(id -> this.searchResultTags.put((Identifier)id, tagGroup.getTag((Identifier)id)));
+        Registry.ITEM.streamTags().filter(tagKey -> predicate.test(tagKey.id())).forEach(this.searchResultTags::add);
     }
 
     @Override
@@ -384,7 +372,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         ItemGroup itemGroup = ItemGroup.GROUPS[selectedTab];
         if (itemGroup.shouldRenderName()) {
             RenderSystem.disableBlend();
-            this.textRenderer.draw(matrices, itemGroup.getTranslationKey(), 8.0f, 6.0f, 0x404040);
+            this.textRenderer.draw(matrices, itemGroup.getDisplayName(), 8.0f, 6.0f, 0x404040);
         }
     }
 
@@ -440,8 +428,8 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
                         if (k == j) {
                             ItemStack itemStack = new ItemStack(Items.PAPER);
                             itemStack.getOrCreateSubNbt(CUSTOM_CREATIVE_LOCK_KEY);
-                            Text text = this.client.options.keysHotbar[j].getBoundKeyLocalizedText();
-                            Text text2 = this.client.options.keySaveToolbarActivator.getBoundKeyLocalizedText();
+                            Text text = this.client.options.hotbarKeys[j].getBoundKeyLocalizedText();
+                            Text text2 = this.client.options.saveToolbarActivatorKey.getBoundKeyLocalizedText();
                             itemStack.setCustomName(new TranslatableText("inventory.hotbarInfo", text2, text));
                             ((CreativeScreenHandler)this.handler).itemList.add(itemStack);
                             continue;
@@ -518,8 +506,8 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
             return false;
         }
         int i = (((CreativeScreenHandler)this.handler).itemList.size() + 9 - 1) / 9 - 5;
-        this.scrollPosition = (float)((double)this.scrollPosition - amount / (double)i);
-        this.scrollPosition = MathHelper.clamp(this.scrollPosition, 0.0f, 1.0f);
+        float f = (float)(amount / (double)i);
+        this.scrollPosition = MathHelper.clamp(this.scrollPosition - f, 0.0f, 1.0f);
         ((CreativeScreenHandler)this.handler).scrollItems(this.scrollPosition);
         return true;
     }
@@ -584,13 +572,13 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
                     break;
                 }
             }
-            this.searchResultTags.forEach((id, tag) -> {
-                if (stack.isIn((Tag<Item>)tag)) {
-                    list2.add(1, new LiteralText("#" + id).formatted(Formatting.DARK_PURPLE));
+            this.searchResultTags.forEach(tagKey -> {
+                if (stack.isIn((TagKey<Item>)tagKey)) {
+                    list2.add(1, new LiteralText("#" + tagKey.id()).formatted(Formatting.DARK_PURPLE));
                 }
             });
             if (itemGroup != null) {
-                list2.add(1, itemGroup.getTranslationKey().shallowCopy().formatted(Formatting.BLUE));
+                list2.add(1, itemGroup.getDisplayName().shallowCopy().formatted(Formatting.BLUE));
             }
             this.renderTooltip(matrices, list2, stack.getTooltipData(), x, y);
         } else {
@@ -651,7 +639,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         }
         k = group.isTopRow() ? (k -= 32) : (k += this.backgroundHeight);
         if (this.isPointWithinBounds(j + 3, k + 3, 23, 27, mouseX, mouseY)) {
-            this.renderTooltip(matrices, group.getTranslationKey(), mouseX, mouseY);
+            this.renderTooltip(matrices, group.getDisplayName(), mouseX, mouseY);
             return true;
         }
         return false;
@@ -708,8 +696,8 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
             for (int i = 0; i < PlayerInventory.getHotbarSize(); ++i) {
                 hotbarStorageEntry.set(i, clientPlayerEntity.getInventory().getStack(i).copy());
             }
-            Text text = client.options.keysHotbar[index].getBoundKeyLocalizedText();
-            Text text2 = client.options.keyLoadToolbarActivator.getBoundKeyLocalizedText();
+            Text text = client.options.hotbarKeys[index].getBoundKeyLocalizedText();
+            Text text2 = client.options.loadToolbarActivatorKey.getBoundKeyLocalizedText();
             client.inGameHud.setOverlayMessage(new TranslatableText("inventory.hotbarSaved", text2, text), false);
             hotbarStorage.save();
         }

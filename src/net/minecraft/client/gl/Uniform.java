@@ -9,6 +9,7 @@ package net.minecraft.client.gl;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vector4f;
@@ -82,6 +83,9 @@ public class Uniform {
     }
 
     public void set(Matrix4f values) {
+    }
+
+    public void method_39978(Matrix3f matrix3f) {
     }
 }
 

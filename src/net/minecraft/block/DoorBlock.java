@@ -122,11 +122,11 @@ extends Block {
         return false;
     }
 
-    private int getOpenSoundEventId() {
+    private int getCloseSoundEventId() {
         return this.material == Material.METAL ? 1011 : 1012;
     }
 
-    private int getCloseSoundEventId() {
+    private int getOpenSoundEventId() {
         return this.material == Material.METAL ? 1005 : 1006;
     }
 
@@ -187,7 +187,7 @@ extends Block {
         }
         state = (BlockState)state.cycle(OPEN);
         world.setBlockState(pos, state, 10);
-        world.syncWorldEvent(player, state.get(OPEN) != false ? this.getCloseSoundEventId() : this.getOpenSoundEventId(), pos, 0);
+        world.syncWorldEvent(player, state.get(OPEN) != false ? this.getOpenSoundEventId() : this.getCloseSoundEventId(), pos, 0);
         world.emitGameEvent((Entity)player, this.isOpen(state) ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
         return ActionResult.success(world.isClient);
     }
@@ -229,7 +229,7 @@ extends Block {
     }
 
     private void playOpenCloseSound(World world, BlockPos pos, boolean open) {
-        world.syncWorldEvent(null, open ? this.getCloseSoundEventId() : this.getOpenSoundEventId(), pos, 0);
+        world.syncWorldEvent(null, open ? this.getOpenSoundEventId() : this.getCloseSoundEventId(), pos, 0);
     }
 
     @Override

@@ -27,7 +27,7 @@ extends Framebuffer {
 
     public WindowFramebuffer(int width, int height) {
         super(true);
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> this.initSize(width, height));
         } else {
@@ -36,7 +36,7 @@ extends Framebuffer {
     }
 
     private void initSize(int width, int height) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         Size size = this.findSuitableSize(width, height);
         this.fbo = GlStateManager.glGenFramebuffers();
         GlStateManager._glBindFramebuffer(36160, this.fbo);
@@ -63,7 +63,7 @@ extends Framebuffer {
     }
 
     private Size findSuitableSize(int width, int height) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         this.colorAttachment = TextureUtil.generateTextureId();
         this.depthAttachment = TextureUtil.generateTextureId();
         Attachment attachment = Attachment.NONE;
@@ -82,7 +82,7 @@ extends Framebuffer {
     }
 
     private boolean supportColor(Size size) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         GlStateManager._getError();
         GlStateManager._bindTexture(this.colorAttachment);
         GlStateManager._texImage2D(3553, 0, 32856, size.width, size.height, 0, 6408, 5121, null);
@@ -90,7 +90,7 @@ extends Framebuffer {
     }
 
     private boolean supportsDepth(Size size) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         GlStateManager._getError();
         GlStateManager._bindTexture(this.depthAttachment);
         GlStateManager._texImage2D(3553, 0, 6402, size.width, size.height, 0, 6402, 5126, null);
@@ -108,7 +108,7 @@ extends Framebuffer {
         }
 
         static List<Size> findCompatible(int width, int height) {
-            RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+            RenderSystem.assertOnRenderThreadOrInit();
             int i = RenderSystem.maxSupportedTextureSize();
             if (width <= 0 || width > i || height <= 0 || height > i) {
                 return ImmutableList.of((Object)DEFAULT);

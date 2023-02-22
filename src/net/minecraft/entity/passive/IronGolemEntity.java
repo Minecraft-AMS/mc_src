@@ -71,6 +71,7 @@ implements Angerable {
     private int lookingAtVillagerTicksLeft;
     private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private int angerTime;
+    @Nullable
     private UUID angryAt;
 
     public IronGolemEntity(EntityType<? extends IronGolemEntity> entityType, World world) {
@@ -169,8 +170,8 @@ implements Angerable {
     }
 
     @Override
-    public void setAngerTime(int ticks) {
-        this.angerTime = ticks;
+    public void setAngerTime(int angerTime) {
+        this.angerTime = angerTime;
     }
 
     @Override
@@ -179,11 +180,12 @@ implements Angerable {
     }
 
     @Override
-    public void setAngryAt(@Nullable UUID uuid) {
-        this.angryAt = uuid;
+    public void setAngryAt(@Nullable UUID angryAt) {
+        this.angryAt = angryAt;
     }
 
     @Override
+    @Nullable
     public UUID getAngryAt() {
         return this.angryAt;
     }
@@ -318,7 +320,7 @@ implements Angerable {
                 if (SpawnHelper.isClearForSpawn(world, blockPos3, blockState2 = world.getBlockState(blockPos3), blockState2.getFluidState(), EntityType.IRON_GOLEM)) continue;
                 return false;
             }
-            return SpawnHelper.isClearForSpawn(world, blockPos, world.getBlockState(blockPos), Fluids.EMPTY.getDefaultState(), EntityType.IRON_GOLEM) && world.intersectsEntities(this);
+            return SpawnHelper.isClearForSpawn(world, blockPos, world.getBlockState(blockPos), Fluids.EMPTY.getDefaultState(), EntityType.IRON_GOLEM) && world.doesNotIntersectEntities(this);
         }
         return false;
     }

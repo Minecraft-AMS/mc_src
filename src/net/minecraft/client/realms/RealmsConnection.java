@@ -2,13 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms;
 
+import com.mojang.logging.LogUtils;
 import java.net.InetSocketAddress;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -25,14 +27,15 @@ import net.minecraft.network.NetworkState;
 import net.minecraft.network.packet.c2s.handshake.HandshakeC2SPacket;
 import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
 import net.minecraft.text.TranslatableText;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsConnection {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     final Screen onlineScreen;
     volatile boolean aborted;
+    @Nullable
     ClientConnection connection;
 
     public RealmsConnection(Screen onlineScreen) {
@@ -42,6 +45,7 @@ public class RealmsConnection {
     public void connect(final RealmsServer server, ServerAddress address) {
         final MinecraftClient minecraftClient = MinecraftClient.getInstance();
         minecraftClient.setConnectedToRealms(true);
+        minecraftClient.loadBlockList();
         NarratorManager.INSTANCE.narrate(new TranslatableText("mco.connect.success"));
         final String string = address.getAddress();
         final int i = address.getPort();

@@ -6,10 +6,10 @@
  *  com.google.common.cache.CacheLoader
  *  com.google.common.cache.LoadingCache
  *  com.google.common.collect.ImmutableMap
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.Object2ByteLinkedOpenHashMap
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.block;
 
@@ -17,12 +17,12 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2ByteLinkedOpenHashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
@@ -66,6 +66,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -76,14 +77,14 @@ import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.explosion.Explosion;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class Block
 extends AbstractBlock
 implements ItemConvertible {
-    protected static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private final RegistryEntry.Reference<Block> registryEntry = Registry.BLOCK.createEntry(this);
     public static final IdList<BlockState> STATE_IDS = new IdList();
     private static final LoadingCache<VoxelShape, Boolean> FULL_CUBE_SHAPE_CACHE = CacheBuilder.newBuilder().maximumSize(512L).weakKeys().build((CacheLoader)new CacheLoader<VoxelShape, Boolean>(){
 
@@ -119,7 +120,7 @@ implements ItemConvertible {
     private static final ThreadLocal<Object2ByteLinkedOpenHashMap<NeighborGroup>> FACE_CULL_MAP = ThreadLocal.withInitial(() -> {
         Object2ByteLinkedOpenHashMap<NeighborGroup> object2ByteLinkedOpenHashMap = new Object2ByteLinkedOpenHashMap<NeighborGroup>(2048, 0.25f){
 
-            protected void rehash(int i) {
+            protected void rehash(int newN) {
             }
         };
         object2ByteLinkedOpenHashMap.defaultReturnValue((byte)127);
@@ -153,7 +154,7 @@ implements ItemConvertible {
         }
         List<Entity> list = world.getOtherEntities(null, voxelShape.getBoundingBox());
         for (Entity entity : list) {
-            double d = VoxelShapes.calculateMaxOffset(Direction.Axis.Y, entity.getBoundingBox().offset(0.0, 1.0, 0.0), Stream.of(voxelShape), -1.0);
+            double d = VoxelShapes.calculateMaxOffset(Direction.Axis.Y, entity.getBoundingBox().offset(0.0, 1.0, 0.0), List.of(voxelShape), -1.0);
             entity.requestTeleport(entity.getX(), entity.getY() + 1.0 + d, entity.getZ());
         }
         return to;
@@ -209,8 +210,8 @@ implements ItemConvertible {
         return this.randomTicks;
     }
 
-    public static boolean shouldDrawSide(BlockState state, BlockView world, BlockPos pos, Direction side, BlockPos blockPos) {
-        BlockState blockState = world.getBlockState(blockPos);
+    public static boolean shouldDrawSide(BlockState state, BlockView world, BlockPos pos, Direction side, BlockPos otherPos) {
+        BlockState blockState = world.getBlockState(otherPos);
         if (state.isSideInvisible(blockState, side)) {
             return false;
         }
@@ -225,7 +226,7 @@ implements ItemConvertible {
             if (voxelShape.isEmpty()) {
                 return true;
             }
-            VoxelShape voxelShape2 = blockState.getCullingFace(world, blockPos, side.getOpposite());
+            VoxelShape voxelShape2 = blockState.getCullingFace(world, otherPos, side.getOpposite());
             boolean bl = VoxelShapes.matchesAnywhere(voxelShape, voxelShape2, BooleanBiFunction.ONLY_FIRST);
             if (object2ByteLinkedOpenHashMap.size() == 2048) {
                 object2ByteLinkedOpenHashMap.removeLastByte();
@@ -298,10 +299,10 @@ implements ItemConvertible {
         }
     }
 
-    public static void dropStacks(BlockState state, World world, BlockPos pos, @Nullable BlockEntity blockEntity, Entity entity, ItemStack stack) {
+    public static void dropStacks(BlockState state, World world, BlockPos pos, @Nullable BlockEntity blockEntity, Entity entity, ItemStack stack2) {
         if (world instanceof ServerWorld) {
-            Block.getDroppedStacks(state, (ServerWorld)world, pos, blockEntity, entity, stack).forEach(itemStack -> Block.dropStack(world, pos, itemStack));
-            state.onStacksDropped((ServerWorld)world, pos, stack);
+            Block.getDroppedStacks(state, (ServerWorld)world, pos, blockEntity, entity, stack2).forEach(stack -> Block.dropStack(world, pos, stack));
+            state.onStacksDropped((ServerWorld)world, pos, stack2);
         }
     }
 
@@ -485,8 +486,13 @@ implements ItemConvertible {
         return this;
     }
 
-    protected ImmutableMap<BlockState, VoxelShape> getShapesForStates(Function<BlockState, VoxelShape> function) {
-        return (ImmutableMap)this.stateManager.getStates().stream().collect(ImmutableMap.toImmutableMap(Function.identity(), function));
+    protected ImmutableMap<BlockState, VoxelShape> getShapesForStates(Function<BlockState, VoxelShape> stateToShape) {
+        return (ImmutableMap)this.stateManager.getStates().stream().collect(ImmutableMap.toImmutableMap(Function.identity(), stateToShape));
+    }
+
+    @Deprecated
+    public RegistryEntry.Reference<Block> getRegistryEntry() {
+        return this.registryEntry;
     }
 
     public static final class NeighborGroup {

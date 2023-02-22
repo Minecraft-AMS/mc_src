@@ -42,7 +42,7 @@ extends EntityRenderer<LightningEntity> {
             j += (float)(random.nextInt(11) - 5);
         }
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getLightning());
-        Matrix4f matrix4f = matrixStack.peek().getModel();
+        Matrix4f matrix4f = matrixStack.peek().getPositionMatrix();
         for (int l = 0; l < 4; ++l) {
             Random random2 = new Random(lightningEntity.seed);
             for (int m = 0; m < 3; ++m) {
@@ -72,11 +72,11 @@ extends EntityRenderer<LightningEntity> {
                     float x = 0.5f;
                     float y = 0.1f + (float)l * 0.2f;
                     if (m == 0) {
-                        y = (float)((double)y * ((double)r * 0.1 + 1.0));
+                        y *= (float)r * 0.1f + 1.0f;
                     }
                     float z = 0.1f + (float)l * 0.2f;
                     if (m == 0) {
-                        z *= (float)(r - 1) * 0.1f + 1.0f;
+                        z *= ((float)r - 1.0f) * 0.1f + 1.0f;
                     }
                     LightningEntityRenderer.drawBranch(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, false, true, false);
                     LightningEntityRenderer.drawBranch(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, false, true, true);

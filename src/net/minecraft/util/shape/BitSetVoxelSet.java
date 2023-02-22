@@ -27,7 +27,7 @@ extends VoxelSet {
         this.minZ = k;
     }
 
-    public static BitSetVoxelSet method_31939(int sizeX, int sizeY, int sizeZ, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+    public static BitSetVoxelSet create(int sizeX, int sizeY, int sizeZ, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
         BitSetVoxelSet bitSetVoxelSet = new BitSetVoxelSet(sizeX, sizeY, sizeZ);
         bitSetVoxelSet.minX = minX;
         bitSetVoxelSet.minY = minY;
@@ -38,7 +38,7 @@ extends VoxelSet {
         for (int i = minX; i < maxX; ++i) {
             for (int j = minY; j < maxY; ++j) {
                 for (int k = minZ; k < maxZ; ++k) {
-                    bitSetVoxelSet.method_31940(i, j, k, false);
+                    bitSetVoxelSet.set(i, j, k, false);
                 }
             }
         }
@@ -77,7 +77,7 @@ extends VoxelSet {
         return this.storage.get(this.getIndex(x, y, z));
     }
 
-    private void method_31940(int x, int y, int z, boolean bl) {
+    private void set(int x, int y, int z, boolean bl) {
         this.storage.set(this.getIndex(x, y, z));
         if (bl) {
             this.minX = Math.min(this.minX, x);
@@ -91,7 +91,7 @@ extends VoxelSet {
 
     @Override
     public void set(int x, int y, int z) {
-        this.method_31940(x, y, z, true);
+        this.set(x, y, z, true);
     }
 
     @Override
@@ -149,34 +149,34 @@ extends VoxelSet {
 
     protected static void method_31941(VoxelSet voxelSet, VoxelSet.PositionBiConsumer positionBiConsumer, boolean bl) {
         BitSetVoxelSet bitSetVoxelSet = new BitSetVoxelSet(voxelSet);
-        for (int i = 0; i < bitSetVoxelSet.sizeX; ++i) {
-            for (int j = 0; j < bitSetVoxelSet.sizeY; ++j) {
+        for (int i = 0; i < bitSetVoxelSet.sizeY; ++i) {
+            for (int j = 0; j < bitSetVoxelSet.sizeX; ++j) {
                 int k = -1;
                 for (int l = 0; l <= bitSetVoxelSet.sizeZ; ++l) {
-                    if (bitSetVoxelSet.inBoundsAndContains(i, j, l)) {
+                    if (bitSetVoxelSet.inBoundsAndContains(j, i, l)) {
                         if (bl) {
                             if (k != -1) continue;
                             k = l;
                             continue;
                         }
-                        positionBiConsumer.consume(i, j, l, i + 1, j + 1, l + 1);
+                        positionBiConsumer.consume(j, i, l, j + 1, i + 1, l + 1);
                         continue;
                     }
                     if (k == -1) continue;
-                    int m = i;
-                    int n = j;
-                    bitSetVoxelSet.method_31942(k, l, i, j);
-                    while (bitSetVoxelSet.isColumnFull(k, l, m + 1, j)) {
-                        bitSetVoxelSet.method_31942(k, l, m + 1, j);
+                    int m = j;
+                    int n = i;
+                    bitSetVoxelSet.method_31942(k, l, j, i);
+                    while (bitSetVoxelSet.isColumnFull(k, l, m + 1, i)) {
+                        bitSetVoxelSet.method_31942(k, l, m + 1, i);
                         ++m;
                     }
-                    while (bitSetVoxelSet.method_31938(i, m + 1, k, l, n + 1)) {
-                        for (int o = i; o <= m; ++o) {
+                    while (bitSetVoxelSet.method_31938(j, m + 1, k, l, n + 1)) {
+                        for (int o = j; o <= m; ++o) {
                             bitSetVoxelSet.method_31942(k, l, o, n + 1);
                         }
                         ++n;
                     }
-                    positionBiConsumer.consume(i, j, k, m + 1, n + 1, l);
+                    positionBiConsumer.consume(j, i, k, m + 1, n + 1, l);
                     k = -1;
                 }
             }

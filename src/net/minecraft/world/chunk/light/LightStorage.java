@@ -101,13 +101,7 @@ extends SectionDistanceLevelPropagator {
         }
         ChunkNibbleArray chunkNibbleArray = this.getLightSection(l, true);
         chunkNibbleArray.set(ChunkSectionPos.getLocalCoord(BlockPos.unpackLongX(blockPos)), ChunkSectionPos.getLocalCoord(BlockPos.unpackLongY(blockPos)), ChunkSectionPos.getLocalCoord(BlockPos.unpackLongZ(blockPos)), value);
-        for (int i = -1; i <= 1; ++i) {
-            for (int j = -1; j <= 1; ++j) {
-                for (int k = -1; k <= 1; ++k) {
-                    this.notifySections.add(ChunkSectionPos.fromBlockPos(BlockPos.add(blockPos, j, k, i)));
-                }
-            }
-        }
+        ChunkSectionPos.forEachChunkSectionAround(blockPos, arg_0 -> ((LongSet)this.notifySections).add(arg_0));
     }
 
     @Override
@@ -153,10 +147,13 @@ extends SectionDistanceLevelPropagator {
                 ((ChunkToNibbleArrayMap)this.storage).put(id, this.createSection(id));
                 this.dirtySections.add(id);
                 this.onLoadSection(id);
-                for (int j = -1; j <= 1; ++j) {
-                    for (int k = -1; k <= 1; ++k) {
-                        for (int l = -1; l <= 1; ++l) {
-                            this.notifySections.add(ChunkSectionPos.fromBlockPos(BlockPos.add(id, k, l, j)));
+                int j = ChunkSectionPos.unpackX(id);
+                int k = ChunkSectionPos.unpackY(id);
+                int l = ChunkSectionPos.unpackZ(id);
+                for (int m = -1; m <= 1; ++m) {
+                    for (int n = -1; n <= 1; ++n) {
+                        for (int o = -1; o <= 1; ++o) {
+                            this.notifySections.add(ChunkSectionPos.asLong(j + n, k + o, l + m));
                         }
                     }
                 }
@@ -177,6 +174,9 @@ extends SectionDistanceLevelPropagator {
     }
 
     protected void removeSection(ChunkLightProvider<?, ?> storage, long sectionPos) {
+        if (storage.getPendingUpdateCount() == 0) {
+            return;
+        }
         if (storage.getPendingUpdateCount() < 8192) {
             storage.removePendingUpdateIf(m -> ChunkSectionPos.fromBlockPos(m) == sectionPos);
             return;
@@ -323,10 +323,10 @@ extends SectionDistanceLevelPropagator {
         }
     }
 
-    protected void enqueueSectionData(long sectionPos, @Nullable ChunkNibbleArray array, boolean bl) {
+    protected void enqueueSectionData(long sectionPos, @Nullable ChunkNibbleArray array, boolean nonEdge) {
         if (array != null) {
             this.queuedSections.put(sectionPos, (Object)array);
-            if (!bl) {
+            if (!nonEdge) {
                 this.queuedEdgeSections.add(sectionPos);
             }
         } else {

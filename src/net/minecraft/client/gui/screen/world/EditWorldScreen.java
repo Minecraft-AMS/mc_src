@@ -6,7 +6,7 @@
  *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonIOException
  *  com.google.gson.stream.JsonWriter
- *  com.mojang.datafixers.util.Function4
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DataResult$PartialResult
  *  com.mojang.serialization.JsonOps
@@ -14,8 +14,7 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.FileUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.world;
 
@@ -23,7 +22,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.stream.JsonWriter;
-import com.mojang.datafixers.util.Function4;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
@@ -48,28 +47,24 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.resource.DataPackSettings;
-import net.minecraft.resource.ResourceManager;
+import net.minecraft.server.SaveLoader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.WorldSavePath;
-import net.minecraft.util.dynamic.RegistryReadingOps;
+import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.world.SaveProperties;
 import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.level.storage.LevelSummary;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class EditWorldScreen
 extends Screen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().disableHtmlEscaping().create();
     private static final Text ENTER_NAME_TEXT = new TranslatableText("selectWorld.enterName");
     private ButtonWidget saveButton;
@@ -119,10 +114,9 @@ extends Screen {
         }, new TranslatableText("optimizeWorld.confirm.title"), new TranslatableText("optimizeWorld.confirm.description"), true))));
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 5, 200, 20, new TranslatableText("selectWorld.edit.export_worldgen_settings"), button -> {
             DataResult dataResult2;
-            DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-            try (MinecraftClient.IntegratedResourceManager integratedResourceManager = this.client.createIntegratedResourceManager(impl, MinecraftClient::loadDataPackSettings, (Function4<LevelStorage.Session, DynamicRegistryManager.Impl, ResourceManager, DataPackSettings, SaveProperties>)((Function4)MinecraftClient::createSaveProperties), false, this.storageSession);){
-                RegistryReadingOps dynamicOps = RegistryReadingOps.of(JsonOps.INSTANCE, impl);
-                DataResult dataResult = GeneratorOptions.CODEC.encodeStart(dynamicOps, (Object)integratedResourceManager.getSaveProperties().getGeneratorOptions());
+            try (SaveLoader saveLoader = this.client.createSaveLoader(this.storageSession, false);){
+                RegistryOps dynamicOps = RegistryOps.of(JsonOps.INSTANCE, saveLoader.dynamicRegistryManager());
+                DataResult dataResult = GeneratorOptions.CODEC.encodeStart(dynamicOps, (Object)saveLoader.saveProperties().getGeneratorOptions());
                 dataResult2 = dataResult.flatMap(json -> {
                     Path path = this.storageSession.getDirectory(WorldSavePath.ROOT).resolve("worldgen_settings_export.json");
                     try (JsonWriter jsonWriter = GSON.newJsonWriter((Writer)Files.newBufferedWriter(path, StandardCharsets.UTF_8, new OpenOption[0]));){
@@ -165,7 +159,7 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.callback.accept(false);
     }
 

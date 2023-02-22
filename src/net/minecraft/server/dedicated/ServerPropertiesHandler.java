@@ -2,14 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.gson.JsonObject
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.server.dedicated;
 
+import com.google.gson.JsonObject;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import net.minecraft.server.dedicated.AbstractPropertiesHandler;
+import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.Difficulty;
@@ -36,67 +40,47 @@ extends AbstractPropertiesHandler<ServerPropertiesHandler> {
     public final GameMode gameMode = this.get("gamemode", ServerPropertiesHandler.combineParser(GameMode::byId, GameMode::byName), GameMode::getName, GameMode.SURVIVAL);
     public final String levelName = this.getString("level-name", "world");
     public final int serverPort = this.getInt("server-port", 25565);
+    @Nullable
     public final Boolean announcePlayerAchievements = this.getDeprecatedBoolean("announce-player-achievements");
     public final boolean enableQuery = this.parseBoolean("enable-query", false);
     public final int queryPort = this.getInt("query.port", 25565);
     public final boolean enableRcon = this.parseBoolean("enable-rcon", false);
     public final int rconPort = this.getInt("rcon.port", 25575);
     public final String rconPassword = this.getString("rcon.password", "");
+    @Nullable
     public final String resourcePackHash = this.getDeprecatedString("resource-pack-hash");
     public final String resourcePackSha1 = this.getString("resource-pack-sha1", "");
     public final boolean hardcore = this.parseBoolean("hardcore", false);
     public final boolean allowNether = this.parseBoolean("allow-nether", true);
     public final boolean spawnMonsters = this.parseBoolean("spawn-monsters", true);
-    public final boolean snooperEnabled;
-    public final boolean useNativeTransport;
-    public final boolean enableCommandBlock;
-    public final int spawnProtection;
-    public final int opPermissionLevel;
-    public final int functionPermissionLevel;
-    public final long maxTickTime;
-    public final int rateLimit;
-    public final int viewDistance;
-    public final int maxPlayers;
-    public final int networkCompressionThreshold;
-    public final boolean broadcastRconToOps;
-    public final boolean broadcastConsoleToOps;
-    public final int maxWorldSize;
-    public final boolean syncChunkWrites;
-    public final boolean enableJmxMonitoring;
-    public final boolean enableStatus;
-    public final int entityBroadcastRangePercentage;
-    public final String textFilteringConfig;
-    public final AbstractPropertiesHandler.PropertyAccessor<Integer> playerIdleTimeout;
-    public final AbstractPropertiesHandler.PropertyAccessor<Boolean> whiteList;
+    public final boolean useNativeTransport = this.parseBoolean("use-native-transport", true);
+    public final boolean enableCommandBlock = this.parseBoolean("enable-command-block", false);
+    public final int spawnProtection = this.getInt("spawn-protection", 16);
+    public final int opPermissionLevel = this.getInt("op-permission-level", 4);
+    public final int functionPermissionLevel = this.getInt("function-permission-level", 2);
+    public final long maxTickTime = this.parseLong("max-tick-time", TimeUnit.MINUTES.toMillis(1L));
+    public final int rateLimit = this.getInt("rate-limit", 0);
+    public final int viewDistance = this.getInt("view-distance", 10);
+    public final int simulationDistance = this.getInt("simulation-distance", 10);
+    public final int maxPlayers = this.getInt("max-players", 20);
+    public final int networkCompressionThreshold = this.getInt("network-compression-threshold", 256);
+    public final boolean broadcastRconToOps = this.parseBoolean("broadcast-rcon-to-ops", true);
+    public final boolean broadcastConsoleToOps = this.parseBoolean("broadcast-console-to-ops", true);
+    public final int maxWorldSize = this.transformedParseInt("max-world-size", maxWorldSize -> MathHelper.clamp(maxWorldSize, 1, 29999984), 29999984);
+    public final boolean syncChunkWrites = this.parseBoolean("sync-chunk-writes", true);
+    public final boolean enableJmxMonitoring = this.parseBoolean("enable-jmx-monitoring", false);
+    public final boolean enableStatus = this.parseBoolean("enable-status", true);
+    public final boolean hideOnlinePlayers = this.parseBoolean("hide-online-players", false);
+    public final int entityBroadcastRangePercentage = this.transformedParseInt("entity-broadcast-range-percentage", percentage -> MathHelper.clamp(percentage, 10, 1000), 100);
+    public final String textFilteringConfig = this.getString("text-filtering-config", "");
+    public final AbstractPropertiesHandler.PropertyAccessor<Integer> playerIdleTimeout = this.intAccessor("player-idle-timeout", 0);
+    public final AbstractPropertiesHandler.PropertyAccessor<Boolean> whiteList = this.booleanAccessor("white-list", false);
+    private final WorldGenProperties worldGenProperties = new WorldGenProperties(this.getString("level-seed", ""), this.get("generator-settings", generatorSettings -> JsonHelper.deserialize(!generatorSettings.isEmpty() ? generatorSettings : "{}"), new JsonObject()), this.parseBoolean("generate-structures", true), this.get("level-type", type -> type.toLowerCase(Locale.ROOT), "default"));
     @Nullable
     private GeneratorOptions generatorOptions;
 
     public ServerPropertiesHandler(Properties properties) {
         super(properties);
-        if (this.parseBoolean("snooper-enabled", true)) {
-            // empty if block
-        }
-        this.snooperEnabled = false;
-        this.useNativeTransport = this.parseBoolean("use-native-transport", true);
-        this.enableCommandBlock = this.parseBoolean("enable-command-block", false);
-        this.spawnProtection = this.getInt("spawn-protection", 16);
-        this.opPermissionLevel = this.getInt("op-permission-level", 4);
-        this.functionPermissionLevel = this.getInt("function-permission-level", 2);
-        this.maxTickTime = this.parseLong("max-tick-time", TimeUnit.MINUTES.toMillis(1L));
-        this.rateLimit = this.getInt("rate-limit", 0);
-        this.viewDistance = this.getInt("view-distance", 10);
-        this.maxPlayers = this.getInt("max-players", 20);
-        this.networkCompressionThreshold = this.getInt("network-compression-threshold", 256);
-        this.broadcastRconToOps = this.parseBoolean("broadcast-rcon-to-ops", true);
-        this.broadcastConsoleToOps = this.parseBoolean("broadcast-console-to-ops", true);
-        this.maxWorldSize = this.transformedParseInt("max-world-size", maxWorldSize -> MathHelper.clamp(maxWorldSize, 1, 29999984), 29999984);
-        this.syncChunkWrites = this.parseBoolean("sync-chunk-writes", true);
-        this.enableJmxMonitoring = this.parseBoolean("enable-jmx-monitoring", false);
-        this.enableStatus = this.parseBoolean("enable-status", true);
-        this.entityBroadcastRangePercentage = this.transformedParseInt("entity-broadcast-range-percentage", percentage -> MathHelper.clamp(percentage, 10, 1000), 100);
-        this.textFilteringConfig = this.getString("text-filtering-config", "");
-        this.playerIdleTimeout = this.intAccessor("player-idle-timeout", 0);
-        this.whiteList = this.booleanAccessor("white-list", false);
     }
 
     public static ServerPropertiesHandler load(Path path) {
@@ -106,13 +90,13 @@ extends AbstractPropertiesHandler<ServerPropertiesHandler> {
     @Override
     protected ServerPropertiesHandler create(DynamicRegistryManager dynamicRegistryManager, Properties properties) {
         ServerPropertiesHandler serverPropertiesHandler = new ServerPropertiesHandler(properties);
-        serverPropertiesHandler.method_37371(dynamicRegistryManager);
+        serverPropertiesHandler.getGeneratorOptions(dynamicRegistryManager);
         return serverPropertiesHandler;
     }
 
-    public GeneratorOptions method_37371(DynamicRegistryManager dynamicRegistryManager) {
+    public GeneratorOptions getGeneratorOptions(DynamicRegistryManager registryManager) {
         if (this.generatorOptions == null) {
-            this.generatorOptions = GeneratorOptions.fromProperties(dynamicRegistryManager, this.properties);
+            this.generatorOptions = GeneratorOptions.fromProperties(registryManager, this.worldGenProperties);
         }
         return this.generatorOptions;
     }
@@ -120,6 +104,9 @@ extends AbstractPropertiesHandler<ServerPropertiesHandler> {
     @Override
     protected /* synthetic */ AbstractPropertiesHandler create(DynamicRegistryManager registryManager, Properties properties) {
         return this.create(registryManager, properties);
+    }
+
+    public record WorldGenProperties(String levelSeed, JsonObject generatorSettings, boolean generateStructures, String levelType) {
     }
 }
 

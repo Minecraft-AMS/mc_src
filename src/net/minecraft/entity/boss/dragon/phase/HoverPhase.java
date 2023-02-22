@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class HoverPhase
 extends AbstractPhase {
+    @Nullable
     private Vec3d target;
 
     public HoverPhase(EnderDragonEntity enderDragonEntity) {

@@ -5,14 +5,15 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.util.Pair
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -30,11 +31,10 @@ import net.minecraft.test.TestUtil;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class TestRunner {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final BlockPos pos;
     final ServerWorld world;
     private final TestManager testManager;
@@ -71,7 +71,7 @@ public class TestRunner {
         Pair<GameTestBatch, Collection<GameTestState>> pair = this.batches.get(index);
         final GameTestBatch gameTestBatch = (GameTestBatch)pair.getFirst();
         Collection collection = (Collection)pair.getSecond();
-        Map<GameTestState, BlockPos> map = this.method_29401(collection);
+        Map<GameTestState, BlockPos> map = this.alignTestStructures(collection);
         String string = gameTestBatch.getId();
         LOGGER.info("Running test batch '{}' ({} tests)...", (Object)string, (Object)collection.size());
         gameTestBatch.startBatch(this.world);
@@ -106,7 +106,7 @@ public class TestRunner {
         });
     }
 
-    private Map<GameTestState, BlockPos> method_29401(Collection<GameTestState> gameTests) {
+    private Map<GameTestState, BlockPos> alignTestStructures(Collection<GameTestState> gameTests) {
         HashMap map = Maps.newHashMap();
         int i = 0;
         Box box = new Box(this.reusablePos);

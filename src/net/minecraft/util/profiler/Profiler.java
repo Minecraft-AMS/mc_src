@@ -26,9 +26,17 @@ public interface Profiler {
 
     public void markSampleType(SampleType var1);
 
-    public void visit(String var1);
+    default public void visit(String marker) {
+        this.visit(marker, 1);
+    }
 
-    public void visit(Supplier<String> var1);
+    public void visit(String var1, int var2);
+
+    default public void visit(Supplier<String> markerGetter) {
+        this.visit(markerGetter, 1);
+    }
+
+    public void visit(Supplier<String> var1, int var2);
 
     public static Profiler union(final Profiler a, final Profiler b) {
         if (a == DummyProfiler.INSTANCE) {
@@ -88,15 +96,15 @@ public interface Profiler {
             }
 
             @Override
-            public void visit(String marker) {
-                a.visit(marker);
-                b.visit(marker);
+            public void visit(String marker, int i) {
+                a.visit(marker, i);
+                b.visit(marker, i);
             }
 
             @Override
-            public void visit(Supplier<String> markerGetter) {
-                a.visit(markerGetter);
-                b.visit(markerGetter);
+            public void visit(Supplier<String> markerGetter, int i) {
+                a.visit(markerGetter, i);
+                b.visit(markerGetter, i);
             }
         };
     }

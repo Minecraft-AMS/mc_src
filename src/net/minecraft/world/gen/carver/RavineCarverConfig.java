@@ -22,18 +22,18 @@ import net.minecraft.world.gen.heightprovider.HeightProvider;
 
 public class RavineCarverConfig
 extends CarverConfig {
-    public static final Codec<RavineCarverConfig> RAVINE_CODEC = RecordCodecBuilder.create(instance -> instance.group((App)CarverConfig.CONFIG_CODEC.forGetter(ravineCarverConfig -> ravineCarverConfig), (App)FloatProvider.VALUE_CODEC.fieldOf("vertical_rotation").forGetter(ravineCarverConfig -> ravineCarverConfig.verticalRotation), (App)Shape.CODEC.fieldOf("shape").forGetter(ravineCarverConfig -> ravineCarverConfig.shape)).apply((Applicative)instance, RavineCarverConfig::new));
+    public static final Codec<RavineCarverConfig> RAVINE_CODEC = RecordCodecBuilder.create(instance -> instance.group((App)CarverConfig.CONFIG_CODEC.forGetter(ravineCarverConfig -> ravineCarverConfig), (App)FloatProvider.VALUE_CODEC.fieldOf("vertical_rotation").forGetter(config -> config.verticalRotation), (App)Shape.CODEC.fieldOf("shape").forGetter(config -> config.shape)).apply((Applicative)instance, RavineCarverConfig::new));
     public final FloatProvider verticalRotation;
     public final Shape shape;
 
-    public RavineCarverConfig(float probability, HeightProvider y, FloatProvider yScale, YOffset lavaLevel, boolean aquifers, CarverDebugConfig debugConfig, FloatProvider verticalRotation, Shape shape) {
-        super(probability, y, yScale, lavaLevel, aquifers, debugConfig);
+    public RavineCarverConfig(float probability, HeightProvider y, FloatProvider yScale, YOffset lavaLevel, CarverDebugConfig debugConfig, FloatProvider verticalRotation, Shape shape) {
+        super(probability, y, yScale, lavaLevel, debugConfig);
         this.verticalRotation = verticalRotation;
         this.shape = shape;
     }
 
     public RavineCarverConfig(CarverConfig config, FloatProvider verticalRotation, Shape shape) {
-        this(config.probability, config.y, config.yScale, config.lavaLevel, config.aquifers, config.debugConfig, verticalRotation, shape);
+        this(config.probability, config.y, config.yScale, config.lavaLevel, config.debugConfig, verticalRotation, shape);
     }
 
     public static class Shape {

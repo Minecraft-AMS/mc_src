@@ -29,72 +29,125 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.util.profiling.jfr.Finishable;
+import net.minecraft.util.profiling.jfr.FlightProfiler;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.Heightmap;
+import net.minecraft.world.chunk.BelowZeroRetrogen;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.chunk.Blender;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkStatus {
+    public static final int field_35470 = 8;
     private static final EnumSet<Heightmap.Type> PRE_CARVER_HEIGHTMAPS = EnumSet.of(Heightmap.Type.OCEAN_FLOOR_WG, Heightmap.Type.WORLD_SURFACE_WG);
-    private static final EnumSet<Heightmap.Type> POST_CARVER_HEIGHTMAPS = EnumSet.of(Heightmap.Type.OCEAN_FLOOR, Heightmap.Type.WORLD_SURFACE, Heightmap.Type.MOTION_BLOCKING, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES);
+    public static final EnumSet<Heightmap.Type> POST_CARVER_HEIGHTMAPS = EnumSet.of(Heightmap.Type.OCEAN_FLOOR, Heightmap.Type.WORLD_SURFACE, Heightmap.Type.MOTION_BLOCKING, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES);
     private static final LoadTask STATUS_BUMP_LOAD_TASK = (targetStatus, world, structureManager, lightingProvider, function, chunk) -> {
-        if (chunk instanceof ProtoChunk && !chunk.getStatus().isAtLeast(targetStatus)) {
-            ((ProtoChunk)chunk).setStatus(targetStatus);
+        if (chunk instanceof ProtoChunk) {
+            ProtoChunk protoChunk = (ProtoChunk)chunk;
+            if (!chunk.getStatus().isAtLeast(targetStatus)) {
+                protoChunk.setStatus(targetStatus);
+            }
         }
         return CompletableFuture.completedFuture(Either.left((Object)chunk));
     };
-    public static final ChunkStatus EMPTY = ChunkStatus.register("empty", null, -1, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> {});
-    public static final ChunkStatus STRUCTURE_STARTS = ChunkStatus.register("structure_starts", EMPTY, 0, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator chunkGenerator, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> list, Chunk chunk) -> {
+    public static final ChunkStatus EMPTY = ChunkStatus.register("empty", null, -1, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {});
+    public static final ChunkStatus STRUCTURE_STARTS = ChunkStatus.register("structure_starts", EMPTY, 0, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (targetStatus, executor, world, generator, structureManager, lightingProvider, function, chunks, chunk, bl) -> {
         if (!chunk.getStatus().isAtLeast(targetStatus)) {
             if (world.getServer().getSaveProperties().getGeneratorOptions().shouldGenerateStructures()) {
-                chunkGenerator.setStructureStarts(world.getRegistryManager(), world.getStructureAccessor(), chunk, structureManager, world.getSeed());
+                generator.setStructureStarts(world.getRegistryManager(), world.getStructureAccessor(), chunk, structureManager, world.getSeed());
             }
             if (chunk instanceof ProtoChunk) {
-                ((ProtoChunk)chunk).setStatus(targetStatus);
+                ProtoChunk protoChunk = (ProtoChunk)chunk;
+                protoChunk.setStatus(targetStatus);
             }
+            world.cacheStructures(chunk);
+        }
+        return CompletableFuture.completedFuture(Either.left((Object)chunk));
+    }, (targetStatus, world, structureManager, lightingProvider, function, chunk) -> {
+        if (!chunk.getStatus().isAtLeast(targetStatus)) {
+            if (chunk instanceof ProtoChunk) {
+                ProtoChunk protoChunk = (ProtoChunk)chunk;
+                protoChunk.setStatus(targetStatus);
+            }
+            world.cacheStructures(chunk);
         }
         return CompletableFuture.completedFuture(Either.left((Object)chunk));
     });
-    public static final ChunkStatus STRUCTURE_REFERENCES = ChunkStatus.register("structure_references", STRUCTURE_STARTS, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> {
-        ChunkRegion chunkRegion = new ChunkRegion(serverWorld, list, chunkStatus, -1);
-        chunkGenerator.addStructureReferences(chunkRegion, serverWorld.getStructureAccessor().forRegion(chunkRegion), chunk);
+    public static final ChunkStatus STRUCTURE_REFERENCES = ChunkStatus.register("structure_references", STRUCTURE_STARTS, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {
+        ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, -1);
+        generator.addStructureReferences(chunkRegion, world.getStructureAccessor().forRegion(chunkRegion), chunk);
     });
-    public static final ChunkStatus BIOMES = ChunkStatus.register("biomes", STRUCTURE_REFERENCES, 0, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> chunkGenerator.populateBiomes(serverWorld.getRegistryManager().get(Registry.BIOME_KEY), chunk));
-    public static final ChunkStatus NOISE = ChunkStatus.register("noise", BIOMES, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, Executor executor, ServerWorld world, ChunkGenerator chunkGenerator, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> list, Chunk chunk2) -> {
-        if (!chunk2.getStatus().isAtLeast(chunkStatus)) {
-            ChunkRegion chunkRegion = new ChunkRegion(world, list, chunkStatus, 0);
-            return chunkGenerator.populateNoise(executor, world.getStructureAccessor().forRegion(chunkRegion), chunk2).thenApply(chunk -> {
+    public static final ChunkStatus BIOMES = ChunkStatus.register("biomes", STRUCTURE_REFERENCES, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> chunks, Chunk chunk2, boolean bl) -> {
+        if (bl || !chunk2.getStatus().isAtLeast(targetStatus)) {
+            ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, -1);
+            return generator.populateBiomes(world.getRegistryManager().get(Registry.BIOME_KEY), executor, Blender.getBlender(chunkRegion), world.getStructureAccessor().forRegion(chunkRegion), chunk2).thenApply(chunk -> {
                 if (chunk instanceof ProtoChunk) {
-                    ((ProtoChunk)chunk).setStatus(chunkStatus);
+                    ((ProtoChunk)chunk).setStatus(targetStatus);
                 }
                 return Either.left((Object)chunk);
             });
         }
         return CompletableFuture.completedFuture(Either.left((Object)chunk2));
     });
-    public static final ChunkStatus SURFACE = ChunkStatus.register("surface", NOISE, 0, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> chunkGenerator.buildSurface(new ChunkRegion(serverWorld, list, chunkStatus, 0), chunk));
-    public static final ChunkStatus CARVERS = ChunkStatus.register("carvers", SURFACE, 0, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> chunkGenerator.carve(serverWorld.getSeed(), serverWorld.getBiomeAccess(), chunk, GenerationStep.Carver.AIR));
-    public static final ChunkStatus LIQUID_CARVERS = ChunkStatus.register("liquid_carvers", CARVERS, 0, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> chunkGenerator.carve(serverWorld.getSeed(), serverWorld.getBiomeAccess(), chunk, GenerationStep.Carver.LIQUID));
-    public static final ChunkStatus FEATURES = ChunkStatus.register("features", LIQUID_CARVERS, 8, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus status, Executor executor, ServerWorld serverWorld, ChunkGenerator chunkGenerator, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> list, Chunk chunk) -> {
+    public static final ChunkStatus NOISE = ChunkStatus.register("noise", BIOMES, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> chunks, Chunk chunk2, boolean bl) -> {
+        if (bl || !chunk2.getStatus().isAtLeast(targetStatus)) {
+            ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, 0);
+            return generator.populateNoise(executor, Blender.getBlender(chunkRegion), world.getStructureAccessor().forRegion(chunkRegion), chunk2).thenApply(chunk -> {
+                if (chunk instanceof ProtoChunk) {
+                    ProtoChunk protoChunk = (ProtoChunk)chunk;
+                    BelowZeroRetrogen belowZeroRetrogen = protoChunk.getBelowZeroRetrogen();
+                    if (belowZeroRetrogen != null) {
+                        BelowZeroRetrogen.replaceOldBedrock(protoChunk);
+                        if (belowZeroRetrogen.hasMissingBedrock()) {
+                            belowZeroRetrogen.fillColumnsWithAirIfMissingBedrock(protoChunk);
+                        }
+                    }
+                    protoChunk.setStatus(targetStatus);
+                }
+                return Either.left((Object)chunk);
+            });
+        }
+        return CompletableFuture.completedFuture(Either.left((Object)chunk2));
+    });
+    public static final ChunkStatus SURFACE = ChunkStatus.register("surface", NOISE, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {
+        ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, 0);
+        generator.buildSurface(chunkRegion, world.getStructureAccessor().forRegion(chunkRegion), chunk);
+    });
+    public static final ChunkStatus CARVERS = ChunkStatus.register("carvers", SURFACE, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {
+        ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, 0);
+        if (chunk instanceof ProtoChunk) {
+            ProtoChunk protoChunk = (ProtoChunk)chunk;
+            Blender.method_39809(chunkRegion, protoChunk);
+        }
+        generator.carve(chunkRegion, world.getSeed(), world.getBiomeAccess(), world.getStructureAccessor().forRegion(chunkRegion), chunk, GenerationStep.Carver.AIR);
+    });
+    public static final ChunkStatus LIQUID_CARVERS = ChunkStatus.register("liquid_carvers", CARVERS, 8, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {});
+    public static final ChunkStatus FEATURES = ChunkStatus.register("features", LIQUID_CARVERS, 8, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> chunks, Chunk chunk, boolean bl) -> {
         ProtoChunk protoChunk = (ProtoChunk)chunk;
-        protoChunk.setLightingProvider(serverLightingProvider);
-        if (!chunk.getStatus().isAtLeast(status)) {
+        protoChunk.setLightingProvider(lightingProvider);
+        if (bl || !chunk.getStatus().isAtLeast(targetStatus)) {
             Heightmap.populateHeightmaps(chunk, EnumSet.of(Heightmap.Type.MOTION_BLOCKING, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, Heightmap.Type.OCEAN_FLOOR, Heightmap.Type.WORLD_SURFACE));
-            ChunkRegion chunkRegion = new ChunkRegion(serverWorld, list, status, 1);
-            chunkGenerator.generateFeatures(chunkRegion, serverWorld.getStructureAccessor().forRegion(chunkRegion));
-            protoChunk.setStatus(status);
+            ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, 1);
+            generator.generateFeatures(chunkRegion, chunk, world.getStructureAccessor().forRegion(chunkRegion));
+            Blender.tickLeavesAndFluids(chunkRegion, chunk);
+            protoChunk.setStatus(targetStatus);
         }
         return CompletableFuture.completedFuture(Either.left((Object)chunk));
     });
-    public static final ChunkStatus LIGHT = ChunkStatus.register("light", FEATURES, 1, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (targetStatus, executor, serverWorld, chunkGenerator, structureManager, serverLightingProvider, function, list, chunk) -> ChunkStatus.getLightingFuture(targetStatus, serverLightingProvider, chunk), (status, world, structureManager, lightingProvider, function, chunk) -> ChunkStatus.getLightingFuture(status, lightingProvider, chunk));
-    public static final ChunkStatus SPAWN = ChunkStatus.register("spawn", LIGHT, 0, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> chunkGenerator.populateEntities(new ChunkRegion(serverWorld, list, chunkStatus, -1)));
-    public static final ChunkStatus HEIGHTMAPS = ChunkStatus.register("heightmaps", SPAWN, 0, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus chunkStatus, ServerWorld serverWorld, ChunkGenerator chunkGenerator, List<Chunk> list, Chunk chunk) -> {});
-    public static final ChunkStatus FULL = ChunkStatus.register("full", HEIGHTMAPS, 0, POST_CARVER_HEIGHTMAPS, ChunkType.LEVELCHUNK, (targetStatus, executor, serverWorld, chunkGenerator, structureManager, serverLightingProvider, function, list, chunk) -> (CompletableFuture)function.apply(chunk), (status, world, structureManager, lightingProvider, convertCallback, chunk) -> (CompletableFuture)convertCallback.apply(chunk));
-    private static final List<ChunkStatus> DISTANCE_TO_STATUS = ImmutableList.of((Object)FULL, (Object)FEATURES, (Object)LIQUID_CARVERS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS);
+    public static final ChunkStatus LIGHT = ChunkStatus.register("light", FEATURES, 1, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (targetStatus, executor, world, generator, structureManager, lightingProvider, function, chunks, chunk, bl) -> ChunkStatus.getLightingFuture(targetStatus, lightingProvider, chunk), (targetStatus, world, structureManager, lightingProvider, function, chunk) -> ChunkStatus.getLightingFuture(targetStatus, lightingProvider, chunk));
+    public static final ChunkStatus SPAWN = ChunkStatus.register("spawn", LIGHT, 0, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {
+        if (!chunk.hasBelowZeroRetrogen()) {
+            generator.populateEntities(new ChunkRegion(world, chunks, targetStatus, -1));
+        }
+    });
+    public static final ChunkStatus HEIGHTMAPS = ChunkStatus.register("heightmaps", SPAWN, 0, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {});
+    public static final ChunkStatus FULL = ChunkStatus.register("full", HEIGHTMAPS, 0, POST_CARVER_HEIGHTMAPS, ChunkType.LEVELCHUNK, (targetStatus, executor, world, generator, structureManager, lightingProvider, function, chunks, chunk, bl) -> (CompletableFuture)function.apply(chunk), (targetStatus, world, structureManager, lightingProvider, function, chunk) -> (CompletableFuture)function.apply(chunk));
+    private static final List<ChunkStatus> DISTANCE_TO_STATUS = ImmutableList.of((Object)FULL, (Object)FEATURES, (Object)LIQUID_CARVERS, (Object)BIOMES, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object[])new ChunkStatus[0]);
     private static final IntList STATUS_TO_DISTANCE = (IntList)Util.make(new IntArrayList(ChunkStatus.createOrderedList().size()), intArrayList -> {
         int i = 0;
         for (int j = ChunkStatus.createOrderedList().size() - 1; j >= 0; --j) {
@@ -189,8 +242,14 @@ public class ChunkStatus {
         return this.previous;
     }
 
-    public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> runGenerationTask(Executor executor, ServerWorld world, ChunkGenerator chunkGenerator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> list) {
-        return this.generationTask.doWork(this, executor, world, chunkGenerator, structureManager, lightingProvider, function, list, list.get(list.size() / 2));
+    public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> runGenerationTask(Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> fullChunkConverter, List<Chunk> chunks, boolean bl) {
+        Chunk chunk = chunks.get(chunks.size() / 2);
+        Finishable finishable = FlightProfiler.INSTANCE.startChunkGenerationProfiling(chunk.getPos(), world.getRegistryKey(), this.id);
+        CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = this.generationTask.doWork(this, executor, world, generator, structureManager, lightingProvider, fullChunkConverter, chunks, chunk, bl);
+        return finishable != null ? completableFuture.thenApply(either -> {
+            finishable.finish();
+            return either;
+        }) : completableFuture;
     }
 
     public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> runLoadTask(ServerWorld world, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, Chunk chunk) {
@@ -213,8 +272,8 @@ public class ChunkStatus {
         return this.heightMapTypes;
     }
 
-    public boolean isAtLeast(ChunkStatus chunk) {
-        return this.getIndex() >= chunk.getIndex();
+    public boolean isAtLeast(ChunkStatus chunkStatus) {
+        return this.getIndex() >= chunkStatus.getIndex();
     }
 
     public String toString() {
@@ -245,7 +304,7 @@ public class ChunkStatus {
     }
 
     static interface GenerationTask {
-        public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> doWork(ChunkStatus var1, Executor var2, ServerWorld var3, ChunkGenerator var4, StructureManager var5, ServerLightingProvider var6, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> var7, List<Chunk> var8, Chunk var9);
+        public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> doWork(ChunkStatus var1, Executor var2, ServerWorld var3, ChunkGenerator var4, StructureManager var5, ServerLightingProvider var6, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> var7, List<Chunk> var8, Chunk var9, boolean var10);
     }
 
     static interface LoadTask {
@@ -255,11 +314,12 @@ public class ChunkStatus {
     static interface SimpleGenerationTask
     extends GenerationTask {
         @Override
-        default public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> doWork(ChunkStatus chunkStatus, Executor executor, ServerWorld serverWorld, ChunkGenerator chunkGenerator, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> list, Chunk chunk) {
-            if (!chunk.getStatus().isAtLeast(chunkStatus)) {
+        default public CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> doWork(ChunkStatus chunkStatus, Executor executor, ServerWorld serverWorld, ChunkGenerator chunkGenerator, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> list, Chunk chunk, boolean bl) {
+            if (bl || !chunk.getStatus().isAtLeast(chunkStatus)) {
                 this.doWork(chunkStatus, serverWorld, chunkGenerator, list, chunk);
                 if (chunk instanceof ProtoChunk) {
-                    ((ProtoChunk)chunk).setStatus(chunkStatus);
+                    ProtoChunk protoChunk = (ProtoChunk)chunk;
+                    protoChunk.setStatus(chunkStatus);
                 }
             }
             return CompletableFuture.completedFuture(Either.left((Object)chunk));

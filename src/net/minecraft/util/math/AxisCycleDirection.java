@@ -5,6 +5,9 @@ package net.minecraft.util.math;
 
 import net.minecraft.util.math.Direction;
 
+/*
+ * Uses 'sealed' constructs - enablewith --sealed true
+ */
 public abstract class AxisCycleDirection
 extends Enum<AxisCycleDirection> {
     public static final /* enum */ AxisCycleDirection NONE = new AxisCycleDirection(){

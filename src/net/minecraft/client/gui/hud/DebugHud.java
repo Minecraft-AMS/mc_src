@@ -52,10 +52,10 @@ import net.minecraft.entity.SpawnGroup;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.integrated.IntegratedServer;
+import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.MetricsData;
 import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
@@ -68,13 +68,18 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.LightType;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeSource;
+import net.minecraft.world.biome.source.util.MultiNoiseUtil;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -201,8 +206,8 @@ extends DrawableHelper {
         list.add(this.client.world.getRegistryKey().getValue() + " FC: " + longSet.size());
         list.add("");
         list.add(String.format(Locale.ROOT, "XYZ: %.3f / %.5f / %.3f", this.client.getCameraEntity().getX(), this.client.getCameraEntity().getY(), this.client.getCameraEntity().getZ()));
-        list.add(String.format("Block: %d %d %d", blockPos.getX(), blockPos.getY(), blockPos.getZ()));
-        list.add(String.format("Chunk: %d %d %d in %d %d %d", blockPos.getX() & 0xF, blockPos.getY() & 0xF, blockPos.getZ() & 0xF, ChunkSectionPos.getSectionCoord(blockPos.getX()), ChunkSectionPos.getSectionCoord(blockPos.getY()), ChunkSectionPos.getSectionCoord(blockPos.getZ())));
+        list.add(String.format("Block: %d %d %d [%d %d %d]", blockPos.getX(), blockPos.getY(), blockPos.getZ(), blockPos.getX() & 0xF, blockPos.getY() & 0xF, blockPos.getZ() & 0xF));
+        list.add(String.format("Chunk: %d %d %d [%d %d in r.%d.%d.mca]", chunkPos.x, ChunkSectionPos.getSectionCoord(blockPos.getY()), chunkPos.z, chunkPos.getRegionRelativeX(), chunkPos.getRegionRelativeZ(), chunkPos.getRegionX(), chunkPos.getRegionZ()));
         list.add(String.format(Locale.ROOT, "Facing: %s (%s) (%.1f / %.1f)", direction, string2, Float.valueOf(MathHelper.wrapDegrees(entity.getYaw())), Float.valueOf(MathHelper.wrapDegrees(entity.getPitch()))));
         WorldChunk worldChunk = this.getClientChunk();
         if (worldChunk.isEmpty()) {
@@ -232,7 +237,7 @@ extends DrawableHelper {
             }
             list.add(stringBuilder.toString());
             if (blockPos.getY() >= this.client.world.getBottomY() && blockPos.getY() < this.client.world.getTopY()) {
-                list.add("Biome: " + this.client.world.getRegistryManager().get(Registry.BIOME_KEY).getId(this.client.world.getBiome(blockPos)));
+                list.add("Biome: " + DebugHud.getBiomeString(this.client.world.getBiome(blockPos)));
                 long l = 0L;
                 float h = 0.0f;
                 if (worldChunk2 != null) {
@@ -245,11 +250,17 @@ extends DrawableHelper {
         }
         ServerWorld serverWorld = this.getServerWorld();
         if (serverWorld != null) {
-            SpawnHelper.Info info = serverWorld.getChunkManager().getSpawnInfo();
+            ServerChunkManager serverChunkManager = serverWorld.getChunkManager();
+            ChunkGenerator chunkGenerator = serverChunkManager.getChunkGenerator();
+            chunkGenerator.getDebugHudText(list, blockPos);
+            MultiNoiseUtil.MultiNoiseSampler multiNoiseSampler = chunkGenerator.getMultiNoiseSampler();
+            BiomeSource biomeSource = chunkGenerator.getBiomeSource();
+            biomeSource.addDebugInfo(list, blockPos, multiNoiseSampler);
+            SpawnHelper.Info info = serverChunkManager.getSpawnInfo();
             if (info != null) {
                 Object2IntMap<SpawnGroup> object2IntMap = info.getGroupToCount();
                 int m = info.getSpawningChunkCount();
-                list.add("SC: " + m + ", " + Stream.of(SpawnGroup.values()).map(spawnGroup -> Character.toUpperCase(spawnGroup.getName().charAt(0)) + ": " + object2IntMap.getInt(spawnGroup)).collect(Collectors.joining(", ")));
+                list.add("SC: " + m + ", " + Stream.of(SpawnGroup.values()).map(group -> Character.toUpperCase(group.getName().charAt(0)) + ": " + object2IntMap.getInt(group)).collect(Collectors.joining(", ")));
             } else {
                 list.add("SC: N/A");
             }
@@ -259,6 +270,10 @@ extends DrawableHelper {
         }
         list.add(this.client.getSoundManager().getDebugString() + String.format(" (Mood %d%%)", Math.round(this.client.player.getMoodPercentage() * 100.0f)));
         return list;
+    }
+
+    private static String getBiomeString(RegistryEntry<Biome> biome) {
+        return (String)biome.getKeyOrValue().map(biomeKey -> biomeKey.getValue().toString(), biome_ -> "[unregistered " + biome_ + "]");
     }
 
     @Nullable
@@ -280,7 +295,7 @@ extends DrawableHelper {
     }
 
     private World getWorld() {
-        return (World)DataFixUtils.orElse(Optional.ofNullable(this.client.getServer()).flatMap(integratedServer -> Optional.ofNullable(integratedServer.getWorld(this.client.world.getRegistryKey()))), (Object)this.client.world);
+        return (World)DataFixUtils.orElse(Optional.ofNullable(this.client.getServer()).flatMap(server -> Optional.ofNullable(server.getWorld(this.client.world.getRegistryKey()))), (Object)this.client.world);
     }
 
     @Nullable
@@ -324,9 +339,7 @@ extends DrawableHelper {
             for (Map.Entry entry : blockState.getEntries().entrySet()) {
                 list.add(this.propertyToString(entry));
             }
-            for (Identifier identifier : this.client.getNetworkHandler().getTagManager().getOrCreateTagGroup(Registry.BLOCK_KEY).getTagsFor(blockState.getBlock())) {
-                list.add("#" + identifier);
-            }
+            blockState.streamTags().map(tagKey -> "#" + tagKey.id()).forEach(list::add);
         }
         if (this.fluidHit.getType() == HitResult.Type.BLOCK) {
             blockPos = ((BlockHitResult)this.fluidHit).getBlockPos();
@@ -337,9 +350,7 @@ extends DrawableHelper {
             for (Map.Entry entry : fluidState.getEntries().entrySet()) {
                 list.add(this.propertyToString(entry));
             }
-            for (Identifier identifier : this.client.getNetworkHandler().getTagManager().getOrCreateTagGroup(Registry.FLUID_KEY).getTagsFor(fluidState.getFluid())) {
-                list.add("#" + identifier);
-            }
+            fluidState.streamTags().map(tagKey -> "#" + tagKey.id()).forEach(list::add);
         }
         if ((entity = this.client.targetedEntity) != null) {
             list.add("");

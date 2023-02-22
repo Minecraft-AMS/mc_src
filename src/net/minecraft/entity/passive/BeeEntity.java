@@ -82,7 +82,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.ItemTags;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
@@ -127,7 +127,8 @@ Flutterer {
     public static final String FLOWER_POS_KEY = "FlowerPos";
     public static final String HIVE_POS_KEY = "HivePos";
     private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
-    private UUID targetUuid;
+    @Nullable
+    private UUID angryAt;
     private float currentPitch;
     private float lastPitch;
     private int ticksSinceSting;
@@ -192,7 +193,7 @@ Flutterer {
         this.goalSelector.add(8, new BeeWanderAroundGoal());
         this.goalSelector.add(9, new SwimGoal(this));
         this.targetSelector.add(1, new BeeRevengeGoal(this).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new BeeFollowTargetGoal(this));
+        this.targetSelector.add(2, new StingTargetGoal(this));
         this.targetSelector.add(3, new UniversalAngerGoal<BeeEntity>(this, true));
     }
 
@@ -305,8 +306,8 @@ Flutterer {
         return this.flowerPos != null;
     }
 
-    public void setFlowerPos(BlockPos pos) {
-        this.flowerPos = pos;
+    public void setFlowerPos(BlockPos flowerPos) {
+        this.flowerPos = flowerPos;
     }
 
     @Debug
@@ -331,8 +332,8 @@ Flutterer {
         return bl && !this.isHiveNearFire();
     }
 
-    public void setCannotEnterHiveTicks(int ticks) {
-        this.cannotEnterHiveTicks = ticks;
+    public void setCannotEnterHiveTicks(int cannotEnterHiveTicks) {
+        this.cannotEnterHiveTicks = cannotEnterHiveTicks;
     }
 
     public float getBodyPitch(float tickDelta) {
@@ -383,18 +384,19 @@ Flutterer {
     }
 
     @Override
-    public void setAngerTime(int ticks) {
-        this.dataTracker.set(ANGER, ticks);
+    public void setAngerTime(int angerTime) {
+        this.dataTracker.set(ANGER, angerTime);
     }
 
     @Override
+    @Nullable
     public UUID getAngryAt() {
-        return this.targetUuid;
+        return this.angryAt;
     }
 
     @Override
-    public void setAngryAt(@Nullable UUID uuid) {
-        this.targetUuid = uuid;
+    public void setAngryAt(@Nullable UUID angryAt) {
+        this.angryAt = angryAt;
     }
 
     @Override
@@ -630,7 +632,7 @@ Flutterer {
     }
 
     @Override
-    protected void swimUpward(Tag<Fluid> fluid) {
+    protected void swimUpward(TagKey<Fluid> fluid) {
         this.setVelocity(this.getVelocity().add(0.0, 0.01, 0.0));
     }
 
@@ -662,6 +664,7 @@ Flutterer {
         private int pollinationTicks;
         private int lastPollinationTick;
         private boolean running;
+        @Nullable
         private Vec3d nextTarget;
         private int ticks;
         private static final int field_30308 = 600;
@@ -750,6 +753,11 @@ Flutterer {
             this.running = false;
             BeeEntity.this.navigation.stop();
             BeeEntity.this.ticksUntilCanPollinate = 200;
+        }
+
+        @Override
+        public boolean shouldRunEveryTick() {
+            return true;
         }
 
         @Override
@@ -940,7 +948,7 @@ Flutterer {
         private List<BlockPos> getNearbyFreeHives() {
             BlockPos blockPos = BeeEntity.this.getBlockPos();
             PointOfInterestStorage pointOfInterestStorage = ((ServerWorld)BeeEntity.this.world).getPointOfInterestStorage();
-            Stream<PointOfInterest> stream = pointOfInterestStorage.getInCircle(pointOfInterestType -> pointOfInterestType == PointOfInterestType.BEEHIVE || pointOfInterestType == PointOfInterestType.BEE_NEST, blockPos, 20, PointOfInterestStorage.OccupationStatus.ANY);
+            Stream<PointOfInterest> stream = pointOfInterestStorage.getInCircle(poiType -> poiType == PointOfInterestType.BEEHIVE || poiType == PointOfInterestType.BEE_NEST, blockPos, 20, PointOfInterestStorage.OccupationStatus.ANY);
             return stream.map(PointOfInterest::getPos).filter(BeeEntity.this::doesHiveHaveSpace).sorted(Comparator.comparingDouble(blockPos2 -> blockPos2.getSquaredDistance(blockPos))).collect(Collectors.toList());
         }
     }
@@ -994,7 +1002,7 @@ Flutterer {
                 return;
             }
             ++this.ticks;
-            if (this.ticks > 600) {
+            if (this.ticks > this.getTickCount(600)) {
                 this.makeChosenHivePossibleHive();
                 return;
             }
@@ -1104,7 +1112,7 @@ Flutterer {
                 return;
             }
             ++this.ticks;
-            if (this.ticks > 600) {
+            if (this.ticks > this.getTickCount(600)) {
                 BeeEntity.this.flowerPos = null;
                 return;
             }
@@ -1148,7 +1156,7 @@ Flutterer {
 
         @Override
         public void tick() {
-            if (BeeEntity.this.random.nextInt(30) != 0) {
+            if (BeeEntity.this.random.nextInt(this.getTickCount(30)) != 0) {
                 return;
             }
             for (int i = 1; i <= 2; ++i) {
@@ -1250,9 +1258,9 @@ Flutterer {
         }
     }
 
-    static class BeeFollowTargetGoal
+    static class StingTargetGoal
     extends ActiveTargetGoal<PlayerEntity> {
-        BeeFollowTargetGoal(BeeEntity bee) {
+        StingTargetGoal(BeeEntity bee) {
             super(bee, PlayerEntity.class, 10, true, false, bee::shouldAngerAt);
         }
 

@@ -83,7 +83,7 @@ implements Inventory {
 
     @Override
     public boolean canPlayerUse(PlayerEntity player) {
-        return this.merchant.getCurrentCustomer() == player;
+        return this.merchant.getCustomer() == player;
     }
 
     @Override

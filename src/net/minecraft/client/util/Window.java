@@ -2,10 +2,9 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.PointerBuffer
  *  org.lwjgl.glfw.Callbacks
@@ -19,12 +18,14 @@
  *  org.lwjgl.system.MemoryStack
  *  org.lwjgl.system.MemoryUtil
  *  org.lwjgl.util.tinyfd.TinyFileDialogs
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.util;
 
 import com.mojang.blaze3d.platform.GLX;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,8 +45,6 @@ import net.minecraft.client.util.MacWindowUtil;
 import net.minecraft.client.util.Monitor;
 import net.minecraft.client.util.MonitorTracker;
 import net.minecraft.client.util.VideoMode;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.Callbacks;
@@ -58,11 +57,12 @@ import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public final class Window
 implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final GLFWErrorCallback errorCallback = GLFWErrorCallback.create(this::logGlError);
     private final WindowEventHandler eventHandler;
     private final MonitorTracker monitorTracker;
@@ -89,7 +89,7 @@ implements AutoCloseable {
     private boolean vsync;
 
     public Window(WindowEventHandler eventHandler, MonitorTracker monitorTracker, WindowSettings settings, @Nullable String videoMode, String title) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         this.monitorTracker = monitorTracker;
         this.throwOnGlError();
         this.setPhase("Pre startup");
@@ -133,7 +133,7 @@ implements AutoCloseable {
     }
 
     public int getRefreshRate() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         return GLX._getRefreshRate(this);
     }
 
@@ -142,7 +142,7 @@ implements AutoCloseable {
     }
 
     public static void acceptError(BiConsumer<Integer, String> consumer) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             PointerBuffer pointerBuffer = memoryStack.mallocPointer(1);
             int i = GLFW.glfwGetError((PointerBuffer)pointerBuffer);
@@ -155,7 +155,7 @@ implements AutoCloseable {
     }
 
     public void setIcon(InputStream icon16, InputStream icon32) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             if (icon16 == null) {
                 throw new FileNotFoundException("icons/icon_16x16.png");
@@ -198,7 +198,7 @@ implements AutoCloseable {
      */
     @Nullable
     private ByteBuffer readImage(InputStream in, IntBuffer x, IntBuffer y, IntBuffer channels) throws IOException {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         ByteBuffer byteBuffer = null;
         try {
             byteBuffer = TextureUtil.readResource(in);
@@ -218,19 +218,19 @@ implements AutoCloseable {
     }
 
     private void throwOnGlError() {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         GLFW.glfwSetErrorCallback(Window::throwGlError);
     }
 
     private static void throwGlError(int error, long description) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         String string = "GLFW error " + error + ": " + MemoryUtil.memUTF8((long)description);
         TinyFileDialogs.tinyfd_messageBox((CharSequence)"Minecraft", (CharSequence)(string + ".\n\nPlease make sure you have up-to-date drivers (see aka.ms/mcdriver for instructions)."), (CharSequence)"ok", (CharSequence)"error", (boolean)false);
         throw new GlErroredException(string);
     }
 
     public void logGlError(int error, long description) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         String string = MemoryUtil.memUTF8((long)description);
         LOGGER.error("########## GL ERROR ##########");
         LOGGER.error("@ {}", (Object)this.phase);
@@ -245,14 +245,14 @@ implements AutoCloseable {
     }
 
     public void setVsync(boolean vsync) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         this.vsync = vsync;
         GLFW.glfwSwapInterval((int)(vsync ? 1 : 0));
     }
 
     @Override
     public void close() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         Callbacks.glfwFreeCallbacks((long)this.handle);
         this.errorCallback.close();
         GLFW.glfwDestroyWindow((long)this.handle);
@@ -281,7 +281,7 @@ implements AutoCloseable {
     }
 
     private void updateFramebufferSize() {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         int[] is = new int[1];
         int[] js = new int[1];
         GLFW.glfwGetFramebufferSize((long)this.handle, (int[])is, (int[])js);
@@ -344,7 +344,7 @@ implements AutoCloseable {
 
     private void updateWindowRegion() {
         boolean bl;
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         boolean bl2 = bl = GLFW.glfwGetWindowMonitor((long)this.handle) != 0L;
         if (this.fullscreen) {
             Monitor monitor = this.monitorTracker.getMonitor(this);
@@ -389,7 +389,7 @@ implements AutoCloseable {
     }
 
     private void updateFullscreen(boolean vsync) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         try {
             this.updateWindowRegion();
             this.eventHandler.onResolutionChanged();

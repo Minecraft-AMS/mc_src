@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.mojang.serialization.Codec
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
@@ -43,7 +41,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.tag.TagManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TypeFilter;
 import net.minecraft.util.crash.CrashException;
@@ -51,11 +48,13 @@ import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
@@ -77,14 +76,11 @@ import net.minecraft.world.entity.EntityLookup;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class World
 implements WorldAccess,
 AutoCloseable {
-    protected static final Logger LOGGER = LogManager.getLogger();
     public static final Codec<RegistryKey<World>> CODEC = Identifier.CODEC.xmap(RegistryKey.createKeyFactory(Registry.WORLD_KEY), RegistryKey::getValue);
     public static final RegistryKey<World> OVERWORLD = RegistryKey.of(Registry.WORLD_KEY, new Identifier("overworld"));
     public static final RegistryKey<World> NETHER = RegistryKey.of(Registry.WORLD_KEY, new Identifier("the_nether"));
@@ -110,34 +106,37 @@ AutoCloseable {
     protected float thunderGradientPrev;
     protected float thunderGradient;
     public final Random random = new Random();
-    private final DimensionType dimension;
+    final DimensionType dimension;
+    private final RegistryEntry<DimensionType> field_36402;
     protected final MutableWorldProperties properties;
     private final Supplier<Profiler> profiler;
     public final boolean isClient;
     private final WorldBorder border;
     private final BiomeAccess biomeAccess;
     private final RegistryKey<World> registryKey;
+    private long tickOrder;
 
-    protected World(MutableWorldProperties properties, RegistryKey<World> registryRef, final DimensionType dimensionType, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed) {
+    protected World(MutableWorldProperties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed) {
         this.profiler = profiler;
         this.properties = properties;
-        this.dimension = dimensionType;
+        this.field_36402 = registryEntry;
+        this.dimension = registryEntry.value();
         this.registryKey = registryRef;
         this.isClient = isClient;
-        this.border = dimensionType.getCoordinateScale() != 1.0 ? new WorldBorder(){
+        this.border = this.dimension.getCoordinateScale() != 1.0 ? new WorldBorder(){
 
             @Override
             public double getCenterX() {
-                return super.getCenterX() / dimensionType.getCoordinateScale();
+                return super.getCenterX() / World.this.dimension.getCoordinateScale();
             }
 
             @Override
             public double getCenterZ() {
-                return super.getCenterZ() / dimensionType.getCoordinateScale();
+                return super.getCenterZ() / World.this.dimension.getCoordinateScale();
             }
         } : new WorldBorder();
         this.thread = Thread.currentThread();
-        this.biomeAccess = new BiomeAccess(this, seed, dimensionType.getBiomeAccessType());
+        this.biomeAccess = new BiomeAccess(this, seed);
         this.debugWorld = debugWorld;
     }
 
@@ -418,6 +417,7 @@ AutoCloseable {
                 iterator.remove();
                 continue;
             }
+            if (!this.shouldTickBlocksInChunk(ChunkPos.toLong(blockEntityTickInvoker.getPos()))) continue;
             blockEntityTickInvoker.tick();
         }
         this.iteratingTickingBlockEntities = false;
@@ -434,6 +434,14 @@ AutoCloseable {
             entity.populateCrashReport(crashReportSection);
             throw new CrashException(crashReport);
         }
+    }
+
+    public boolean shouldUpdatePostDeath(Entity entity) {
+        return true;
+    }
+
+    public boolean shouldTickBlocksInChunk(long chunkPos) {
+        return true;
     }
 
     public Explosion createExplosion(@Nullable Entity entity, double x, double y, double z, float power, Explosion.DestructionType destructionType) {
@@ -495,7 +503,7 @@ AutoCloseable {
         if (chunk == null) {
             return false;
         }
-        return chunk.getBlockState(pos).hasSolidTopSurface(this, pos, entity, direction);
+        return chunk.getBlockState(pos).isSolidSurface(this, pos, entity, direction);
     }
 
     public boolean isTopSolid(BlockPos pos, Entity entity) {
@@ -537,13 +545,13 @@ AutoCloseable {
     public List<Entity> getOtherEntities(@Nullable Entity except, Box box, Predicate<? super Entity> predicate) {
         this.getProfiler().visit("getEntities");
         ArrayList list = Lists.newArrayList();
-        this.getEntityLookup().forEachIntersects(box, entity2 -> {
-            if (entity2 != except && predicate.test((Entity)entity2)) {
-                list.add(entity2);
+        this.getEntityLookup().forEachIntersects(box, entity -> {
+            if (entity != except && predicate.test((Entity)entity)) {
+                list.add(entity);
             }
-            if (entity2 instanceof EnderDragonEntity) {
-                for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity2).getBodyParts()) {
-                    if (entity2 == except || !predicate.test(enderDragonPart)) continue;
+            if (entity instanceof EnderDragonEntity) {
+                for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity).getBodyParts()) {
+                    if (entity == except || !predicate.test(enderDragonPart)) continue;
                     list.add(enderDragonPart);
                 }
             }
@@ -560,7 +568,8 @@ AutoCloseable {
                 list.add(entity);
             }
             if (entity instanceof EnderDragonEntity) {
-                for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity).getBodyParts()) {
+                EnderDragonEntity enderDragonEntity = (EnderDragonEntity)entity;
+                for (EnderDragonPart enderDragonPart : enderDragonEntity.getBodyParts()) {
                     Entity entity2 = (Entity)filter.downcast(enderDragonPart);
                     if (entity2 == null || !predicate.test(entity2)) continue;
                     list.add(entity2);
@@ -575,7 +584,7 @@ AutoCloseable {
 
     public void markDirty(BlockPos pos) {
         if (this.isChunkLoaded(pos)) {
-            this.getWorldChunk(pos).markDirty();
+            this.getWorldChunk(pos).setNeedsSaving(true);
         }
     }
 
@@ -724,12 +733,12 @@ AutoCloseable {
         if (this.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos).getY() > pos.getY()) {
             return false;
         }
-        Biome biome = this.getBiome(pos);
-        return biome.getPrecipitation() == Biome.Precipitation.RAIN && biome.getTemperature(pos) >= 0.15f;
+        Biome biome = this.getBiome(pos).value();
+        return biome.getPrecipitation() == Biome.Precipitation.RAIN && biome.doesNotSnow(pos);
     }
 
     public boolean hasHighHumidity(BlockPos pos) {
-        Biome biome = this.getBiome(pos);
+        Biome biome = this.getBiome(pos).value();
         return biome.hasHighHumidity();
     }
 
@@ -811,6 +820,10 @@ AutoCloseable {
         return this.dimension;
     }
 
+    public RegistryEntry<DimensionType> method_40134() {
+        return this.field_36402;
+    }
+
     public RegistryKey<World> getRegistryKey() {
         return this.registryKey;
     }
@@ -831,8 +844,6 @@ AutoCloseable {
     }
 
     public abstract RecipeManager getRecipeManager();
-
-    public abstract TagManager getTagManager();
 
     public BlockPos getRandomPosInChunk(int x, int y, int z, int i) {
         this.lcgBlockSeed = this.lcgBlockSeed * 3 + 1013904223;
@@ -875,10 +886,15 @@ AutoCloseable {
                 WorldChunk chunk = this.getChunkManager().getWorldChunk(o, p);
                 if (chunk == null) continue;
                 for (int q = m; q <= n; ++q) {
-                    chunk.getGameEventDispatcher(q).dispatch(gameEvent, entity, pos);
+                    ((Chunk)chunk).getGameEventDispatcher(q).dispatch(gameEvent, entity, pos);
                 }
             }
         }
+    }
+
+    @Override
+    public long getTickOrder() {
+        return this.tickOrder++;
     }
 
     @Override

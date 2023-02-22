@@ -3,14 +3,15 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.network;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -25,13 +26,12 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.network.LanServerInfo;
 import net.minecraft.server.LanServerPinger;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class LanServerQueryManager {
     static final AtomicInteger THREAD_ID = new AtomicInteger(0);
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
 
     @Environment(value=EnvType.CLIENT)
     public static class LanServerDetector

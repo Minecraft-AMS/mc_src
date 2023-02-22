@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.Arrays
  *  it.unimi.dsi.fastutil.Swapper
  *  it.unimi.dsi.fastutil.ints.IntArrayList
@@ -12,13 +13,13 @@
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.search;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.Swapper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
@@ -30,14 +31,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class SuffixArray<T> {
     private static final boolean PRINT_COMPARISONS = Boolean.parseBoolean(System.getProperty("SuffixArray.printComparisons", "false"));
     private static final boolean PRINT_ARRAY = Boolean.parseBoolean(System.getProperty("SuffixArray.printArray", "false"));
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_33013 = -1;
     private static final int field_33014 = -2;
     protected final List<T> objects = Lists.newArrayList();
@@ -66,21 +66,14 @@ public class SuffixArray<T> {
         int j2;
         int i2 = this.characters.size();
         int[] is = new int[i2];
-        final int[] js = new int[i2];
-        final int[] ks = new int[i2];
+        int[] js = new int[i2];
+        int[] ks = new int[i2];
         int[] ls = new int[i2];
-        IntComparator intComparator = new IntComparator(){
-
-            public int compare(int i, int j) {
-                if (js[i] == js[j]) {
-                    return Integer.compare(ks[i], ks[j]);
-                }
-                return Integer.compare(js[i], js[j]);
+        IntComparator intComparator = (i, j) -> {
+            if (js[i] == js[j]) {
+                return Integer.compare(ks[i], ks[j]);
             }
-
-            public int compare(Integer integer, Integer integer2) {
-                return this.compare((int)integer, (int)integer2);
-            }
+            return Integer.compare(js[i], js[j]);
         };
         Swapper swapper = (i, j) -> {
             if (i != j) {
@@ -144,7 +137,7 @@ public class SuffixArray<T> {
             if (k == i) {
                 stringBuilder.append('^');
             }
-            if ((l = this.characters.get(j + k).intValue()) == -1) break;
+            if ((l = this.characters.getInt(j + k)) == -1) break;
             stringBuilder.append((char)l);
             ++k;
         }
@@ -180,7 +173,7 @@ public class SuffixArray<T> {
             l = j + (k - j) / 2;
             m = this.compare(text, l);
             if (PRINT_COMPARISONS) {
-                LOGGER.debug("comparing lower \"{}\" with {} \"{}\": {}", (Object)text, (Object)l, (Object)this.getDebugString(l), (Object)m);
+                LOGGER.debug("comparing lower \"{}\" with {} \"{}\": {}", new Object[]{text, l, this.getDebugString(l), m});
             }
             if (m > 0) {
                 j = l + 1;
@@ -197,7 +190,7 @@ public class SuffixArray<T> {
             m = j + (k - j) / 2;
             int n = this.compare(text, m);
             if (PRINT_COMPARISONS) {
-                LOGGER.debug("comparing upper \"{}\" with {} \"{}\": {}", (Object)text, (Object)m, (Object)this.getDebugString(m), (Object)n);
+                LOGGER.debug("comparing upper \"{}\" with {} \"{}\": {}", new Object[]{text, m, this.getDebugString(m), n});
             }
             if (n >= 0) {
                 j = m + 1;

@@ -7,8 +7,6 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityData;
@@ -53,7 +51,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -93,7 +91,7 @@ implements RangedAttackMob {
         this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::canDrownedAttackTarget));
         this.targetSelector.add(3, new ActiveTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, false));
         this.targetSelector.add(3, new ActiveTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
-        this.targetSelector.add(3, new ActiveTargetGoal<AxolotlEntity>(this, AxolotlEntity.class, true, false));
+        this.targetSelector.add(3, new ActiveTargetGoal<AxolotlEntity>((MobEntity)this, AxolotlEntity.class, true, false));
         this.targetSelector.add(5, new ActiveTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
     }
 
@@ -109,9 +107,12 @@ implements RangedAttackMob {
 
     public static boolean canSpawn(EntityType<DrownedEntity> type, ServerWorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
         boolean bl;
-        Optional<RegistryKey<Biome>> optional = world.getBiomeKey(pos);
+        if (!world.getFluidState(pos.down()).isIn(FluidTags.WATER)) {
+            return false;
+        }
+        RegistryEntry<Biome> registryEntry = world.getBiome(pos);
         boolean bl2 = bl = world.getDifficulty() != Difficulty.PEACEFUL && DrownedEntity.isSpawnDark(world, pos, random) && (spawnReason == SpawnReason.SPAWNER || world.getFluidState(pos).isIn(FluidTags.WATER));
-        if (Objects.equals(optional, Optional.of(BiomeKeys.RIVER)) || Objects.equals(optional, Optional.of(BiomeKeys.FROZEN_RIVER))) {
+        if (registryEntry.matchesKey(BiomeKeys.RIVER) || registryEntry.matchesKey(BiomeKeys.FROZEN_RIVER)) {
             return random.nextInt(15) == 0 && bl;
         }
         return random.nextInt(40) == 0 && DrownedEntity.isValidSpawnDepth(world, pos) && bl;
@@ -201,7 +202,7 @@ implements RangedAttackMob {
 
     @Override
     public boolean canSpawn(WorldView world) {
-        return world.intersectsEntities(this);
+        return world.doesNotIntersectEntities(this);
     }
 
     public boolean canDrownedAttackTarget(@Nullable LivingEntity target) {
@@ -485,7 +486,7 @@ implements RangedAttackMob {
         @Override
         public void tick() {
             if (this.drowned.getY() < (double)(this.minY - 1) && (this.drowned.getNavigation().isIdle() || this.drowned.hasFinishedCurrentPath())) {
-                Vec3d vec3d = NoPenaltyTargeting.find(this.drowned, 4, 8, new Vec3d(this.drowned.getX(), this.minY - 1, this.drowned.getZ()), 1.5707963705062866);
+                Vec3d vec3d = NoPenaltyTargeting.findTo(this.drowned, 4, 8, new Vec3d(this.drowned.getX(), this.minY - 1, this.drowned.getZ()), 1.5707963705062866);
                 if (vec3d == null) {
                     this.foundTarget = true;
                     return;

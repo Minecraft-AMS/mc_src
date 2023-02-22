@@ -62,22 +62,22 @@ implements LightingView {
     }
 
     @Override
-    public int doLightUpdates(int i, boolean bl, boolean bl2) {
+    public int doLightUpdates(int i, boolean doSkylight, boolean skipEdgeLightPropagation) {
         if (this.blockLightProvider != null && this.skyLightProvider != null) {
             int j = i / 2;
-            int k = this.blockLightProvider.doLightUpdates(j, bl, bl2);
+            int k = this.blockLightProvider.doLightUpdates(j, doSkylight, skipEdgeLightPropagation);
             int l = i - j + k;
-            int m = this.skyLightProvider.doLightUpdates(l, bl, bl2);
+            int m = this.skyLightProvider.doLightUpdates(l, doSkylight, skipEdgeLightPropagation);
             if (k == 0 && m > 0) {
-                return this.blockLightProvider.doLightUpdates(m, bl, bl2);
+                return this.blockLightProvider.doLightUpdates(m, doSkylight, skipEdgeLightPropagation);
             }
             return m;
         }
         if (this.blockLightProvider != null) {
-            return this.blockLightProvider.doLightUpdates(i, bl, bl2);
+            return this.blockLightProvider.doLightUpdates(i, doSkylight, skipEdgeLightPropagation);
         }
         if (this.skyLightProvider != null) {
-            return this.skyLightProvider.doLightUpdates(i, bl, bl2);
+            return this.skyLightProvider.doLightUpdates(i, doSkylight, skipEdgeLightPropagation);
         }
         return i;
     }
@@ -93,12 +93,12 @@ implements LightingView {
     }
 
     @Override
-    public void setColumnEnabled(ChunkPos chunkPos, boolean bl) {
+    public void setColumnEnabled(ChunkPos pos, boolean retainData) {
         if (this.blockLightProvider != null) {
-            this.blockLightProvider.setColumnEnabled(chunkPos, bl);
+            this.blockLightProvider.setColumnEnabled(pos, retainData);
         }
         if (this.skyLightProvider != null) {
-            this.skyLightProvider.setColumnEnabled(chunkPos, bl);
+            this.skyLightProvider.setColumnEnabled(pos, retainData);
         }
     }
 
@@ -115,24 +115,24 @@ implements LightingView {
         return this.skyLightProvider;
     }
 
-    public String displaySectionLevel(LightType lightType, ChunkSectionPos chunkSectionPos) {
+    public String displaySectionLevel(LightType lightType, ChunkSectionPos pos) {
         if (lightType == LightType.BLOCK) {
             if (this.blockLightProvider != null) {
-                return this.blockLightProvider.displaySectionLevel(chunkSectionPos.asLong());
+                return this.blockLightProvider.displaySectionLevel(pos.asLong());
             }
         } else if (this.skyLightProvider != null) {
-            return this.skyLightProvider.displaySectionLevel(chunkSectionPos.asLong());
+            return this.skyLightProvider.displaySectionLevel(pos.asLong());
         }
         return "n/a";
     }
 
-    public void enqueueSectionData(LightType lightType, ChunkSectionPos pos, @Nullable ChunkNibbleArray nibbles, boolean bl) {
+    public void enqueueSectionData(LightType lightType, ChunkSectionPos pos, @Nullable ChunkNibbleArray nibbles, boolean nonEdge) {
         if (lightType == LightType.BLOCK) {
             if (this.blockLightProvider != null) {
-                this.blockLightProvider.enqueueSectionData(pos.asLong(), nibbles, bl);
+                this.blockLightProvider.enqueueSectionData(pos.asLong(), nibbles, nonEdge);
             }
         } else if (this.skyLightProvider != null) {
-            this.skyLightProvider.enqueueSectionData(pos.asLong(), nibbles, bl);
+            this.skyLightProvider.enqueueSectionData(pos.asLong(), nibbles, nonEdge);
         }
     }
 

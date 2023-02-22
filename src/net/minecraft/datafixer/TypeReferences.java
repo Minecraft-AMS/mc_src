@@ -34,6 +34,6 @@ public class TypeReferences {
     public static final DSL.TypeReference TEAM = () -> "team";
     public static final DSL.TypeReference RECIPE = () -> "recipe";
     public static final DSL.TypeReference BIOME = () -> "biome";
-    public static final DSL.TypeReference CHUNK_GENERATOR_SETTINGS = () -> "world_gen_settings";
+    public static final DSL.TypeReference WORLD_GEN_SETTINGS = () -> "world_gen_settings";
 }
 

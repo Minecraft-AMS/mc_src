@@ -5,11 +5,11 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen;
 
@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -41,6 +42,7 @@ import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.screen.narration.ScreenNarrator;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.item.TooltipData;
 import net.minecraft.client.render.BufferBuilder;
@@ -66,15 +68,14 @@ import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.Matrix4f;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class Screen
 extends AbstractParentElement
 implements Drawable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Set<String> ALLOWED_PROTOCOLS = Sets.newHashSet((Object[])new String[]{"http", "https"});
     private static final int field_32270 = 2;
     private static final Text SCREEN_USAGE_TEXT = new TranslatableText("narrator.screen.usage");
@@ -89,12 +90,13 @@ implements Drawable {
     private final List<Drawable> drawables = Lists.newArrayList();
     public boolean passEvents;
     protected TextRenderer textRenderer;
+    @Nullable
     private URI clickedLink;
     private static final long SCREEN_INIT_NARRATION_DELAY;
     private static final long NARRATOR_MODE_CHANGE_DELAY;
-    private static final long field_33819 = 750L;
-    private static final long field_33820 = 200L;
-    private static final long field_33821 = 200L;
+    private static final long MOUSE_MOVE_NARRATION_DELAY = 750L;
+    private static final long MOUSE_PRESS_SCROLL_NARRATION_DELAY = 200L;
+    private static final long KEY_PRESS_NARRATION_DELAY = 200L;
     private final ScreenNarrator narrator = new ScreenNarrator();
     private long elementNarrationStartTime = Long.MIN_VALUE;
     private long screenNarrationStartTime = Long.MAX_VALUE;
@@ -123,7 +125,7 @@ implements Drawable {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256 && this.shouldCloseOnEsc()) {
-            this.onClose();
+            this.close();
             return true;
         }
         if (keyCode == 258) {
@@ -141,7 +143,7 @@ implements Drawable {
         return true;
     }
 
-    public void onClose() {
+    public void close() {
         this.client.setScreen(null);
     }
 
@@ -240,7 +242,7 @@ implements Drawable {
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-        Matrix4f matrix4f = matrices.peek().getModel();
+        Matrix4f matrix4f = matrices.peek().getPositionMatrix();
         Screen.fillGradient(matrix4f, bufferBuilder, l - 3, m - 4, l + k + 3, m - 3, 400, -267386864, -267386864);
         Screen.fillGradient(matrix4f, bufferBuilder, l - 3, m + n + 3, l + k + 3, m + n + 4, 400, -267386864, -267386864);
         Screen.fillGradient(matrix4f, bufferBuilder, l - 3, m - 3, l + k + 3, m + n + 3, 400, -267386864, -267386864);
@@ -271,7 +273,7 @@ implements Drawable {
         s = m;
         for (t = 0; t < components.size(); ++t) {
             tooltipComponent2 = components.get(t);
-            tooltipComponent2.drawItems(this.textRenderer, l, s, matrices, this.itemRenderer, 400, this.client.getTextureManager());
+            tooltipComponent2.drawItems(this.textRenderer, l, s, matrices, this.itemRenderer, 400);
             s += tooltipComponent2.getHeight() + (t == 0 ? 2 : 0);
         }
         this.itemRenderer.zOffset = f;
@@ -420,7 +422,7 @@ implements Drawable {
         tessellator.draw();
     }
 
-    public boolean isPauseScreen() {
+    public boolean shouldPause() {
         return true;
     }
 
@@ -598,6 +600,12 @@ implements Drawable {
 
     public void applyNarratorModeChangeDelay() {
         this.setScreenNarrationDelay(NARRATOR_MODE_CHANGE_DELAY, false);
+    }
+
+    protected static void hide(ClickableWidget ... widgets) {
+        for (ClickableWidget clickableWidget : widgets) {
+            clickableWidget.visible = false;
+        }
     }
 
     static {

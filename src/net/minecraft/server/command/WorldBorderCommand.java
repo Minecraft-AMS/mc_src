@@ -39,6 +39,7 @@ public class WorldBorderCommand {
     private static final SimpleCommandExceptionType SET_FAILED_NO_CHANGE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.set.failed.nochange"));
     private static final SimpleCommandExceptionType SET_FAILED_SMALL_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.set.failed.small"));
     private static final SimpleCommandExceptionType SET_FAILED_BIG_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.set.failed.big", 5.9999968E7));
+    private static final SimpleCommandExceptionType SET_FAILED_FAR_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.set.failed.far", 2.9999984E7));
     private static final SimpleCommandExceptionType WARNING_TIME_FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.warning.time.failed"));
     private static final SimpleCommandExceptionType WARNING_DISTANCE_FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.warning.distance.failed"));
     private static final SimpleCommandExceptionType DAMAGE_BUFFER_FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.worldborder.damage.buffer.failed"));
@@ -49,7 +50,7 @@ public class WorldBorderCommand {
     }
 
     private static int executeBuffer(ServerCommandSource source, float distance) throws CommandSyntaxException {
-        WorldBorder worldBorder = source.getWorld().getWorldBorder();
+        WorldBorder worldBorder = source.getServer().getOverworld().getWorldBorder();
         if (worldBorder.getSafeZone() == (double)distance) {
             throw DAMAGE_BUFFER_FAILED_EXCEPTION.create();
         }
@@ -59,7 +60,7 @@ public class WorldBorderCommand {
     }
 
     private static int executeDamage(ServerCommandSource source, float damagePerBlock) throws CommandSyntaxException {
-        WorldBorder worldBorder = source.getWorld().getWorldBorder();
+        WorldBorder worldBorder = source.getServer().getOverworld().getWorldBorder();
         if (worldBorder.getDamagePerBlock() == (double)damagePerBlock) {
             throw DAMAGE_AMOUNT_FAILED_EXCEPTION.create();
         }
@@ -69,7 +70,7 @@ public class WorldBorderCommand {
     }
 
     private static int executeWarningTime(ServerCommandSource source, int time) throws CommandSyntaxException {
-        WorldBorder worldBorder = source.getWorld().getWorldBorder();
+        WorldBorder worldBorder = source.getServer().getOverworld().getWorldBorder();
         if (worldBorder.getWarningTime() == time) {
             throw WARNING_TIME_FAILED_EXCEPTION.create();
         }
@@ -79,7 +80,7 @@ public class WorldBorderCommand {
     }
 
     private static int executeWarningDistance(ServerCommandSource source, int distance) throws CommandSyntaxException {
-        WorldBorder worldBorder = source.getWorld().getWorldBorder();
+        WorldBorder worldBorder = source.getServer().getOverworld().getWorldBorder();
         if (worldBorder.getWarningBlocks() == distance) {
             throw WARNING_DISTANCE_FAILED_EXCEPTION.create();
         }
@@ -89,15 +90,18 @@ public class WorldBorderCommand {
     }
 
     private static int executeGet(ServerCommandSource source) {
-        double d = source.getWorld().getWorldBorder().getSize();
+        double d = source.getServer().getOverworld().getWorldBorder().getSize();
         source.sendFeedback(new TranslatableText("commands.worldborder.get", String.format(Locale.ROOT, "%.0f", d)), false);
         return MathHelper.floor(d + 0.5);
     }
 
     private static int executeCenter(ServerCommandSource source, Vec2f pos) throws CommandSyntaxException {
-        WorldBorder worldBorder = source.getWorld().getWorldBorder();
+        WorldBorder worldBorder = source.getServer().getOverworld().getWorldBorder();
         if (worldBorder.getCenterX() == (double)pos.x && worldBorder.getCenterZ() == (double)pos.y) {
             throw CENTER_FAILED_EXCEPTION.create();
+        }
+        if ((double)Math.abs(pos.x) > 2.9999984E7 || (double)Math.abs(pos.y) > 2.9999984E7) {
+            throw SET_FAILED_FAR_EXCEPTION.create();
         }
         worldBorder.setCenter(pos.x, pos.y);
         source.sendFeedback(new TranslatableText("commands.worldborder.center.success", String.format(Locale.ROOT, "%.2f", Float.valueOf(pos.x)), String.format("%.2f", Float.valueOf(pos.y))), true);
@@ -105,7 +109,7 @@ public class WorldBorderCommand {
     }
 
     private static int executeSet(ServerCommandSource source, double distance, long time) throws CommandSyntaxException {
-        WorldBorder worldBorder = source.getWorld().getWorldBorder();
+        WorldBorder worldBorder = source.getServer().getOverworld().getWorldBorder();
         double d = worldBorder.getSize();
         if (d == distance) {
             throw SET_FAILED_NO_CHANGE_EXCEPTION.create();

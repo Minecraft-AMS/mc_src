@@ -5,7 +5,6 @@ package net.minecraft.structure;
 
 import java.util.Locale;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.BuriedTreasureGenerator;
 import net.minecraft.structure.DesertTempleGenerator;
 import net.minecraft.structure.EndCityGenerator;
@@ -20,6 +19,8 @@ import net.minecraft.structure.PoolStructurePiece;
 import net.minecraft.structure.RuinedPortalStructurePiece;
 import net.minecraft.structure.ShipwreckGenerator;
 import net.minecraft.structure.StrongholdGenerator;
+import net.minecraft.structure.StructureContext;
+import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.SwampHutGenerator;
 import net.minecraft.structure.WoodlandMansionGenerator;
@@ -83,10 +84,38 @@ public interface StructurePieceType {
     public static final StructurePieceType NETHER_FOSSIL = StructurePieceType.register(NetherFossilGenerator.Piece::new, "NeFos");
     public static final StructurePieceType JIGSAW = StructurePieceType.register(PoolStructurePiece::new, "jigsaw");
 
-    public StructurePiece load(ServerWorld var1, NbtCompound var2);
+    public StructurePiece load(StructureContext var1, NbtCompound var2);
 
-    public static StructurePieceType register(StructurePieceType pieceType, String id) {
-        return Registry.register(Registry.STRUCTURE_PIECE, id.toLowerCase(Locale.ROOT), pieceType);
+    private static StructurePieceType register(StructurePieceType type, String id) {
+        return Registry.register(Registry.STRUCTURE_PIECE, id.toLowerCase(Locale.ROOT), type);
+    }
+
+    private static StructurePieceType register(Simple type, String id) {
+        return StructurePieceType.register((StructurePieceType)type, id);
+    }
+
+    private static StructurePieceType register(ManagerAware type, String id) {
+        return StructurePieceType.register((StructurePieceType)type, id);
+    }
+
+    public static interface Simple
+    extends StructurePieceType {
+        public StructurePiece load(NbtCompound var1);
+
+        @Override
+        default public StructurePiece load(StructureContext structureContext, NbtCompound nbtCompound) {
+            return this.load(nbtCompound);
+        }
+    }
+
+    public static interface ManagerAware
+    extends StructurePieceType {
+        public StructurePiece load(StructureManager var1, NbtCompound var2);
+
+        @Override
+        default public StructurePiece load(StructureContext structureContext, NbtCompound nbtCompound) {
+            return this.load(structureContext.structureManager(), nbtCompound);
+        }
     }
 }
 

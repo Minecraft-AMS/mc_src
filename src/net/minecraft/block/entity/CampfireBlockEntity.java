@@ -1,8 +1,5 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block.entity;
 
@@ -16,6 +13,7 @@ import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.CampfireCookingRecipe;
@@ -27,7 +25,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
-import org.jetbrains.annotations.Nullable;
 
 public class CampfireBlockEntity
 extends BlockEntity
@@ -52,7 +49,7 @@ implements Clearable {
             campfire.cookingTimes[n] = campfire.cookingTimes[n] + 1;
             if (campfire.cookingTimes[i] < campfire.cookingTotalTimes[i]) continue;
             SimpleInventory inventory = new SimpleInventory(itemStack);
-            ItemStack itemStack2 = world.getRecipeManager().getFirstMatch(RecipeType.CAMPFIRE_COOKING, inventory, world).map(campfireCookingRecipe -> campfireCookingRecipe.craft(inventory)).orElse(itemStack);
+            ItemStack itemStack2 = world.getRecipeManager().getFirstMatch(RecipeType.CAMPFIRE_COOKING, inventory, world).map(recipe -> recipe.craft(inventory)).orElse(itemStack);
             ItemScatterer.spawn(world, (double)pos.getX(), (double)pos.getY(), (double)pos.getZ(), itemStack2);
             campfire.itemsBeingCooked.set(i, ItemStack.EMPTY);
             world.updateListeners(pos, state, state, 3);
@@ -117,28 +114,22 @@ implements Clearable {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        this.saveInitialChunkData(nbt);
-        nbt.putIntArray("CookingTimes", this.cookingTimes);
-        nbt.putIntArray("CookingTotalTimes", this.cookingTotalTimes);
-        return nbt;
-    }
-
-    private NbtCompound saveInitialChunkData(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         Inventories.writeNbt(nbt, this.itemsBeingCooked, true);
-        return nbt;
+        nbt.putIntArray("CookingTimes", this.cookingTimes);
+        nbt.putIntArray("CookingTotalTimes", this.cookingTotalTimes);
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 13, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.saveInitialChunkData(new NbtCompound());
+        NbtCompound nbtCompound = new NbtCompound();
+        Inventories.writeNbt(nbtCompound, this.itemsBeingCooked, true);
+        return nbtCompound;
     }
 
     public Optional<CampfireCookingRecipe> getRecipeFor(ItemStack item) {
@@ -148,11 +139,11 @@ implements Clearable {
         return this.world.getRecipeManager().getFirstMatch(RecipeType.CAMPFIRE_COOKING, new SimpleInventory(item), this.world);
     }
 
-    public boolean addItem(ItemStack item, int integer) {
+    public boolean addItem(ItemStack item, int cookTime) {
         for (int i = 0; i < this.itemsBeingCooked.size(); ++i) {
             ItemStack itemStack = this.itemsBeingCooked.get(i);
             if (!itemStack.isEmpty()) continue;
-            this.cookingTotalTimes[i] = integer;
+            this.cookingTotalTimes[i] = cookTime;
             this.cookingTimes[i] = 0;
             this.itemsBeingCooked.set(i, item.split(1));
             this.updateListeners();
@@ -175,6 +166,10 @@ implements Clearable {
         if (this.world != null) {
             this.updateListeners();
         }
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 }
 

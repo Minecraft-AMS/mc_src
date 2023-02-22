@@ -59,7 +59,7 @@ extends LightingView {
         }
 
         @Override
-        public int doLightUpdates(int i, boolean bl, boolean bl2) {
+        public int doLightUpdates(int i, boolean doSkylight, boolean skipEdgeLightPropagation) {
             return i;
         }
 
@@ -68,7 +68,7 @@ extends LightingView {
         }
 
         @Override
-        public void setColumnEnabled(ChunkPos chunkPos, boolean bl) {
+        public void setColumnEnabled(ChunkPos pos, boolean retainData) {
         }
 
         private static /* synthetic */ Empty[] method_36763() {

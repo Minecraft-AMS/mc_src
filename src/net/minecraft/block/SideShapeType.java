@@ -12,6 +12,9 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 
+/*
+ * Uses 'sealed' constructs - enablewith --sealed true
+ */
 public abstract class SideShapeType
 extends Enum<SideShapeType> {
     public static final /* enum */ SideShapeType FULL = new SideShapeType(){

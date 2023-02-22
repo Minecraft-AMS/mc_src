@@ -4,25 +4,27 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.google.common.hash.Hashing
+ *  com.google.common.io.Files
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.codec.digest.DigestUtils
  *  org.apache.commons.io.FileUtils
  *  org.apache.commons.io.comparator.LastModifiedFileComparator
  *  org.apache.commons.io.filefilter.IOFileFilter
  *  org.apache.commons.io.filefilter.TrueFileFilter
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.resource;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.hash.Hashing;
+import com.mojang.logging.LogUtils;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,22 +61,20 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.comparator.LastModifiedFileComparator;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientBuiltinResourcePackProvider
 implements ResourcePackProvider {
     private static final PackResourceMetadata DEFAULT_PACK_METADATA = new PackResourceMetadata(new TranslatableText("resourcePack.vanilla.description"), ResourceType.CLIENT_RESOURCES.getPackVersion(SharedConstants.getGameVersion()));
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Pattern SHA1_PATTERN = Pattern.compile("^[a-fA-F0-9]{40}$");
-    private static final int MAX_FILE_SIZE = 0x6400000;
+    private static final int MAX_FILE_SIZE = 0xFA00000;
     private static final int MAX_SAVED_PACKS = 10;
     private static final String VANILLA = "vanilla";
     private static final String SERVER = "server";
@@ -130,7 +130,7 @@ implements ResourcePackProvider {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     public CompletableFuture<?> download(String url, String packSha1, boolean closeAfterDownload) {
-        String string = DigestUtils.sha1Hex((String)url);
+        String string = Hashing.sha1().hashString((CharSequence)url, StandardCharsets.UTF_8).toString();
         String string2 = SHA1_PATTERN.matcher(packSha1).matches() ? packSha1 : "";
         this.lock.lock();
         try {
@@ -145,7 +145,7 @@ implements ResourcePackProvider {
                 Map<String, String> map = ClientBuiltinResourcePackProvider.getDownloadHeaders();
                 MinecraftClient minecraftClient = MinecraftClient.getInstance();
                 minecraftClient.submitAndJoin(() -> minecraftClient.setScreen(progressScreen));
-                completableFuture = NetworkUtils.downloadResourcePack(file, url, map, 0x6400000, progressScreen, minecraftClient.getNetworkProxy());
+                completableFuture = NetworkUtils.downloadResourcePack(file, url, map, 0xFA00000, progressScreen, minecraftClient.getNetworkProxy());
             }
             CompletableFuture<?> completableFuture2 = this.downloadTask = ((CompletableFuture)completableFuture.thenCompose(object -> {
                 if (!this.verifyFile(string2, file)) {
@@ -210,10 +210,7 @@ implements ResourcePackProvider {
 
     private boolean verifyFile(String expectedSha1, File file) {
         try {
-            String string;
-            try (FileInputStream fileInputStream = new FileInputStream(file);){
-                string = DigestUtils.sha1Hex((InputStream)fileInputStream);
-            }
+            String string = com.google.common.io.Files.asByteSource((File)file).hash(Hashing.sha1()).toString();
             if (expectedSha1.isEmpty()) {
                 LOGGER.info("Found file {} without verification hash", (Object)file);
                 return true;
@@ -222,7 +219,7 @@ implements ResourcePackProvider {
                 LOGGER.info("Found file {} matching requested hash {}", (Object)file, (Object)expectedSha1);
                 return true;
             }
-            LOGGER.warn("File {} had wrong hash (expected {}, found {}).", (Object)file, (Object)expectedSha1, (Object)string);
+            LOGGER.warn("File {} had wrong hash (expected {}, found {}).", new Object[]{file, expectedSha1, string});
         }
         catch (IOException iOException) {
             LOGGER.warn("File {} couldn't be hashed.", (Object)file, (Object)iOException);
@@ -231,6 +228,9 @@ implements ResourcePackProvider {
     }
 
     private void deleteOldServerPack() {
+        if (!this.serverPacksRoot.isDirectory()) {
+            return;
+        }
         try {
             ArrayList list = Lists.newArrayList((Iterable)FileUtils.listFiles((File)this.serverPacksRoot, (IOFileFilter)TrueFileFilter.TRUE, null));
             list.sort(LastModifiedFileComparator.LASTMODIFIED_REVERSE);
@@ -241,8 +241,8 @@ implements ResourcePackProvider {
                 FileUtils.deleteQuietly((File)file);
             }
         }
-        catch (IllegalArgumentException illegalArgumentException) {
-            LOGGER.error("Error while deleting old server resource pack : {}", (Object)illegalArgumentException.getMessage());
+        catch (Exception exception) {
+            LOGGER.error("Error while deleting old server resource pack : {}", (Object)exception.getMessage());
         }
     }
 

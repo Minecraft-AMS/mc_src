@@ -2,12 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.gen.feature;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import java.util.Random;
 import java.util.function.Predicate;
@@ -28,12 +29,11 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.util.FeatureContext;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class DungeonFeature
 extends Feature<DefaultFeatureConfig> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final EntityType<?>[] MOB_SPAWNER_ENTITIES = new EntityType[]{EntityType.SKELETON, EntityType.ZOMBIE, EntityType.ZOMBIE, EntityType.SPIDER};
     private static final BlockState AIR = Blocks.CAVE_AIR.getDefaultState();
 
@@ -47,7 +47,7 @@ extends Feature<DefaultFeatureConfig> {
         int u;
         int t;
         int s;
-        Predicate<BlockState> predicate = Feature.notInBlockTagPredicate(BlockTags.FEATURES_CANNOT_REPLACE.getId());
+        Predicate<BlockState> predicate = Feature.notInBlockTagPredicate(BlockTags.FEATURES_CANNOT_REPLACE);
         BlockPos blockPos = context.getOrigin();
         Random random = context.getRandom();
         StructureWorldAccess structureWorldAccess = context.getWorld();
@@ -127,7 +127,7 @@ extends Feature<DefaultFeatureConfig> {
         if (blockEntity instanceof MobSpawnerBlockEntity) {
             ((MobSpawnerBlockEntity)blockEntity).getLogic().setEntityId(this.getMobSpawnerEntity(random));
         } else {
-            LOGGER.error("Failed to fetch mob spawner entity at ({}, {}, {})", (Object)blockPos.getX(), (Object)blockPos.getY(), (Object)blockPos.getZ());
+            LOGGER.error("Failed to fetch mob spawner entity at ({}, {}, {})", new Object[]{blockPos.getX(), blockPos.getY(), blockPos.getZ()});
         }
         return true;
     }

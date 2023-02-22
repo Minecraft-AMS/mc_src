@@ -2,11 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.dedicated;
 
+import com.mojang.logging.LogUtils;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -14,11 +15,10 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Properties;
 import net.minecraft.SharedConstants;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class EulaReader {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Path eulaFile;
     private final boolean eulaAgreedTo;
 

@@ -174,6 +174,11 @@ extends HostileEntity {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
             --this.fireballCooldown;
             LivingEntity livingEntity = this.blaze.getTarget();

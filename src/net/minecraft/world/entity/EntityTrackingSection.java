@@ -2,23 +2,25 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.entity;
 
+import com.mojang.logging.LogUtils;
+import java.util.Collection;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.util.TypeFilter;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.collection.TypeFilterableList;
+import net.minecraft.util.math.Box;
+import net.minecraft.world.entity.EntityLike;
 import net.minecraft.world.entity.EntityTrackingStatus;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
-public class EntityTrackingSection<T> {
-    protected static final Logger LOGGER = LogManager.getLogger();
+public class EntityTrackingSection<T extends EntityLike> {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final TypeFilterableList<T> collection;
     private EntityTrackingStatus status;
 
@@ -27,26 +29,30 @@ public class EntityTrackingSection<T> {
         this.collection = new TypeFilterableList<T>(entityClass);
     }
 
-    public void add(T obj) {
-        this.collection.add(obj);
+    public void add(T entity) {
+        this.collection.add(entity);
     }
 
-    public boolean remove(T obj) {
-        return this.collection.remove(obj);
+    public boolean remove(T entity) {
+        return this.collection.remove(entity);
     }
 
-    public void forEach(Predicate<? super T> predicate, Consumer<T> action) {
-        for (T object : this.collection) {
-            if (!predicate.test(object)) continue;
-            action.accept(object);
+    public void forEach(Box box, Consumer<T> action) {
+        for (EntityLike entityLike : this.collection) {
+            if (!entityLike.getBoundingBox().intersects(box)) continue;
+            action.accept(entityLike);
         }
     }
 
-    public <U extends T> void forEach(TypeFilter<T, U> type, Predicate<? super U> filter, Consumer<? super U> action) {
-        for (T object : this.collection.getAllOfType(type.getBaseClass())) {
-            U object2 = type.downcast(object);
-            if (object2 == null || !filter.test(object2)) continue;
-            action.accept(object2);
+    public <U extends T> void forEach(TypeFilter<T, U> type, Box box, Consumer<? super U> action) {
+        Collection<T> collection = this.collection.getAllOfType(type.getBaseClass());
+        if (collection.isEmpty()) {
+            return;
+        }
+        for (EntityLike entityLike : collection) {
+            EntityLike entityLike2 = (EntityLike)type.downcast(entityLike);
+            if (entityLike2 == null || !entityLike.getBoundingBox().intersects(box)) continue;
+            action.accept(entityLike2);
         }
     }
 

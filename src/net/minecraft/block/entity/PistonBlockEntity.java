@@ -36,7 +36,7 @@ extends BlockEntity {
     private static final int field_31382 = 2;
     private static final double field_31383 = 0.01;
     public static final double field_31381 = 0.51;
-    private BlockState pushedBlock;
+    private BlockState pushedBlock = Blocks.AIR.getDefaultState();
     private Direction facing;
     private boolean extending;
     private boolean source;
@@ -60,7 +60,7 @@ extends BlockEntity {
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     public boolean isExtending() {
@@ -258,7 +258,7 @@ extends BlockEntity {
             }
             world.removeBlockEntity(pos);
             blockEntity.markRemoved();
-            if (blockEntity.pushedBlock != null && world.getBlockState(pos).isOf(Blocks.MOVING_PISTON)) {
+            if (world.getBlockState(pos).isOf(Blocks.MOVING_PISTON)) {
                 BlockState blockState = Block.postProcessState(blockEntity.pushedBlock, world, pos);
                 if (blockState.isAir()) {
                     world.setBlockState(pos, blockEntity.pushedBlock, 84);
@@ -293,18 +293,17 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.put("blockState", NbtHelper.fromBlockState(this.pushedBlock));
         nbt.putInt("facing", this.facing.getId());
         nbt.putFloat("progress", this.lastProgress);
         nbt.putBoolean("extending", this.extending);
         nbt.putBoolean("source", this.source);
-        return nbt;
     }
 
     public VoxelShape getCollisionShape(BlockView world, BlockPos pos) {
-        VoxelShape voxelShape = !this.extending && this.source ? ((BlockState)this.pushedBlock.with(PistonBlock.EXTENDED, true)).getCollisionShape(world, pos) : VoxelShapes.empty();
+        VoxelShape voxelShape = !this.extending && this.source && this.pushedBlock.getBlock() instanceof PistonBlock ? ((BlockState)this.pushedBlock.with(PistonBlock.EXTENDED, true)).getCollisionShape(world, pos) : VoxelShapes.empty();
         Direction direction = field_12205.get();
         if ((double)this.progress < 1.0 && direction == this.getMovementDirection()) {
             return voxelShape;

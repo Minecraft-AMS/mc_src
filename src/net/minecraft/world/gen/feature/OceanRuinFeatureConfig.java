@@ -18,7 +18,7 @@ import net.minecraft.world.gen.feature.OceanRuinFeature;
 
 public class OceanRuinFeatureConfig
 implements FeatureConfig {
-    public static final Codec<OceanRuinFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)OceanRuinFeature.BiomeType.CODEC.fieldOf("biome_temp").forGetter(oceanRuinFeatureConfig -> oceanRuinFeatureConfig.biomeType), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("large_probability").forGetter(oceanRuinFeatureConfig -> Float.valueOf(oceanRuinFeatureConfig.largeProbability)), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("cluster_probability").forGetter(oceanRuinFeatureConfig -> Float.valueOf(oceanRuinFeatureConfig.clusterProbability))).apply((Applicative)instance, OceanRuinFeatureConfig::new));
+    public static final Codec<OceanRuinFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)OceanRuinFeature.BiomeType.CODEC.fieldOf("biome_temp").forGetter(config -> config.biomeType), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("large_probability").forGetter(config -> Float.valueOf(config.largeProbability)), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("cluster_probability").forGetter(config -> Float.valueOf(config.clusterProbability))).apply((Applicative)instance, OceanRuinFeatureConfig::new));
     public final OceanRuinFeature.BiomeType biomeType;
     public final float largeProbability;
     public final float clusterProbability;

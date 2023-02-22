@@ -2,16 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  io.netty.buffer.ByteBuf
  *  io.netty.channel.ChannelHandlerContext
  *  io.netty.handler.codec.ByteToMessageDecoder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- *  org.apache.logging.log4j.Marker
- *  org.apache.logging.log4j.MarkerManager
+ *  org.slf4j.Logger
  */
 package net.minecraft.network;
 
+import com.mojang.logging.LogUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -22,37 +21,37 @@ import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
+import net.minecraft.util.profiling.jfr.FlightProfiler;
+import org.slf4j.Logger;
 
 public class DecoderHandler
 extends ByteToMessageDecoder {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final Marker MARKER = MarkerManager.getMarker((String)"PACKET_RECEIVED", (Marker)ClientConnection.NETWORK_PACKETS_MARKER);
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final NetworkSide side;
 
     public DecoderHandler(NetworkSide side) {
         this.side = side;
     }
 
-    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
-        if (byteBuf.readableBytes() == 0) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> objects) throws Exception {
+        int i = buf.readableBytes();
+        if (i == 0) {
             return;
         }
-        PacketByteBuf packetByteBuf = new PacketByteBuf(byteBuf);
-        int i = packetByteBuf.readVarInt();
-        Packet<?> packet = ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getPacketHandler(this.side, i, packetByteBuf);
+        PacketByteBuf packetByteBuf = new PacketByteBuf(buf);
+        int j = packetByteBuf.readVarInt();
+        Packet<?> packet = ((NetworkState)((Object)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getPacketHandler(this.side, j, packetByteBuf);
         if (packet == null) {
-            throw new IOException("Bad packet id " + i);
+            throw new IOException("Bad packet id " + j);
         }
+        int k = ((NetworkState)((Object)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId();
+        FlightProfiler.INSTANCE.onPacketReceived(k, j, ctx.channel().remoteAddress(), i);
         if (packetByteBuf.readableBytes() > 0) {
-            throw new IOException("Packet " + ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId() + "/" + i + " (" + packet.getClass().getSimpleName() + ") was larger than I expected, found " + packetByteBuf.readableBytes() + " bytes extra whilst reading packet " + i);
+            throw new IOException("Packet " + ((NetworkState)((Object)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId() + "/" + j + " (" + packet.getClass().getSimpleName() + ") was larger than I expected, found " + packetByteBuf.readableBytes() + " bytes extra whilst reading packet " + j);
         }
-        list.add(packet);
+        objects.add(packet);
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(MARKER, " IN: [{}:{}] {}", channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), (Object)i, (Object)packet.getClass().getName());
+            LOGGER.debug(ClientConnection.PACKET_RECEIVED_MARKER, " IN: [{}:{}] {}", new Object[]{ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), j, packet.getClass().getName()});
         }
     }
 }

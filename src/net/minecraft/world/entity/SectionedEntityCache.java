@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.PrimitiveIterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -67,7 +66,7 @@ public class SectionedEntityCache<T extends EntityLike> {
                 long r = longIterator.nextLong();
                 int s = ChunkSectionPos.unpackY(r);
                 int t = ChunkSectionPos.unpackZ(r);
-                if (s < j || s > m || t < k || t > n || (entityTrackingSection = (EntityTrackingSection)this.trackingSections.get(r)) == null || !entityTrackingSection.getStatus().shouldTrack()) continue;
+                if (s < j || s > m || t < k || t > n || (entityTrackingSection = (EntityTrackingSection)this.trackingSections.get(r)) == null || entityTrackingSection.isEmpty() || !entityTrackingSection.getStatus().shouldTrack()) continue;
                 action.accept(entityTrackingSection);
             }
         }
@@ -120,16 +119,12 @@ public class SectionedEntityCache<T extends EntityLike> {
         return longSet;
     }
 
-    private static <T extends EntityLike> Predicate<T> intersecting(Box box) {
-        return entityLike -> entityLike.getBoundingBox().intersects(box);
-    }
-
     public void forEachIntersects(Box box, Consumer<T> action) {
-        this.forEachInBox(box, entityTrackingSection -> entityTrackingSection.forEach(SectionedEntityCache.intersecting(box), action));
+        this.forEachInBox(box, section -> section.forEach(box, action));
     }
 
     public <U extends T> void forEachIntersects(TypeFilter<T, U> filter, Box box, Consumer<U> action) {
-        this.forEachInBox(box, entityTrackingSection -> entityTrackingSection.forEach(filter, SectionedEntityCache.intersecting(box), action));
+        this.forEachInBox(box, section -> section.forEach(filter, box, action));
     }
 
     public void removeSection(long sectionPos) {

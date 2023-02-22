@@ -6,10 +6,10 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.resource.language;
 
@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,13 +34,12 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.SynchronousResourceReloader;
 import net.minecraft.util.Language;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class LanguageManager
 implements SynchronousResourceReloader {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final String DEFAULT_LANGUAGE_CODE = "en_us";
     private static final LanguageDefinition ENGLISH_US = new LanguageDefinition("en_us", "US", "English", false);
     private Map<String, LanguageDefinition> languageDefs = ImmutableMap.of((Object)"en_us", (Object)ENGLISH_US);

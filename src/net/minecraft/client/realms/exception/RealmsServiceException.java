@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.realms.exception;
 
@@ -11,39 +12,42 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.realms.RealmsError;
 import net.minecraft.client.resource.language.I18n;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsServiceException
 extends Exception {
     public final int httpResultCode;
-    public final String httpResponseContent;
-    public final int errorCode;
-    public final String errorMsg;
+    public final String httpResponseText;
+    @Nullable
+    public final RealmsError error;
 
     public RealmsServiceException(int httpResultCode, String httpResponseText, RealmsError error) {
         super(httpResponseText);
         this.httpResultCode = httpResultCode;
-        this.httpResponseContent = httpResponseText;
-        this.errorCode = error.getErrorCode();
-        this.errorMsg = error.getErrorMessage();
+        this.httpResponseText = httpResponseText;
+        this.error = error;
     }
 
-    public RealmsServiceException(int httpResultCode, String httpResponseText, int errorCode, String errorMsg) {
+    public RealmsServiceException(int httpResultCode, String httpResponseText) {
         super(httpResponseText);
         this.httpResultCode = httpResultCode;
-        this.httpResponseContent = httpResponseText;
-        this.errorCode = errorCode;
-        this.errorMsg = errorMsg;
+        this.httpResponseText = httpResponseText;
+        this.error = null;
     }
 
     @Override
     public String toString() {
-        if (this.errorCode == -1) {
-            return "Realms (" + this.httpResultCode + ") " + this.httpResponseContent;
+        if (this.error != null) {
+            String string = "mco.errorMessage." + this.error.getErrorCode();
+            String string2 = I18n.hasTranslation(string) ? I18n.translate(string, new Object[0]) : this.error.getErrorMessage();
+            return "Realms service error (%d/%d) %s".formatted(this.httpResultCode, this.error.getErrorCode(), string2);
         }
-        String string = "mco.errorMessage." + this.errorCode;
-        String string2 = I18n.translate(string, new Object[0]);
-        return (string2.equals(string) ? this.errorMsg : string2) + " - " + this.errorCode;
+        return "Realms service error (%d) %s".formatted(this.httpResultCode, this.httpResponseText);
+    }
+
+    public int getErrorCode(int fallback) {
+        return this.error != null ? this.error.getErrorCode() : fallback;
     }
 }
 

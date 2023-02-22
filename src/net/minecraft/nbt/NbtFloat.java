@@ -10,19 +10,30 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.util.math.MathHelper;
 
 public class NbtFloat
 extends AbstractNbtNumber {
-    private static final int field_33194 = 96;
+    private static final int SIZE = 96;
     public static final NbtFloat ZERO = new NbtFloat(0.0f);
-    public static final NbtType<NbtFloat> TYPE = new NbtType<NbtFloat>(){
+    public static final NbtType<NbtFloat> TYPE = new NbtType.OfFixedSize<NbtFloat>(){
 
         @Override
         public NbtFloat read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
             nbtTagSizeTracker.add(96L);
             return NbtFloat.of(dataInput.readFloat());
+        }
+
+        @Override
+        public NbtScanner.Result doAccept(DataInput input, NbtScanner visitor) throws IOException {
+            return visitor.visitFloat(input.readFloat());
+        }
+
+        @Override
+        public int getSizeInBytes() {
+            return 4;
         }
 
         @Override
@@ -126,6 +137,11 @@ extends AbstractNbtNumber {
     @Override
     public Number numberValue() {
         return Float.valueOf(this.value);
+    }
+
+    @Override
+    public NbtScanner.Result doAccept(NbtScanner visitor) {
+        return visitor.visitFloat(this.value);
     }
 
     @Override

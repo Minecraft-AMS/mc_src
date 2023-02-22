@@ -28,6 +28,7 @@ implements Toast {
     public static final int field_32225 = 28;
     private final Type type;
     private final Text title;
+    @Nullable
     private final Text description;
     private Toast.Visibility visibility = Toast.Visibility.SHOW;
     private long lastTime;
@@ -49,10 +50,10 @@ implements Toast {
         manager.drawTexture(matrices, 0, 0, 0, 96, this.getWidth(), this.getHeight());
         this.type.drawIcon(matrices, manager, 6, 6);
         if (this.description == null) {
-            manager.getGame().textRenderer.draw(matrices, this.title, 30.0f, 12.0f, -11534256);
+            manager.getClient().textRenderer.draw(matrices, this.title, 30.0f, 12.0f, -11534256);
         } else {
-            manager.getGame().textRenderer.draw(matrices, this.title, 30.0f, 7.0f, -11534256);
-            manager.getGame().textRenderer.draw(matrices, this.description, 30.0f, 18.0f, -16777216);
+            manager.getClient().textRenderer.draw(matrices, this.title, 30.0f, 7.0f, -11534256);
+            manager.getClient().textRenderer.draw(matrices, this.description, 30.0f, 18.0f, -16777216);
         }
         if (this.hasProgressBar) {
             DrawableHelper.fill(matrices, 3, 28, 157, 29, -1);

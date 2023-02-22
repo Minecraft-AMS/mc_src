@@ -7,11 +7,11 @@
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.GameProfileRepository
  *  com.mojang.authlib.minecraft.MinecraftSessionService
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.integrated;
 
@@ -20,56 +20,55 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.resource.ResourcePackManager;
-import net.minecraft.resource.ServerResourceManager;
 import net.minecraft.server.LanServerPinger;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.SaveLoader;
 import net.minecraft.server.WorldGenerationProgressListenerFactory;
 import net.minecraft.server.integrated.IntegratedPlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stats;
+import net.minecraft.util.ModStatus;
 import net.minecraft.util.SystemDetails;
 import net.minecraft.util.UserCache;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.snooper.Snooper;
 import net.minecraft.world.GameMode;
-import net.minecraft.world.SaveProperties;
 import net.minecraft.world.level.storage.LevelStorage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class IntegratedServer
 extends MinecraftServer {
-    public static final int field_33015 = -1;
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final int field_34964 = 2;
     private final MinecraftClient client;
-    private boolean paused;
+    private boolean paused = true;
     private int lanPort = -1;
     @Nullable
     private GameMode forcedGameMode;
+    @Nullable
     private LanServerPinger lanPinger;
+    @Nullable
     private UUID localPlayerUuid;
+    private int simulationDistance = 0;
 
-    public IntegratedServer(Thread serverThread, MinecraftClient client, DynamicRegistryManager.Impl registryManager, LevelStorage.Session session, ResourcePackManager dataPackManager, ServerResourceManager serverResourceManager, SaveProperties saveProperties, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
-        super(serverThread, registryManager, session, saveProperties, dataPackManager, client.getNetworkProxy(), client.getDataFixer(), serverResourceManager, sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
+    public IntegratedServer(Thread serverThread, MinecraftClient client, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
+        super(serverThread, session, dataPackManager, saveLoader, client.getNetworkProxy(), client.getDataFixer(), sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
         this.setSinglePlayerName(client.getSession().getUsername());
         this.setDemo(client.isDemo());
-        this.setPlayerManager(new IntegratedPlayerManager(this, this.registryManager, this.saveHandler));
+        this.setPlayerManager(new IntegratedPlayerManager(this, this.getRegistryManager(), this.saveHandler));
         this.client = client;
     }
 
@@ -87,25 +86,32 @@ extends MinecraftServer {
 
     @Override
     public void tick(BooleanSupplier shouldKeepTicking) {
+        int j;
+        boolean bl2;
         boolean bl = this.paused;
-        this.paused = MinecraftClient.getInstance().getNetworkHandler() != null && MinecraftClient.getInstance().isPaused();
+        this.paused = MinecraftClient.getInstance().isPaused();
         Profiler profiler = this.getProfiler();
         if (!bl && this.paused) {
             profiler.push("autoSave");
             LOGGER.info("Saving and pausing game...");
-            this.getPlayerManager().saveAllPlayerData();
-            this.save(false, false, false);
+            this.saveAll(false, false, false);
             profiler.pop();
         }
-        if (this.paused) {
+        boolean bl3 = bl2 = MinecraftClient.getInstance().getNetworkHandler() != null;
+        if (bl2 && this.paused) {
             this.incrementTotalWorldTimeStat();
             return;
         }
         super.tick(shouldKeepTicking);
-        int i = Math.max(2, this.client.options.viewDistance + -1);
+        int i = Math.max(2, this.client.options.viewDistance);
         if (i != this.getPlayerManager().getViewDistance()) {
             LOGGER.info("Changing view distance to {}, from {}", (Object)i, (Object)this.getPlayerManager().getViewDistance());
             this.getPlayerManager().setViewDistance(i);
+        }
+        if ((j = Math.max(2, this.client.options.simulationDistance)) != this.simulationDistance) {
+            LOGGER.info("Changing simulation distance to {}, from {}", (Object)j, (Object)this.simulationDistance);
+            this.getPlayerManager().setSimulationDistance(j);
+            this.simulationDistance = j;
         }
     }
 
@@ -147,46 +153,25 @@ extends MinecraftServer {
 
     @Override
     public void setCrashReport(CrashReport report) {
-        this.client.setCrashReport(report);
+        this.client.setCrashReportSupplier(() -> report);
     }
 
     @Override
     public SystemDetails addExtraSystemDetails(SystemDetails details) {
         details.addSection("Type", "Integrated Server (map_client.txt)");
-        details.addSection("Is Modded", () -> this.getModdedStatusMessage().orElse("Probably not. Jar signature remains and both client + server brands are untouched."));
+        details.addSection("Is Modded", () -> this.getModStatus().getMessage());
         return details;
     }
 
     @Override
-    public Optional<String> getModdedStatusMessage() {
-        String string = ClientBrandRetriever.getClientModName();
-        if (!string.equals("vanilla")) {
-            return Optional.of("Definitely; Client brand changed to '" + string + "'");
-        }
-        string = this.getServerModName();
-        if (!"vanilla".equals(string)) {
-            return Optional.of("Definitely; Server brand changed to '" + string + "'");
-        }
-        if (MinecraftClient.class.getSigners() == null) {
-            return Optional.of("Very likely; Jar signature invalidated");
-        }
-        return Optional.empty();
-    }
-
-    @Override
-    public void addSnooperInfo(Snooper snooper) {
-        super.addSnooperInfo(snooper);
-        snooper.addInfo("snooper_partner", this.client.getSnooper().getToken());
-    }
-
-    @Override
-    public boolean isSnooperEnabled() {
-        return MinecraftClient.getInstance().isSnooperEnabled();
+    public ModStatus getModStatus() {
+        return MinecraftClient.getModStatus().combine(super.getModStatus());
     }
 
     @Override
     public boolean openToLan(@Nullable GameMode gameMode, boolean cheatsAllowed, int port) {
         try {
+            this.client.loadBlockList();
             this.getNetworkIo().bind(null, port);
             LOGGER.info("Started serving on {}", (Object)port);
             this.lanPort = port;

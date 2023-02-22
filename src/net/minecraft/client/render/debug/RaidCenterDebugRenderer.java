@@ -31,8 +31,8 @@ implements DebugRenderer.Renderer {
         this.client = client;
     }
 
-    public void setRaidCenters(Collection<BlockPos> centers) {
-        this.raidCenters = centers;
+    public void setRaidCenters(Collection<BlockPos> raidCenters) {
+        this.raidCenters = raidCenters;
     }
 
     @Override

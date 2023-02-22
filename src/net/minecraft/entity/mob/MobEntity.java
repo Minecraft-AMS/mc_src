@@ -61,13 +61,14 @@ import net.minecraft.loot.context.LootContext;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtFloat;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.EntityAttachS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Hand;
@@ -90,13 +91,14 @@ extends LivingEntity {
     private static final int AI_DISABLED_FLAG = 1;
     private static final int LEFT_HANDED_FLAG = 2;
     private static final int ATTACKING_FLAG = 4;
-    public static final float field_30091 = 0.15f;
-    public static final float field_30083 = 0.55f;
-    public static final float field_30084 = 0.5f;
-    public static final float field_30085 = 0.25f;
+    public static final float BASE_SPAWN_EQUIPMENT_CHANCE = 0.15f;
+    public static final float DEFAULT_CAN_PICKUP_LOOT_CHANCE = 0.55f;
+    public static final float BASE_ENCHANTED_ARMOR_CHANCE = 0.5f;
+    public static final float BASE_ENCHANTED_MAIN_HAND_EQUIPMENT_CHANCE = 0.25f;
     public static final String LEASH_KEY = "Leash";
-    private static final int field_30087 = 1;
+    private static final int MINIMUM_DROPPED_XP_PER_EQUIPMENT = 1;
     public static final float DEFAULT_DROP_CHANCE = 0.085f;
+    public static final int field_35039 = 2;
     public int ambientSoundChance;
     protected int experiencePoints;
     protected LookControl lookControl;
@@ -106,15 +108,17 @@ extends LivingEntity {
     protected EntityNavigation navigation;
     protected final GoalSelector goalSelector;
     protected final GoalSelector targetSelector;
+    @Nullable
     private LivingEntity target;
     private final MobVisibilityCache visibilityCache;
     private final DefaultedList<ItemStack> handItems = DefaultedList.ofSize(2, ItemStack.EMPTY);
     protected final float[] handDropChances = new float[2];
     private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);
     protected final float[] armorDropChances = new float[4];
-    private boolean pickUpLoot;
+    private boolean canPickUpLoot;
     private boolean persistent;
     private final Map<PathNodeType, Float> pathfindingPenalties = Maps.newEnumMap(PathNodeType.class);
+    @Nullable
     private Identifier lootTable;
     private long lootTableSeed;
     @Nullable
@@ -465,8 +469,8 @@ extends LivingEntity {
         this.upwardSpeed = upwardSpeed;
     }
 
-    public void setSidewaysSpeed(float sidewaysMovement) {
-        this.sidewaysSpeed = sidewaysMovement;
+    public void setSidewaysSpeed(float sidewaysSpeed) {
+        this.sidewaysSpeed = sidewaysSpeed;
     }
 
     @Override
@@ -650,12 +654,22 @@ extends LivingEntity {
         this.world.getProfiler().push("sensing");
         this.visibilityCache.clear();
         this.world.getProfiler().pop();
-        this.world.getProfiler().push("targetSelector");
-        this.targetSelector.tick();
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("goalSelector");
-        this.goalSelector.tick();
-        this.world.getProfiler().pop();
+        int i = this.world.getServer().getTicks() + this.getId();
+        if (i % 2 == 0 || this.age <= 1) {
+            this.world.getProfiler().push("targetSelector");
+            this.targetSelector.tick();
+            this.world.getProfiler().pop();
+            this.world.getProfiler().push("goalSelector");
+            this.goalSelector.tick();
+            this.world.getProfiler().pop();
+        } else {
+            this.world.getProfiler().push("targetSelector");
+            this.targetSelector.tickGoals(false);
+            this.world.getProfiler().pop();
+            this.world.getProfiler().push("goalSelector");
+            this.goalSelector.tickGoals(false);
+            this.world.getProfiler().pop();
+        }
         this.world.getProfiler().push("navigation");
         this.navigation.tick();
         this.world.getProfiler().pop();
@@ -681,15 +695,15 @@ extends LivingEntity {
     protected void mobTick() {
     }
 
-    public int getLookPitchSpeed() {
+    public int getMaxLookPitchChange() {
         return 40;
     }
 
-    public int getBodyYawSpeed() {
+    public int getMaxHeadRotation() {
         return 75;
     }
 
-    public int getLookYawSpeed() {
+    public int getMaxLookYawChange() {
         return 10;
     }
 
@@ -710,15 +724,15 @@ extends LivingEntity {
         this.setYaw(this.changeAngle(this.getYaw(), h, maxYawChange));
     }
 
-    private float changeAngle(float oldAngle, float newAngle, float maxChangeInAngle) {
-        float f = MathHelper.wrapDegrees(newAngle - oldAngle);
-        if (f > maxChangeInAngle) {
-            f = maxChangeInAngle;
+    private float changeAngle(float from, float to, float max) {
+        float f = MathHelper.wrapDegrees(to - from);
+        if (f > max) {
+            f = max;
         }
-        if (f < -maxChangeInAngle) {
-            f = -maxChangeInAngle;
+        if (f < -max) {
+            f = -max;
         }
-        return oldAngle + f;
+        return from + f;
     }
 
     public static boolean canMobSpawn(EntityType<? extends MobEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
@@ -731,7 +745,7 @@ extends LivingEntity {
     }
 
     public boolean canSpawn(WorldView world) {
-        return !world.containsFluid(this.getBoundingBox()) && world.intersectsEntities(this);
+        return !world.containsFluid(this.getBoundingBox()) && world.doesNotIntersectEntities(this);
     }
 
     public int getLimitPerChunk() {
@@ -971,11 +985,11 @@ extends LivingEntity {
     }
 
     public boolean canPickUpLoot() {
-        return this.pickUpLoot;
+        return this.canPickUpLoot;
     }
 
-    public void setCanPickUpLoot(boolean pickUpLoot) {
-        this.pickUpLoot = pickUpLoot;
+    public void setCanPickUpLoot(boolean canPickUpLoot) {
+        this.canPickUpLoot = canPickUpLoot;
     }
 
     @Override
@@ -1023,7 +1037,7 @@ extends LivingEntity {
             if (this.world instanceof ServerWorld) {
                 SpawnEggItem spawnEggItem = (SpawnEggItem)itemStack.getItem();
                 Optional<MobEntity> optional = spawnEggItem.spawnBaby(player, this, this.getType(), (ServerWorld)this.world, this.getPos(), itemStack);
-                optional.ifPresent(mobEntity -> this.onPlayerSpawnedChild(player, (MobEntity)mobEntity));
+                optional.ifPresent(entity -> this.onPlayerSpawnedChild(player, (MobEntity)entity));
                 return optional.isPresent() ? ActionResult.SUCCESS : ActionResult.PASS;
             }
             return ActionResult.CONSUME;
@@ -1062,7 +1076,7 @@ extends LivingEntity {
         return this.positionTargetRange;
     }
 
-    public void method_35055() {
+    public void clearPositionTarget() {
         this.positionTargetRange = -1.0f;
     }
 
@@ -1183,7 +1197,7 @@ extends LivingEntity {
                     return;
                 }
             } else if (this.leashNbt.contains("X", 99) && this.leashNbt.contains("Y", 99) && this.leashNbt.contains("Z", 99)) {
-                BlockPos blockPos = new BlockPos(this.leashNbt.getInt("X"), this.leashNbt.getInt("Y"), this.leashNbt.getInt("Z"));
+                BlockPos blockPos = NbtHelper.toBlockPos(this.leashNbt);
                 this.attachLeash(LeashKnotEntity.getOrCreate(this.world, blockPos), true);
                 return;
             }
@@ -1295,7 +1309,7 @@ extends LivingEntity {
     }
 
     @Override
-    protected void swimUpward(Tag<Fluid> fluid) {
+    protected void swimUpward(TagKey<Fluid> fluid) {
         if (this.getNavigation().canSwim()) {
             super.swimUpward(fluid);
         } else {

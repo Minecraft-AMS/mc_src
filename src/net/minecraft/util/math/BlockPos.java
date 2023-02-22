@@ -3,15 +3,16 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.AbstractIterator
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  org.apache.commons.lang3.Validate
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Unmodifiable
+ *  org.slf4j.Logger
  */
 package net.minecraft.util.math;
 
 import com.google.common.collect.AbstractIterator;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import java.util.Optional;
 import java.util.Random;
@@ -30,15 +31,14 @@ import net.minecraft.util.math.Position;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import org.apache.commons.lang3.Validate;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Unmodifiable;
+import org.slf4j.Logger;
 
 @Unmodifiable
 public class BlockPos
 extends Vec3i {
     public static final Codec<BlockPos> CODEC = Codec.INT_STREAM.comapFlatMap(stream -> Util.toArray(stream, 3).map(values -> new BlockPos(values[0], values[1], values[2])), pos -> IntStream.of(pos.getX(), pos.getY(), pos.getZ())).stable();
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final BlockPos ORIGIN = new BlockPos(0, 0, 0);
     private static final int SIZE_BITS_X;
     private static final int SIZE_BITS_Z;
@@ -344,7 +344,11 @@ extends Vec3i {
     }
 
     public static Optional<BlockPos> findClosest(BlockPos pos, int horizontalRange, int verticalRange, Predicate<BlockPos> condition) {
-        return BlockPos.streamOutwards(pos, horizontalRange, verticalRange, horizontalRange).filter(condition).findFirst();
+        for (BlockPos blockPos : BlockPos.iterateOutwards(pos, horizontalRange, verticalRange, horizontalRange)) {
+            if (!condition.test(blockPos)) continue;
+            return Optional.of(blockPos);
+        }
+        return Optional.empty();
     }
 
     public static Stream<BlockPos> streamOutwards(BlockPos center, int maxX, int maxY, int maxZ) {
@@ -549,7 +553,7 @@ extends Vec3i {
     }
 
     static {
-        SIZE_BITS_Z = SIZE_BITS_X = 1 + MathHelper.log2(MathHelper.smallestEncompassingPowerOfTwo(30000000));
+        SIZE_BITS_Z = SIZE_BITS_X = 1 + MathHelper.floorLog2(MathHelper.smallestEncompassingPowerOfTwo(30000000));
         SIZE_BITS_Y = 64 - SIZE_BITS_X - SIZE_BITS_Z;
         BITS_X = (1L << SIZE_BITS_X) - 1L;
         BITS_Y = (1L << SIZE_BITS_Y) - 1L;

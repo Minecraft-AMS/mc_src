@@ -8,38 +8,39 @@ package net.minecraft.entity.ai.brain.task;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnGroup;
-import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.EntityLookTarget;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 
 public class FollowMobTask
 extends Task<LivingEntity> {
     private final Predicate<LivingEntity> predicate;
     private final float maxDistanceSquared;
+    private Optional<LivingEntity> target = Optional.empty();
 
-    public FollowMobTask(Tag<EntityType<?>> entityType, float maxDistance) {
-        this((LivingEntity livingEntity) -> livingEntity.getType().isIn(entityType), maxDistance);
+    public FollowMobTask(TagKey<EntityType<?>> entityType, float maxDistance) {
+        this((LivingEntity entity) -> entity.getType().isIn(entityType), maxDistance);
     }
 
     public FollowMobTask(SpawnGroup group, float maxDistance) {
-        this((LivingEntity livingEntity) -> group.equals(livingEntity.getType().getSpawnGroup()), maxDistance);
+        this((LivingEntity entity) -> group.equals(entity.getType().getSpawnGroup()), maxDistance);
     }
 
     public FollowMobTask(EntityType<?> entityType, float maxDistance) {
-        this((LivingEntity livingEntity) -> entityType.equals(livingEntity.getType()), maxDistance);
+        this((LivingEntity entity) -> entityType.equals(entity.getType()), maxDistance);
     }
 
     public FollowMobTask(float maxDistance) {
-        this((LivingEntity livingEntity) -> true, maxDistance);
+        this((LivingEntity entity) -> true, maxDistance);
     }
 
     public FollowMobTask(Predicate<LivingEntity> predicate, float maxDistance) {
@@ -50,13 +51,15 @@ extends Task<LivingEntity> {
 
     @Override
     protected boolean shouldRun(ServerWorld world, LivingEntity entity) {
-        return entity.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get().stream().anyMatch(this.predicate);
+        LivingTargetCache livingTargetCache = entity.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get();
+        this.target = livingTargetCache.findFirst(this.predicate.and(livingEntity2 -> livingEntity2.squaredDistanceTo(entity) <= (double)this.maxDistanceSquared));
+        return this.target.isPresent();
     }
 
     @Override
     protected void run(ServerWorld world, LivingEntity entity, long time) {
-        Brain<?> brain = entity.getBrain();
-        brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).ifPresent(list -> list.stream().filter(this.predicate).filter(livingEntity2 -> livingEntity2.squaredDistanceTo(entity) <= (double)this.maxDistanceSquared).findFirst().ifPresent(livingEntity -> brain.remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget((Entity)livingEntity, true))));
+        entity.getBrain().remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget(this.target.get(), true));
+        this.target = Optional.empty();
     }
 }
 

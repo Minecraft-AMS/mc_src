@@ -8,11 +8,8 @@
 package net.minecraft.util.thread;
 
 import com.google.common.collect.Queues;
-import java.util.Collection;
-import java.util.List;
 import java.util.Queue;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jetbrains.annotations.Nullable;
 
 public interface TaskQueue<T, F> {
@@ -27,18 +24,23 @@ public interface TaskQueue<T, F> {
 
     public static final class Prioritized
     implements TaskQueue<PrioritizedTask, Runnable> {
-        private final List<Queue<Runnable>> queues;
+        private final Queue<Runnable>[] queue;
+        private final AtomicInteger queueSize = new AtomicInteger();
 
         public Prioritized(int priorityCount) {
-            this.queues = IntStream.range(0, priorityCount).mapToObj(i -> Queues.newConcurrentLinkedQueue()).collect(Collectors.toList());
+            this.queue = new Queue[priorityCount];
+            for (int i = 0; i < priorityCount; ++i) {
+                this.queue[i] = Queues.newConcurrentLinkedQueue();
+            }
         }
 
         @Override
         @Nullable
         public Runnable poll() {
-            for (Queue<Runnable> queue : this.queues) {
+            for (Queue<Runnable> queue : this.queue) {
                 Runnable runnable = queue.poll();
                 if (runnable == null) continue;
+                this.queueSize.decrementAndGet();
                 return runnable;
             }
             return null;
@@ -46,23 +48,23 @@ public interface TaskQueue<T, F> {
 
         @Override
         public boolean add(PrioritizedTask prioritizedTask) {
-            int i = prioritizedTask.getPriority();
-            this.queues.get(i).add(prioritizedTask);
+            int i = prioritizedTask.priority;
+            if (i >= this.queue.length || i < 0) {
+                throw new IndexOutOfBoundsException("Priority %d not supported. Expected range [0-%d]".formatted(i, this.queue.length - 1));
+            }
+            this.queue[i].add(prioritizedTask);
+            this.queueSize.incrementAndGet();
             return true;
         }
 
         @Override
         public boolean isEmpty() {
-            return this.queues.stream().allMatch(Collection::isEmpty);
+            return this.queueSize.get() == 0;
         }
 
         @Override
         public int getSize() {
-            int i = 0;
-            for (Queue<Runnable> queue : this.queues) {
-                i += queue.size();
-            }
-            return i;
+            return this.queueSize.get();
         }
 
         @Override
@@ -74,7 +76,7 @@ public interface TaskQueue<T, F> {
 
     public static final class PrioritizedTask
     implements Runnable {
-        private final int priority;
+        final int priority;
         private final Runnable runnable;
 
         public PrioritizedTask(int priority, Runnable runnable) {

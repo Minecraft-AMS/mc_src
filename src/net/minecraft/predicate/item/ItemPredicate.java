@@ -39,8 +39,7 @@ import net.minecraft.potion.PotionUtil;
 import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.predicate.NumberRange;
 import net.minecraft.predicate.item.EnchantmentPredicate;
-import net.minecraft.tag.ServerTagManagerHolder;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.registry.Registry;
@@ -49,7 +48,7 @@ import org.jetbrains.annotations.Nullable;
 public class ItemPredicate {
     public static final ItemPredicate ANY = new ItemPredicate();
     @Nullable
-    private final Tag<Item> tag;
+    private final TagKey<Item> tag;
     @Nullable
     private final Set<Item> items;
     private final NumberRange.IntRange count;
@@ -71,7 +70,7 @@ public class ItemPredicate {
         this.nbt = NbtPredicate.ANY;
     }
 
-    public ItemPredicate(@Nullable Tag<Item> tag, @Nullable Set<Item> items, NumberRange.IntRange count, NumberRange.IntRange durability, EnchantmentPredicate[] enchantments, EnchantmentPredicate[] storedEnchantments, @Nullable Potion potion, NbtPredicate nbt) {
+    public ItemPredicate(@Nullable TagKey<Item> tag, @Nullable Set<Item> items, NumberRange.IntRange count, NumberRange.IntRange durability, EnchantmentPredicate[] enchantments, EnchantmentPredicate[] storedEnchantments, @Nullable Potion potion, NbtPredicate nbt) {
         this.tag = tag;
         this.items = items;
         this.count = count;
@@ -144,10 +143,10 @@ public class ItemPredicate {
             }
             set = builder.build();
         }
-        Tag<Item> tag = null;
+        TagKey<Item> tagKey = null;
         if (jsonObject.has("tag")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "tag"));
-            tag = ServerTagManagerHolder.getTagManager().getTag(Registry.ITEM_KEY, identifier2, id -> new JsonSyntaxException("Unknown item tag '" + id + "'"));
+            tagKey = TagKey.of(Registry.ITEM_KEY, identifier2);
         }
         Potion potion = null;
         if (jsonObject.has("potion")) {
@@ -156,7 +155,7 @@ public class ItemPredicate {
         }
         EnchantmentPredicate[] enchantmentPredicates = EnchantmentPredicate.deserializeAll(jsonObject.get("enchantments"));
         EnchantmentPredicate[] enchantmentPredicates2 = EnchantmentPredicate.deserializeAll(jsonObject.get("stored_enchantments"));
-        return new ItemPredicate(tag, (Set<Item>)set, intRange, intRange2, enchantmentPredicates, enchantmentPredicates2, potion, nbtPredicate);
+        return new ItemPredicate(tagKey, (Set<Item>)set, intRange, intRange2, enchantmentPredicates, enchantmentPredicates2, potion, nbtPredicate);
     }
 
     public JsonElement toJson() {
@@ -173,7 +172,7 @@ public class ItemPredicate {
             jsonObject.add("items", (JsonElement)jsonArray);
         }
         if (this.tag != null) {
-            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getTagId(Registry.ITEM_KEY, this.tag, () -> new IllegalStateException("Unknown item tag")).toString());
+            jsonObject.addProperty("tag", this.tag.id().toString());
         }
         jsonObject.add("count", this.count.toJson());
         jsonObject.add("durability", this.durability.toJson());
@@ -216,7 +215,7 @@ public class ItemPredicate {
         @Nullable
         private Set<Item> item;
         @Nullable
-        private Tag<Item> tag;
+        private TagKey<Item> tag;
         private NumberRange.IntRange count = NumberRange.IntRange.ANY;
         private NumberRange.IntRange durability = NumberRange.IntRange.ANY;
         @Nullable
@@ -235,7 +234,7 @@ public class ItemPredicate {
             return this;
         }
 
-        public Builder tag(Tag<Item> tag) {
+        public Builder tag(TagKey<Item> tag) {
             this.tag = tag;
             return this;
         }

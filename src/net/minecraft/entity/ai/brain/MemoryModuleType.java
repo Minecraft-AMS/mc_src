@@ -14,6 +14,7 @@ import java.util.UUID;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.LookTarget;
 import net.minecraft.entity.ai.brain.Memory;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -39,7 +40,7 @@ public class MemoryModuleType<U> {
     public static final MemoryModuleType<GlobalPos> MEETING_POINT = MemoryModuleType.register("meeting_point", GlobalPos.CODEC);
     public static final MemoryModuleType<List<GlobalPos>> SECONDARY_JOB_SITE = MemoryModuleType.register("secondary_job_site");
     public static final MemoryModuleType<List<LivingEntity>> MOBS = MemoryModuleType.register("mobs");
-    public static final MemoryModuleType<List<LivingEntity>> VISIBLE_MOBS = MemoryModuleType.register("visible_mobs");
+    public static final MemoryModuleType<LivingTargetCache> VISIBLE_MOBS = MemoryModuleType.register("visible_mobs");
     public static final MemoryModuleType<List<LivingEntity>> VISIBLE_VILLAGER_BABIES = MemoryModuleType.register("visible_villager_babies");
     public static final MemoryModuleType<List<PlayerEntity>> NEAREST_PLAYERS = MemoryModuleType.register("nearest_players");
     public static final MemoryModuleType<PlayerEntity> NEAREST_VISIBLE_PLAYER = MemoryModuleType.register("nearest_visible_player");

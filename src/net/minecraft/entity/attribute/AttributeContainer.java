@@ -5,15 +5,16 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
  *  com.google.common.collect.Sets
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.attribute;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -28,12 +29,11 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class AttributeContainer {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<EntityAttribute, EntityAttributeInstance> custom = Maps.newHashMap();
     private final Set<EntityAttributeInstance> tracked = Sets.newHashSet();
     private final DefaultAttributeContainer fallback;
@@ -86,8 +86,8 @@ public class AttributeContainer {
     }
 
     public void removeModifiers(Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers) {
-        attributeModifiers.asMap().forEach((entityAttribute, collection) -> {
-            EntityAttributeInstance entityAttributeInstance = this.custom.get(entityAttribute);
+        attributeModifiers.asMap().forEach((attribute, collection) -> {
+            EntityAttributeInstance entityAttributeInstance = this.custom.get(attribute);
             if (entityAttributeInstance != null) {
                 collection.forEach(entityAttributeInstance::removeModifier);
             }
@@ -95,20 +95,20 @@ public class AttributeContainer {
     }
 
     public void addTemporaryModifiers(Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers) {
-        attributeModifiers.forEach((entityAttribute, entityAttributeModifier) -> {
-            EntityAttributeInstance entityAttributeInstance = this.getCustomInstance((EntityAttribute)entityAttribute);
+        attributeModifiers.forEach((attribute, attributeModifier) -> {
+            EntityAttributeInstance entityAttributeInstance = this.getCustomInstance((EntityAttribute)attribute);
             if (entityAttributeInstance != null) {
-                entityAttributeInstance.removeModifier((EntityAttributeModifier)entityAttributeModifier);
-                entityAttributeInstance.addTemporaryModifier((EntityAttributeModifier)entityAttributeModifier);
+                entityAttributeInstance.removeModifier((EntityAttributeModifier)attributeModifier);
+                entityAttributeInstance.addTemporaryModifier((EntityAttributeModifier)attributeModifier);
             }
         });
     }
 
     public void setFrom(AttributeContainer other) {
-        other.custom.values().forEach(entityAttributeInstance -> {
-            EntityAttributeInstance entityAttributeInstance2 = this.getCustomInstance(entityAttributeInstance.getAttribute());
-            if (entityAttributeInstance2 != null) {
-                entityAttributeInstance2.setFrom((EntityAttributeInstance)entityAttributeInstance);
+        other.custom.values().forEach(attributeInstance -> {
+            EntityAttributeInstance entityAttributeInstance = this.getCustomInstance(attributeInstance.getAttribute());
+            if (entityAttributeInstance != null) {
+                entityAttributeInstance.setFrom((EntityAttributeInstance)attributeInstance);
             }
         });
     }
@@ -125,8 +125,8 @@ public class AttributeContainer {
         for (int i = 0; i < nbt.size(); ++i) {
             NbtCompound nbtCompound = nbt.getCompound(i);
             String string = nbtCompound.getString("Name");
-            Util.ifPresentOrElse(Registry.ATTRIBUTE.getOrEmpty(Identifier.tryParse(string)), entityAttribute -> {
-                EntityAttributeInstance entityAttributeInstance = this.getCustomInstance((EntityAttribute)entityAttribute);
+            Util.ifPresentOrElse(Registry.ATTRIBUTE.getOrEmpty(Identifier.tryParse(string)), attribute -> {
+                EntityAttributeInstance entityAttributeInstance = this.getCustomInstance((EntityAttribute)attribute);
                 if (entityAttributeInstance != null) {
                     entityAttributeInstance.readNbt(nbtCompound);
                 }

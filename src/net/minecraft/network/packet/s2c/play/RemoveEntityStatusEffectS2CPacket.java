@@ -26,18 +26,18 @@ implements Packet<ClientPlayPacketListener> {
 
     public RemoveEntityStatusEffectS2CPacket(PacketByteBuf buf) {
         this.entityId = buf.readVarInt();
-        this.effectType = StatusEffect.byRawId(buf.readUnsignedByte());
+        this.effectType = StatusEffect.byRawId(buf.readVarInt());
     }
 
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.entityId);
-        buf.writeByte(StatusEffect.getRawId(this.effectType));
+        buf.writeVarInt(StatusEffect.getRawId(this.effectType));
     }
 
     @Override
     public void apply(ClientPlayPacketListener clientPlayPacketListener) {
-        clientPlayPacketListener.onRemoveEntityEffect(this);
+        clientPlayPacketListener.onRemoveEntityStatusEffect(this);
     }
 
     @Nullable

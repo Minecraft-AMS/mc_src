@@ -4,13 +4,14 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Lists
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.resource;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FilterInputStream;
@@ -30,12 +31,11 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class NamespaceResourceManager
 implements ResourceManager {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     protected final List<ResourcePack> packList = Lists.newArrayList();
     private final ResourceType type;
     private final String namespace;
@@ -55,23 +55,23 @@ implements ResourceManager {
     }
 
     @Override
-    public Resource getResource(Identifier id) throws IOException {
-        this.validate(id);
+    public Resource getResource(Identifier identifier) throws IOException {
+        this.validate(identifier);
         ResourcePack resourcePack = null;
-        Identifier identifier = NamespaceResourceManager.getMetadataPath(id);
+        Identifier identifier2 = NamespaceResourceManager.getMetadataPath(identifier);
         for (int i = this.packList.size() - 1; i >= 0; --i) {
             ResourcePack resourcePack2 = this.packList.get(i);
-            if (resourcePack == null && resourcePack2.contains(this.type, identifier)) {
+            if (resourcePack == null && resourcePack2.contains(this.type, identifier2)) {
                 resourcePack = resourcePack2;
             }
-            if (!resourcePack2.contains(this.type, id)) continue;
+            if (!resourcePack2.contains(this.type, identifier)) continue;
             InputStream inputStream = null;
             if (resourcePack != null) {
-                inputStream = this.open(identifier, resourcePack);
+                inputStream = this.open(identifier2, resourcePack);
             }
-            return new ResourceImpl(resourcePack2.getName(), id, this.open(id, resourcePack2), inputStream);
+            return new ResourceImpl(resourcePack2.getName(), identifier, this.open(identifier, resourcePack2), inputStream);
         }
-        throw new FileNotFoundException(id.toString());
+        throw new FileNotFoundException(identifier.toString());
     }
 
     @Override

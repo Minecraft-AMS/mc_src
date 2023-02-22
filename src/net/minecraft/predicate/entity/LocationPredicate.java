@@ -5,20 +5,20 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonNull
  *  com.google.gson.JsonObject
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.JsonOps
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.predicate.entity;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
-import java.util.Optional;
 import net.minecraft.block.CampfireBlock;
 import net.minecraft.predicate.BlockPredicate;
 import net.minecraft.predicate.FluidPredicate;
@@ -32,13 +32,12 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.feature.StructureFeature;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class LocationPredicate {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final LocationPredicate ANY = new LocationPredicate(NumberRange.FloatRange.ANY, NumberRange.FloatRange.ANY, NumberRange.FloatRange.ANY, null, null, null, null, LightPredicate.ANY, BlockPredicate.ANY, FluidPredicate.ANY);
     private final NumberRange.FloatRange x;
     private final NumberRange.FloatRange y;
@@ -46,7 +45,7 @@ public class LocationPredicate {
     @Nullable
     private final RegistryKey<Biome> biome;
     @Nullable
-    private final StructureFeature<?> feature;
+    private final RegistryKey<ConfiguredStructureFeature<?, ?>> feature;
     @Nullable
     private final RegistryKey<World> dimension;
     @Nullable
@@ -55,7 +54,7 @@ public class LocationPredicate {
     private final BlockPredicate block;
     private final FluidPredicate fluid;
 
-    public LocationPredicate(NumberRange.FloatRange x, NumberRange.FloatRange y, NumberRange.FloatRange z, @Nullable RegistryKey<Biome> biome, @Nullable StructureFeature<?> feature, @Nullable RegistryKey<World> dimension, @Nullable Boolean smokey, LightPredicate light, BlockPredicate block, FluidPredicate fluid) {
+    public LocationPredicate(NumberRange.FloatRange x, NumberRange.FloatRange y, NumberRange.FloatRange z, @Nullable RegistryKey<Biome> biome, @Nullable RegistryKey<ConfiguredStructureFeature<?, ?>> feature, @Nullable RegistryKey<World> dimension, @Nullable Boolean smokey, LightPredicate light, BlockPredicate block, FluidPredicate fluid) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -76,45 +75,45 @@ public class LocationPredicate {
         return new LocationPredicate(NumberRange.FloatRange.ANY, NumberRange.FloatRange.ANY, NumberRange.FloatRange.ANY, null, null, dimension, null, LightPredicate.ANY, BlockPredicate.ANY, FluidPredicate.ANY);
     }
 
-    public static LocationPredicate feature(StructureFeature<?> feature) {
+    public static LocationPredicate feature(RegistryKey<ConfiguredStructureFeature<?, ?>> feature) {
         return new LocationPredicate(NumberRange.FloatRange.ANY, NumberRange.FloatRange.ANY, NumberRange.FloatRange.ANY, null, feature, null, null, LightPredicate.ANY, BlockPredicate.ANY, FluidPredicate.ANY);
     }
 
-    public boolean test(ServerWorld serverWorld, double d, double e, double f) {
-        if (!this.x.test(d)) {
+    public static LocationPredicate y(NumberRange.FloatRange y) {
+        return new LocationPredicate(NumberRange.FloatRange.ANY, y, NumberRange.FloatRange.ANY, null, null, null, null, LightPredicate.ANY, BlockPredicate.ANY, FluidPredicate.ANY);
+    }
+
+    public boolean test(ServerWorld world, double x, double y, double z) {
+        if (!this.x.test(x)) {
             return false;
         }
-        if (!this.y.test(e)) {
+        if (!this.y.test(y)) {
             return false;
         }
-        if (!this.z.test(f)) {
+        if (!this.z.test(z)) {
             return false;
         }
-        if (this.dimension != null && this.dimension != serverWorld.getRegistryKey()) {
+        if (this.dimension != null && this.dimension != world.getRegistryKey()) {
             return false;
         }
-        BlockPos blockPos = new BlockPos(d, e, f);
-        boolean bl = serverWorld.canSetBlock(blockPos);
-        Optional<RegistryKey<Biome>> optional = serverWorld.getRegistryManager().get(Registry.BIOME_KEY).getKey(serverWorld.getBiome(blockPos));
-        if (!optional.isPresent()) {
+        BlockPos blockPos = new BlockPos(x, y, z);
+        boolean bl = world.canSetBlock(blockPos);
+        if (!(this.biome == null || bl && world.getBiome(blockPos).matchesKey(this.biome))) {
             return false;
         }
-        if (!(this.biome == null || bl && this.biome == optional.get())) {
+        if (!(this.feature == null || bl && world.getStructureAccessor().method_41034(blockPos, this.feature).hasChildren())) {
             return false;
         }
-        if (!(this.feature == null || bl && serverWorld.getStructureAccessor().getStructureAt(blockPos, true, this.feature).hasChildren())) {
+        if (!(this.smokey == null || bl && this.smokey == CampfireBlock.isLitCampfireInRange(world, blockPos))) {
             return false;
         }
-        if (!(this.smokey == null || bl && this.smokey == CampfireBlock.isLitCampfireInRange(serverWorld, blockPos))) {
+        if (!this.light.test(world, blockPos)) {
             return false;
         }
-        if (!this.light.test(serverWorld, blockPos)) {
+        if (!this.block.test(world, blockPos)) {
             return false;
         }
-        if (!this.block.test(serverWorld, blockPos)) {
-            return false;
-        }
-        return this.fluid.test(serverWorld, blockPos);
+        return this.fluid.test(world, blockPos);
     }
 
     public JsonElement toJson() {
@@ -133,7 +132,7 @@ public class LocationPredicate {
             World.CODEC.encodeStart((DynamicOps)JsonOps.INSTANCE, this.dimension).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(jsonElement -> jsonObject.add("dimension", jsonElement));
         }
         if (this.feature != null) {
-            jsonObject.addProperty("feature", this.feature.getName());
+            jsonObject.addProperty("feature", this.feature.getValue().toString());
         }
         if (this.biome != null) {
             jsonObject.addProperty("biome", this.biome.getValue().toString());
@@ -148,6 +147,7 @@ public class LocationPredicate {
     }
 
     public static LocationPredicate fromJson(@Nullable JsonElement json) {
+        RegistryKey registryKey;
         if (json == null || json.isJsonNull()) {
             return ANY;
         }
@@ -156,18 +156,18 @@ public class LocationPredicate {
         NumberRange.FloatRange floatRange = NumberRange.FloatRange.fromJson(jsonObject2.get("x"));
         NumberRange.FloatRange floatRange2 = NumberRange.FloatRange.fromJson(jsonObject2.get("y"));
         NumberRange.FloatRange floatRange3 = NumberRange.FloatRange.fromJson(jsonObject2.get("z"));
-        RegistryKey registryKey = jsonObject.has("dimension") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("dimension")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(Registry.WORLD_KEY, identifier)).orElse(null) : null;
-        StructureFeature structureFeature = jsonObject.has("feature") ? (StructureFeature)StructureFeature.STRUCTURES.get((Object)JsonHelper.getString(jsonObject, "feature")) : null;
-        RegistryKey<Biome> registryKey2 = null;
+        RegistryKey registryKey2 = jsonObject.has("dimension") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("dimension")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(Registry.WORLD_KEY, identifier)).orElse(null) : (registryKey = null);
+        RegistryKey registryKey22 = jsonObject.has("feature") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("feature")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY, identifier)).orElse(null) : null;
+        RegistryKey<Biome> registryKey3 = null;
         if (jsonObject.has("biome")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "biome"));
-            registryKey2 = RegistryKey.of(Registry.BIOME_KEY, identifier2);
+            registryKey3 = RegistryKey.of(Registry.BIOME_KEY, identifier2);
         }
         Boolean boolean_ = jsonObject.has("smokey") ? Boolean.valueOf(jsonObject.get("smokey").getAsBoolean()) : null;
         LightPredicate lightPredicate = LightPredicate.fromJson(jsonObject.get("light"));
         BlockPredicate blockPredicate = BlockPredicate.fromJson(jsonObject.get("block"));
         FluidPredicate fluidPredicate = FluidPredicate.fromJson(jsonObject.get("fluid"));
-        return new LocationPredicate(floatRange, floatRange2, floatRange3, registryKey2, structureFeature, registryKey, boolean_, lightPredicate, blockPredicate, fluidPredicate);
+        return new LocationPredicate(floatRange, floatRange2, floatRange3, registryKey3, registryKey22, registryKey, boolean_, lightPredicate, blockPredicate, fluidPredicate);
     }
 
     public static class Builder {
@@ -177,7 +177,7 @@ public class LocationPredicate {
         @Nullable
         private RegistryKey<Biome> biome;
         @Nullable
-        private StructureFeature<?> feature;
+        private RegistryKey<ConfiguredStructureFeature<?, ?>> feature;
         @Nullable
         private RegistryKey<World> dimension;
         @Nullable
@@ -210,7 +210,7 @@ public class LocationPredicate {
             return this;
         }
 
-        public Builder feature(@Nullable StructureFeature<?> feature) {
+        public Builder feature(@Nullable RegistryKey<ConfiguredStructureFeature<?, ?>> feature) {
             this.feature = feature;
             return this;
         }

@@ -10,5 +10,9 @@ public interface PacketListener {
     public void onDisconnected(Text var1);
 
     public ClientConnection getConnection();
+
+    default public boolean shouldCrashOnException() {
+        return true;
+    }
 }
 

@@ -12,6 +12,8 @@ import net.fabricmc.api.Environment;
 
 @Environment(value=EnvType.CLIENT)
 public interface Element {
+    public static final long MAX_DOUBLE_CLICK_INTERVAL = 250L;
+
     default public void mouseMoved(double mouseX, double mouseY) {
     }
 

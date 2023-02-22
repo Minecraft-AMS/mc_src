@@ -4,17 +4,18 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.mojang.datafixers.util.Either
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.gui.screen;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Either;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,14 +45,13 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsSelectWorldTemplateScreen
 extends RealmsScreen {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     static final Identifier LINK_ICONS = new Identifier("realms", "textures/gui/realms/link_icons.png");
     static final Identifier TRAILER_ICONS = new Identifier("realms", "textures/gui/realms/trailer_icons.png");
     static final Identifier SLOT_FRAME = new Identifier("realms", "textures/gui/realms/slot_frame.png");
@@ -65,6 +65,7 @@ extends RealmsScreen {
     private ButtonWidget publisherButton;
     @Nullable
     Text tooltip;
+    @Nullable
     String currentLink;
     private final RealmsServer.WorldType worldType;
     int clicks;
@@ -114,7 +115,7 @@ extends RealmsScreen {
         this.trailerButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 206, this.height - 32, 100, 20, new TranslatableText("mco.template.button.trailer"), button -> this.onTrailer()));
         this.selectButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 32, 100, 20, new TranslatableText("mco.template.button.select"), button -> this.selectTemplate()));
         Text text = this.worldType == RealmsServer.WorldType.MINIGAME ? ScreenTexts.CANCEL : ScreenTexts.BACK;
-        ButtonWidget buttonWidget = new ButtonWidget(this.width / 2 + 6, this.height - 32, 100, 20, text, button -> this.onClose());
+        ButtonWidget buttonWidget = new ButtonWidget(this.width / 2 + 6, this.height - 32, 100, 20, text, button -> this.close());
         this.addDrawableChild(buttonWidget);
         this.publisherButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 112, this.height - 32, 100, 20, new TranslatableText("mco.template.button.publisher"), button -> this.onPublish()));
         this.selectButton.active = false;
@@ -168,7 +169,7 @@ extends RealmsScreen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.callback.accept(null);
     }
 

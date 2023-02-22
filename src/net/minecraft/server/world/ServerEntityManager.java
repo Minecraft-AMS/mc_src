@@ -5,6 +5,7 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Queues
  *  com.google.common.collect.Sets
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.longs.Long2ObjectFunction
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap$Entry
@@ -12,14 +13,14 @@
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
  *  it.unimi.dsi.fastutil.longs.LongSet
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.world;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.Long2ObjectFunction;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
@@ -55,12 +56,11 @@ import net.minecraft.world.entity.SectionedEntityCache;
 import net.minecraft.world.entity.SimpleEntityLookup;
 import net.minecraft.world.storage.ChunkDataAccess;
 import net.minecraft.world.storage.ChunkDataList;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class ServerEntityManager<T extends EntityLike>
 implements AutoCloseable {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     final Set<UUID> entityUuids = Sets.newHashSet();
     final EntityHandler<T> handler;
     private final ChunkDataAccess<T> dataAccess;
@@ -108,7 +108,7 @@ implements AutoCloseable {
         long l = ChunkSectionPos.toLong(entity.getBlockPos());
         EntityTrackingSection<T> entityTrackingSection = this.cache.getTrackingSection(l);
         entityTrackingSection.add(entity);
-        entity.setListener(new Listener(this, entity, l, entityTrackingSection));
+        entity.setChangeListener(new Listener(this, entity, l, entityTrackingSection));
         if (!existing) {
             this.handler.create(entity);
         }
@@ -173,15 +173,15 @@ implements AutoCloseable {
             boolean bl3 = entityTrackingStatus2.shouldTick();
             boolean bl4 = trackingStatus.shouldTick();
             if (bl3 && !bl4) {
-                group.stream().filter(entityLike -> !entityLike.isPlayer()).forEach(this::stopTicking);
+                group.stream().filter(entity -> !entity.isPlayer()).forEach(this::stopTicking);
             }
             if (bl && !bl2) {
-                group.stream().filter(entityLike -> !entityLike.isPlayer()).forEach(this::stopTracking);
+                group.stream().filter(entity -> !entity.isPlayer()).forEach(this::stopTracking);
             } else if (!bl && bl2) {
-                group.stream().filter(entityLike -> !entityLike.isPlayer()).forEach(this::startTracking);
+                group.stream().filter(entity -> !entity.isPlayer()).forEach(this::startTracking);
             }
             if (!bl3 && bl4) {
-                group.stream().filter(entityLike -> !entityLike.isPlayer()).forEach(this::startTicking);
+                group.stream().filter(entity -> !entity.isPlayer()).forEach(this::startTicking);
             }
         });
     }
@@ -198,7 +198,7 @@ implements AutoCloseable {
         if (status == Status.PENDING) {
             return false;
         }
-        List<T> list = this.cache.getTrackingSections(chunkPos).flatMap(entityTrackingSection -> entityTrackingSection.stream().filter(EntityLike::shouldSave)).collect(Collectors.toList());
+        List<T> list = this.cache.getTrackingSections(chunkPos).flatMap(section -> section.stream().filter(EntityLike::shouldSave)).collect(Collectors.toList());
         if (list.isEmpty()) {
             if (status == Status.LOADED) {
                 this.dataAccess.writeChunkData(new ChunkDataList(new ChunkPos(chunkPos), ImmutableList.of()));
@@ -224,7 +224,7 @@ implements AutoCloseable {
     }
 
     private boolean unload(long chunkPos) {
-        boolean bl = this.trySave(chunkPos, entityLike -> entityLike.streamPassengersAndSelf().forEach(this::unload));
+        boolean bl = this.trySave(chunkPos, entity -> entity.streamPassengersAndSelf().forEach(this::unload));
         if (!bl) {
             return false;
         }
@@ -234,7 +234,7 @@ implements AutoCloseable {
 
     private void unload(EntityLike entity) {
         entity.setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK);
-        entity.setListener(EntityChangeListener.NONE);
+        entity.setChangeListener(EntityChangeListener.NONE);
     }
 
     private void unloadChunks() {
@@ -275,7 +275,7 @@ implements AutoCloseable {
             if (bl) {
                 this.unload(pos);
             } else {
-                this.trySave(pos, entityLike -> {});
+                this.trySave(pos, entity -> {});
             }
         });
     }
@@ -287,7 +287,7 @@ implements AutoCloseable {
             this.loadChunks();
             longSet.removeIf(pos -> {
                 boolean bl = this.trackingStatuses.get(pos) == EntityTrackingStatus.HIDDEN;
-                return bl ? this.unload(pos) : this.trySave(pos, entityLike -> {});
+                return bl ? this.unload(pos) : this.trySave(pos, entity -> {});
             });
         }
         this.dataAccess.awaitAll(true);
@@ -307,16 +307,16 @@ implements AutoCloseable {
         return this.lookup;
     }
 
-    public boolean method_37254(BlockPos blockPos) {
-        return ((EntityTrackingStatus)((Object)this.trackingStatuses.get(ChunkPos.toLong(blockPos)))).shouldTick();
+    public boolean shouldTick(BlockPos pos) {
+        return ((EntityTrackingStatus)((Object)this.trackingStatuses.get(ChunkPos.toLong(pos)))).shouldTick();
     }
 
-    public boolean method_37253(ChunkPos chunkPos) {
-        return ((EntityTrackingStatus)((Object)this.trackingStatuses.get(chunkPos.toLong()))).shouldTick();
+    public boolean shouldTick(ChunkPos pos) {
+        return ((EntityTrackingStatus)((Object)this.trackingStatuses.get(pos.toLong()))).shouldTick();
     }
 
-    public boolean method_37252(long l) {
-        return this.managedStatuses.get(l) == Status.LOADED;
+    public boolean isLoaded(long chunkPos) {
+        return this.managedStatuses.get(chunkPos) == Status.LOADED;
     }
 
     public void dump(Writer writer) throws IOException {
@@ -377,13 +377,13 @@ implements AutoCloseable {
          * WARNING - Possible parameter corruption
          * WARNING - void declaration
          */
-        Listener(T t, long entityTrackingSection, EntityTrackingSection<T> entityTrackingSection2) {
+        Listener(T t, long section, EntityTrackingSection<T> entityTrackingSection) {
             void var3_3;
-            void entityLike;
+            void entity;
             this.manager = (ServerEntityManager)serverEntityManager;
-            this.entity = entityLike;
+            this.entity = entity;
             this.sectionPos = var3_3;
-            this.section = (EntityTrackingSection)entityTrackingSection;
+            this.section = (EntityTrackingSection)section;
         }
 
         @Override
@@ -393,7 +393,7 @@ implements AutoCloseable {
             if (l != this.sectionPos) {
                 EntityTrackingStatus entityTrackingStatus = this.section.getStatus();
                 if (!this.section.remove(this.entity)) {
-                    LOGGER.warn("Entity {} wasn't found in section {} (moving to {})", this.entity, (Object)ChunkSectionPos.from(this.sectionPos), (Object)l);
+                    LOGGER.warn("Entity {} wasn't found in section {} (moving to {})", new Object[]{this.entity, ChunkSectionPos.from(this.sectionPos), l});
                 }
                 this.manager.entityLeftSection(this.sectionPos, this.section);
                 EntityTrackingSection entityTrackingSection = this.manager.cache.getTrackingSection(l);
@@ -430,7 +430,7 @@ implements AutoCloseable {
         public void remove(Entity.RemovalReason reason) {
             EntityTrackingStatus entityTrackingStatus;
             if (!this.section.remove(this.entity)) {
-                LOGGER.warn("Entity {} wasn't found in section {} (destroying due to {})", this.entity, (Object)ChunkSectionPos.from(this.sectionPos), (Object)reason);
+                LOGGER.warn("Entity {} wasn't found in section {} (destroying due to {})", new Object[]{this.entity, ChunkSectionPos.from(this.sectionPos), reason});
             }
             if ((entityTrackingStatus = ServerEntityManager.getNeededLoadStatus(this.entity, this.section.getStatus())).shouldTick()) {
                 this.manager.stopTicking(this.entity);
@@ -442,7 +442,7 @@ implements AutoCloseable {
                 this.manager.handler.destroy(this.entity);
             }
             this.manager.entityUuids.remove(this.entity.getUuid());
-            this.entity.setListener(NONE);
+            this.entity.setChangeListener(NONE);
             this.manager.entityLeftSection(this.sectionPos, this.section);
         }
     }

@@ -23,10 +23,10 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.BiomeKeys;
-import net.minecraft.world.gen.Spawner;
 import net.minecraft.world.level.ServerWorldProperties;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
+import net.minecraft.world.spawner.Spawner;
 import org.jetbrains.annotations.Nullable;
 
 public class WanderingTraderManager
@@ -103,7 +103,7 @@ implements Spawner {
         BlockPos blockPos2 = optional.orElse(blockPos);
         BlockPos blockPos3 = this.getNearbySpawnPos(world, blockPos2, 48);
         if (blockPos3 != null && this.doesNotSuffocateAt(world, blockPos3)) {
-            if (world.getBiomeKey(blockPos3).equals(Optional.of(BiomeKeys.THE_VOID))) {
+            if (world.getBiome(blockPos3).matchesKey(BiomeKeys.THE_VOID)) {
                 return false;
             }
             WanderingTraderEntity wanderingTraderEntity = EntityType.WANDERING_TRADER.spawn(world, null, null, null, blockPos3, SpawnReason.EVENT, false, false);

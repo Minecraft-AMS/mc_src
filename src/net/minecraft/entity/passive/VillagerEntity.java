@@ -7,12 +7,13 @@
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.ImmutableSet
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.passive;
 
@@ -21,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
@@ -44,6 +46,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.Schedule;
@@ -107,13 +110,14 @@ import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class VillagerEntity
 extends MerchantEntity
 implements InteractionObserver,
 VillagerDataContainer {
+    private static final Logger field_36335 = LogUtils.getLogger();
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(VillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
     public static final int field_30602 = 12;
     public static final Map<Item, Integer> ITEM_FOOD_VALUES = ImmutableMap.of((Object)Items.BREAD, (Object)4, (Object)Items.POTATO, (Object)1, (Object)Items.CARROT, (Object)1, (Object)Items.BEETROOT, (Object)1);
@@ -133,7 +137,7 @@ VillagerDataContainer {
     @Nullable
     private PlayerEntity lastCustomer;
     private boolean field_30612;
-    private byte foodLevel;
+    private int foodLevel;
     private final VillagerGossips gossip = new VillagerGossips();
     private long gossipStartTime;
     private long lastGossipDecayTime;
@@ -296,14 +300,14 @@ VillagerDataContainer {
 
     private void beginTradeWith(PlayerEntity customer) {
         this.prepareOffersFor(customer);
-        this.setCurrentCustomer(customer);
+        this.setCustomer(customer);
         this.sendOffers(customer, this.getDisplayName(), this.getVillagerData().getLevel());
     }
 
     @Override
-    public void setCurrentCustomer(@Nullable PlayerEntity customer) {
-        boolean bl = this.getCurrentCustomer() != null && customer == null;
-        super.setCurrentCustomer(customer);
+    public void setCustomer(@Nullable PlayerEntity customer) {
+        boolean bl = this.getCustomer() != null && customer == null;
+        super.setCustomer(customer);
         if (bl) {
             this.resetCustomer();
         }
@@ -324,6 +328,11 @@ VillagerDataContainer {
     @Override
     public boolean canRefreshTrades() {
         return true;
+    }
+
+    @Override
+    public boolean isClient() {
+        return this.getWorld().isClient;
     }
 
     public void restock() {
@@ -410,8 +419,8 @@ VillagerDataContainer {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
-        nbt.putByte("FoodLevel", this.foodLevel);
+        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)field_36335).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
+        nbt.putByte("FoodLevel", (byte)this.foodLevel);
         nbt.put("Gossips", (NbtElement)this.gossip.serialize(NbtOps.INSTANCE).getValue());
         nbt.putInt("Xp", this.experience);
         nbt.putLong("LastRestock", this.lastRestockTime);
@@ -427,7 +436,7 @@ VillagerDataContainer {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("VillagerData", 10)) {
             DataResult dataResult = VillagerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("VillagerData")));
-            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(this::setVillagerData);
+            dataResult.resultOrPartial(arg_0 -> ((Logger)field_36335).error(arg_0)).ifPresent(this::setVillagerData);
         }
         if (nbt.contains("Offers", 10)) {
             this.offers = new TradeOfferList(nbt.getCompound("Offers"));
@@ -504,7 +513,7 @@ VillagerDataContainer {
     protected void afterUsing(TradeOffer offer) {
         int i = 3 + this.random.nextInt(4);
         this.experience += offer.getMerchantExperience();
-        this.lastCustomer = this.getCurrentCustomer();
+        this.lastCustomer = this.getCustomer();
         if (this.canLevelUp()) {
             this.levelUpTimer = 40;
             this.levelingUp = true;
@@ -536,7 +545,7 @@ VillagerDataContainer {
 
     @Override
     public void onDeath(DamageSource source) {
-        LOGGER.info("Villager {} died, message: '{}'", (Object)this, (Object)source.getDeathMessage(this).getString());
+        field_36335.info("Villager {} died, message: '{}'", (Object)this, (Object)source.getDeathMessage(this).getString());
         Entity entity = source.getAttacker();
         if (entity != null) {
             this.notifyDeath(entity);
@@ -553,15 +562,16 @@ VillagerDataContainer {
     }
 
     private void notifyDeath(Entity killer) {
-        if (!(this.world instanceof ServerWorld)) {
+        World world = this.world;
+        if (!(world instanceof ServerWorld)) {
             return;
         }
-        Optional<List<LivingEntity>> optional = this.brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS);
-        if (!optional.isPresent()) {
+        ServerWorld serverWorld = (ServerWorld)world;
+        Optional<LivingTargetCache> optional = this.brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS);
+        if (optional.isEmpty()) {
             return;
         }
-        ServerWorld serverWorld = (ServerWorld)this.world;
-        optional.get().stream().filter(entity -> entity instanceof InteractionObserver).forEach(livingEntity -> serverWorld.handleInteraction(EntityInteraction.VILLAGER_KILLED, killer, (InteractionObserver)((Object)livingEntity)));
+        optional.get().iterate(InteractionObserver.class::isInstance).forEach(livingEntity -> serverWorld.handleInteraction(EntityInteraction.VILLAGER_KILLED, killer, (InteractionObserver)((Object)livingEntity)));
     }
 
     public void releaseTicketFor(MemoryModuleType<GlobalPos> memoryModuleType) {
@@ -603,7 +613,7 @@ VillagerDataContainer {
             ItemStack itemStack = this.getInventory().getStack(i);
             if (itemStack.isEmpty() || (integer = ITEM_FOOD_VALUES.get(itemStack.getItem())) == null) continue;
             for (int k = j = itemStack.getCount(); k > 0; --k) {
-                this.foodLevel = (byte)(this.foodLevel + integer);
+                this.foodLevel += integer.intValue();
                 this.getInventory().removeStack(i, 1);
                 if (this.lacksFood()) continue;
                 return;
@@ -616,7 +626,7 @@ VillagerDataContainer {
     }
 
     private void depleteFood(int amount) {
-        this.foodLevel = (byte)(this.foodLevel - amount);
+        this.foodLevel -= amount;
     }
 
     public void eatForBreeding() {
@@ -665,7 +675,7 @@ VillagerDataContainer {
             this.setVillagerData(this.getVillagerData().withProfession(VillagerProfession.NONE));
         }
         if (spawnReason == SpawnReason.COMMAND || spawnReason == SpawnReason.SPAWN_EGG || spawnReason == SpawnReason.SPAWNER || spawnReason == SpawnReason.DISPENSER) {
-            this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiomeKey(this.getBlockPos()))));
+            this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiome(this.getBlockPos()))));
         }
         if (spawnReason == SpawnReason.STRUCTURE) {
             this.natural = true;
@@ -676,7 +686,7 @@ VillagerDataContainer {
     @Override
     public VillagerEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         double d = this.random.nextDouble();
-        VillagerType villagerType = d < 0.5 ? VillagerType.forBiome(serverWorld.getBiomeKey(this.getBlockPos())) : (d < 0.75 ? this.getVillagerData().getType() : ((VillagerEntity)passiveEntity).getVillagerData().getType());
+        VillagerType villagerType = d < 0.5 ? VillagerType.forBiome(serverWorld.getBiome(this.getBlockPos())) : (d < 0.75 ? this.getVillagerData().getType() : ((VillagerEntity)passiveEntity).getVillagerData().getType());
         VillagerEntity villagerEntity = new VillagerEntity(EntityType.VILLAGER, serverWorld, villagerType);
         villagerEntity.initialize(serverWorld, serverWorld.getLocalDifficulty(villagerEntity.getBlockPos()), SpawnReason.BREEDING, null, null);
         return villagerEntity;
@@ -685,7 +695,7 @@ VillagerDataContainer {
     @Override
     public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
         if (world.getDifficulty() != Difficulty.PEACEFUL) {
-            LOGGER.info("Villager {} was struck by lightning {}.", (Object)this, (Object)lightning);
+            field_36335.info("Villager {} was struck by lightning {}.", (Object)this, (Object)lightning);
             WitchEntity witchEntity = EntityType.WITCH.create(world);
             witchEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
             witchEntity.initialize(world, world.getLocalDifficulty(witchEntity.getBlockPos()), SpawnReason.CONVERSION, null, null);
@@ -861,8 +871,8 @@ VillagerDataContainer {
         return this.experience;
     }
 
-    public void setExperience(int amount) {
-        this.experience = amount;
+    public void setExperience(int experience) {
+        this.experience = experience;
     }
 
     private void clearDailyRestockCount() {

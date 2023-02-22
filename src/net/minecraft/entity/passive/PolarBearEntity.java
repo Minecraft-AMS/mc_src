@@ -7,12 +7,9 @@
 package net.minecraft.entity.passive;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
@@ -47,11 +44,12 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -70,7 +68,8 @@ implements Angerable {
     private int warningSoundCooldown;
     private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private int angerTime;
-    private UUID targetUuid;
+    @Nullable
+    private UUID angryAt;
 
     public PolarBearEntity(EntityType<? extends PolarBearEntity> entityType, World world) {
         super((EntityType<? extends AnimalEntity>)entityType, world);
@@ -108,9 +107,9 @@ implements Angerable {
     }
 
     public static boolean canSpawn(EntityType<PolarBearEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
-        Optional<RegistryKey<Biome>> optional = world.getBiomeKey(pos);
-        if (Objects.equals(optional, Optional.of(BiomeKeys.FROZEN_OCEAN)) || Objects.equals(optional, Optional.of(BiomeKeys.DEEP_FROZEN_OCEAN))) {
-            return world.getBaseLightLevel(pos, 0) > 8 && world.getBlockState(pos.down()).isOf(Blocks.ICE);
+        RegistryEntry<Biome> registryEntry = world.getBiome(pos);
+        if (registryEntry.matchesKey(BiomeKeys.FROZEN_OCEAN) || registryEntry.matchesKey(BiomeKeys.DEEP_FROZEN_OCEAN)) {
+            return PolarBearEntity.isLightLevelValidForNaturalSpawn(world, pos) && world.getBlockState(pos.down()).isIn(BlockTags.POLAR_BEARS_SPAWNABLE_ON_IN_FROZEN_OCEAN);
         }
         return PolarBearEntity.isValidNaturalSpawn(type, world, spawnReason, pos, random);
     }
@@ -133,8 +132,8 @@ implements Angerable {
     }
 
     @Override
-    public void setAngerTime(int ticks) {
-        this.angerTime = ticks;
+    public void setAngerTime(int angerTime) {
+        this.angerTime = angerTime;
     }
 
     @Override
@@ -143,13 +142,14 @@ implements Angerable {
     }
 
     @Override
-    public void setAngryAt(@Nullable UUID uuid) {
-        this.targetUuid = uuid;
+    public void setAngryAt(@Nullable UUID angryAt) {
+        this.angryAt = angryAt;
     }
 
     @Override
+    @Nullable
     public UUID getAngryAt() {
-        return this.targetUuid;
+        return this.angryAt;
     }
 
     @Override
@@ -297,11 +297,8 @@ implements Angerable {
         }
 
         @Override
-        public boolean canStart() {
-            if (!PolarBearEntity.this.isBaby() && !PolarBearEntity.this.isOnFire()) {
-                return false;
-            }
-            return super.canStart();
+        protected boolean isInDanger() {
+            return this.mob.getAttacker() != null && this.mob.isBaby() || this.mob.isOnFire();
         }
     }
 

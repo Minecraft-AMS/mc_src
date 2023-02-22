@@ -12,8 +12,8 @@
  *  com.google.gson.JsonPrimitive
  *  com.google.gson.JsonSerializationContext
  *  com.google.gson.JsonSyntaxException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.loot.function;
 
@@ -27,6 +27,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSyntaxException;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -48,17 +49,16 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class EnchantRandomlyLootFunction
 extends ConditionalLootFunction {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     final List<Enchantment> enchantments;
 
-    EnchantRandomlyLootFunction(LootCondition[] lootConditions, Collection<Enchantment> collection) {
-        super(lootConditions);
-        this.enchantments = ImmutableList.copyOf(collection);
+    EnchantRandomlyLootFunction(LootCondition[] conditions, Collection<Enchantment> enchantments) {
+        super(conditions);
+        this.enchantments = ImmutableList.copyOf(enchantments);
     }
 
     @Override

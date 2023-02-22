@@ -9,9 +9,9 @@
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.ProfileLookupCallback
  *  com.mojang.authlib.yggdrasil.ProfileNotFoundException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server;
 
@@ -22,6 +22,7 @@ import com.mojang.authlib.Agent;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.ProfileLookupCallback;
 import com.mojang.authlib.yggdrasil.ProfileNotFoundException;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -49,14 +50,13 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.Whitelist;
 import net.minecraft.server.WhitelistEntry;
 import net.minecraft.server.dedicated.MinecraftDedicatedServer;
-import net.minecraft.util.ChatUtil;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.WorldSavePath;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ServerConfigHandler {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     public static final File BANNED_IPS_FILE = new File("banned-ips.txt");
     public static final File BANNED_PLAYERS_FILE = new File("banned-players.txt");
     public static final File OPERATORS_FILE = new File("ops.txt");
@@ -73,7 +73,7 @@ public class ServerConfigHandler {
     }
 
     private static void lookupProfile(MinecraftServer server, Collection<String> bannedPlayers, ProfileLookupCallback callback) {
-        String[] strings = (String[])bannedPlayers.stream().filter(string -> !ChatUtil.isEmpty(string)).toArray(String[]::new);
+        String[] strings = (String[])bannedPlayers.stream().filter(string -> !StringHelper.isEmpty(string)).toArray(String[]::new);
         if (server.isOnlineMode()) {
             server.getGameProfileRepo().findProfilesByNames(strings, Agent.MINECRAFT, callback);
         } else {
@@ -263,7 +263,7 @@ public class ServerConfigHandler {
 
     @Nullable
     public static UUID getPlayerUuidByName(final MinecraftServer server, String name) {
-        if (ChatUtil.isEmpty(name) || name.length() > 16) {
+        if (StringHelper.isEmpty(name) || name.length() > 16) {
             try {
                 return UUID.fromString(name);
             }

@@ -10,10 +10,10 @@ import net.minecraft.util.math.MathHelper;
 public class BodyControl
 implements Control {
     private final MobEntity entity;
-    private static final int MAX_HEAD_YAW = 15;
-    private static final int MAX_ACTIVE_TICKS = 10;
+    private static final int BODY_KEEP_UP_THRESHOLD = 15;
+    private static final int ROTATE_BODY_START_TICK = 10;
     private static final int ROTATION_INCREMENTS = 10;
-    private int activeTicks;
+    private int bodyAdjustTicks;
     private float lastHeadYaw;
 
     public BodyControl(MobEntity entity) {
@@ -23,38 +23,38 @@ implements Control {
     public void tick() {
         if (this.isMoving()) {
             this.entity.bodyYaw = this.entity.getYaw();
-            this.rotateHead();
+            this.keepUpHead();
             this.lastHeadYaw = this.entity.headYaw;
-            this.activeTicks = 0;
+            this.bodyAdjustTicks = 0;
             return;
         }
         if (this.isIndependent()) {
             if (Math.abs(this.entity.headYaw - this.lastHeadYaw) > 15.0f) {
-                this.activeTicks = 0;
+                this.bodyAdjustTicks = 0;
                 this.lastHeadYaw = this.entity.headYaw;
-                this.rotateLook();
+                this.keepUpBody();
             } else {
-                ++this.activeTicks;
-                if (this.activeTicks > 10) {
-                    this.rotateBody();
+                ++this.bodyAdjustTicks;
+                if (this.bodyAdjustTicks > 10) {
+                    this.slowlyAdjustBody();
                 }
             }
         }
     }
 
-    private void rotateLook() {
-        this.entity.bodyYaw = MathHelper.stepAngleTowards(this.entity.bodyYaw, this.entity.headYaw, this.entity.getBodyYawSpeed());
+    private void keepUpBody() {
+        this.entity.bodyYaw = MathHelper.clampAngle(this.entity.bodyYaw, this.entity.headYaw, this.entity.getMaxHeadRotation());
     }
 
-    private void rotateHead() {
-        this.entity.headYaw = MathHelper.stepAngleTowards(this.entity.headYaw, this.entity.bodyYaw, this.entity.getBodyYawSpeed());
+    private void keepUpHead() {
+        this.entity.headYaw = MathHelper.clampAngle(this.entity.headYaw, this.entity.bodyYaw, this.entity.getMaxHeadRotation());
     }
 
-    private void rotateBody() {
-        int i = this.activeTicks - 10;
+    private void slowlyAdjustBody() {
+        int i = this.bodyAdjustTicks - 10;
         float f = MathHelper.clamp((float)i / 10.0f, 0.0f, 1.0f);
-        float g = (float)this.entity.getBodyYawSpeed() * (1.0f - f);
-        this.entity.bodyYaw = MathHelper.stepAngleTowards(this.entity.bodyYaw, this.entity.headYaw, g);
+        float g = (float)this.entity.getMaxHeadRotation() * (1.0f - f);
+        this.entity.bodyYaw = MathHelper.clampAngle(this.entity.bodyYaw, this.entity.headYaw, g);
     }
 
     private boolean isIndependent() {

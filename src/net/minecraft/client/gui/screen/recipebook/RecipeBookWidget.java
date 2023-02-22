@@ -394,7 +394,7 @@ RecipeGridAligner<Ingredient> {
         if (this.searchField.isFocused() && this.searchField.isVisible() && keyCode != 256) {
             return true;
         }
-        if (this.client.options.keyChat.matchesKey(keyCode, scanCode) && !this.searchField.isFocused()) {
+        if (this.client.options.chatKey.matchesKey(keyCode, scanCode) && !this.searchField.isFocused()) {
             this.searching = true;
             this.searchField.setTextFieldFocused(true);
             return true;

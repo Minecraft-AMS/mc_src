@@ -4,11 +4,12 @@
  * Could not load the following classes:
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParser
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.http.Header
  *  org.apache.http.HttpEntity
  *  org.apache.http.HttpResponse
+ *  org.apache.http.NameValuePair
  *  org.apache.http.client.config.RequestConfig
  *  org.apache.http.client.methods.CloseableHttpResponse
  *  org.apache.http.client.methods.HttpPost
@@ -18,13 +19,14 @@
  *  org.apache.http.impl.client.HttpClientBuilder
  *  org.apache.http.util.Args
  *  org.apache.http.util.EntityUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -43,9 +45,9 @@ import net.minecraft.client.realms.UploadStatus;
 import net.minecraft.client.realms.dto.UploadInfo;
 import net.minecraft.client.realms.gui.screen.UploadResult;
 import net.minecraft.client.util.Session;
-import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -55,12 +57,12 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.Args;
 import org.apache.http.util.EntityUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class FileUpload {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int MAX_ATTEMPTS = 5;
     private static final String UPLOAD_ENDPOINT = "/upload";
     private final File file;
@@ -72,6 +74,7 @@ public class FileUpload {
     private final String clientVersion;
     private final UploadStatus uploadStatus;
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
+    @Nullable
     private CompletableFuture<UploadResult> uploadTask;
     private final RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout((int)TimeUnit.MINUTES.toMillis(10L)).setConnectTimeout((int)TimeUnit.SECONDS.toMillis(15L)).build();
 
@@ -134,7 +137,7 @@ public class FileUpload {
         return builder.build();
     }
 
-    private void cleanup(HttpPost request, CloseableHttpClient client) {
+    private void cleanup(HttpPost request, @Nullable CloseableHttpClient client) {
         request.releaseConnection();
         if (client != null) {
             try {
@@ -183,7 +186,7 @@ public class FileUpload {
     }
 
     private long getRetryDelaySeconds(HttpResponse response) {
-        return Optional.ofNullable(response.getFirstHeader("Retry-After")).map(Header::getValue).map(Long::valueOf).orElse(0L);
+        return Optional.ofNullable(response.getFirstHeader("Retry-After")).map(NameValuePair::getValue).map(Long::valueOf).orElse(0L);
     }
 
     public boolean isFinished() {

@@ -13,9 +13,9 @@
  *  com.mojang.brigadier.tree.CommandNode
  *  com.mojang.brigadier.tree.LiteralCommandNode
  *  com.mojang.brigadier.tree.RootCommandNode
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.command.argument;
 
@@ -30,6 +30,7 @@ import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.brigadier.tree.RootCommandNode;
+import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -60,6 +61,8 @@ import net.minecraft.command.argument.NbtPathArgumentType;
 import net.minecraft.command.argument.NumberRangeArgumentType;
 import net.minecraft.command.argument.OperationArgumentType;
 import net.minecraft.command.argument.ParticleEffectArgumentType;
+import net.minecraft.command.argument.RegistryKeyArgumentType;
+import net.minecraft.command.argument.RegistryPredicateArgumentType;
 import net.minecraft.command.argument.RotationArgumentType;
 import net.minecraft.command.argument.ScoreHolderArgumentType;
 import net.minecraft.command.argument.ScoreboardCriterionArgumentType;
@@ -79,25 +82,24 @@ import net.minecraft.command.argument.serialize.ArgumentSerializer;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ArgumentTypes {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<Class<?>, Entry<?>> CLASS_MAP = Maps.newHashMap();
     private static final Map<Identifier, Entry<?>> ID_MAP = Maps.newHashMap();
 
-    public static <T extends ArgumentType<?>> void register(String id, Class<T> class_, ArgumentSerializer<T> argumentSerializer) {
+    public static <T extends ArgumentType<?>> void register(String id, Class<T> argClass, ArgumentSerializer<T> serializer) {
         Identifier identifier = new Identifier(id);
-        if (CLASS_MAP.containsKey(class_)) {
-            throw new IllegalArgumentException("Class " + class_.getName() + " already has a serializer!");
+        if (CLASS_MAP.containsKey(argClass)) {
+            throw new IllegalArgumentException("Class " + argClass.getName() + " already has a serializer!");
         }
         if (ID_MAP.containsKey(identifier)) {
             throw new IllegalArgumentException("'" + identifier + "' is already a registered serializer!");
         }
-        Entry<T> entry = new Entry<T>(class_, argumentSerializer, identifier);
-        CLASS_MAP.put(class_, entry);
+        Entry<T> entry = new Entry<T>(serializer, identifier);
+        CLASS_MAP.put(argClass, entry);
         ID_MAP.put(identifier, entry);
     }
 
@@ -141,10 +143,16 @@ public class ArgumentTypes {
         ArgumentTypes.register("dimension", DimensionArgumentType.class, new ConstantArgumentSerializer<DimensionArgumentType>(DimensionArgumentType::dimension));
         ArgumentTypes.register("time", TimeArgumentType.class, new ConstantArgumentSerializer<TimeArgumentType>(TimeArgumentType::time));
         ArgumentTypes.register("uuid", UuidArgumentType.class, new ConstantArgumentSerializer<UuidArgumentType>(UuidArgumentType::uuid));
+        ArgumentTypes.register("resource", ArgumentTypes.upcast(RegistryKeyArgumentType.class), new RegistryKeyArgumentType.Serializer());
+        ArgumentTypes.register("resource_or_tag", ArgumentTypes.upcast(RegistryPredicateArgumentType.class), new RegistryPredicateArgumentType.Serializer());
         if (SharedConstants.isDevelopment) {
             ArgumentTypes.register("test_argument", TestFunctionArgumentType.class, new ConstantArgumentSerializer<TestFunctionArgumentType>(TestFunctionArgumentType::testFunction));
             ArgumentTypes.register("test_class", TestClassArgumentType.class, new ConstantArgumentSerializer<TestClassArgumentType>(TestClassArgumentType::testClass));
         }
+    }
+
+    private static <T extends ArgumentType<?>> Class<T> upcast(Class<? super T> clazz) {
+        return clazz;
     }
 
     @Nullable
@@ -153,19 +161,19 @@ public class ArgumentTypes {
     }
 
     @Nullable
-    private static Entry<?> byClass(ArgumentType<?> argumentType) {
-        return CLASS_MAP.get(argumentType.getClass());
+    private static Entry<?> byClass(ArgumentType<?> type) {
+        return CLASS_MAP.get(type.getClass());
     }
 
-    public static <T extends ArgumentType<?>> void toPacket(PacketByteBuf packetByteBuf, T argumentType) {
-        Entry<?> entry = ArgumentTypes.byClass(argumentType);
+    public static <T extends ArgumentType<?>> void toPacket(PacketByteBuf buf, T type) {
+        Entry<?> entry = ArgumentTypes.byClass(type);
         if (entry == null) {
-            LOGGER.error("Could not serialize {} ({}) - will not be sent to client!", argumentType, argumentType.getClass());
-            packetByteBuf.writeIdentifier(new Identifier(""));
+            LOGGER.error("Could not serialize {} ({}) - will not be sent to client!", type, type.getClass());
+            buf.writeIdentifier(new Identifier(""));
             return;
         }
-        packetByteBuf.writeIdentifier(entry.id);
-        entry.serializer.toPacket(argumentType, packetByteBuf);
+        buf.writeIdentifier(entry.id);
+        entry.serializer.toPacket(type, buf);
     }
 
     @Nullable
@@ -179,23 +187,23 @@ public class ArgumentTypes {
         return entry.serializer.fromPacket(buf);
     }
 
-    private static <T extends ArgumentType<?>> void toJson(JsonObject jsonObject, T argumentType) {
-        Entry<?> entry = ArgumentTypes.byClass(argumentType);
+    private static <T extends ArgumentType<?>> void toJson(JsonObject json, T type) {
+        Entry<?> entry = ArgumentTypes.byClass(type);
         if (entry == null) {
-            LOGGER.error("Could not serialize argument {} ({})!", argumentType, argumentType.getClass());
-            jsonObject.addProperty("type", "unknown");
+            LOGGER.error("Could not serialize argument {} ({})!", type, type.getClass());
+            json.addProperty("type", "unknown");
         } else {
-            jsonObject.addProperty("type", "argument");
-            jsonObject.addProperty("parser", entry.id.toString());
-            JsonObject jsonObject2 = new JsonObject();
-            entry.serializer.toJson(argumentType, jsonObject2);
-            if (jsonObject2.size() > 0) {
-                jsonObject.add("properties", (JsonElement)jsonObject2);
+            json.addProperty("type", "argument");
+            json.addProperty("parser", entry.id.toString());
+            JsonObject jsonObject = new JsonObject();
+            entry.serializer.toJson(type, jsonObject);
+            if (jsonObject.size() > 0) {
+                json.add("properties", (JsonElement)jsonObject);
             }
         }
     }
 
-    public static <S> JsonObject toJson(CommandDispatcher<S> commandDispatcher, CommandNode<S> commandNode) {
+    public static <S> JsonObject toJson(CommandDispatcher<S> dispatcher, CommandNode<S> commandNode) {
         Collection collection;
         JsonObject jsonObject = new JsonObject();
         if (commandNode instanceof RootCommandNode) {
@@ -210,7 +218,7 @@ public class ArgumentTypes {
         }
         JsonObject jsonObject2 = new JsonObject();
         for (CommandNode commandNode2 : commandNode.getChildren()) {
-            jsonObject2.add(commandNode2.getName(), (JsonElement)ArgumentTypes.toJson(commandDispatcher, commandNode2));
+            jsonObject2.add(commandNode2.getName(), (JsonElement)ArgumentTypes.toJson(dispatcher, commandNode2));
         }
         if (jsonObject2.size() > 0) {
             jsonObject.add("children", (JsonElement)jsonObject2);
@@ -218,7 +226,7 @@ public class ArgumentTypes {
         if (commandNode.getCommand() != null) {
             jsonObject.addProperty("executable", Boolean.valueOf(true));
         }
-        if (commandNode.getRedirect() != null && !(collection = commandDispatcher.getPath(commandNode.getRedirect())).isEmpty()) {
+        if (commandNode.getRedirect() != null && !(collection = dispatcher.getPath(commandNode.getRedirect())).isEmpty()) {
             JsonArray jsonArray = new JsonArray();
             for (String string : collection) {
                 jsonArray.add(string);
@@ -228,8 +236,8 @@ public class ArgumentTypes {
         return jsonObject;
     }
 
-    public static boolean hasClass(ArgumentType<?> argumentType) {
-        return ArgumentTypes.byClass(argumentType) != null;
+    public static boolean hasClass(ArgumentType<?> type) {
+        return ArgumentTypes.byClass(type) != null;
     }
 
     public static <T> Set<ArgumentType<?>> getAllArgumentTypes(CommandNode<T> node) {
@@ -254,14 +262,12 @@ public class ArgumentTypes {
     }
 
     static class Entry<T extends ArgumentType<?>> {
-        public final Class<T> argClass;
         public final ArgumentSerializer<T> serializer;
         public final Identifier id;
 
-        Entry(Class<T> class_, ArgumentSerializer<T> argumentSerializer, Identifier identifier) {
-            this.argClass = class_;
-            this.serializer = argumentSerializer;
-            this.id = identifier;
+        Entry(ArgumentSerializer<T> serializer, Identifier id) {
+            this.serializer = serializer;
+            this.id = id;
         }
     }
 }

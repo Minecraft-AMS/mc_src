@@ -5,8 +5,8 @@ package net.minecraft.structure;
 
 import java.util.Random;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.SimpleStructurePiece;
+import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePiecesHolder;
@@ -27,9 +27,9 @@ import net.minecraft.world.gen.chunk.ChunkGenerator;
 public class NetherFossilGenerator {
     private static final Identifier[] FOSSILS = new Identifier[]{new Identifier("nether_fossils/fossil_1"), new Identifier("nether_fossils/fossil_2"), new Identifier("nether_fossils/fossil_3"), new Identifier("nether_fossils/fossil_4"), new Identifier("nether_fossils/fossil_5"), new Identifier("nether_fossils/fossil_6"), new Identifier("nether_fossils/fossil_7"), new Identifier("nether_fossils/fossil_8"), new Identifier("nether_fossils/fossil_9"), new Identifier("nether_fossils/fossil_10"), new Identifier("nether_fossils/fossil_11"), new Identifier("nether_fossils/fossil_12"), new Identifier("nether_fossils/fossil_13"), new Identifier("nether_fossils/fossil_14")};
 
-    public static void addPieces(StructureManager manager, StructurePiecesHolder structurePiecesHolder, Random random, BlockPos pos) {
+    public static void addPieces(StructureManager manager, StructurePiecesHolder holder, Random random, BlockPos pos) {
         BlockRotation blockRotation = BlockRotation.random(random);
-        structurePiecesHolder.addPiece(new Piece(manager, Util.getRandom(FOSSILS, random), pos, blockRotation));
+        holder.addPiece(new Piece(manager, Util.getRandom(FOSSILS, random), pos, blockRotation));
     }
 
     public static class Piece
@@ -38,8 +38,8 @@ public class NetherFossilGenerator {
             super(StructurePieceType.NETHER_FOSSIL, 0, manager, template, template.toString(), Piece.createPlacementData(rotation), pos);
         }
 
-        public Piece(ServerWorld world, NbtCompound nbt) {
-            super(StructurePieceType.NETHER_FOSSIL, nbt, world, (Identifier identifier) -> Piece.createPlacementData(BlockRotation.valueOf(nbt.getString("Rot"))));
+        public Piece(StructureManager manager, NbtCompound nbt) {
+            super(StructurePieceType.NETHER_FOSSIL, nbt, manager, (Identifier id) -> Piece.createPlacementData(BlockRotation.valueOf(nbt.getString("Rot"))));
         }
 
         private static StructurePlacementData createPlacementData(BlockRotation rotation) {
@@ -47,8 +47,8 @@ public class NetherFossilGenerator {
         }
 
         @Override
-        protected void writeNbt(ServerWorld world, NbtCompound nbt) {
-            super.writeNbt(world, nbt);
+        protected void writeNbt(StructureContext context, NbtCompound nbt) {
+            super.writeNbt(context, nbt);
             nbt.putString("Rot", this.placementData.getRotation().name());
         }
 
@@ -57,9 +57,9 @@ public class NetherFossilGenerator {
         }
 
         @Override
-        public boolean generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox boundingBox, ChunkPos chunkPos, BlockPos pos) {
-            boundingBox.encompass(this.structure.calculateBoundingBox(this.placementData, this.pos));
-            return super.generate(world, structureAccessor, chunkGenerator, random, boundingBox, chunkPos, pos);
+        public void generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox chunkBox, ChunkPos chunkPos, BlockPos pos) {
+            chunkBox.encompass(this.structure.calculateBoundingBox(this.placementData, this.pos));
+            super.generate(world, structureAccessor, chunkGenerator, random, chunkBox, chunkPos, pos);
         }
     }
 }

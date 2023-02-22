@@ -3,16 +3,17 @@
  * 
  * Could not load the following classes:
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.world;
 
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
@@ -33,14 +34,13 @@ import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.chunk.ChunkProvider;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.light.LightingProvider;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ServerLightingProvider
 extends LightingProvider
 implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final TaskExecutor<Runnable> processor;
     private final ObjectList<Pair<Stage, Runnable>> pendingTasks = new ObjectArrayList();
     private final ThreadedAnvilChunkStorage chunkStorage;
@@ -60,7 +60,7 @@ implements AutoCloseable {
     }
 
     @Override
-    public int doLightUpdates(int i, boolean bl, boolean bl2) {
+    public int doLightUpdates(int i, boolean doSkylight, boolean skipEdgeLightPropagation) {
         throw Util.throwOrPause(new UnsupportedOperationException("Ran automatically on a different thread!"));
     }
 
@@ -96,13 +96,13 @@ implements AutoCloseable {
     }
 
     @Override
-    public void setColumnEnabled(ChunkPos chunkPos, boolean bl) {
-        this.enqueue(chunkPos.x, chunkPos.z, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.setColumnEnabled(chunkPos, bl), () -> "enableLight " + chunkPos + " " + bl));
+    public void setColumnEnabled(ChunkPos pos, boolean retainData) {
+        this.enqueue(pos.x, pos.z, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.setColumnEnabled(pos, retainData), () -> "enableLight " + pos + " " + retainData));
     }
 
     @Override
-    public void enqueueSectionData(LightType lightType, ChunkSectionPos pos, @Nullable ChunkNibbleArray nibbles, boolean bl) {
-        this.enqueue(pos.getSectionX(), pos.getSectionZ(), () -> 0, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.enqueueSectionData(lightType, pos, nibbles, bl), () -> "queueData " + pos));
+    public void enqueueSectionData(LightType lightType, ChunkSectionPos pos, @Nullable ChunkNibbleArray nibbles, boolean nonEdge) {
+        this.enqueue(pos.getSectionX(), pos.getSectionZ(), () -> 0, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.enqueueSectionData(lightType, pos, nibbles, nonEdge), () -> "queueData " + pos));
     }
 
     private void enqueue(int x, int z, Stage stage, Runnable task) {
@@ -130,7 +130,7 @@ implements AutoCloseable {
             ChunkSection[] chunkSections = chunk.getSectionArray();
             for (int i = 0; i < chunk.countVerticalSections(); ++i) {
                 ChunkSection chunkSection = chunkSections[i];
-                if (ChunkSection.isEmpty(chunkSection)) continue;
+                if (chunkSection.isEmpty()) continue;
                 int j = this.world.sectionIndexToCoord(i);
                 super.setSectionStatus(ChunkSectionPos.from(chunkPos, j), false);
             }

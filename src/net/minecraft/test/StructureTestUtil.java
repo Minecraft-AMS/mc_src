@@ -4,15 +4,16 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
+ *  com.mojang.logging.LogUtils
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.test;
 
 import com.google.common.collect.Lists;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -40,7 +41,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.server.world.ServerTickScheduler;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructureManager;
@@ -55,14 +55,14 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorConfig;
+import net.minecraft.world.tick.WorldTickScheduler;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class StructureTestUtil {
-    private static final Logger LOGGER = LogManager.getLogger();
-    public static final String field_33173 = "gameteststructures";
+    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final String TEST_STRUCTURES_DIRECTORY_NAME = "gameteststructures";
     public static String testStructuresDirectoryName = "gameteststructures";
     private static final int field_33174 = 4;
 
@@ -107,9 +107,9 @@ public class StructureTestUtil {
         Files.walk(Paths.get(testStructuresDirectoryName, new String[0]), new FileVisitOption[0]).filter(path -> path.toString().endsWith(".snbt")).forEach(path -> {
             try {
                 String string = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
-                NbtCompound nbtCompound = NbtHelper.method_32260(string);
+                NbtCompound nbtCompound = NbtHelper.fromNbtProviderString(string);
                 NbtCompound nbtCompound2 = StructureValidatorProvider.update(path.toString(), nbtCompound);
-                NbtProvider.writeTo(path, NbtHelper.toPrettyPrintedString(nbtCompound2));
+                NbtProvider.writeTo(path, NbtHelper.toNbtProviderString(nbtCompound2));
             }
             catch (CommandSyntaxException | IOException exception) {
                 LOGGER.error("Something went wrong upgrading: {}", path, (Object)exception);
@@ -170,7 +170,7 @@ public class StructureTestUtil {
         StructureTestUtil.forceLoadNearbyChunks(pos, world);
         StructureTestUtil.clearArea(blockBox, pos.getY(), world);
         StructureBlockBlockEntity structureBlockBlockEntity = StructureTestUtil.placeStructure(structureName, blockPos, rotation, world, bl);
-        ((ServerTickScheduler)world.getBlockTickScheduler()).getScheduledTicks(blockBox, true, false);
+        ((WorldTickScheduler)world.getBlockTickScheduler()).clearNextTicks(blockBox);
         world.clearUpdatesInArea(blockBox);
         return structureBlockBlockEntity;
     }
@@ -189,7 +189,7 @@ public class StructureTestUtil {
     public static void clearArea(BlockBox area, int altitude, ServerWorld world) {
         BlockBox blockBox = new BlockBox(area.getMinX() - 2, area.getMinY() - 3, area.getMinZ() - 3, area.getMaxX() + 3, area.getMaxY() + 20, area.getMaxZ() + 3);
         BlockPos.stream(blockBox).forEach(pos -> StructureTestUtil.resetBlock(altitude, pos, world));
-        ((ServerTickScheduler)world.getBlockTickScheduler()).getScheduledTicks(blockBox, true, false);
+        ((WorldTickScheduler)world.getBlockTickScheduler()).clearNextTicks(blockBox);
         world.clearUpdatesInArea(blockBox);
         Box box = new Box(blockBox.getMinX(), blockBox.getMinY(), blockBox.getMinZ(), blockBox.getMaxX(), blockBox.getMaxY(), blockBox.getMaxZ());
         List<Entity> list = world.getEntitiesByClass(Entity.class, box, entity -> !(entity instanceof PlayerEntity));
@@ -273,7 +273,7 @@ public class StructureTestUtil {
         try {
             BufferedReader bufferedReader = Files.newBufferedReader(path);
             String string = IOUtils.toString((Reader)bufferedReader);
-            return NbtHelper.method_32260(string);
+            return NbtHelper.fromNbtProviderString(string);
         }
         catch (IOException iOException) {
             return null;
@@ -285,17 +285,11 @@ public class StructureTestUtil {
 
     private static void resetBlock(int altitude, BlockPos pos, ServerWorld world) {
         BlockState blockState = null;
-        FlatChunkGeneratorConfig flatChunkGeneratorConfig = FlatChunkGeneratorConfig.getDefaultConfig(world.getRegistryManager().get(Registry.BIOME_KEY));
-        if (flatChunkGeneratorConfig instanceof FlatChunkGeneratorConfig) {
-            List<BlockState> list = flatChunkGeneratorConfig.getLayerBlocks();
-            int i = pos.getY() - world.getBottomY();
-            if (pos.getY() < altitude && i > 0 && i <= list.size()) {
-                blockState = list.get(i - 1);
-            }
-        } else if (pos.getY() == altitude - 1) {
-            blockState = world.getBiome(pos).getGenerationSettings().getSurfaceConfig().getTopMaterial();
-        } else if (pos.getY() < altitude - 1) {
-            blockState = world.getBiome(pos).getGenerationSettings().getSurfaceConfig().getUnderMaterial();
+        FlatChunkGeneratorConfig flatChunkGeneratorConfig = FlatChunkGeneratorConfig.getDefaultConfig(world.getRegistryManager().get(Registry.BIOME_KEY), world.getRegistryManager().get(Registry.STRUCTURE_SET_KEY));
+        List<BlockState> list = flatChunkGeneratorConfig.getLayerBlocks();
+        int i = pos.getY() - world.getBottomY();
+        if (pos.getY() < altitude && i > 0 && i <= list.size()) {
+            blockState = list.get(i - 1);
         }
         if (blockState == null) {
             blockState = Blocks.AIR.getDefaultState();

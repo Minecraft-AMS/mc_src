@@ -2,25 +2,29 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Suppliers
  *  com.google.common.collect.Maps
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture$Type
+ *  com.mojang.logging.LogUtils
  *  com.mojang.util.UUIDTypeAdapter
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.codec.binary.Base64
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.lwjgl.BufferUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.util;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import com.mojang.util.UUIDTypeAdapter;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -30,11 +34,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -45,16 +48,16 @@ import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.util.Identifier;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.BufferUtils;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsTextureManager {
     private static final Map<String, RealmsTexture> TEXTURES = Maps.newHashMap();
     static final Map<String, Boolean> SKIN_FETCH_STATUS = Maps.newHashMap();
     static final Map<String, String> FETCHED_SKINS = Maps.newHashMap();
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final Identifier ISLES = new Identifier("textures/gui/presets/isles.png");
 
     public static void bindWorldTemplate(String id, @Nullable String image) {
@@ -159,41 +162,16 @@ public class RealmsTextureManager {
         thread.start();
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     private static int getTextureId(String id, String image) {
         RealmsTexture realmsTexture = TEXTURES.get(id);
         if (realmsTexture != null && realmsTexture.image.equals(image)) {
             return realmsTexture.textureId;
         }
         int i = realmsTexture != null ? realmsTexture.textureId : GlStateManager._genTexture();
-        IntBuffer intBuffer = null;
-        int j = 0;
-        int k = 0;
-        try {
-            BufferedImage bufferedImage;
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(new Base64().decode(image));
-            try {
-                bufferedImage = ImageIO.read(inputStream);
-            }
-            finally {
-                IOUtils.closeQuietly((InputStream)inputStream);
-            }
-            j = bufferedImage.getWidth();
-            k = bufferedImage.getHeight();
-            int[] is = new int[j * k];
-            bufferedImage.getRGB(0, 0, j, k, is, 0, j);
-            intBuffer = ByteBuffer.allocateDirect(4 * j * k).order(ByteOrder.nativeOrder()).asIntBuffer();
-            intBuffer.put(is);
-            intBuffer.flip();
-        }
-        catch (IOException iOException) {
-            iOException.printStackTrace();
-        }
+        RealmsTextureImage realmsTextureImage = RealmsTextureImage.fromBase64(image);
         RenderSystem.activeTexture(33984);
         RenderSystem.bindTextureForSetup(i);
-        TextureUtil.initTexture(intBuffer, j, k);
+        TextureUtil.initTexture(realmsTextureImage.buffer, realmsTextureImage.width, realmsTextureImage.height);
         TEXTURES.put(id, new RealmsTexture(image, i));
         return i;
     }
@@ -206,6 +184,58 @@ public class RealmsTextureManager {
         public RealmsTexture(String image, int textureId) {
             this.image = image;
             this.textureId = textureId;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class RealmsTextureImage {
+        final int width;
+        final int height;
+        final IntBuffer buffer;
+        private static final Supplier<RealmsTextureImage> FALLBACK = Suppliers.memoize(() -> {
+            int i = 16;
+            int j = 16;
+            IntBuffer intBuffer = BufferUtils.createIntBuffer((int)256);
+            int k = -16777216;
+            int l = -524040;
+            for (int m = 0; m < 16; ++m) {
+                for (int n = 0; n < 16; ++n) {
+                    if (m < 8 ^ n < 8) {
+                        intBuffer.put(n + m * 16, -524040);
+                        continue;
+                    }
+                    intBuffer.put(n + m * 16, -16777216);
+                }
+            }
+            return new RealmsTextureImage(16, 16, intBuffer);
+        });
+
+        private RealmsTextureImage(int width, int height, IntBuffer buffer) {
+            this.width = width;
+            this.height = height;
+            this.buffer = buffer;
+        }
+
+        public static RealmsTextureImage fromBase64(String string) {
+            try {
+                ByteArrayInputStream inputStream = new ByteArrayInputStream(new Base64().decode(string));
+                BufferedImage bufferedImage = ImageIO.read(inputStream);
+                if (bufferedImage != null) {
+                    int i = bufferedImage.getWidth();
+                    int j = bufferedImage.getHeight();
+                    int[] is = new int[i * j];
+                    bufferedImage.getRGB(0, 0, i, j, is, 0, i);
+                    IntBuffer intBuffer = BufferUtils.createIntBuffer((int)(i * j));
+                    intBuffer.put(is);
+                    intBuffer.flip();
+                    return new RealmsTextureImage(i, j, intBuffer);
+                }
+                LOGGER.warn("Unknown image format: {}", (Object)string);
+            }
+            catch (IOException iOException) {
+                LOGGER.warn("Failed to load world image: {}", (Object)string, (Object)iOException);
+            }
+            return FALLBACK.get();
         }
     }
 }

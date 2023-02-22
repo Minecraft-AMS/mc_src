@@ -57,8 +57,8 @@ extends EntityRenderer<FishingBobberEntity> {
         matrixStack.multiply(this.dispatcher.getRotation());
         matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
         MatrixStack.Entry entry = matrixStack.peek();
-        Matrix4f matrix4f = entry.getModel();
-        Matrix3f matrix3f = entry.getNormal();
+        Matrix4f matrix4f = entry.getPositionMatrix();
+        Matrix3f matrix3f = entry.getNormalMatrix();
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(LAYER);
         FishingBobberEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, i, 0.0f, 0, 0, 1);
         FishingBobberEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, i, 1.0f, 0, 1, 1);
@@ -103,7 +103,7 @@ extends EntityRenderer<FishingBobberEntity> {
         MatrixStack.Entry entry2 = matrixStack.peek();
         int y = 16;
         for (int z = 0; z <= 16; ++z) {
-            FishingBobberEntityRenderer.method_23172(v, w, x, vertexConsumer2, entry2, FishingBobberEntityRenderer.percentage(z, 16), FishingBobberEntityRenderer.percentage(z + 1, 16));
+            FishingBobberEntityRenderer.renderFishingLine(v, w, x, vertexConsumer2, entry2, FishingBobberEntityRenderer.percentage(z, 16), FishingBobberEntityRenderer.percentage(z + 1, 16));
         }
         matrixStack.pop();
         super.render(fishingBobberEntity, f, g, matrixStack, vertexConsumerProvider, i);
@@ -117,15 +117,15 @@ extends EntityRenderer<FishingBobberEntity> {
         buffer.vertex(matrix, x - 0.5f, (float)y - 0.5f, 0.0f).color(255, 255, 255, 255).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(normalMatrix, 0.0f, 1.0f, 0.0f).next();
     }
 
-    private static void method_23172(float x, float y, float z, VertexConsumer buffer, MatrixStack.Entry normal, float f, float g) {
-        float h = x * f;
-        float i = y * (f * f + f) * 0.5f + 0.25f;
-        float j = z * f;
-        float k = x * g - h;
-        float l = y * (g * g + g) * 0.5f + 0.25f - i;
-        float m = z * g - j;
-        float n = MathHelper.sqrt(k * k + l * l + m * m);
-        buffer.vertex(normal.getModel(), h, i, j).color(0, 0, 0, 255).normal(normal.getNormal(), k /= n, l /= n, m /= n).next();
+    private static void renderFishingLine(float x, float y, float z, VertexConsumer buffer, MatrixStack.Entry matrices, float segmentStart, float segmentEnd) {
+        float f = x * segmentStart;
+        float g = y * (segmentStart * segmentStart + segmentStart) * 0.5f + 0.25f;
+        float h = z * segmentStart;
+        float i = x * segmentEnd - f;
+        float j = y * (segmentEnd * segmentEnd + segmentEnd) * 0.5f + 0.25f - g;
+        float k = z * segmentEnd - h;
+        float l = MathHelper.sqrt(i * i + j * j + k * k);
+        buffer.vertex(matrices.getPositionMatrix(), f, g, h).color(0, 0, 0, 255).normal(matrices.getNormalMatrix(), i /= l, j /= l, k /= l).next();
     }
 
     @Override

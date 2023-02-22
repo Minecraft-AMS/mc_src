@@ -24,6 +24,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
@@ -67,23 +68,20 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         if (this.targetEntity != null) {
             nbt.putUuid("Target", this.targetEntity.getUuid());
         }
-        return nbt;
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 5, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     public static void clientTick(World world, BlockPos pos, BlockState state, ConduitBlockEntity blockEntity) {
@@ -184,7 +182,7 @@ extends BlockEntity {
     }
 
     private static void attackHostileEntity(World world, BlockPos pos, BlockState state, List<BlockPos> activatingBlocks, ConduitBlockEntity blockEntity) {
-        LivingEntity livingEntity2 = blockEntity.targetEntity;
+        LivingEntity livingEntity = blockEntity.targetEntity;
         int i = activatingBlocks.size();
         if (i < 42) {
             blockEntity.targetEntity = null;
@@ -192,7 +190,7 @@ extends BlockEntity {
             blockEntity.targetEntity = ConduitBlockEntity.findTargetEntity(world, pos, blockEntity.targetUuid);
             blockEntity.targetUuid = null;
         } else if (blockEntity.targetEntity == null) {
-            List<LivingEntity> list = world.getEntitiesByClass(LivingEntity.class, ConduitBlockEntity.getAttackZone(pos), livingEntity -> livingEntity instanceof Monster && livingEntity.isTouchingWaterOrRain());
+            List<LivingEntity> list = world.getEntitiesByClass(LivingEntity.class, ConduitBlockEntity.getAttackZone(pos), entity -> entity instanceof Monster && entity.isTouchingWaterOrRain());
             if (!list.isEmpty()) {
                 blockEntity.targetEntity = list.get(world.random.nextInt(list.size()));
             }
@@ -203,7 +201,7 @@ extends BlockEntity {
             world.playSound(null, blockEntity.targetEntity.getX(), blockEntity.targetEntity.getY(), blockEntity.targetEntity.getZ(), SoundEvents.BLOCK_CONDUIT_ATTACK_TARGET, SoundCategory.BLOCKS, 1.0f, 1.0f);
             blockEntity.targetEntity.damage(DamageSource.MAGIC, 4.0f);
         }
-        if (livingEntity2 != blockEntity.targetEntity) {
+        if (livingEntity != blockEntity.targetEntity) {
             world.updateListeners(pos, state, state, 2);
         }
     }
@@ -228,17 +226,17 @@ extends BlockEntity {
 
     @Nullable
     private static LivingEntity findTargetEntity(World world, BlockPos pos, UUID uuid) {
-        List<LivingEntity> list = world.getEntitiesByClass(LivingEntity.class, ConduitBlockEntity.getAttackZone(pos), livingEntity -> livingEntity.getUuid().equals(uuid));
+        List<LivingEntity> list = world.getEntitiesByClass(LivingEntity.class, ConduitBlockEntity.getAttackZone(pos), entity -> entity.getUuid().equals(uuid));
         if (list.size() == 1) {
             return list.get(0);
         }
         return null;
     }
 
-    private static void spawnNautilusParticles(World world, BlockPos pos, List<BlockPos> activatingBlocks, @Nullable Entity entity, int i) {
+    private static void spawnNautilusParticles(World world, BlockPos pos, List<BlockPos> activatingBlocks, @Nullable Entity entity, int ticks) {
         float f;
         Random random = world.random;
-        double d = MathHelper.sin((float)(i + 35) * 0.1f) / 2.0f + 0.5f;
+        double d = MathHelper.sin((float)(ticks + 35) * 0.1f) / 2.0f + 0.5f;
         d = (d * d + d) * (double)0.3f;
         Vec3d vec3d = new Vec3d((double)pos.getX() + 0.5, (double)pos.getY() + 1.5 + d, (double)pos.getZ() + 0.5);
         for (BlockPos blockPos : activatingBlocks) {
@@ -251,10 +249,10 @@ extends BlockEntity {
         }
         if (entity != null) {
             Vec3d vec3d2 = new Vec3d(entity.getX(), entity.getEyeY(), entity.getZ());
-            float j = (-0.5f + random.nextFloat()) * (3.0f + entity.getWidth());
-            float k = -1.0f + random.nextFloat() * entity.getHeight();
+            float i = (-0.5f + random.nextFloat()) * (3.0f + entity.getWidth());
+            float j = -1.0f + random.nextFloat() * entity.getHeight();
             f = (-0.5f + random.nextFloat()) * (3.0f + entity.getWidth());
-            Vec3d vec3d3 = new Vec3d(j, k, f);
+            Vec3d vec3d3 = new Vec3d(i, j, f);
             world.addParticle(ParticleTypes.NAUTILUS, vec3d2.x, vec3d2.y, vec3d2.z, vec3d3.x, vec3d3.y, vec3d3.z);
         }
     }
@@ -273,6 +271,10 @@ extends BlockEntity {
 
     public float getRotation(float tickDelta) {
         return (this.ticksActive + tickDelta) * -0.0375f;
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 }
 

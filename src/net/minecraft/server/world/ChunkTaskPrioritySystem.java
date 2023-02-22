@@ -5,14 +5,15 @@
  *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Either
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.world;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Either;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,13 +33,12 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.thread.MessageListener;
 import net.minecraft.util.thread.TaskExecutor;
 import net.minecraft.util.thread.TaskQueue;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class ChunkTaskPrioritySystem
 implements ChunkHolder.LevelUpdateListener,
 AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<MessageListener<?>, LevelPrioritizedQueue<? extends Function<MessageListener<Unit>, ?>>> queues;
     private final Set<MessageListener<?>> idleActors;
     private final TaskExecutor<TaskQueue.PrioritizedTask> controlActor;
@@ -47,6 +47,10 @@ AutoCloseable {
         this.queues = actors.stream().collect(Collectors.toMap(Function.identity(), actor -> new LevelPrioritizedQueue(actor.getName() + "_queue", maxQueues)));
         this.idleActors = Sets.newHashSet(actors);
         this.controlActor = new TaskExecutor<TaskQueue.PrioritizedTask>(new TaskQueue.Prioritized(4), executor, "sorter");
+    }
+
+    public boolean shouldDelayShutdown() {
+        return this.controlActor.hasQueuedTasks() || this.queues.values().stream().anyMatch(LevelPrioritizedQueue::hasQueuedElement);
     }
 
     public static <T> Task<T> createTask(Function<MessageListener<Unit>, T> taskFunction, long pos, IntSupplier lastLevelUpdatedToProvider) {
@@ -80,7 +84,7 @@ AutoCloseable {
     }
 
     public MessageListener<UnblockingMessage> createUnblockingExecutor(MessageListener<Runnable> executor) {
-        return (MessageListener)this.controlActor.ask(yield -> new TaskQueue.PrioritizedTask(0, () -> yield.send(MessageListener.create("chunk priority sorter around " + executor.getName(), unblockingMessage -> this.removeChunk(executor, unblockingMessage.pos, unblockingMessage.callback, unblockingMessage.removeTask))))).join();
+        return (MessageListener)this.controlActor.ask(yield -> new TaskQueue.PrioritizedTask(0, () -> yield.send(MessageListener.create("chunk priority sorter around " + executor.getName(), message -> this.removeChunk(executor, message.pos, message.callback, message.removeTask))))).join();
     }
 
     @Override
@@ -123,10 +127,10 @@ AutoCloseable {
             if (stream == null) {
                 this.idleActors.add(actor);
             } else {
-                Util.combineSafe(stream.map(executeOrAddBlocking -> (CompletableFuture)executeOrAddBlocking.map(actor::ask, addBlocking -> {
+                CompletableFuture.allOf((CompletableFuture[])stream.map(executeOrAddBlocking -> (CompletableFuture)executeOrAddBlocking.map(actor::ask, addBlocking -> {
                     addBlocking.run();
                     return CompletableFuture.completedFuture(Unit.INSTANCE);
-                })).collect(Collectors.toList())).thenAccept(list -> this.enqueueExecution(queue, actor));
+                })).toArray(CompletableFuture[]::new)).thenAccept(void_ -> this.enqueueExecution(queue, actor));
             }
         }));
     }
@@ -141,7 +145,7 @@ AutoCloseable {
 
     @VisibleForTesting
     public String getDebugString() {
-        return this.queues.entrySet().stream().map(entry -> ((MessageListener)entry.getKey()).getName() + "=[" + ((LevelPrioritizedQueue)entry.getValue()).getBlockingChunks().stream().map(long_ -> long_ + ":" + new ChunkPos((long)long_)).collect(Collectors.joining(",")) + "]").collect(Collectors.joining(",")) + ", s=" + this.idleActors.size();
+        return this.queues.entrySet().stream().map(entry -> ((MessageListener)entry.getKey()).getName() + "=[" + ((LevelPrioritizedQueue)entry.getValue()).getBlockingChunks().stream().map(pos -> pos + ":" + new ChunkPos((long)pos)).collect(Collectors.joining(",")) + "]").collect(Collectors.joining(",")) + ", s=" + this.idleActors.size();
     }
 
     @Override

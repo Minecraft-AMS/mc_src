@@ -14,6 +14,7 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
@@ -44,6 +45,10 @@ public interface MultilineText {
         }
 
         @Override
+        public void fillBackground(MatrixStack matrices, int centerX, int centerY, int lineHeight, int padding, int color) {
+        }
+
+        @Override
         public int count() {
             return 0;
         }
@@ -61,7 +66,7 @@ public interface MultilineText {
         return MultilineText.create(renderer, (List)Arrays.stream(texts).map(Text::asOrderedText).map(text -> new Line((OrderedText)text, renderer.getWidth((OrderedText)text))).collect(ImmutableList.toImmutableList()));
     }
 
-    public static MultilineText method_35726(TextRenderer renderer, List<Text> texts) {
+    public static MultilineText createFromTexts(TextRenderer renderer, List<Text> texts) {
         return MultilineText.create(renderer, (List)texts.stream().map(Text::asOrderedText).map(text -> new Line((OrderedText)text, renderer.getWidth((OrderedText)text))).collect(ImmutableList.toImmutableList()));
     }
 
@@ -107,6 +112,14 @@ public interface MultilineText {
             }
 
             @Override
+            public void fillBackground(MatrixStack matrices, int centerX, int centerY, int lineHeight, int padding, int color) {
+                int i = lines.stream().mapToInt(line -> line.width).max().orElse(0);
+                if (i > 0) {
+                    DrawableHelper.fill(matrices, centerX - i / 2 - padding, centerY - padding, centerX + i / 2 + padding, centerY + lines.size() * lineHeight + padding, color);
+                }
+            }
+
+            @Override
             public int count() {
                 return lines.size();
             }
@@ -120,6 +133,8 @@ public interface MultilineText {
     public int drawWithShadow(MatrixStack var1, int var2, int var3, int var4, int var5);
 
     public int draw(MatrixStack var1, int var2, int var3, int var4, int var5);
+
+    public void fillBackground(MatrixStack var1, int var2, int var3, int var4, int var5, int var6);
 
     public int count();
 

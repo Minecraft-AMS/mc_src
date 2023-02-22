@@ -51,7 +51,7 @@ extends Goal {
             if (this.canDespawn && this.mob.getDespawnCounter() >= 100) {
                 return false;
             }
-            if (this.mob.getRandom().nextInt(this.chance) != 0) {
+            if (this.mob.getRandom().nextInt(WanderAroundGoal.toGoalTicks(this.chance)) != 0) {
                 return false;
             }
         }

@@ -109,7 +109,7 @@ implements BlockEntityProvider {
 
     @Nullable
     private ItemFrameEntity getAttachedItemFrame(World world, Direction facing, BlockPos pos) {
-        List<ItemFrameEntity> list = world.getEntitiesByClass(ItemFrameEntity.class, new Box(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), itemFrameEntity -> itemFrameEntity != null && itemFrameEntity.getHorizontalFacing() == facing);
+        List<ItemFrameEntity> list = world.getEntitiesByClass(ItemFrameEntity.class, new Box(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), itemFrame -> itemFrame != null && itemFrame.getHorizontalFacing() == facing);
         if (list.size() == 1) {
             return list.get(0);
         }
@@ -139,7 +139,7 @@ implements BlockEntityProvider {
         int n = j = blockEntity instanceof ComparatorBlockEntity ? ((ComparatorBlockEntity)blockEntity).getOutputSignal() : 0;
         if (i != j || state.get(POWERED).booleanValue() != this.hasPower(world, pos, state)) {
             TickPriority tickPriority = this.isTargetNotAligned(world, pos, state) ? TickPriority.HIGH : TickPriority.NORMAL;
-            world.getBlockTickScheduler().schedule(pos, this, 2, tickPriority);
+            world.createAndScheduleBlockTick(pos, this, 2, tickPriority);
         }
     }
 

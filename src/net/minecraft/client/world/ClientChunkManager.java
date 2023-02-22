@@ -2,47 +2,47 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.world;
 
-import java.io.File;
+import com.mojang.logging.LogUtils;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.packet.s2c.play.ChunkData;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.LightType;
-import net.minecraft.world.biome.source.BiomeArray;
+import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkManager;
-import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.EmptyChunk;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientChunkManager
 extends ChunkManager {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private final WorldChunk emptyChunk;
     private final LightingProvider lightingProvider;
     volatile ClientChunkMap chunks;
@@ -50,7 +50,7 @@ extends ChunkManager {
 
     public ClientChunkManager(ClientWorld world, int loadDistance) {
         this.world = world;
-        this.emptyChunk = new EmptyChunk(world, new ChunkPos(0, 0));
+        this.emptyChunk = new EmptyChunk(world, new ChunkPos(0, 0), world.getRegistryManager().get(Registry.BIOME_KEY).entryOf(BiomeKeys.PLAINS));
         this.lightingProvider = new LightingProvider(this, true, world.getDimension().hasSkyLight());
         this.chunks = new ClientChunkMap(ClientChunkManager.getChunkMapRadius(loadDistance));
     }
@@ -98,7 +98,7 @@ extends ChunkManager {
     }
 
     @Nullable
-    public WorldChunk loadChunkFromPacket(int x, int z, BiomeArray biomes, PacketByteBuf buf, NbtCompound nbt, BitSet bitSet) {
+    public WorldChunk loadChunkFromPacket(int x, int z, PacketByteBuf buf, NbtCompound nbt, Consumer<ChunkData.BlockEntityVisitor> consumer) {
         if (!this.chunks.isInRadius(x, z)) {
             LOGGER.warn("Ignoring chunk since it's not in the view range: {}, {}", (Object)x, (Object)z);
             return null;
@@ -107,26 +107,18 @@ extends ChunkManager {
         WorldChunk worldChunk = this.chunks.chunks.get(i);
         ChunkPos chunkPos = new ChunkPos(x, z);
         if (!ClientChunkManager.positionEquals(worldChunk, x, z)) {
-            worldChunk = new WorldChunk(this.world, chunkPos, biomes);
-            worldChunk.loadFromPacket(biomes, buf, nbt, bitSet);
+            worldChunk = new WorldChunk(this.world, chunkPos);
+            worldChunk.loadFromPacket(buf, nbt, consumer);
             this.chunks.set(i, worldChunk);
         } else {
-            worldChunk.loadFromPacket(biomes, buf, nbt, bitSet);
-        }
-        ChunkSection[] chunkSections = worldChunk.getSectionArray();
-        LightingProvider lightingProvider = this.getLightingProvider();
-        lightingProvider.setColumnEnabled(chunkPos, true);
-        for (int j = 0; j < chunkSections.length; ++j) {
-            ChunkSection chunkSection = chunkSections[j];
-            int k = this.world.sectionIndexToCoord(j);
-            lightingProvider.setSectionStatus(ChunkSectionPos.from(x, k, z), ChunkSection.isEmpty(chunkSection));
+            worldChunk.loadFromPacket(buf, nbt, consumer);
         }
         this.world.resetChunkColor(chunkPos);
         return worldChunk;
     }
 
     @Override
-    public void tick(BooleanSupplier booleanSupplier) {
+    public void tick(BooleanSupplier shouldKeepTicking, boolean tickChunks) {
     }
 
     public void setChunkMapCenter(int x, int z) {
@@ -225,7 +217,7 @@ extends ChunkManager {
         }
 
         private void writePositions(String fileName) {
-            try (FileOutputStream fileOutputStream = new FileOutputStream(new File(fileName));){
+            try (FileOutputStream fileOutputStream = new FileOutputStream(fileName);){
                 int i = ClientChunkManager.this.chunks.radius;
                 for (int j = this.centerChunkZ - i; j <= this.centerChunkZ + i; ++j) {
                     for (int k = this.centerChunkX - i; k <= this.centerChunkX + i; ++k) {
@@ -237,7 +229,7 @@ extends ChunkManager {
                 }
             }
             catch (IOException iOException) {
-                LOGGER.error((Object)iOException);
+                LOGGER.error("Failed to dump chunks to file {}", (Object)fileName, (Object)iOException);
             }
         }
     }

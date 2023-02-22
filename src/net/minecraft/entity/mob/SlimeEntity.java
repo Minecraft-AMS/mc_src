@@ -7,8 +7,6 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
@@ -49,7 +47,7 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.biome.BiomeKeys;
-import net.minecraft.world.gen.ChunkRandom;
+import net.minecraft.world.gen.random.ChunkRandom;
 import org.jetbrains.annotations.Nullable;
 
 public class SlimeEntity
@@ -282,7 +280,7 @@ implements Monster {
     public static boolean canSpawn(EntityType<SlimeEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
         if (world.getDifficulty() != Difficulty.PEACEFUL) {
             boolean bl;
-            if (Objects.equals(world.getBiomeKey(pos), Optional.of(BiomeKeys.SWAMP)) && pos.getY() > 50 && pos.getY() < 70 && random.nextFloat() < 0.5f && random.nextFloat() < world.getMoonSize() && world.getLightLevel(pos) <= random.nextInt(8)) {
+            if (world.getBiome(pos).matchesKey(BiomeKeys.SWAMP) && pos.getY() > 50 && pos.getY() < 70 && random.nextFloat() < 0.5f && random.nextFloat() < world.getMoonSize() && world.getLightLevel(pos) <= random.nextInt(8)) {
                 return SlimeEntity.canMobSpawn(type, world, spawnReason, pos, random);
             }
             if (!(world instanceof StructureWorldAccess)) {
@@ -303,7 +301,7 @@ implements Monster {
     }
 
     @Override
-    public int getLookPitchSpeed() {
+    public int getMaxLookPitchChange() {
         return 0;
     }
 
@@ -415,6 +413,11 @@ implements Monster {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
             if (this.slime.getRandom().nextFloat() < 0.8f) {
                 this.slime.getJumpControl().setActive();
@@ -447,7 +450,7 @@ implements Monster {
 
         @Override
         public void start() {
-            this.ticksLeft = 300;
+            this.ticksLeft = FaceTowardTargetGoal.toGoalTicks(300);
             super.start();
         }
 
@@ -464,8 +467,16 @@ implements Monster {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
-            this.slime.lookAtEntity(this.slime.getTarget(), 10.0f, 10.0f);
+            LivingEntity livingEntity = this.slime.getTarget();
+            if (livingEntity != null) {
+                this.slime.lookAtEntity(livingEntity, 10.0f, 10.0f);
+            }
             ((SlimeMoveControl)this.slime.getMoveControl()).look(this.slime.getYaw(), this.slime.canAttack());
         }
     }
@@ -489,7 +500,7 @@ implements Monster {
         @Override
         public void tick() {
             if (--this.timer <= 0) {
-                this.timer = 40 + this.slime.getRandom().nextInt(60);
+                this.timer = this.getTickCount(40 + this.slime.getRandom().nextInt(60));
                 this.targetYaw = this.slime.getRandom().nextInt(360);
             }
             ((SlimeMoveControl)this.slime.getMoveControl()).look(this.targetYaw, false);

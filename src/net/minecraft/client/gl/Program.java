@@ -3,11 +3,11 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gl;
 
@@ -15,6 +15,7 @@ import com.google.common.collect.Maps;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
@@ -23,12 +24,11 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.GLImportProcessor;
 import net.minecraft.client.gl.GlShader;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class Program {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_32037 = 32768;
     private final Type shaderType;
     private final String name;
@@ -41,7 +41,7 @@ public class Program {
     }
 
     public void attachTo(GlShader program) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GlStateManager.glAttachShader(program.getProgramRef(), this.getShaderRef());
     }
 
@@ -49,7 +49,7 @@ public class Program {
         if (this.shaderRef == -1) {
             return;
         }
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GlStateManager.glDeleteShader(this.shaderRef);
         this.shaderRef = -1;
         this.shaderType.getProgramCache().remove(this.name);
@@ -60,7 +60,7 @@ public class Program {
     }
 
     public static Program createFromResource(Type type, String name, InputStream stream, String domain, GLImportProcessor loader) throws IOException {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         int i = Program.loadProgram(type, name, stream, domain, loader);
         Program program = new Program(type, i, name);
         type.getProgramCache().put(name, program);

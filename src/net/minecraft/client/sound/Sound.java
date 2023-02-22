@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.sound;
 
@@ -12,6 +13,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.SoundContainer;
 import net.minecraft.client.sound.SoundSystem;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class Sound
@@ -114,9 +116,10 @@ implements SoundContainer<Sound> {
             this.name = name;
         }
 
-        public static RegistrationType getByName(String string) {
+        @Nullable
+        public static RegistrationType getByName(String name) {
             for (RegistrationType registrationType : RegistrationType.values()) {
-                if (!registrationType.name.equals(string)) continue;
+                if (!registrationType.name.equals(name)) continue;
                 return registrationType;
             }
             return null;

@@ -7,13 +7,13 @@
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.Keyable
  *  com.mojang.serialization.MapCodec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.biome;
 
@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Keyable;
 import com.mojang.serialization.MapCodec;
@@ -37,26 +38,23 @@ import net.minecraft.util.collection.Pool;
 import net.minecraft.util.collection.Weight;
 import net.minecraft.util.collection.Weighted;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class SpawnSettings {
-    public static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final float field_30983 = 0.1f;
     public static final Pool<SpawnEntry> EMPTY_ENTRY_POOL = Pool.empty();
-    public static final SpawnSettings INSTANCE = new SpawnSettings(0.1f, (Map)Stream.of(SpawnGroup.values()).collect(ImmutableMap.toImmutableMap(spawnGroup -> spawnGroup, spawnGroup -> EMPTY_ENTRY_POOL)), (Map<EntityType<?>, SpawnDensity>)ImmutableMap.of(), false);
-    public static final MapCodec<SpawnSettings> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)Codec.floatRange((float)0.0f, (float)0.9999999f).optionalFieldOf("creature_spawn_probability", (Object)Float.valueOf(0.1f)).forGetter(spawnSettings -> Float.valueOf(spawnSettings.creatureSpawnProbability)), (App)Codec.simpleMap(SpawnGroup.CODEC, (Codec)Pool.createCodec(SpawnEntry.CODEC).promotePartial(Util.addPrefix("Spawn data: ", arg_0 -> ((Logger)LOGGER).error(arg_0))), (Keyable)StringIdentifiable.toKeyable(SpawnGroup.values())).fieldOf("spawners").forGetter(spawnSettings -> spawnSettings.spawners), (App)Codec.simpleMap(Registry.ENTITY_TYPE, SpawnDensity.CODEC, Registry.ENTITY_TYPE).fieldOf("spawn_costs").forGetter(spawnSettings -> spawnSettings.spawnCosts), (App)Codec.BOOL.fieldOf("player_spawn_friendly").orElse((Object)false).forGetter(SpawnSettings::isPlayerSpawnFriendly)).apply((Applicative)instance, SpawnSettings::new));
+    public static final SpawnSettings INSTANCE = new Builder().build();
+    public static final MapCodec<SpawnSettings> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)Codec.floatRange((float)0.0f, (float)0.9999999f).optionalFieldOf("creature_spawn_probability", (Object)Float.valueOf(0.1f)).forGetter(spawnSettings -> Float.valueOf(spawnSettings.creatureSpawnProbability)), (App)Codec.simpleMap(SpawnGroup.CODEC, (Codec)Pool.createCodec(SpawnEntry.CODEC).promotePartial(Util.addPrefix("Spawn data: ", arg_0 -> ((Logger)LOGGER).error(arg_0))), (Keyable)StringIdentifiable.toKeyable(SpawnGroup.values())).fieldOf("spawners").forGetter(spawnSettings -> spawnSettings.spawners), (App)Codec.simpleMap(Registry.ENTITY_TYPE.getCodec(), SpawnDensity.CODEC, Registry.ENTITY_TYPE).fieldOf("spawn_costs").forGetter(spawnSettings -> spawnSettings.spawnCosts)).apply((Applicative)instance, SpawnSettings::new));
     private final float creatureSpawnProbability;
     private final Map<SpawnGroup, Pool<SpawnEntry>> spawners;
     private final Map<EntityType<?>, SpawnDensity> spawnCosts;
-    private final boolean playerSpawnFriendly;
 
-    SpawnSettings(float creatureSpawnProbability, Map<SpawnGroup, Pool<SpawnEntry>> spawners, Map<EntityType<?>, SpawnDensity> spawnCosts, boolean playerSpawnFriendly) {
+    SpawnSettings(float creatureSpawnProbability, Map<SpawnGroup, Pool<SpawnEntry>> spawners, Map<EntityType<?>, SpawnDensity> spawnCosts) {
         this.creatureSpawnProbability = creatureSpawnProbability;
         this.spawners = ImmutableMap.copyOf(spawners);
         this.spawnCosts = ImmutableMap.copyOf(spawnCosts);
-        this.playerSpawnFriendly = playerSpawnFriendly;
     }
 
     public Pool<SpawnEntry> getSpawnEntries(SpawnGroup spawnGroup) {
@@ -70,10 +68,6 @@ public class SpawnSettings {
 
     public float getCreatureSpawnProbability() {
         return this.creatureSpawnProbability;
-    }
-
-    public boolean isPlayerSpawnFriendly() {
-        return this.playerSpawnFriendly;
     }
 
     public static class SpawnDensity {
@@ -97,7 +91,7 @@ public class SpawnSettings {
 
     public static class SpawnEntry
     extends Weighted.Absent {
-        public static final Codec<SpawnEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.ENTITY_TYPE.fieldOf("type").forGetter(spawnEntry -> spawnEntry.type), (App)Weight.CODEC.fieldOf("weight").forGetter(Weighted.Absent::getWeight), (App)Codec.INT.fieldOf("minCount").forGetter(spawnEntry -> spawnEntry.minGroupSize), (App)Codec.INT.fieldOf("maxCount").forGetter(spawnEntry -> spawnEntry.maxGroupSize)).apply((Applicative)instance, SpawnEntry::new));
+        public static final Codec<SpawnEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.ENTITY_TYPE.getCodec().fieldOf("type").forGetter(spawnEntry -> spawnEntry.type), (App)Weight.CODEC.fieldOf("weight").forGetter(Weighted.Absent::getWeight), (App)Codec.INT.fieldOf("minCount").forGetter(spawnEntry -> spawnEntry.minGroupSize), (App)Codec.INT.fieldOf("maxCount").forGetter(spawnEntry -> spawnEntry.maxGroupSize)).apply((Applicative)instance, SpawnEntry::new));
         public final EntityType<?> type;
         public final int minGroupSize;
         public final int maxGroupSize;
@@ -122,7 +116,6 @@ public class SpawnSettings {
         private final Map<SpawnGroup, List<SpawnEntry>> spawners = (Map)Stream.of(SpawnGroup.values()).collect(ImmutableMap.toImmutableMap(spawnGroup -> spawnGroup, spawnGroup -> Lists.newArrayList()));
         private final Map<EntityType<?>, SpawnDensity> spawnCosts = Maps.newLinkedHashMap();
         private float creatureSpawnProbability = 0.1f;
-        private boolean playerSpawnFriendly;
 
         public Builder spawn(SpawnGroup spawnGroup, SpawnEntry spawnEntry) {
             this.spawners.get(spawnGroup).add(spawnEntry);
@@ -139,13 +132,8 @@ public class SpawnSettings {
             return this;
         }
 
-        public Builder playerSpawnFriendly() {
-            this.playerSpawnFriendly = true;
-            return this;
-        }
-
         public SpawnSettings build() {
-            return new SpawnSettings(this.creatureSpawnProbability, (Map)this.spawners.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> Pool.of((List)entry.getValue()))), (Map<EntityType<?>, SpawnDensity>)ImmutableMap.copyOf(this.spawnCosts), this.playerSpawnFriendly);
+            return new SpawnSettings(this.creatureSpawnProbability, (Map)this.spawners.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> Pool.of((List)entry.getValue()))), (Map<EntityType<?>, SpawnDensity>)ImmutableMap.copyOf(this.spawnCosts));
         }
     }
 }

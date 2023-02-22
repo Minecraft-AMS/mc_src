@@ -7,6 +7,7 @@ import java.io.IOException;
 import net.minecraft.resource.Resource;
 import net.minecraft.util.Identifier;
 
+@FunctionalInterface
 public interface ResourceFactory {
     public Resource getResource(Identifier var1) throws IOException;
 }

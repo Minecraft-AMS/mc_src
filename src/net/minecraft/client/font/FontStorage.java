@@ -12,6 +12,7 @@
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.font;
 
@@ -39,12 +40,15 @@ import net.minecraft.client.font.WhiteRectangleGlyph;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class FontStorage
 implements AutoCloseable {
     private static final EmptyGlyphRenderer EMPTY_GLYPH_RENDERER = new EmptyGlyphRenderer();
     private static final Glyph SPACE = () -> 4.0f;
+    private static final Glyph ZERO_WIDTH_NON_JOINER = () -> 0.0f;
+    private static final int ZERO_WIDTH_NON_JOINER_CODE_POINT = 8204;
     private static final Random RANDOM = new Random();
     private final TextureManager textureManager;
     private final Identifier id;
@@ -76,7 +80,10 @@ implements AutoCloseable {
         HashSet set = Sets.newHashSet();
         intSet.forEach(codePoint -> {
             for (Font font : fonts) {
-                Glyph glyph = codePoint == 32 ? SPACE : font.getGlyph(codePoint);
+                Glyph glyph = this.getEmptyGlyph(codePoint);
+                if (glyph == null) {
+                    glyph = font.getGlyph(codePoint);
+                }
                 if (glyph == null) continue;
                 set.add(font);
                 if (glyph == BlankGlyph.INSTANCE) break;
@@ -107,8 +114,20 @@ implements AutoCloseable {
         this.glyphAtlases.clear();
     }
 
+    @Nullable
+    private Glyph getEmptyGlyph(int codePoint) {
+        return switch (codePoint) {
+            case 32 -> SPACE;
+            case 8204 -> ZERO_WIDTH_NON_JOINER;
+            default -> null;
+        };
+    }
+
     public Glyph getGlyph(int codePoint2) {
-        return (Glyph)this.glyphCache.computeIfAbsent(codePoint2, codePoint -> codePoint == 32 ? SPACE : this.getRenderableGlyph(codePoint));
+        return (Glyph)this.glyphCache.computeIfAbsent(codePoint2, codePoint -> {
+            Glyph glyph = this.getEmptyGlyph(codePoint);
+            return glyph == null ? this.getRenderableGlyph(codePoint) : glyph;
+        });
     }
 
     private RenderableGlyph getRenderableGlyph(int codePoint) {
@@ -120,8 +139,11 @@ implements AutoCloseable {
         return BlankGlyph.INSTANCE;
     }
 
-    public GlyphRenderer getGlyphRenderer(int i2) {
-        return (GlyphRenderer)this.glyphRendererCache.computeIfAbsent(i2, i -> i == 32 ? EMPTY_GLYPH_RENDERER : this.getGlyphRenderer(this.getRenderableGlyph(i)));
+    public GlyphRenderer getGlyphRenderer(int codePoint2) {
+        return (GlyphRenderer)this.glyphRendererCache.computeIfAbsent(codePoint2, codePoint -> switch (codePoint) {
+            case 32, 8204 -> EMPTY_GLYPH_RENDERER;
+            default -> this.getGlyphRenderer(this.getRenderableGlyph(codePoint));
+        });
     }
 
     private GlyphRenderer getGlyphRenderer(RenderableGlyph c) {

@@ -9,10 +9,10 @@ package net.minecraft.data.client;
 import com.google.gson.JsonElement;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-import net.minecraft.data.client.model.Model;
-import net.minecraft.data.client.model.ModelIds;
-import net.minecraft.data.client.model.Models;
-import net.minecraft.data.client.model.Texture;
+import net.minecraft.data.client.Model;
+import net.minecraft.data.client.ModelIds;
+import net.minecraft.data.client.Models;
+import net.minecraft.data.client.TextureMap;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.util.Identifier;
@@ -25,15 +25,15 @@ public class ItemModelGenerator {
     }
 
     private void register(Item item, Model model) {
-        model.upload(ModelIds.getItemModelId(item), Texture.layer0(item), this.writer);
+        model.upload(ModelIds.getItemModelId(item), TextureMap.layer0(item), this.writer);
     }
 
     private void register(Item item, String suffix, Model model) {
-        model.upload(ModelIds.getItemSubModelId(item, suffix), Texture.layer0(Texture.getSubId(item, suffix)), this.writer);
+        model.upload(ModelIds.getItemSubModelId(item, suffix), TextureMap.layer0(TextureMap.getSubId(item, suffix)), this.writer);
     }
 
     private void register(Item item, Item texture, Model model) {
-        model.upload(ModelIds.getItemModelId(item), Texture.layer0(texture), this.writer);
+        model.upload(ModelIds.getItemModelId(item), TextureMap.layer0(texture), this.writer);
     }
 
     public void register() {
@@ -196,6 +196,7 @@ public class ItemModelGenerator {
         this.register(Items.MUSIC_DISC_STRAD, Models.GENERATED);
         this.register(Items.MUSIC_DISC_WAIT, Models.GENERATED);
         this.register(Items.MUSIC_DISC_WARD, Models.GENERATED);
+        this.register(Items.MUSIC_DISC_OTHERSIDE, Models.GENERATED);
         this.register(Items.MUTTON, Models.GENERATED);
         this.register(Items.NAME_TAG, Models.GENERATED);
         this.register(Items.NAUTILUS_SHELL, Models.GENERATED);

@@ -10,12 +10,13 @@ import java.util.Objects;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtString
 implements NbtElement {
-    private static final int field_33241 = 288;
-    public static final NbtType<NbtString> TYPE = new NbtType<NbtString>(){
+    private static final int SIZE = 288;
+    public static final NbtType<NbtString> TYPE = new NbtType.OfVariableSize<NbtString>(){
 
         @Override
         public NbtString read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
@@ -23,6 +24,16 @@ implements NbtElement {
             String string = dataInput.readUTF();
             nbtTagSizeTracker.add(16 * string.length());
             return NbtString.of(string);
+        }
+
+        @Override
+        public NbtScanner.Result doAccept(DataInput input, NbtScanner visitor) throws IOException {
+            return visitor.visitString(input.readUTF());
+        }
+
+        @Override
+        public void skip(DataInput input) throws IOException {
+            NbtString.skip(input);
         }
 
         @Override
@@ -46,11 +57,15 @@ implements NbtElement {
         }
     };
     private static final NbtString EMPTY = new NbtString("");
-    private static final char field_33242 = '\"';
-    private static final char field_33243 = '\'';
-    private static final char field_33244 = '\\';
-    private static final char field_33245 = '\u0000';
+    private static final char DOUBLE_QUOTE = '\"';
+    private static final char SINGLE_QUOTE = '\'';
+    private static final char BACKSLASH = '\\';
+    private static final char NULL = '\u0000';
     private final String value;
+
+    public static void skip(DataInput input) throws IOException {
+        input.skipBytes(input.readUnsignedShort());
+    }
 
     private NbtString(String value) {
         Objects.requireNonNull(value, "Null string not allowed");
@@ -132,6 +147,11 @@ implements NbtElement {
         stringBuilder.setCharAt(0, (char)c);
         stringBuilder.append((char)c);
         return stringBuilder.toString();
+    }
+
+    @Override
+    public NbtScanner.Result doAccept(NbtScanner visitor) {
+        return visitor.visitString(this.value);
     }
 
     @Override

@@ -23,6 +23,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.ai.brain.sensor.SensorType;
@@ -114,12 +115,12 @@ Hoglin {
     }
 
     private Optional<? extends LivingEntity> getHoglinTarget() {
-        return this.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse((List<LivingEntity>)ImmutableList.of()).stream().filter(this::shouldAttack).findFirst();
+        return this.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse(LivingTargetCache.empty()).findFirst(this::shouldAttack);
     }
 
-    private boolean shouldAttack(LivingEntity livingEntity) {
-        EntityType<?> entityType = livingEntity.getType();
-        return entityType != EntityType.ZOGLIN && entityType != EntityType.CREEPER && Sensor.testAttackableTargetPredicate(this, livingEntity);
+    private boolean shouldAttack(LivingEntity entity) {
+        EntityType<?> entityType = entity.getType();
+        return entityType != EntityType.ZOGLIN && entityType != EntityType.CREEPER && Sensor.testAttackableTargetPredicate(this, entity);
     }
 
     @Override
@@ -197,7 +198,7 @@ Hoglin {
         return super.getBrain();
     }
 
-    protected void method_26931() {
+    protected void tickBrain() {
         Activity activity = this.brain.getFirstPossibleNonCoreActivity().orElse(null);
         this.brain.resetPossibleActivities((List<Activity>)ImmutableList.of((Object)Activity.FIGHT, (Object)Activity.IDLE));
         Activity activity2 = this.brain.getFirstPossibleNonCoreActivity().orElse(null);
@@ -212,7 +213,7 @@ Hoglin {
         this.world.getProfiler().push("zoglinBrain");
         this.getBrain().tick((ServerWorld)this.world, this);
         this.world.getProfiler().pop();
-        this.method_26931();
+        this.tickBrain();
     }
 
     @Override

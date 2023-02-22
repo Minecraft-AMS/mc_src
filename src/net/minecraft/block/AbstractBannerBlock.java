@@ -11,6 +11,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.DyeColor;
@@ -40,9 +41,10 @@ extends BlockWithEntity {
 
     @Override
     public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
-        BlockEntity blockEntity;
-        if (itemStack.hasCustomName() && (blockEntity = world.getBlockEntity(pos)) instanceof BannerBlockEntity) {
-            ((BannerBlockEntity)blockEntity).setCustomName(itemStack.getName());
+        if (world.isClient) {
+            world.getBlockEntity(pos, BlockEntityType.BANNER).ifPresent(blockEntity -> blockEntity.readFrom(itemStack));
+        } else if (itemStack.hasCustomName()) {
+            world.getBlockEntity(pos, BlockEntityType.BANNER).ifPresent(blockEntity -> blockEntity.setCustomName(itemStack.getName()));
         }
     }
 

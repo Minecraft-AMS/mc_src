@@ -6,14 +6,14 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.stb.STBTTFontinfo
  *  org.lwjgl.stb.STBTruetype
  *  org.lwjgl.system.MemoryUtil
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.font;
 
@@ -22,6 +22,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import net.fabricmc.api.EnvType;
@@ -33,17 +34,16 @@ import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.stb.STBTTFontinfo;
 import org.lwjgl.stb.STBTruetype;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class TrueTypeFontLoader
 implements FontLoader {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Identifier filename;
     private final float size;
     private final float oversample;

@@ -4,15 +4,16 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.resource.language;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,13 +30,12 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class TranslationStorage
 extends Language {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<String, String> translations;
     private final boolean rightToLeft;
 
@@ -58,7 +58,7 @@ extends Language {
                 catch (FileNotFoundException identifier) {
                 }
                 catch (Exception exception) {
-                    LOGGER.warn("Skipped language file: {}:{} ({})", (Object)string2, (Object)string, (Object)exception.toString());
+                    LOGGER.warn("Skipped language file: {}:{} ({})", new Object[]{string2, string, exception.toString()});
                 }
             }
         }

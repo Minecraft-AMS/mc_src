@@ -2,136 +2,99 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Suppliers
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
- *  com.mojang.datafixers.DataFixUtils
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.Keyable
  *  com.mojang.serialization.MapCodec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.biome;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Keyable;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
-import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.gen.GenerationStep;
-import net.minecraft.world.gen.carver.CarverConfig;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.StructureFeature;
-import net.minecraft.world.gen.surfacebuilder.ConfiguredSurfaceBuilder;
-import net.minecraft.world.gen.surfacebuilder.ConfiguredSurfaceBuilders;
-import net.minecraft.world.gen.surfacebuilder.SurfaceConfig;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.world.gen.feature.PlacedFeature;
+import org.slf4j.Logger;
 
 public class GenerationSettings {
-    public static final Logger LOGGER = LogManager.getLogger();
-    public static final GenerationSettings INSTANCE = new GenerationSettings(() -> ConfiguredSurfaceBuilders.NOPE, (Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>>)ImmutableMap.of(), (List<List<Supplier<ConfiguredFeature<?, ?>>>>)ImmutableList.of(), (List<Supplier<ConfiguredStructureFeature<?, ?>>>)ImmutableList.of());
-    public static final MapCodec<GenerationSettings> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)ConfiguredSurfaceBuilder.REGISTRY_CODEC.fieldOf("surface_builder").flatXmap(Codecs.createPresentValueChecker(), Codecs.createPresentValueChecker()).forGetter(generationSettings -> generationSettings.surfaceBuilder), (App)Codec.simpleMap(GenerationStep.Carver.CODEC, (Codec)ConfiguredCarver.LIST_CODEC.promotePartial(Util.addPrefix("Carver: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).flatXmap(Codecs.createPresentValuesChecker(), Codecs.createPresentValuesChecker()), (Keyable)StringIdentifiable.toKeyable(GenerationStep.Carver.values())).fieldOf("carvers").forGetter(generationSettings -> generationSettings.carvers), (App)ConfiguredFeature.field_26756.promotePartial(Util.addPrefix("Feature: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).flatXmap(Codecs.createPresentValuesChecker(), Codecs.createPresentValuesChecker()).listOf().fieldOf("features").forGetter(generationSettings -> generationSettings.features), (App)ConfiguredStructureFeature.REGISTRY_ELEMENT_CODEC.promotePartial(Util.addPrefix("Structure start: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).fieldOf("starts").flatXmap(Codecs.createPresentValuesChecker(), Codecs.createPresentValuesChecker()).forGetter(generationSettings -> generationSettings.structureFeatures)).apply((Applicative)instance, GenerationSettings::new));
-    private final Supplier<ConfiguredSurfaceBuilder<?>> surfaceBuilder;
-    private final Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>> carvers;
-    private final List<List<Supplier<ConfiguredFeature<?, ?>>>> features;
-    private final List<Supplier<ConfiguredStructureFeature<?, ?>>> structureFeatures;
-    private final List<ConfiguredFeature<?, ?>> flowerFeatures;
+    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final GenerationSettings INSTANCE = new GenerationSettings((Map<GenerationStep.Carver, RegistryEntryList<ConfiguredCarver<?>>>)ImmutableMap.of(), (List<RegistryEntryList<PlacedFeature>>)ImmutableList.of());
+    public static final MapCodec<GenerationSettings> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)Codec.simpleMap(GenerationStep.Carver.CODEC, (Codec)ConfiguredCarver.LIST_CODEC.promotePartial(Util.addPrefix("Carver: ", arg_0 -> ((Logger)LOGGER).error(arg_0))), (Keyable)StringIdentifiable.toKeyable(GenerationStep.Carver.values())).fieldOf("carvers").forGetter(generationSettings -> generationSettings.carvers), (App)PlacedFeature.LISTS_CODEC.promotePartial(Util.addPrefix("Features: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).fieldOf("features").forGetter(generationSettings -> generationSettings.features)).apply((Applicative)instance, GenerationSettings::new));
+    private final Map<GenerationStep.Carver, RegistryEntryList<ConfiguredCarver<?>>> carvers;
+    private final List<RegistryEntryList<PlacedFeature>> features;
+    private final Supplier<List<ConfiguredFeature<?, ?>>> flowerFeatures;
+    private final Supplier<Set<PlacedFeature>> allowedFeatures;
 
-    GenerationSettings(Supplier<ConfiguredSurfaceBuilder<?>> surfaceBuilder, Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>> carvers, List<List<Supplier<ConfiguredFeature<?, ?>>>> features, List<Supplier<ConfiguredStructureFeature<?, ?>>> structureFeatures) {
-        this.surfaceBuilder = surfaceBuilder;
+    GenerationSettings(Map<GenerationStep.Carver, RegistryEntryList<ConfiguredCarver<?>>> carvers, List<RegistryEntryList<PlacedFeature>> features) {
         this.carvers = carvers;
         this.features = features;
-        this.structureFeatures = structureFeatures;
-        this.flowerFeatures = (List)features.stream().flatMap(Collection::stream).map(Supplier::get).flatMap(ConfiguredFeature::getDecoratedFeatures).filter(configuredFeature -> configuredFeature.feature == Feature.FLOWER).collect(ImmutableList.toImmutableList());
+        this.flowerFeatures = Suppliers.memoize(() -> (List)features.stream().flatMap(RegistryEntryList::stream).map(RegistryEntry::value).flatMap(PlacedFeature::getDecoratedFeatures).filter(configuredFeature -> configuredFeature.feature() == Feature.FLOWER).collect(ImmutableList.toImmutableList()));
+        this.allowedFeatures = Suppliers.memoize(() -> features.stream().flatMap(RegistryEntryList::stream).map(RegistryEntry::value).collect(Collectors.toSet()));
     }
 
-    public List<Supplier<ConfiguredCarver<?>>> getCarversForStep(GenerationStep.Carver carverStep) {
-        return (List)this.carvers.getOrDefault(carverStep, (List<Supplier<ConfiguredCarver<?>>>)ImmutableList.of());
-    }
-
-    public boolean hasStructureFeature(StructureFeature<?> structureFeature) {
-        return this.structureFeatures.stream().anyMatch(supplier -> ((ConfiguredStructureFeature)supplier.get()).feature == structureFeature);
-    }
-
-    public Collection<Supplier<ConfiguredStructureFeature<?, ?>>> getStructureFeatures() {
-        return this.structureFeatures;
-    }
-
-    public ConfiguredStructureFeature<?, ?> method_30978(ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        return (ConfiguredStructureFeature)DataFixUtils.orElse(this.structureFeatures.stream().map(Supplier::get).filter(configuredStructureFeature2 -> configuredStructureFeature2.feature == configuredStructureFeature.feature).findAny(), configuredStructureFeature);
+    public Iterable<RegistryEntry<ConfiguredCarver<?>>> getCarversForStep(GenerationStep.Carver carverStep) {
+        return Objects.requireNonNullElseGet((Iterable)this.carvers.get(carverStep), List::of);
     }
 
     public List<ConfiguredFeature<?, ?>> getFlowerFeatures() {
-        return this.flowerFeatures;
+        return this.flowerFeatures.get();
     }
 
-    public List<List<Supplier<ConfiguredFeature<?, ?>>>> getFeatures() {
+    public List<RegistryEntryList<PlacedFeature>> getFeatures() {
         return this.features;
     }
 
-    public Supplier<ConfiguredSurfaceBuilder<?>> getSurfaceBuilder() {
-        return this.surfaceBuilder;
-    }
-
-    public SurfaceConfig getSurfaceConfig() {
-        return this.surfaceBuilder.get().getConfig();
+    public boolean isFeatureAllowed(PlacedFeature feature) {
+        return this.allowedFeatures.get().contains(feature);
     }
 
     public static class Builder {
-        private Optional<Supplier<ConfiguredSurfaceBuilder<?>>> surfaceBuilder = Optional.empty();
-        private final Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>> carvers = Maps.newLinkedHashMap();
-        private final List<List<Supplier<ConfiguredFeature<?, ?>>>> features = Lists.newArrayList();
-        private final List<Supplier<ConfiguredStructureFeature<?, ?>>> structureFeatures = Lists.newArrayList();
+        private final Map<GenerationStep.Carver, List<RegistryEntry<ConfiguredCarver<?>>>> carvers = Maps.newLinkedHashMap();
+        private final List<List<RegistryEntry<PlacedFeature>>> features = Lists.newArrayList();
 
-        public Builder surfaceBuilder(ConfiguredSurfaceBuilder<?> surfaceBuilder) {
-            return this.surfaceBuilder(() -> surfaceBuilder);
+        public Builder feature(GenerationStep.Feature featureStep, RegistryEntry<PlacedFeature> feature) {
+            return this.feature(featureStep.ordinal(), feature);
         }
 
-        public Builder surfaceBuilder(Supplier<ConfiguredSurfaceBuilder<?>> surfaceBuilderSupplier) {
-            this.surfaceBuilder = Optional.of(surfaceBuilderSupplier);
-            return this;
-        }
-
-        public Builder feature(GenerationStep.Feature featureStep, ConfiguredFeature<?, ?> feature) {
-            return this.feature(featureStep.ordinal(), () -> feature);
-        }
-
-        public Builder feature(int stepIndex, Supplier<ConfiguredFeature<?, ?>> featureSupplier) {
+        public Builder feature(int stepIndex, RegistryEntry<PlacedFeature> featureEntry) {
             this.addFeatureStep(stepIndex);
-            this.features.get(stepIndex).add(featureSupplier);
+            this.features.get(stepIndex).add(featureEntry);
             return this;
         }
 
-        public <C extends CarverConfig> Builder carver(GenerationStep.Carver carverStep, ConfiguredCarver<C> carver2) {
-            this.carvers.computeIfAbsent(carverStep, carver -> Lists.newArrayList()).add(() -> carver2);
-            return this;
-        }
-
-        public Builder structureFeature(ConfiguredStructureFeature<?, ?> structureFeature) {
-            this.structureFeatures.add(() -> structureFeature);
+        public Builder carver(GenerationStep.Carver carverStep, RegistryEntry<? extends ConfiguredCarver<?>> carver2) {
+            this.carvers.computeIfAbsent(carverStep, carver -> Lists.newArrayList()).add(RegistryEntry.upcast(carver2));
             return this;
         }
 
@@ -142,7 +105,7 @@ public class GenerationSettings {
         }
 
         public GenerationSettings build() {
-            return new GenerationSettings(this.surfaceBuilder.orElseThrow(() -> new IllegalStateException("Missing surface builder")), (Map)this.carvers.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> ImmutableList.copyOf((Collection)((Collection)entry.getValue())))), (List)this.features.stream().map(ImmutableList::copyOf).collect(ImmutableList.toImmutableList()), (List<Supplier<ConfiguredStructureFeature<?, ?>>>)ImmutableList.copyOf(this.structureFeatures));
+            return new GenerationSettings((Map)this.carvers.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> RegistryEntryList.of((List)entry.getValue()))), (List)this.features.stream().map(RegistryEntryList::of).collect(ImmutableList.toImmutableList()));
         }
     }
 }

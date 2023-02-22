@@ -19,6 +19,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
+import net.minecraft.tag.ConfiguredStructureFeatureTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
@@ -27,7 +28,6 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
-import net.minecraft.world.gen.feature.StructureFeature;
 
 public class EnderEyeItem
 extends Item {
@@ -67,6 +67,7 @@ extends Item {
 
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
+        ServerWorld serverWorld;
         BlockPos blockPos;
         ItemStack itemStack = user.getStackInHand(hand);
         BlockHitResult hitResult = EnderEyeItem.raycast(world, user, RaycastContext.FluidHandling.NONE);
@@ -74,7 +75,7 @@ extends Item {
             return TypedActionResult.pass(itemStack);
         }
         user.setCurrentHand(hand);
-        if (world instanceof ServerWorld && (blockPos = ((ServerWorld)world).getChunkManager().getChunkGenerator().locateStructure((ServerWorld)world, StructureFeature.STRONGHOLD, user.getBlockPos(), 100, false)) != null) {
+        if (world instanceof ServerWorld && (blockPos = (serverWorld = (ServerWorld)world).locateStructure(ConfiguredStructureFeatureTags.EYE_OF_ENDER_LOCATED, user.getBlockPos(), 100, false)) != null) {
             EyeOfEnderEntity eyeOfEnderEntity = new EyeOfEnderEntity(world, user.getX(), user.getBodyY(0.5), user.getZ());
             eyeOfEnderEntity.setItem(itemStack);
             eyeOfEnderEntity.initTargetPos(blockPos);

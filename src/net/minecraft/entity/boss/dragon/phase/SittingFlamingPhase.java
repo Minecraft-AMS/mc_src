@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.boss.dragon.phase;
 
@@ -13,14 +16,16 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
 
 public class SittingFlamingPhase
 extends AbstractSittingPhase {
-    private static final int field_30433 = 200;
+    private static final int DURATION = 200;
     private static final int field_30434 = 4;
     private static final int field_30435 = 10;
     private int ticks;
     private int timesRun;
+    @Nullable
     private AreaEffectCloudEntity dragonBreathEntity;
 
     public SittingFlamingPhase(EnderDragonEntity enderDragonEntity) {

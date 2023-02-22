@@ -30,41 +30,41 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class ItemStackEnchantmentFix
 extends DataFix {
-    private static final Int2ObjectMap<String> ID_TO_ENCHANTMENTS_MAP = (Int2ObjectMap)DataFixUtils.make((Object)new Int2ObjectOpenHashMap(), int2ObjectOpenHashMap -> {
-        int2ObjectOpenHashMap.put(0, (Object)"minecraft:protection");
-        int2ObjectOpenHashMap.put(1, (Object)"minecraft:fire_protection");
-        int2ObjectOpenHashMap.put(2, (Object)"minecraft:feather_falling");
-        int2ObjectOpenHashMap.put(3, (Object)"minecraft:blast_protection");
-        int2ObjectOpenHashMap.put(4, (Object)"minecraft:projectile_protection");
-        int2ObjectOpenHashMap.put(5, (Object)"minecraft:respiration");
-        int2ObjectOpenHashMap.put(6, (Object)"minecraft:aqua_affinity");
-        int2ObjectOpenHashMap.put(7, (Object)"minecraft:thorns");
-        int2ObjectOpenHashMap.put(8, (Object)"minecraft:depth_strider");
-        int2ObjectOpenHashMap.put(9, (Object)"minecraft:frost_walker");
-        int2ObjectOpenHashMap.put(10, (Object)"minecraft:binding_curse");
-        int2ObjectOpenHashMap.put(16, (Object)"minecraft:sharpness");
-        int2ObjectOpenHashMap.put(17, (Object)"minecraft:smite");
-        int2ObjectOpenHashMap.put(18, (Object)"minecraft:bane_of_arthropods");
-        int2ObjectOpenHashMap.put(19, (Object)"minecraft:knockback");
-        int2ObjectOpenHashMap.put(20, (Object)"minecraft:fire_aspect");
-        int2ObjectOpenHashMap.put(21, (Object)"minecraft:looting");
-        int2ObjectOpenHashMap.put(22, (Object)"minecraft:sweeping");
-        int2ObjectOpenHashMap.put(32, (Object)"minecraft:efficiency");
-        int2ObjectOpenHashMap.put(33, (Object)"minecraft:silk_touch");
-        int2ObjectOpenHashMap.put(34, (Object)"minecraft:unbreaking");
-        int2ObjectOpenHashMap.put(35, (Object)"minecraft:fortune");
-        int2ObjectOpenHashMap.put(48, (Object)"minecraft:power");
-        int2ObjectOpenHashMap.put(49, (Object)"minecraft:punch");
-        int2ObjectOpenHashMap.put(50, (Object)"minecraft:flame");
-        int2ObjectOpenHashMap.put(51, (Object)"minecraft:infinity");
-        int2ObjectOpenHashMap.put(61, (Object)"minecraft:luck_of_the_sea");
-        int2ObjectOpenHashMap.put(62, (Object)"minecraft:lure");
-        int2ObjectOpenHashMap.put(65, (Object)"minecraft:loyalty");
-        int2ObjectOpenHashMap.put(66, (Object)"minecraft:impaling");
-        int2ObjectOpenHashMap.put(67, (Object)"minecraft:riptide");
-        int2ObjectOpenHashMap.put(68, (Object)"minecraft:channeling");
-        int2ObjectOpenHashMap.put(70, (Object)"minecraft:mending");
-        int2ObjectOpenHashMap.put(71, (Object)"minecraft:vanishing_curse");
+    private static final Int2ObjectMap<String> ID_TO_ENCHANTMENTS_MAP = (Int2ObjectMap)DataFixUtils.make((Object)new Int2ObjectOpenHashMap(), map -> {
+        map.put(0, (Object)"minecraft:protection");
+        map.put(1, (Object)"minecraft:fire_protection");
+        map.put(2, (Object)"minecraft:feather_falling");
+        map.put(3, (Object)"minecraft:blast_protection");
+        map.put(4, (Object)"minecraft:projectile_protection");
+        map.put(5, (Object)"minecraft:respiration");
+        map.put(6, (Object)"minecraft:aqua_affinity");
+        map.put(7, (Object)"minecraft:thorns");
+        map.put(8, (Object)"minecraft:depth_strider");
+        map.put(9, (Object)"minecraft:frost_walker");
+        map.put(10, (Object)"minecraft:binding_curse");
+        map.put(16, (Object)"minecraft:sharpness");
+        map.put(17, (Object)"minecraft:smite");
+        map.put(18, (Object)"minecraft:bane_of_arthropods");
+        map.put(19, (Object)"minecraft:knockback");
+        map.put(20, (Object)"minecraft:fire_aspect");
+        map.put(21, (Object)"minecraft:looting");
+        map.put(22, (Object)"minecraft:sweeping");
+        map.put(32, (Object)"minecraft:efficiency");
+        map.put(33, (Object)"minecraft:silk_touch");
+        map.put(34, (Object)"minecraft:unbreaking");
+        map.put(35, (Object)"minecraft:fortune");
+        map.put(48, (Object)"minecraft:power");
+        map.put(49, (Object)"minecraft:punch");
+        map.put(50, (Object)"minecraft:flame");
+        map.put(51, (Object)"minecraft:infinity");
+        map.put(61, (Object)"minecraft:luck_of_the_sea");
+        map.put(62, (Object)"minecraft:lure");
+        map.put(65, (Object)"minecraft:loyalty");
+        map.put(66, (Object)"minecraft:impaling");
+        map.put(67, (Object)"minecraft:riptide");
+        map.put(68, (Object)"minecraft:channeling");
+        map.put(70, (Object)"minecraft:mending");
+        map.put(71, (Object)"minecraft:vanishing_curse");
     });
 
     public ItemStackEnchantmentFix(Schema outputSchema, boolean changesType) {

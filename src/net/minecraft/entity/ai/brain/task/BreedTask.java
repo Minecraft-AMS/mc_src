@@ -91,7 +91,10 @@ extends Task<AnimalEntity> {
     }
 
     private Optional<? extends AnimalEntity> findBreedTarget(AnimalEntity animal) {
-        return animal.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get().stream().filter(livingEntity -> livingEntity.getType() == this.targetType).map(livingEntity -> (AnimalEntity)livingEntity).filter(animal::canBreedWith).findFirst();
+        return animal.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get().findFirst(entity -> {
+            AnimalEntity animalEntity2;
+            return entity.getType() == this.targetType && entity instanceof AnimalEntity && animal.canBreedWith(animalEntity2 = (AnimalEntity)entity);
+        }).map(AnimalEntity.class::cast);
     }
 
     @Override

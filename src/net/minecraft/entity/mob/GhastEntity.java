@@ -53,7 +53,7 @@ implements Monster {
         this.goalSelector.add(5, new FlyRandomlyGoal(this));
         this.goalSelector.add(7, new LookAtTargetGoal(this));
         this.goalSelector.add(7, new ShootFireballGoal(this));
-        this.targetSelector.add(1, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, livingEntity -> Math.abs(livingEntity.getY() - this.getY()) <= 4.0));
+        this.targetSelector.add(1, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, entity -> Math.abs(entity.getY() - this.getY()) <= 4.0));
     }
 
     public boolean isShooting() {
@@ -237,6 +237,11 @@ implements Monster {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
             if (this.ghast.getTarget() == null) {
                 Vec3d vec3d = this.ghast.getVelocity();
@@ -280,8 +285,16 @@ implements Monster {
         }
 
         @Override
+        public boolean shouldRunEveryTick() {
+            return true;
+        }
+
+        @Override
         public void tick() {
             LivingEntity livingEntity = this.ghast.getTarget();
+            if (livingEntity == null) {
+                return;
+            }
             double d = 64.0;
             if (livingEntity.squaredDistanceTo(this.ghast) < 4096.0 && this.ghast.canSee(livingEntity)) {
                 World world = this.ghast.world;

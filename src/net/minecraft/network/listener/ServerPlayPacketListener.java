@@ -3,7 +3,7 @@
  */
 package net.minecraft.network.listener;
 
-import net.minecraft.network.listener.PacketListener;
+import net.minecraft.network.listener.ServerPacketListener;
 import net.minecraft.network.packet.c2s.play.AdvancementTabC2SPacket;
 import net.minecraft.network.packet.c2s.play.BoatPaddleStateC2SPacket;
 import net.minecraft.network.packet.c2s.play.BookUpdateC2SPacket;
@@ -51,10 +51,10 @@ import net.minecraft.network.packet.c2s.play.UpdateStructureBlockC2SPacket;
 import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
 
 public interface ServerPlayPacketListener
-extends PacketListener {
+extends ServerPacketListener {
     public void onHandSwing(HandSwingC2SPacket var1);
 
-    public void onGameMessage(ChatMessageC2SPacket var1);
+    public void onChatMessage(ChatMessageC2SPacket var1);
 
     public void onClientStatus(ClientStatusC2SPacket var1);
 
@@ -78,7 +78,7 @@ extends PacketListener {
 
     public void onPong(PlayPongC2SPacket var1);
 
-    public void onPlayerAbilities(UpdatePlayerAbilitiesC2SPacket var1);
+    public void onUpdatePlayerAbilities(UpdatePlayerAbilitiesC2SPacket var1);
 
     public void onPlayerAction(PlayerActionC2SPacket var1);
 
@@ -90,7 +90,7 @@ extends PacketListener {
 
     public void onCreativeInventoryAction(CreativeInventoryActionC2SPacket var1);
 
-    public void onSignUpdate(UpdateSignC2SPacket var1);
+    public void onUpdateSign(UpdateSignC2SPacket var1);
 
     public void onPlayerInteractBlock(PlayerInteractBlockC2SPacket var1);
 
@@ -124,9 +124,9 @@ extends PacketListener {
 
     public void onUpdateBeacon(UpdateBeaconC2SPacket var1);
 
-    public void onStructureBlockUpdate(UpdateStructureBlockC2SPacket var1);
+    public void onUpdateStructureBlock(UpdateStructureBlockC2SPacket var1);
 
-    public void onMerchantTradeSelect(SelectMerchantTradeC2SPacket var1);
+    public void onSelectMerchantTrade(SelectMerchantTradeC2SPacket var1);
 
     public void onBookUpdate(BookUpdateC2SPacket var1);
 
@@ -134,7 +134,7 @@ extends PacketListener {
 
     public void onQueryBlockNbt(QueryBlockNbtC2SPacket var1);
 
-    public void onJigsawUpdate(UpdateJigsawC2SPacket var1);
+    public void onUpdateJigsaw(UpdateJigsawC2SPacket var1);
 
     public void onJigsawGenerating(JigsawGeneratingC2SPacket var1);
 

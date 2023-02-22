@@ -4,18 +4,19 @@
  * Could not load the following classes:
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.exceptions.AuthenticationUnavailableException
+ *  com.mojang.logging.LogUtils
  *  io.netty.channel.ChannelFutureListener
  *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
  *  org.apache.commons.lang3.Validate
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.network;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.exceptions.AuthenticationUnavailableException;
+import com.mojang.logging.LogUtils;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -49,14 +50,13 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import org.apache.commons.lang3.Validate;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ServerLoginNetworkHandler
 implements ServerLoginPacketListener {
     private static final AtomicInteger NEXT_AUTHENTICATOR_THREAD_ID = new AtomicInteger(0);
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final int TIMEOUT_TICKS = 600;
     private static final Random RANDOM = new Random();
     private final byte[] nonce = new byte[4];
@@ -130,6 +130,7 @@ implements ServerLoginPacketListener {
                 }
             }
             catch (Exception exception) {
+                LOGGER.error("Couldn't place player in world", (Throwable)exception);
                 TranslatableText text2 = new TranslatableText("multiplayer.disconnect.invalid_player_data");
                 this.connection.send(new DisconnectS2CPacket(text2));
                 this.connection.disconnect(text2);
@@ -157,12 +158,17 @@ implements ServerLoginPacketListener {
     public void onHello(LoginHelloC2SPacket packet) {
         Validate.validState((this.state == State.HELLO ? 1 : 0) != 0, (String)"Unexpected hello packet", (Object[])new Object[0]);
         this.profile = packet.getProfile();
+        Validate.validState((boolean)ServerLoginNetworkHandler.isValidName(this.profile.getName()), (String)"Invalid characters in username", (Object[])new Object[0]);
         if (this.server.isOnlineMode() && !this.connection.isLocal()) {
             this.state = State.KEY;
             this.connection.send(new LoginHelloS2CPacket("", this.server.getKeyPair().getPublic().getEncoded(), this.nonce));
         } else {
             this.state = State.READY_TO_ACCEPT;
         }
+    }
+
+    public static boolean isValidName(String name) {
+        return name.chars().filter(c -> c <= 32 || c >= 127).findAny().isEmpty();
     }
 
     @Override

@@ -17,7 +17,9 @@ public class CachedBlockPosition {
     private final WorldView world;
     private final BlockPos pos;
     private final boolean forceLoad;
+    @Nullable
     private BlockState state;
+    @Nullable
     private BlockEntity blockEntity;
     private boolean cachedEntity;
 
@@ -52,7 +54,7 @@ public class CachedBlockPosition {
     }
 
     public static Predicate<CachedBlockPosition> matchesBlockState(Predicate<BlockState> state) {
-        return cachedBlockPosition -> cachedBlockPosition != null && state.test(cachedBlockPosition.getBlockState());
+        return pos -> pos != null && state.test(pos.getBlockState());
     }
 }
 

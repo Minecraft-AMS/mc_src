@@ -49,7 +49,7 @@ extends Goal {
     }
 
     protected int getInterval(PathAwareEntity mob) {
-        return 200 + mob.getRandom().nextInt(200);
+        return MoveToTargetPosGoal.toGoalTicks(200 + mob.getRandom().nextInt(200));
     }
 
     @Override
@@ -68,7 +68,7 @@ extends Goal {
         this.mob.getNavigation().startMovingTo((double)this.targetPos.getX() + 0.5, this.targetPos.getY() + 1, (double)this.targetPos.getZ() + 0.5, this.speed);
     }
 
-    public double getDesiredSquaredDistanceToTarget() {
+    public double getDesiredDistanceToTarget() {
         return 1.0;
     }
 
@@ -77,9 +77,14 @@ extends Goal {
     }
 
     @Override
+    public boolean shouldRunEveryTick() {
+        return true;
+    }
+
+    @Override
     public void tick() {
         BlockPos blockPos = this.getTargetPos();
-        if (!blockPos.isWithinDistance(this.mob.getPos(), this.getDesiredSquaredDistanceToTarget())) {
+        if (!blockPos.isWithinDistance(this.mob.getPos(), this.getDesiredDistanceToTarget())) {
             this.reached = false;
             ++this.tryingTime;
             if (this.shouldResetPath()) {

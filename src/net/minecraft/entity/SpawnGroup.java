@@ -18,6 +18,7 @@ implements StringIdentifiable {
     public static final /* enum */ SpawnGroup MONSTER = new SpawnGroup("monster", 70, false, false, 128);
     public static final /* enum */ SpawnGroup CREATURE = new SpawnGroup("creature", 10, true, true, 128);
     public static final /* enum */ SpawnGroup AMBIENT = new SpawnGroup("ambient", 15, true, false, 128);
+    public static final /* enum */ SpawnGroup AXOLOTLS = new SpawnGroup("axolotls", 5, true, false, 128);
     public static final /* enum */ SpawnGroup UNDERGROUND_WATER_CREATURE = new SpawnGroup("underground_water_creature", 5, true, false, 128);
     public static final /* enum */ SpawnGroup WATER_CREATURE = new SpawnGroup("water_creature", 5, true, false, 128);
     public static final /* enum */ SpawnGroup WATER_AMBIENT = new SpawnGroup("water_ambient", 20, true, false, 64);
@@ -82,7 +83,7 @@ implements StringIdentifiable {
     }
 
     private static /* synthetic */ SpawnGroup[] method_36609() {
-        return new SpawnGroup[]{MONSTER, CREATURE, AMBIENT, UNDERGROUND_WATER_CREATURE, WATER_CREATURE, WATER_AMBIENT, MISC};
+        return new SpawnGroup[]{MONSTER, CREATURE, AMBIENT, AXOLOTLS, UNDERGROUND_WATER_CREATURE, WATER_CREATURE, WATER_AMBIENT, MISC};
     }
 
     static {

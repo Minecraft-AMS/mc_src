@@ -7,13 +7,13 @@
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gl;
 
@@ -24,6 +24,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.io.Closeable;
 import java.io.IOException;
@@ -49,16 +50,15 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class JsonEffectGlShader
 implements EffectGlShader,
 AutoCloseable {
     private static final String PROGRAM_DIRECTORY = "shaders/program/";
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Uniform DEFAULT_UNIFORM = new Uniform();
     private static final boolean field_32683 = true;
     private static JsonEffectGlShader activeShader;
@@ -186,7 +186,7 @@ AutoCloseable {
         return effectProgram;
     }
 
-    public static GlBlendState deserializeBlendState(JsonObject json) {
+    public static GlBlendState deserializeBlendState(@Nullable JsonObject json) {
         if (json == null) {
             return new GlBlendState();
         }
@@ -238,7 +238,7 @@ AutoCloseable {
     }
 
     public void disable() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GlProgramManager.useProgram(0);
         activeProgramRef = -1;
         activeShader = null;
@@ -251,7 +251,7 @@ AutoCloseable {
     }
 
     public void enable() {
-        RenderSystem.assertThread(RenderSystem::isOnGameThread);
+        RenderSystem.assertOnGameThread();
         this.uniformStateDirty = false;
         activeShader = this;
         this.blendState.enable();
@@ -282,19 +282,19 @@ AutoCloseable {
 
     @Nullable
     public GlUniform getUniformByName(String name) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         return this.uniformByName.get(name);
     }
 
     public Uniform getUniformByNameOrDummy(String name) {
-        RenderSystem.assertThread(RenderSystem::isOnGameThread);
+        RenderSystem.assertOnGameThread();
         GlUniform glUniform = this.getUniformByName(name);
         return glUniform == null ? DEFAULT_UNIFORM : glUniform;
     }
 
     private void finalizeUniformsAndSamplers() {
         int i;
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         IntArrayList intList = new IntArrayList();
         for (i = 0; i < this.samplerNames.size(); ++i) {
             String string = this.samplerNames.get(i);
@@ -318,7 +318,7 @@ AutoCloseable {
                 continue;
             }
             this.uniformLocs.add(k);
-            glUniform.setLoc(k);
+            glUniform.setLocation(k);
             this.uniformByName.put(string2, glUniform);
         }
     }

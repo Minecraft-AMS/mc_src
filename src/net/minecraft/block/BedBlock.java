@@ -104,14 +104,14 @@ implements BlockEntityProvider {
             return ActionResult.SUCCESS;
         }
         if (state.get(OCCUPIED).booleanValue()) {
-            if (!this.isFree(world, pos)) {
+            if (!this.wakeVillager(world, pos)) {
                 player.sendMessage(new TranslatableText("block.minecraft.bed.occupied"), true);
             }
             return ActionResult.SUCCESS;
         }
         player.trySleep(pos).ifLeft(reason -> {
             if (reason != null) {
-                player.sendMessage(reason.toText(), true);
+                player.sendMessage(reason.getMessage(), true);
             }
         });
         return ActionResult.SUCCESS;
@@ -121,7 +121,7 @@ implements BlockEntityProvider {
         return world.getDimension().isBedWorking();
     }
 
-    private boolean isFree(World world, BlockPos pos) {
+    private boolean wakeVillager(World world, BlockPos pos) {
         List<VillagerEntity> list = world.getEntitiesByClass(VillagerEntity.class, new Box(pos), LivingEntity::isSleeping);
         if (list.isEmpty()) {
             return false;
@@ -185,7 +185,8 @@ implements BlockEntityProvider {
         Direction direction = ctx.getPlayerFacing();
         BlockPos blockPos = ctx.getBlockPos();
         BlockPos blockPos2 = blockPos.offset(direction);
-        if (ctx.getWorld().getBlockState(blockPos2).canReplace(ctx)) {
+        World world = ctx.getWorld();
+        if (world.getBlockState(blockPos2).canReplace(ctx) && world.getWorldBorder().contains(blockPos2)) {
             return (BlockState)this.getDefaultState().with(FACING, direction);
         }
         return null;
@@ -221,19 +222,19 @@ implements BlockEntityProvider {
         return DoubleBlockProperties.Type.SECOND;
     }
 
-    private static boolean isBed(BlockView world, BlockPos pos) {
+    private static boolean isBedBelow(BlockView world, BlockPos pos) {
         return world.getBlockState(pos.down()).getBlock() instanceof BedBlock;
     }
 
-    public static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, float f) {
+    public static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, float spawnAngle) {
         Direction direction3;
         Direction direction = world.getBlockState(pos).get(FACING);
         Direction direction2 = direction.rotateYClockwise();
-        Direction direction4 = direction3 = direction2.pointsTo(f) ? direction2.getOpposite() : direction2;
-        if (BedBlock.isBed(world, pos)) {
+        Direction direction4 = direction3 = direction2.pointsTo(spawnAngle) ? direction2.getOpposite() : direction2;
+        if (BedBlock.isBedBelow(world, pos)) {
             return BedBlock.findWakeUpPosition(type, world, pos, direction, direction3);
         }
-        int[][] is = BedBlock.method_30838(direction, direction3);
+        int[][] is = BedBlock.getAroundAndOnBedOffsets(direction, direction3);
         Optional<Vec3d> optional = BedBlock.findWakeUpPosition(type, world, pos, is, true);
         if (optional.isPresent()) {
             return optional;
@@ -241,8 +242,8 @@ implements BlockEntityProvider {
         return BedBlock.findWakeUpPosition(type, world, pos, is, false);
     }
 
-    private static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, Direction direction, Direction direction2) {
-        int[][] is = BedBlock.method_30840(direction, direction2);
+    private static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, Direction bedDirection, Direction respawnDirection) {
+        int[][] is = BedBlock.getAroundBedOffsets(bedDirection, respawnDirection);
         Optional<Vec3d> optional = BedBlock.findWakeUpPosition(type, world, pos, is, true);
         if (optional.isPresent()) {
             return optional;
@@ -252,7 +253,7 @@ implements BlockEntityProvider {
         if (optional2.isPresent()) {
             return optional2;
         }
-        int[][] js = BedBlock.method_30837(direction);
+        int[][] js = BedBlock.getOnBedOffsets(bedDirection);
         Optional<Vec3d> optional3 = BedBlock.findWakeUpPosition(type, world, pos, js, true);
         if (optional3.isPresent()) {
             return optional3;
@@ -268,11 +269,11 @@ implements BlockEntityProvider {
         return BedBlock.findWakeUpPosition(type, world, pos, js, false);
     }
 
-    private static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, int[][] is, boolean bl) {
+    private static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, int[][] possibleOffsets, boolean ignoreInvalidPos) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int[] js : is) {
-            mutable.set(pos.getX() + js[0], pos.getY(), pos.getZ() + js[1]);
-            Vec3d vec3d = Dismounting.findRespawnPos(type, world, mutable, bl);
+        for (int[] is : possibleOffsets) {
+            mutable.set(pos.getX() + is[0], pos.getY(), pos.getZ() + is[1]);
+            Vec3d vec3d = Dismounting.findRespawnPos(type, world, mutable, ignoreInvalidPos);
             if (vec3d == null) continue;
             return Optional.of(vec3d);
         }
@@ -325,16 +326,16 @@ implements BlockEntityProvider {
         return false;
     }
 
-    private static int[][] method_30838(Direction direction, Direction direction2) {
-        return (int[][])ArrayUtils.addAll((Object[])BedBlock.method_30840(direction, direction2), (Object[])BedBlock.method_30837(direction));
+    private static int[][] getAroundAndOnBedOffsets(Direction bedDirection, Direction respawnDirection) {
+        return (int[][])ArrayUtils.addAll((Object[])BedBlock.getAroundBedOffsets(bedDirection, respawnDirection), (Object[])BedBlock.getOnBedOffsets(bedDirection));
     }
 
-    private static int[][] method_30840(Direction direction, Direction direction2) {
-        return new int[][]{{direction2.getOffsetX(), direction2.getOffsetZ()}, {direction2.getOffsetX() - direction.getOffsetX(), direction2.getOffsetZ() - direction.getOffsetZ()}, {direction2.getOffsetX() - direction.getOffsetX() * 2, direction2.getOffsetZ() - direction.getOffsetZ() * 2}, {-direction.getOffsetX() * 2, -direction.getOffsetZ() * 2}, {-direction2.getOffsetX() - direction.getOffsetX() * 2, -direction2.getOffsetZ() - direction.getOffsetZ() * 2}, {-direction2.getOffsetX() - direction.getOffsetX(), -direction2.getOffsetZ() - direction.getOffsetZ()}, {-direction2.getOffsetX(), -direction2.getOffsetZ()}, {-direction2.getOffsetX() + direction.getOffsetX(), -direction2.getOffsetZ() + direction.getOffsetZ()}, {direction.getOffsetX(), direction.getOffsetZ()}, {direction2.getOffsetX() + direction.getOffsetX(), direction2.getOffsetZ() + direction.getOffsetZ()}};
+    private static int[][] getAroundBedOffsets(Direction bedDirection, Direction respawnDirection) {
+        return new int[][]{{respawnDirection.getOffsetX(), respawnDirection.getOffsetZ()}, {respawnDirection.getOffsetX() - bedDirection.getOffsetX(), respawnDirection.getOffsetZ() - bedDirection.getOffsetZ()}, {respawnDirection.getOffsetX() - bedDirection.getOffsetX() * 2, respawnDirection.getOffsetZ() - bedDirection.getOffsetZ() * 2}, {-bedDirection.getOffsetX() * 2, -bedDirection.getOffsetZ() * 2}, {-respawnDirection.getOffsetX() - bedDirection.getOffsetX() * 2, -respawnDirection.getOffsetZ() - bedDirection.getOffsetZ() * 2}, {-respawnDirection.getOffsetX() - bedDirection.getOffsetX(), -respawnDirection.getOffsetZ() - bedDirection.getOffsetZ()}, {-respawnDirection.getOffsetX(), -respawnDirection.getOffsetZ()}, {-respawnDirection.getOffsetX() + bedDirection.getOffsetX(), -respawnDirection.getOffsetZ() + bedDirection.getOffsetZ()}, {bedDirection.getOffsetX(), bedDirection.getOffsetZ()}, {respawnDirection.getOffsetX() + bedDirection.getOffsetX(), respawnDirection.getOffsetZ() + bedDirection.getOffsetZ()}};
     }
 
-    private static int[][] method_30837(Direction direction) {
-        return new int[][]{{0, 0}, {-direction.getOffsetX(), -direction.getOffsetZ()}};
+    private static int[][] getOnBedOffsets(Direction bedDirection) {
+        return new int[][]{{0, 0}, {-bedDirection.getOffsetX(), -bedDirection.getOffsetZ()}};
     }
 }
 

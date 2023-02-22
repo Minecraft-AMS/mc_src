@@ -2,16 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.texture;
 
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.Closeable;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
@@ -22,14 +23,13 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ResourceTexture
 extends AbstractTexture {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     protected final Identifier location;
 
     public ResourceTexture(Identifier location) {
@@ -58,9 +58,9 @@ extends AbstractTexture {
         }
     }
 
-    private void upload(NativeImage nativeImage, boolean blur, boolean clamp) {
-        TextureUtil.prepareImage(this.getGlId(), 0, nativeImage.getWidth(), nativeImage.getHeight());
-        nativeImage.upload(0, 0, 0, 0, 0, nativeImage.getWidth(), nativeImage.getHeight(), blur, clamp, false, true);
+    private void upload(NativeImage image, boolean blur, boolean clamp) {
+        TextureUtil.prepareImage(this.getGlId(), 0, image.getWidth(), image.getHeight());
+        image.upload(0, 0, 0, 0, 0, image.getWidth(), image.getHeight(), blur, clamp, false, true);
     }
 
     protected TextureData loadTextureData(ResourceManager resourceManager) {
@@ -89,10 +89,10 @@ extends AbstractTexture {
             this.image = image;
         }
 
-        public static TextureData load(ResourceManager resourceManager, Identifier identifier) {
+        public static TextureData load(ResourceManager resourceManager, Identifier id) {
             TextureData textureData;
             block10: {
-                Resource resource = resourceManager.getResource(identifier);
+                Resource resource = resourceManager.getResource(id);
                 try {
                     NativeImage nativeImage = NativeImage.read(resource.getInputStream());
                     TextureResourceMetadata textureResourceMetadata = null;
@@ -100,7 +100,7 @@ extends AbstractTexture {
                         textureResourceMetadata = resource.getMetadata(TextureResourceMetadata.READER);
                     }
                     catch (RuntimeException runtimeException) {
-                        LOGGER.warn("Failed reading metadata of: {}", (Object)identifier, (Object)runtimeException);
+                        LOGGER.warn("Failed reading metadata of: {}", (Object)id, (Object)runtimeException);
                     }
                     textureData = new TextureData(textureResourceMetadata, nativeImage);
                     if (resource == null) break block10;

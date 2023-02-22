@@ -7,7 +7,6 @@
 package net.minecraft.entity.ai.brain.task;
 
 import com.google.common.collect.ImmutableMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.minecraft.entity.Entity;
@@ -15,6 +14,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.EntityLookTarget;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
@@ -41,24 +41,24 @@ extends Task<LivingEntity> {
 
     @Override
     public boolean shouldRun(ServerWorld world, LivingEntity entity) {
-        return this.shouldRunPredicate.test(entity) && this.getVisibleMobs(entity).stream().anyMatch(this::test);
+        return this.shouldRunPredicate.test(entity) && this.getVisibleMobs(entity).anyMatch(this::test);
     }
 
     @Override
     public void run(ServerWorld world, LivingEntity entity, long time) {
         super.run(world, entity, time);
         Brain<?> brain = entity.getBrain();
-        brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).ifPresent(list -> list.stream().filter(livingEntity2 -> livingEntity2.squaredDistanceTo(entity) <= (double)this.maxSquaredDistance).filter(this::test).findFirst().ifPresent(livingEntity -> {
-            brain.remember(MemoryModuleType.INTERACTION_TARGET, livingEntity);
-            brain.remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget((Entity)livingEntity, true));
-        }));
+        brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).flatMap(livingTargetCache -> livingTargetCache.findFirst(livingEntity2 -> livingEntity2.squaredDistanceTo(entity) <= (double)this.maxSquaredDistance && this.test((LivingEntity)livingEntity2))).ifPresent(target -> {
+            brain.remember(MemoryModuleType.INTERACTION_TARGET, target);
+            brain.remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget((Entity)target, true));
+        });
     }
 
     private boolean test(LivingEntity entity) {
         return this.entityType.equals(entity.getType()) && this.predicate.test(entity);
     }
 
-    private List<LivingEntity> getVisibleMobs(LivingEntity entity) {
+    private LivingTargetCache getVisibleMobs(LivingEntity entity) {
         return entity.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get();
     }
 }

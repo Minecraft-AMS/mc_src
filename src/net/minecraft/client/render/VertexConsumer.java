@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.lwjgl.system.MemoryStack
  */
 package net.minecraft.client.render;
@@ -17,19 +15,16 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.Vector4f;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.lwjgl.system.MemoryStack;
 
 @Environment(value=EnvType.CLIENT)
 public interface VertexConsumer {
-    public static final Logger LOGGER = LogManager.getLogger();
-
     public VertexConsumer vertex(double var1, double var3, double var5);
 
     public VertexConsumer color(int var1, int var2, int var3, int var4);
@@ -62,6 +57,10 @@ public interface VertexConsumer {
         return this.color((int)(red * 255.0f), (int)(green * 255.0f), (int)(blue * 255.0f), (int)(alpha * 255.0f));
     }
 
+    default public VertexConsumer color(int argb) {
+        return this.color(ColorHelper.Argb.getRed(argb), ColorHelper.Argb.getGreen(argb), ColorHelper.Argb.getBlue(argb), ColorHelper.Argb.getAlpha(argb));
+    }
+
     default public VertexConsumer light(int uv) {
         return this.light(uv & 0xFFFF, uv >> 16 & 0xFFFF);
     }
@@ -80,8 +79,8 @@ public interface VertexConsumer {
         int[] js = quad.getVertexData();
         Vec3i vec3i = quad.getFace().getVector();
         Vec3f vec3f = new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
-        Matrix4f matrix4f = matrixEntry.getModel();
-        vec3f.transform(matrixEntry.getNormal());
+        Matrix4f matrix4f = matrixEntry.getPositionMatrix();
+        vec3f.transform(matrixEntry.getNormalMatrix());
         int i = 8;
         int j = js.length / 8;
         try (MemoryStack memoryStack = MemoryStack.stackPush();){

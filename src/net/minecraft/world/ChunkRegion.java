@@ -2,18 +2,19 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world;
 
+import com.mojang.logging.LogUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
@@ -30,7 +31,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.structure.StructureStart;
 import net.minecraft.util.TypeFilter;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
@@ -40,11 +40,11 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.LocalDifficulty;
-import net.minecraft.world.MultiTickScheduler;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.TickScheduler;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
@@ -56,61 +56,62 @@ import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.gen.StructureAccessor;
-import net.minecraft.world.gen.feature.StructureFeature;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.world.tick.MultiTickScheduler;
+import net.minecraft.world.tick.QueryableTickScheduler;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class ChunkRegion
 implements StructureWorldAccess {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final List<Chunk> chunks;
-    private final ChunkPos centerPos;
+    private final Chunk centerPos;
     private final int width;
     private final ServerWorld world;
     private final long seed;
     private final WorldProperties levelProperties;
     private final Random random;
     private final DimensionType dimension;
-    private final TickScheduler<Block> blockTickScheduler = new MultiTickScheduler<Block>(pos -> this.getChunk((BlockPos)pos).getBlockTickScheduler());
-    private final TickScheduler<Fluid> fluidTickScheduler = new MultiTickScheduler<Fluid>(pos -> this.getChunk((BlockPos)pos).getFluidTickScheduler());
+    private final MultiTickScheduler<Block> blockTickScheduler = new MultiTickScheduler(pos -> this.getChunk((BlockPos)pos).getBlockTickScheduler());
+    private final MultiTickScheduler<Fluid> fluidTickScheduler = new MultiTickScheduler(pos -> this.getChunk((BlockPos)pos).getFluidTickScheduler());
     private final BiomeAccess biomeAccess;
     private final ChunkPos lowerCorner;
     private final ChunkPos upperCorner;
     private final StructureAccessor structureAccessor;
-    private final ChunkStatus field_33754;
+    private final ChunkStatus status;
     private final int placementRadius;
     @Nullable
-    private Supplier<String> field_33756;
+    private Supplier<String> currentlyGeneratingStructureName;
+    private final AtomicLong tickOrder = new AtomicLong();
 
-    public ChunkRegion(ServerWorld world, List<Chunk> list, ChunkStatus chunkStatus, int placementRadius) {
-        this.field_33754 = chunkStatus;
+    public ChunkRegion(ServerWorld world, List<Chunk> chunks, ChunkStatus status, int placementRadius) {
+        this.status = status;
         this.placementRadius = placementRadius;
-        int i = MathHelper.floor(Math.sqrt(list.size()));
-        if (i * i != list.size()) {
+        int i = MathHelper.floor(Math.sqrt(chunks.size()));
+        if (i * i != chunks.size()) {
             throw Util.throwOrPause(new IllegalStateException("Cache size is not a square."));
         }
-        ChunkPos chunkPos = list.get(list.size() / 2).getPos();
-        this.chunks = list;
-        this.centerPos = chunkPos;
+        this.chunks = chunks;
+        this.centerPos = chunks.get(chunks.size() / 2);
         this.width = i;
         this.world = world;
         this.seed = world.getSeed();
         this.levelProperties = world.getLevelProperties();
         this.random = world.getRandom();
         this.dimension = world.getDimension();
-        this.biomeAccess = new BiomeAccess(this, BiomeAccess.hashSeed(this.seed), world.getDimension().getBiomeAccessType());
-        this.lowerCorner = list.get(0).getPos();
-        this.upperCorner = list.get(list.size() - 1).getPos();
+        this.biomeAccess = new BiomeAccess(this, BiomeAccess.hashSeed(this.seed));
+        this.lowerCorner = chunks.get(0).getPos();
+        this.upperCorner = chunks.get(chunks.size() - 1).getPos();
         this.structureAccessor = world.getStructureAccessor().forRegion(this);
     }
 
     public ChunkPos getCenterPos() {
-        return this.centerPos;
+        return this.centerPos.getPos();
     }
 
-    public void method_36972(@Nullable Supplier<String> supplier) {
-        this.field_33756 = supplier;
+    @Override
+    public void setCurrentlyGeneratingStructureName(@Nullable Supplier<String> structureName) {
+        this.currentlyGeneratingStructureName = structureName;
     }
 
     @Override
@@ -136,7 +137,7 @@ implements StructureWorldAccess {
             return null;
         }
         LOGGER.error("Requested chunk : {} {}", (Object)chunkX, (Object)chunkZ);
-        LOGGER.error("Region bounds : {} {} | {} {}", (Object)this.lowerCorner.x, (Object)this.lowerCorner.z, (Object)this.upperCorner.x, (Object)this.upperCorner.z);
+        LOGGER.error("Region bounds : {} {} | {} {}", new Object[]{this.lowerCorner.x, this.lowerCorner.z, this.upperCorner.x, this.upperCorner.z});
         if (chunk != null) {
             throw Util.throwOrPause(new RuntimeException(String.format("Chunk is not of correct status. Expecting %s, got %s | %s %s", leastStatus, chunk.getStatus(), chunkX, chunkZ)));
         }
@@ -175,7 +176,7 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public Biome getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
+    public RegistryEntry<Biome> getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
         return this.world.getGeneratorStoredBiome(biomeX, biomeY, biomeZ);
     }
 
@@ -236,11 +237,18 @@ implements StructureWorldAccess {
     public boolean isValidForSetBlock(BlockPos pos) {
         int i = ChunkSectionPos.getSectionCoord(pos.getX());
         int j = ChunkSectionPos.getSectionCoord(pos.getZ());
-        int k = Math.abs(this.centerPos.x - i);
-        int l = Math.abs(this.centerPos.z - j);
+        ChunkPos chunkPos = this.getCenterPos();
+        int k = Math.abs(chunkPos.x - i);
+        int l = Math.abs(chunkPos.z - j);
         if (k > this.placementRadius || l > this.placementRadius) {
-            Util.error("Detected setBlock in a far chunk [" + i + ", " + j + "], pos: " + pos + ", status: " + this.field_33754 + (String)(this.field_33756 == null ? "" : ", currently generating: " + this.field_33756.get()));
+            Util.error("Detected setBlock in a far chunk [" + i + ", " + j + "], pos: " + pos + ", status: " + this.status + (String)(this.currentlyGeneratingStructureName == null ? "" : ", currently generating: " + this.currentlyGeneratingStructureName.get()));
             return false;
+        }
+        if (this.centerPos.hasBelowZeroRetrogen()) {
+            HeightLimitView heightLimitView = this.centerPos.getHeightLimitView();
+            if (pos.getY() < heightLimitView.getBottomY() || pos.getY() >= heightLimitView.getTopY()) {
+                return false;
+            }
         }
         return true;
     }
@@ -348,12 +356,12 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public TickScheduler<Block> getBlockTickScheduler() {
+    public QueryableTickScheduler<Block> getBlockTickScheduler() {
         return this.blockTickScheduler;
     }
 
     @Override
-    public TickScheduler<Fluid> getFluidTickScheduler() {
+    public QueryableTickScheduler<Fluid> getFluidTickScheduler() {
         return this.fluidTickScheduler;
     }
 
@@ -418,11 +426,6 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public Stream<? extends StructureStart<?>> getStructures(ChunkSectionPos pos, StructureFeature<?> feature) {
-        return this.structureAccessor.getStructuresWithChildren(pos, feature);
-    }
-
-    @Override
     public int getBottomY() {
         return this.world.getBottomY();
     }
@@ -430,6 +433,11 @@ implements StructureWorldAccess {
     @Override
     public int getHeight() {
         return this.world.getHeight();
+    }
+
+    @Override
+    public long getTickOrder() {
+        return this.tickOrder.getAndIncrement();
     }
 }
 

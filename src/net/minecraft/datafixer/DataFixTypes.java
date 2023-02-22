@@ -21,7 +21,7 @@ extends Enum<DataFixTypes> {
     public static final /* enum */ DataFixTypes SAVED_DATA = new DataFixTypes(TypeReferences.SAVED_DATA);
     public static final /* enum */ DataFixTypes ADVANCEMENTS = new DataFixTypes(TypeReferences.ADVANCEMENTS);
     public static final /* enum */ DataFixTypes POI_CHUNK = new DataFixTypes(TypeReferences.POI_CHUNK);
-    public static final /* enum */ DataFixTypes WORLD_GEN_SETTINGS = new DataFixTypes(TypeReferences.CHUNK_GENERATOR_SETTINGS);
+    public static final /* enum */ DataFixTypes WORLD_GEN_SETTINGS = new DataFixTypes(TypeReferences.WORLD_GEN_SETTINGS);
     public static final /* enum */ DataFixTypes ENTITY_CHUNK = new DataFixTypes(TypeReferences.ENTITY_CHUNK);
     private final DSL.TypeReference typeReference;
     private static final /* synthetic */ DataFixTypes[] field_19223;

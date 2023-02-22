@@ -9,8 +9,6 @@
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.types.Type
  *  com.mojang.serialization.Dynamic
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.datafixer.fix;
 
@@ -24,12 +22,9 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public abstract class AbstractUuidFix
 extends DataFix {
-    protected static final Logger LOGGER = LogManager.getLogger();
     protected DSL.TypeReference typeReference;
 
     public AbstractUuidFix(Schema outputSchema, DSL.TypeReference typeReference) {

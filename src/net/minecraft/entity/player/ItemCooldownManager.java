@@ -59,7 +59,7 @@ public class ItemCooldownManager {
     protected void onCooldownUpdate(Item item) {
     }
 
-    class Entry {
+    static class Entry {
         final int startTick;
         final int endTick;
 

@@ -2,13 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.world;
 
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -31,15 +33,16 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.level.LevelInfo;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class SelectWorldScreen
 extends Screen {
-    private static final Logger field_28783 = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     protected final Screen parent;
-    private List<OrderedText> tooltipText;
+    @Nullable
+    private List<OrderedText> tooltip;
     private ButtonWidget deleteButton;
     private ButtonWidget selectButton;
     private ButtonWidget editButton;
@@ -89,7 +92,7 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.client.setScreen(this.parent);
     }
 
@@ -100,18 +103,18 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.tooltipText = null;
+        this.tooltip = null;
         this.levelList.render(matrices, mouseX, mouseY, delta);
         this.searchBox.render(matrices, mouseX, mouseY, delta);
         SelectWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltipText != null) {
-            this.renderOrderedTooltip(matrices, this.tooltipText, mouseX, mouseY);
+        if (this.tooltip != null) {
+            this.renderOrderedTooltip(matrices, this.tooltip, mouseX, mouseY);
         }
     }
 
-    public void setTooltip(List<OrderedText> tooltipText) {
-        this.tooltipText = tooltipText;
+    public void setTooltip(List<OrderedText> tooltip) {
+        this.tooltip = tooltip;
     }
 
     public void worldSelected(boolean active) {
@@ -135,15 +138,15 @@ extends Screen {
             if (!this.levelList.children().isEmpty() && (entry = (WorldListWidget.Entry)this.levelList.children().get(0)).getLevelDisplayName().equals("DEBUG world")) {
                 entry.delete();
             }
-            DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
+            DynamicRegistryManager dynamicRegistryManager = DynamicRegistryManager.BUILTIN.get();
             long l = "test1".hashCode();
-            GeneratorOptions generatorOptions = GeneratorType.DEFAULT.createDefaultOptions(impl, l, true, false);
+            GeneratorOptions generatorOptions = GeneratorType.DEFAULT.createDefaultOptions(dynamicRegistryManager, l, true, false);
             LevelInfo levelInfo = new LevelInfo("DEBUG world", GameMode.SPECTATOR, false, Difficulty.NORMAL, true, new GameRules(), DataPackSettings.SAFE_MODE);
             String string2 = FileNameUtil.getNextUniqueName(this.client.getLevelStorage().getSavesDirectory(), "DEBUG world", "");
-            this.client.createWorld(string2, levelInfo, impl, generatorOptions);
+            this.client.createWorld(string2, levelInfo, dynamicRegistryManager, generatorOptions);
         }
         catch (IOException iOException) {
-            field_28783.error("Failed to recreate the debug world", (Throwable)iOException);
+            LOGGER.error("Failed to recreate the debug world", (Throwable)iOException);
         }
     }
 }

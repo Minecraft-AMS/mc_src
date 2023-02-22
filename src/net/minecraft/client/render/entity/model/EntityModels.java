@@ -291,7 +291,7 @@ public class EntityModels {
         TexturedModelData texturedModelData20 = SignBlockEntityRenderer.getTexturedModelData();
         SignType.stream().forEach(signType -> builder.put((Object)EntityModelLayers.createSign(signType), (Object)texturedModelData20));
         ImmutableMap immutableMap = builder.build();
-        List list = EntityModelLayers.getLayers().filter(entityModelLayer -> !immutableMap.containsKey(entityModelLayer)).collect(Collectors.toList());
+        List list = EntityModelLayers.getLayers().filter(layer -> !immutableMap.containsKey(layer)).collect(Collectors.toList());
         if (!list.isEmpty()) {
             throw new IllegalStateException("Missing layer definitions: " + list);
         }

@@ -2,14 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  com.mojang.text2speech.Narrator
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.util;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.text2speech.Narrator;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
@@ -24,19 +25,18 @@ import net.minecraft.network.MessageType;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class NarratorManager
 implements ClientChatListener {
     public static final Text EMPTY = LiteralText.EMPTY;
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final NarratorManager INSTANCE = new NarratorManager();
     private final Narrator narrator = Narrator.getNarrator();
 
     @Override
-    public void onChatMessage(MessageType messageType, Text message, UUID sender) {
+    public void onChatMessage(MessageType type, Text message, UUID sender) {
         NarratorMode narratorMode = NarratorManager.getNarratorOption();
         if (narratorMode == NarratorMode.OFF) {
             return;
@@ -45,11 +45,11 @@ implements ClientChatListener {
             this.debugPrintMessage(message.getString());
             return;
         }
-        if (narratorMode == NarratorMode.ALL || narratorMode == NarratorMode.CHAT && messageType == MessageType.CHAT || narratorMode == NarratorMode.SYSTEM && messageType == MessageType.SYSTEM) {
+        if (narratorMode == NarratorMode.ALL || narratorMode == NarratorMode.CHAT && type == MessageType.CHAT || narratorMode == NarratorMode.SYSTEM && type == MessageType.SYSTEM) {
             Text text = message instanceof TranslatableText && "chat.type.text".equals(((TranslatableText)message).getKey()) ? new TranslatableText("chat.type.text.narrate", ((TranslatableText)message).getArgs()) : message;
             String string = text.getString();
             this.debugPrintMessage(string);
-            this.narrator.say(string, messageType.interruptsNarration());
+            this.narrator.say(string, type.interruptsNarration());
         }
     }
 

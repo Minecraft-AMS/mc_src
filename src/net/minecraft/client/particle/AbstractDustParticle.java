@@ -21,26 +21,26 @@ public class AbstractDustParticle<T extends AbstractDustParticleEffect>
 extends SpriteBillboardParticle {
     private final SpriteProvider spriteProvider;
 
-    protected AbstractDustParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, T abstractDustParticleEffect, SpriteProvider spriteProvider) {
+    protected AbstractDustParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, T parameters, SpriteProvider spriteProvider) {
         super(world, x, y, z, velocityX, velocityY, velocityZ);
-        this.field_28786 = 0.96f;
+        this.velocityMultiplier = 0.96f;
         this.field_28787 = true;
         this.spriteProvider = spriteProvider;
         this.velocityX *= (double)0.1f;
         this.velocityY *= (double)0.1f;
         this.velocityZ *= (double)0.1f;
         float f = this.random.nextFloat() * 0.4f + 0.6f;
-        this.colorRed = this.method_33076(((AbstractDustParticleEffect)abstractDustParticleEffect).getColor().getX(), f);
-        this.colorGreen = this.method_33076(((AbstractDustParticleEffect)abstractDustParticleEffect).getColor().getY(), f);
-        this.colorBlue = this.method_33076(((AbstractDustParticleEffect)abstractDustParticleEffect).getColor().getZ(), f);
-        this.scale *= 0.75f * ((AbstractDustParticleEffect)abstractDustParticleEffect).getScale();
+        this.red = this.darken(((AbstractDustParticleEffect)parameters).getColor().getX(), f);
+        this.green = this.darken(((AbstractDustParticleEffect)parameters).getColor().getY(), f);
+        this.blue = this.darken(((AbstractDustParticleEffect)parameters).getColor().getZ(), f);
+        this.scale *= 0.75f * ((AbstractDustParticleEffect)parameters).getScale();
         int i = (int)(8.0 / (this.random.nextDouble() * 0.8 + 0.2));
-        this.maxAge = (int)Math.max((float)i * ((AbstractDustParticleEffect)abstractDustParticleEffect).getScale(), 1.0f);
+        this.maxAge = (int)Math.max((float)i * ((AbstractDustParticleEffect)parameters).getScale(), 1.0f);
         this.setSpriteForAge(spriteProvider);
     }
 
-    protected float method_33076(float f, float g) {
-        return (this.random.nextFloat() * 0.2f + 0.8f) * f * g;
+    protected float darken(float colorComponent, float multiplier) {
+        return (this.random.nextFloat() * 0.2f + 0.8f) * colorComponent * multiplier;
     }
 
     @Override

@@ -20,6 +20,7 @@ import net.minecraft.block.enums.StructureBlockMode;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.Structure;
@@ -28,9 +29,9 @@ import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.processor.BlockRotStructureProcessor;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
-import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.InvalidIdentifierException;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
@@ -65,7 +66,7 @@ extends BlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.putString("name", this.getStructureName());
         nbt.putString(AUTHOR_KEY, this.author);
@@ -85,7 +86,6 @@ extends BlockEntity {
         nbt.putBoolean("showboundingbox", this.showBoundingBox);
         nbt.putFloat("integrity", this.integrity);
         nbt.putLong("seed", this.seed);
-        return nbt;
     }
 
     @Override
@@ -140,15 +140,13 @@ extends BlockEntity {
         }
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 7, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     public boolean openScreen(PlayerEntity player) {
@@ -174,7 +172,7 @@ extends BlockEntity {
     }
 
     public void setStructureName(@Nullable String name) {
-        this.setStructureName(ChatUtil.isEmpty(name) ? null : Identifier.tryParse(name));
+        this.setStructureName(StringHelper.isEmpty(name) ? null : Identifier.tryParse(name));
     }
 
     public void setStructureName(@Nullable Identifier structureName) {
@@ -189,8 +187,8 @@ extends BlockEntity {
         return this.offset;
     }
 
-    public void setOffset(BlockPos pos) {
-        this.offset = pos;
+    public void setOffset(BlockPos offset) {
+        this.offset = offset;
     }
 
     public Vec3i getSize() {
@@ -270,12 +268,12 @@ extends BlockEntity {
         BlockPos blockPos2 = new BlockPos(blockPos.getX() - 80, this.world.getBottomY(), blockPos.getZ() - 80);
         BlockPos blockPos3 = new BlockPos(blockPos.getX() + 80, this.world.getTopY() - 1, blockPos.getZ() + 80);
         Stream<BlockPos> stream = this.streamCornerPos(blockPos2, blockPos3);
-        return StructureBlockBlockEntity.getStructureBox(blockPos, stream).filter(blockBox -> {
-            int i = blockBox.getMaxX() - blockBox.getMinX();
-            int j = blockBox.getMaxY() - blockBox.getMinY();
-            int k = blockBox.getMaxZ() - blockBox.getMinZ();
+        return StructureBlockBlockEntity.getStructureBox(blockPos, stream).filter(box -> {
+            int i = box.getMaxX() - box.getMinX();
+            int j = box.getMaxY() - box.getMinY();
+            int k = box.getMaxZ() - box.getMinZ();
             if (i > 1 && j > 1 && k > 1) {
-                this.offset = new BlockPos(blockBox.getMinX() - blockPos.getX() + 1, blockBox.getMinY() - blockPos.getY() + 1, blockBox.getMinZ() - blockPos.getZ() + 1);
+                this.offset = new BlockPos(box.getMinX() - blockPos.getX() + 1, box.getMinY() - blockPos.getY() + 1, box.getMinZ() - blockPos.getZ() + 1);
                 this.size = new Vec3i(i - 1, j - 1, k - 1);
                 this.markDirty();
                 BlockState blockState = this.world.getBlockState(blockPos);
@@ -369,7 +367,7 @@ extends BlockEntity {
         Vec3i vec3i;
         boolean bl2;
         BlockPos blockPos = this.getPos();
-        if (!ChatUtil.isEmpty(structure.getAuthor())) {
+        if (!StringHelper.isEmpty(structure.getAuthor())) {
             this.author = structure.getAuthor();
         }
         if (!(bl2 = this.size.equals(vec3i = structure.getSize()))) {
@@ -437,8 +435,12 @@ extends BlockEntity {
         this.showBoundingBox = showBoundingBox;
     }
 
-    private static /* synthetic */ void method_35293(ServerWorld serverWorld, BlockPos blockPos) {
-        serverWorld.setBlockState(blockPos, Blocks.STRUCTURE_VOID.getDefaultState(), 2);
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
+    }
+
+    private static /* synthetic */ void setStructureVoid(ServerWorld world, BlockPos pos) {
+        world.setBlockState(pos, Blocks.STRUCTURE_VOID.getDefaultState(), 2);
     }
 
     public static final class Action

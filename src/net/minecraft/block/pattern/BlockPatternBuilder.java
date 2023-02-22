@@ -3,7 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.Joiner
- *  com.google.common.base.Predicates
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  org.apache.commons.lang3.ArrayUtils
@@ -12,7 +11,6 @@
 package net.minecraft.block.pattern;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.lang.reflect.Array;
@@ -33,7 +31,7 @@ public class BlockPatternBuilder {
     private int width;
 
     private BlockPatternBuilder() {
-        this.charMap.put(Character.valueOf(' '), (Predicate<CachedBlockPosition>)Predicates.alwaysTrue());
+        this.charMap.put(Character.valueOf(' '), pos -> true);
     }
 
     public BlockPatternBuilder aisle(String ... pattern) {

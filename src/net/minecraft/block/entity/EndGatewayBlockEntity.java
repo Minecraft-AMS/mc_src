@@ -2,12 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.block.entity;
 
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Random;
 import net.minecraft.advancement.criterion.Criteria;
@@ -20,6 +21,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -34,16 +36,15 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.gen.feature.ConfiguredFeatures;
+import net.minecraft.world.gen.feature.EndConfiguredFeatures;
 import net.minecraft.world.gen.feature.EndGatewayFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class EndGatewayBlockEntity
 extends EndPortalBlockEntity {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_31368 = 200;
     private static final int field_31369 = 40;
     private static final int field_31370 = 2400;
@@ -60,16 +61,15 @@ extends EndPortalBlockEntity {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.putLong("Age", this.age);
         if (this.exitPortalPos != null) {
             nbt.put("ExitPortal", NbtHelper.fromBlockPos(this.exitPortalPos));
         }
         if (this.exactTeleport) {
-            nbt.putBoolean("ExactTeleport", this.exactTeleport);
+            nbt.putBoolean("ExactTeleport", true);
         }
-        return nbt;
     }
 
     @Override
@@ -130,15 +130,13 @@ extends EndPortalBlockEntity {
         return 1.0f - MathHelper.clamp(((float)this.teleportCooldown - tickDelta) / 40.0f, 0.0f, 1.0f);
     }
 
-    @Override
-    @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 8, this.toInitialChunkDataNbt());
+        return BlockEntityUpdateS2CPacket.create(this);
     }
 
     @Override
     public NbtCompound toInitialChunkDataNbt() {
-        return this.writeNbt(new NbtCompound());
+        return this.createNbt();
     }
 
     private static void startTeleportCooldown(World world, BlockPos pos, BlockState state, EndGatewayBlockEntity blockEntity) {
@@ -208,7 +206,7 @@ extends EndPortalBlockEntity {
         if (blockPos == null) {
             blockPos = new BlockPos(vec3d.x + 0.5, 75.0, vec3d.z + 0.5);
             LOGGER.debug("Failed to find a suitable block to teleport to, spawning an island on {}", (Object)blockPos);
-            ConfiguredFeatures.END_ISLAND.generate(world, world.getChunkManager().getChunkGenerator(), new Random(blockPos.asLong()), blockPos);
+            EndConfiguredFeatures.END_ISLAND.value().generate(world, world.getChunkManager().getChunkGenerator(), new Random(blockPos.asLong()), blockPos);
         } else {
             LOGGER.debug("Found suitable block to teleport to: {}", (Object)blockPos);
         }
@@ -272,7 +270,7 @@ extends EndPortalBlockEntity {
             BlockPos blockPos5 = blockPos4.up();
             BlockPos blockPos6 = blockPos4.up(2);
             if (!blockState.isOf(Blocks.END_STONE) || chunk.getBlockState(blockPos5).isFullCube(chunk, blockPos5) || chunk.getBlockState(blockPos6).isFullCube(chunk, blockPos6)) continue;
-            double e = blockPos4.getSquaredDistance(0.0, 0.0, 0.0, true);
+            double e = blockPos4.getSquaredDistanceFromCenter(0.0, 0.0, 0.0);
             if (blockPos3 != null && !(e < d)) continue;
             blockPos3 = blockPos4;
             d = e;
@@ -281,7 +279,7 @@ extends EndPortalBlockEntity {
     }
 
     private static void createPortal(ServerWorld world, BlockPos pos, EndGatewayFeatureConfig config) {
-        Feature.END_GATEWAY.configure(config).generate(world, world.getChunkManager().getChunkGenerator(), new Random(), pos);
+        Feature.END_GATEWAY.generateIfValid(config, world, world.getChunkManager().getChunkGenerator(), new Random(), pos);
     }
 
     @Override
@@ -300,6 +298,10 @@ extends EndPortalBlockEntity {
     public void setExitPortalPos(BlockPos pos, boolean exactTeleport) {
         this.exactTeleport = exactTeleport;
         this.exitPortalPos = pos;
+    }
+
+    public /* synthetic */ Packet toUpdatePacket() {
+        return this.toUpdatePacket();
     }
 }
 

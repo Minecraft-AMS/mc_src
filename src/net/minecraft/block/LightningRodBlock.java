@@ -60,7 +60,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
@@ -89,7 +89,7 @@ implements Waterloggable {
     public void setPowered(BlockState state, World world, BlockPos pos) {
         world.setBlockState(pos, (BlockState)state.with(POWERED, true), 3);
         this.updateNeighbors(state, world, pos);
-        world.getBlockTickScheduler().schedule(pos, this, 8);
+        world.createAndScheduleBlockTick(pos, this, 8);
         world.syncWorldEvent(3002, pos, state.get(FACING).getAxis().ordinal());
     }
 
@@ -127,7 +127,7 @@ implements Waterloggable {
         if (state.isOf(oldState.getBlock())) {
             return;
         }
-        if (state.get(POWERED).booleanValue() && !world.getBlockTickScheduler().isScheduled(pos, this)) {
+        if (state.get(POWERED).booleanValue() && !world.getBlockTickScheduler().isQueued(pos, this)) {
             world.setBlockState(pos, (BlockState)state.with(POWERED, false), 18);
         }
     }

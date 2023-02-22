@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class BasaltColumnsFeature
 extends Feature<BasaltColumnsFeatureConfig> {
-    private static final ImmutableList<Block> BLOCKS = ImmutableList.of((Object)Blocks.LAVA, (Object)Blocks.BEDROCK, (Object)Blocks.MAGMA_BLOCK, (Object)Blocks.SOUL_SAND, (Object)Blocks.NETHER_BRICKS, (Object)Blocks.NETHER_BRICK_FENCE, (Object)Blocks.NETHER_BRICK_STAIRS, (Object)Blocks.NETHER_WART, (Object)Blocks.CHEST, (Object)Blocks.SPAWNER);
+    private static final ImmutableList<Block> CANNOT_REPLACE_BLOCKS = ImmutableList.of((Object)Blocks.LAVA, (Object)Blocks.BEDROCK, (Object)Blocks.MAGMA_BLOCK, (Object)Blocks.SOUL_SAND, (Object)Blocks.NETHER_BRICKS, (Object)Blocks.NETHER_BRICK_FENCE, (Object)Blocks.NETHER_BRICK_STAIRS, (Object)Blocks.NETHER_WART, (Object)Blocks.CHEST, (Object)Blocks.SPAWNER);
     private static final int field_31495 = 5;
     private static final int field_31496 = 50;
     private static final int field_31497 = 8;
@@ -96,7 +96,7 @@ extends Feature<BasaltColumnsFeatureConfig> {
         if (BasaltColumnsFeature.isAirOrLavaOcean(world, seaLevel, mutablePos)) {
             BlockState blockState = world.getBlockState(mutablePos.move(Direction.DOWN));
             mutablePos.move(Direction.UP);
-            return !blockState.isAir() && !BLOCKS.contains((Object)blockState.getBlock());
+            return !blockState.isAir() && !CANNOT_REPLACE_BLOCKS.contains((Object)blockState.getBlock());
         }
         return false;
     }
@@ -106,7 +106,7 @@ extends Feature<BasaltColumnsFeatureConfig> {
         while (mutablePos.getY() < world.getTopY() && distance > 0) {
             --distance;
             BlockState blockState = world.getBlockState(mutablePos);
-            if (BLOCKS.contains((Object)blockState.getBlock())) {
+            if (CANNOT_REPLACE_BLOCKS.contains((Object)blockState.getBlock())) {
                 return null;
             }
             if (blockState.isAir()) {

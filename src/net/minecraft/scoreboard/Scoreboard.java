@@ -4,12 +4,15 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.scoreboard;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,21 +31,23 @@ import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class Scoreboard {
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int LIST_DISPLAY_SLOT_ID = 0;
     public static final int SIDEBAR_DISPLAY_SLOT_ID = 1;
     public static final int BELOW_NAME_DISPLAY_SLOT_ID = 2;
     public static final int MIN_SIDEBAR_TEAM_DISPLAY_SLOT_ID = 3;
     public static final int MAX_SIDEBAR_TEAM_DISPLAY_SLOT_ID = 18;
     public static final int DISPLAY_SLOT_COUNT = 19;
-    public static final int MAX_NAME_LENGTH = 40;
     private final Map<String, ScoreboardObjective> objectives = Maps.newHashMap();
     private final Map<ScoreboardCriterion, List<ScoreboardObjective>> objectivesByCriterion = Maps.newHashMap();
     private final Map<String, Map<ScoreboardObjective, ScoreboardPlayerScore>> playerObjectives = Maps.newHashMap();
     private final ScoreboardObjective[] objectiveSlots = new ScoreboardObjective[19];
     private final Map<String, Team> teams = Maps.newHashMap();
     private final Map<String, Team> teamsByPlayer = Maps.newHashMap();
+    @Nullable
     private static String[] displaySlotNames;
 
     public boolean containsObjective(String name) {
@@ -59,9 +64,6 @@ public class Scoreboard {
     }
 
     public ScoreboardObjective addObjective(String name, ScoreboardCriterion criterion2, Text displayName, ScoreboardCriterion.RenderType renderType) {
-        if (name.length() > 16) {
-            throw new IllegalArgumentException("The objective name '" + name + "' is too long!");
-        }
         if (this.objectives.containsKey(name)) {
             throw new IllegalArgumentException("An objective with the name '" + name + "' already exists!");
         }
@@ -85,13 +87,10 @@ public class Scoreboard {
         return scoreboardPlayerScore != null;
     }
 
-    public ScoreboardPlayerScore getPlayerScore(String player, ScoreboardObjective objective2) {
-        if (player.length() > 40) {
-            throw new IllegalArgumentException("The player name '" + player + "' is too long!");
-        }
-        Map map = this.playerObjectives.computeIfAbsent(player, string -> Maps.newHashMap());
+    public ScoreboardPlayerScore getPlayerScore(String playerName, ScoreboardObjective objective2) {
+        Map map = this.playerObjectives.computeIfAbsent(playerName, string -> Maps.newHashMap());
         return map.computeIfAbsent(objective2, objective -> {
-            ScoreboardPlayerScore scoreboardPlayerScore = new ScoreboardPlayerScore(this, (ScoreboardObjective)objective, player);
+            ScoreboardPlayerScore scoreboardPlayerScore = new ScoreboardPlayerScore(this, (ScoreboardObjective)objective, playerName);
             scoreboardPlayerScore.setScore(0);
             return scoreboardPlayerScore;
         });
@@ -142,8 +141,8 @@ public class Scoreboard {
         }
     }
 
-    public Map<ScoreboardObjective, ScoreboardPlayerScore> getPlayerObjectives(String string) {
-        HashMap map = this.playerObjectives.get(string);
+    public Map<ScoreboardObjective, ScoreboardPlayerScore> getPlayerObjectives(String playerName) {
+        HashMap map = this.playerObjectives.get(playerName);
         if (map == null) {
             map = Maps.newHashMap();
         }
@@ -181,12 +180,10 @@ public class Scoreboard {
     }
 
     public Team addTeam(String name) {
-        if (name.length() > 16) {
-            throw new IllegalArgumentException("The team name '" + name + "' is too long!");
-        }
         Team team = this.getTeam(name);
         if (team != null) {
-            throw new IllegalArgumentException("A team with the name '" + name + "' already exists!");
+            LOGGER.warn("Requested creation of existing team '{}'", (Object)name);
+            return team;
         }
         team = new Team(this, name);
         this.teams.put(name, team);
@@ -203,9 +200,6 @@ public class Scoreboard {
     }
 
     public boolean addPlayerToTeam(String playerName, Team team) {
-        if (playerName.length() > 40) {
-            throw new IllegalArgumentException("The player name '" + playerName + "' is too long!");
-        }
         if (this.getPlayerTeam(playerName) != null) {
             this.clearPlayerTeam(playerName);
         }
@@ -328,7 +322,7 @@ public class Scoreboard {
 
     protected NbtList toNbt() {
         NbtList nbtList = new NbtList();
-        this.playerObjectives.values().stream().map(Map::values).forEach(collection -> collection.stream().filter(score -> score.getObjective() != null).forEach(score -> {
+        this.playerObjectives.values().stream().map(Map::values).forEach(scores -> scores.stream().filter(score -> score.getObjective() != null).forEach(score -> {
             NbtCompound nbtCompound = new NbtCompound();
             nbtCompound.putString("Name", score.getPlayerName());
             nbtCompound.putString("Objective", score.getObjective().getName());
@@ -344,9 +338,6 @@ public class Scoreboard {
             NbtCompound nbtCompound = list.getCompound(i);
             ScoreboardObjective scoreboardObjective = this.getObjective(nbtCompound.getString("Objective"));
             String string = nbtCompound.getString("Name");
-            if (string.length() > 40) {
-                string = string.substring(0, 40);
-            }
             ScoreboardPlayerScore scoreboardPlayerScore = this.getPlayerScore(string, scoreboardObjective);
             scoreboardPlayerScore.setScore(nbtCompound.getInt("Score"));
             if (!nbtCompound.contains("Locked")) continue;

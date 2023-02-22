@@ -88,15 +88,15 @@ public abstract class VoxelShape {
         return voxelShapes[0];
     }
 
-    public void forEachEdge(VoxelShapes.BoxConsumer boxConsumer) {
-        this.voxels.forEachEdge((i, j, k, l, m, n) -> boxConsumer.consume(this.getPointPosition(Direction.Axis.X, i), this.getPointPosition(Direction.Axis.Y, j), this.getPointPosition(Direction.Axis.Z, k), this.getPointPosition(Direction.Axis.X, l), this.getPointPosition(Direction.Axis.Y, m), this.getPointPosition(Direction.Axis.Z, n)), true);
+    public void forEachEdge(VoxelShapes.BoxConsumer consumer) {
+        this.voxels.forEachEdge((minX, minY, minZ, maxX, maxY, maxZ) -> consumer.consume(this.getPointPosition(Direction.Axis.X, minX), this.getPointPosition(Direction.Axis.Y, minY), this.getPointPosition(Direction.Axis.Z, minZ), this.getPointPosition(Direction.Axis.X, maxX), this.getPointPosition(Direction.Axis.Y, maxY), this.getPointPosition(Direction.Axis.Z, maxZ)), true);
     }
 
-    public void forEachBox(VoxelShapes.BoxConsumer boxConsumer) {
+    public void forEachBox(VoxelShapes.BoxConsumer consumer) {
         DoubleList doubleList = this.getPointPositions(Direction.Axis.X);
         DoubleList doubleList2 = this.getPointPositions(Direction.Axis.Y);
         DoubleList doubleList3 = this.getPointPositions(Direction.Axis.Z);
-        this.voxels.forEachBox((i, j, k, l, m, n) -> boxConsumer.consume(doubleList.getDouble(i), doubleList2.getDouble(j), doubleList3.getDouble(k), doubleList.getDouble(l), doubleList2.getDouble(m), doubleList3.getDouble(n)), true);
+        this.voxels.forEachBox((minX, minY, minZ, maxX, maxY, maxZ) -> consumer.consume(doubleList.getDouble(minX), doubleList2.getDouble(minY), doubleList3.getDouble(minZ), doubleList.getDouble(maxX), doubleList2.getDouble(maxY), doubleList3.getDouble(maxZ)), true);
     }
 
     public List<Box> getBoundingBoxes() {
@@ -105,12 +105,12 @@ public abstract class VoxelShape {
         return list;
     }
 
-    public double method_35593(Direction.Axis axis, double d, double e) {
+    public double getStartingCoord(Direction.Axis axis, double from, double to) {
         int j;
         Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
         Direction.Axis axis3 = AxisCycleDirection.BACKWARD.cycle(axis);
-        int i = this.getCoordIndex(axis2, d);
-        int k = this.voxels.method_35592(axis, i, j = this.getCoordIndex(axis3, e));
+        int i = this.getCoordIndex(axis2, from);
+        int k = this.voxels.getStartingAxisCoord(axis, i, j = this.getCoordIndex(axis3, to));
         if (k >= this.voxels.getSize(axis)) {
             return Double.POSITIVE_INFINITY;
         }
@@ -154,12 +154,12 @@ public abstract class VoxelShape {
             return Optional.empty();
         }
         Vec3d[] vec3ds = new Vec3d[1];
-        this.forEachBox((d, e, f, g, h, i) -> {
-            double j = MathHelper.clamp(target.getX(), d, g);
-            double k = MathHelper.clamp(target.getY(), e, h);
-            double l = MathHelper.clamp(target.getZ(), f, i);
-            if (vec3ds[0] == null || target.squaredDistanceTo(j, k, l) < target.squaredDistanceTo(vec3ds[0])) {
-                vec3ds[0] = new Vec3d(j, k, l);
+        this.forEachBox((minX, minY, minZ, maxX, maxY, maxZ) -> {
+            double d = MathHelper.clamp(target.getX(), minX, maxX);
+            double e = MathHelper.clamp(target.getY(), minY, maxY);
+            double f = MathHelper.clamp(target.getZ(), minZ, maxZ);
+            if (vec3ds[0] == null || target.squaredDistanceTo(d, e, f) < target.squaredDistanceTo(vec3ds[0])) {
+                vec3ds[0] = new Vec3d(d, e, f);
             }
         });
         return Optional.of(vec3ds[0]);

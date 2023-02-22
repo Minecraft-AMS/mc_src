@@ -2,13 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.logging.LogUtils
  *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.network;
 
+import com.mojang.logging.LogUtils;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import net.minecraft.network.ClientConnection;
@@ -16,12 +17,11 @@ import net.minecraft.network.NetworkSide;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class RateLimitedConnection
 extends ClientConnection {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Text RATE_LIMIT_EXCEEDED_MESSAGE = new TranslatableText("disconnect.exceeded_packet_rate");
     private final int rateLimit;
 

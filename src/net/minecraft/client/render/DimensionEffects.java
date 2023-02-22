@@ -119,10 +119,10 @@ public abstract class DimensionEffects {
     @Environment(value=EnvType.CLIENT)
     public static class Overworld
     extends DimensionEffects {
-        public static final int CLOUDS_HEIGHT = 128;
+        public static final int CLOUDS_HEIGHT = 192;
 
         public Overworld() {
-            super(128.0f, true, SkyType.NORMAL, false, false);
+            super(192.0f, true, SkyType.NORMAL, false, false);
         }
 
         @Override

@@ -35,8 +35,8 @@ implements TooltipComponent {
     }
 
     @Override
-    public void drawText(TextRenderer textRenderer, int x, int y, Matrix4f matrix4f, VertexConsumerProvider.Immediate immediate) {
-        textRenderer.draw(this.text, (float)x, (float)y, -1, true, matrix4f, (VertexConsumerProvider)immediate, false, 0, 0xF000F0);
+    public void drawText(TextRenderer textRenderer, int x, int y, Matrix4f matrix, VertexConsumerProvider.Immediate vertexConsumers) {
+        textRenderer.draw(this.text, (float)x, (float)y, -1, true, matrix, (VertexConsumerProvider)vertexConsumers, false, 0, 0xF000F0);
     }
 }
 

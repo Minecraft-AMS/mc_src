@@ -4,15 +4,18 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.realms.gui.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class UploadResult {
     public final int statusCode;
+    @Nullable
     public final String errorMessage;
 
     UploadResult(int statusCode, String errorMessage) {
@@ -30,7 +33,7 @@ public class UploadResult {
             return this;
         }
 
-        public Builder withErrorMessage(String errorMessage) {
+        public Builder withErrorMessage(@Nullable String errorMessage) {
             this.errorMessage = errorMessage;
             return this;
         }

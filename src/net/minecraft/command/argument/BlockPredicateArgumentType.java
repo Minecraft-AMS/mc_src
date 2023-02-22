@@ -35,38 +35,57 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.state.property.Property;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.Tag;
-import net.minecraft.tag.TagManager;
+import net.minecraft.tag.TagKey;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockPredicateArgumentType
 implements ArgumentType<BlockPredicate> {
     private static final Collection<String> EXAMPLES = Arrays.asList("stone", "minecraft:stone", "stone[foo=bar]", "#stone", "#stone[foo=bar]{baz=nbt}");
-    private static final DynamicCommandExceptionType UNKNOWN_TAG_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("arguments.block.tag.unknown", id));
+    static final DynamicCommandExceptionType UNKNOWN_TAG_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("arguments.block.tag.unknown", id));
 
     public static BlockPredicateArgumentType blockPredicate() {
         return new BlockPredicateArgumentType();
     }
 
     public BlockPredicate parse(StringReader stringReader) throws CommandSyntaxException {
-        BlockArgumentParser blockArgumentParser = new BlockArgumentParser(stringReader, true).parse(true);
+        final BlockArgumentParser blockArgumentParser = new BlockArgumentParser(stringReader, true).parse(true);
         if (blockArgumentParser.getBlockState() != null) {
-            StatePredicate statePredicate = new StatePredicate(blockArgumentParser.getBlockState(), blockArgumentParser.getBlockProperties().keySet(), blockArgumentParser.getNbtData());
-            return manager -> statePredicate;
+            final StatePredicate statePredicate = new StatePredicate(blockArgumentParser.getBlockState(), blockArgumentParser.getBlockProperties().keySet(), blockArgumentParser.getNbtData());
+            return new BlockPredicate(){
+
+                @Override
+                public Predicate<CachedBlockPosition> create(Registry<Block> blockRegistry) {
+                    return statePredicate;
+                }
+
+                @Override
+                public boolean hasNbt() {
+                    return statePredicate.hasNbt();
+                }
+            };
         }
-        Identifier identifier = blockArgumentParser.getTagId();
-        return manager -> {
-            Tag<Block> tag = manager.getTag(Registry.BLOCK_KEY, identifier, id -> UNKNOWN_TAG_EXCEPTION.create((Object)id.toString()));
-            return new TagPredicate(tag, blockArgumentParser.getProperties(), blockArgumentParser.getNbtData());
+        final TagKey<Block> tagKey = blockArgumentParser.getTagId();
+        return new BlockPredicate(){
+
+            @Override
+            public Predicate<CachedBlockPosition> create(Registry<Block> blockRegistry) throws CommandSyntaxException {
+                if (!blockRegistry.containsTag(tagKey)) {
+                    throw UNKNOWN_TAG_EXCEPTION.create((Object)tagKey);
+                }
+                return new TagPredicate(tagKey, blockArgumentParser.getProperties(), blockArgumentParser.getNbtData());
+            }
+
+            @Override
+            public boolean hasNbt() {
+                return blockArgumentParser.getNbtData() != null;
+            }
         };
     }
 
     public static Predicate<CachedBlockPosition> getBlockPredicate(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return ((BlockPredicate)context.getArgument(name, BlockPredicate.class)).create(((ServerCommandSource)context.getSource()).getServer().getTagManager());
+        return ((BlockPredicate)context.getArgument(name, BlockPredicate.class)).create(((ServerCommandSource)context.getSource()).getServer().getRegistryManager().get(Registry.BLOCK_KEY));
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
@@ -79,7 +98,7 @@ implements ArgumentType<BlockPredicate> {
         catch (CommandSyntaxException commandSyntaxException) {
             // empty catch block
         }
-        return blockArgumentParser.getSuggestions(builder, BlockTags.getTagGroup());
+        return blockArgumentParser.getSuggestions(builder, Registry.BLOCK);
     }
 
     public Collection<String> getExamples() {
@@ -115,9 +134,13 @@ implements ArgumentType<BlockPredicate> {
             }
             if (this.nbt != null) {
                 BlockEntity blockEntity = cachedBlockPosition.getBlockEntity();
-                return blockEntity != null && NbtHelper.matches(this.nbt, blockEntity.writeNbt(new NbtCompound()), true);
+                return blockEntity != null && NbtHelper.matches(this.nbt, blockEntity.createNbtWithIdentifyingData(), true);
             }
             return true;
+        }
+
+        public boolean hasNbt() {
+            return this.nbt != null;
         }
 
         @Override
@@ -127,17 +150,19 @@ implements ArgumentType<BlockPredicate> {
     }
 
     public static interface BlockPredicate {
-        public Predicate<CachedBlockPosition> create(TagManager var1) throws CommandSyntaxException;
+        public Predicate<CachedBlockPosition> create(Registry<Block> var1) throws CommandSyntaxException;
+
+        public boolean hasNbt();
     }
 
     static class TagPredicate
     implements Predicate<CachedBlockPosition> {
-        private final Tag<Block> tag;
+        private final TagKey<Block> tag;
         @Nullable
         private final NbtCompound nbt;
         private final Map<String, String> properties;
 
-        TagPredicate(Tag<Block> tag, Map<String, String> properties, @Nullable NbtCompound nbt) {
+        TagPredicate(TagKey<Block> tag, Map<String, String> properties, @Nullable NbtCompound nbt) {
             this.tag = tag;
             this.properties = properties;
             this.nbt = nbt;
@@ -163,7 +188,7 @@ implements ArgumentType<BlockPredicate> {
             }
             if (this.nbt != null) {
                 BlockEntity blockEntity = cachedBlockPosition.getBlockEntity();
-                return blockEntity != null && NbtHelper.matches(this.nbt, blockEntity.writeNbt(new NbtCompound()), true);
+                return blockEntity != null && NbtHelper.matches(this.nbt, blockEntity.createNbtWithIdentifyingData(), true);
             }
             return true;
         }

@@ -30,8 +30,8 @@ public class Clipboard {
     public static final int field_31905 = 65545;
     private final ByteBuffer clipboardBuffer = BufferUtils.createByteBuffer((int)8192);
 
-    public String getClipboard(long window, GLFWErrorCallbackI gLFWErrorCallbackI) {
-        GLFWErrorCallback gLFWErrorCallback = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)gLFWErrorCallbackI);
+    public String getClipboard(long window, GLFWErrorCallbackI errorCallback) {
+        GLFWErrorCallback gLFWErrorCallback = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)errorCallback);
         String string = GLFW.glfwGetClipboardString((long)window);
         string = string != null ? TextVisitFactory.validateSurrogates(string) : "";
         GLFWErrorCallback gLFWErrorCallback2 = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)gLFWErrorCallback);

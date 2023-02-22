@@ -28,7 +28,7 @@ import net.minecraft.village.VillagerData;
 import org.jetbrains.annotations.Nullable;
 
 public class TrackedDataHandlerRegistry {
-    private static final Int2ObjectBiMap<TrackedDataHandler<?>> DATA_HANDLERS = new Int2ObjectBiMap(16);
+    private static final Int2ObjectBiMap<TrackedDataHandler<?>> DATA_HANDLERS = Int2ObjectBiMap.create(16);
     public static final TrackedDataHandler<Byte> BYTE = new TrackedDataHandler<Byte>(){
 
         @Override
@@ -250,11 +250,11 @@ public class TrackedDataHandlerRegistry {
 
         @Override
         public ParticleEffect read(PacketByteBuf packetByteBuf) {
-            return this.method_12744(packetByteBuf, (ParticleType)Registry.PARTICLE_TYPE.get(packetByteBuf.readVarInt()));
+            return this.read(packetByteBuf, (ParticleType)Registry.PARTICLE_TYPE.get(packetByteBuf.readVarInt()));
         }
 
-        private <T extends ParticleEffect> T method_12744(PacketByteBuf packetByteBuf, ParticleType<T> particleType) {
-            return particleType.getParametersFactory().read(particleType, packetByteBuf);
+        private <T extends ParticleEffect> T read(PacketByteBuf buf, ParticleType<T> type) {
+            return type.getParametersFactory().read(type, buf);
         }
 
         @Override
@@ -391,7 +391,7 @@ public class TrackedDataHandlerRegistry {
             return this.read(buf);
         }
     };
-    public static final TrackedDataHandler<NbtCompound> TAG_COMPOUND = new TrackedDataHandler<NbtCompound>(){
+    public static final TrackedDataHandler<NbtCompound> NBT_COMPOUND = new TrackedDataHandler<NbtCompound>(){
 
         @Override
         public void write(PacketByteBuf packetByteBuf, NbtCompound nbtCompound) {
@@ -514,7 +514,7 @@ public class TrackedDataHandlerRegistry {
         TrackedDataHandlerRegistry.register(FACING);
         TrackedDataHandlerRegistry.register(OPTIONAL_UUID);
         TrackedDataHandlerRegistry.register(OPTIONAL_BLOCK_STATE);
-        TrackedDataHandlerRegistry.register(TAG_COMPOUND);
+        TrackedDataHandlerRegistry.register(NBT_COMPOUND);
         TrackedDataHandlerRegistry.register(PARTICLE);
         TrackedDataHandlerRegistry.register(VILLAGER_DATA);
         TrackedDataHandlerRegistry.register(FIREWORK_DATA);

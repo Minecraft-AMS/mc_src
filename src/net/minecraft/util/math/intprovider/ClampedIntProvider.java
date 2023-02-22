@@ -23,11 +23,11 @@ import net.minecraft.util.math.intprovider.IntProviderType;
 
 public class ClampedIntProvider
 extends IntProvider {
-    public static final Codec<ClampedIntProvider> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)IntProvider.VALUE_CODEC.fieldOf("source").forGetter(clampedIntProvider -> clampedIntProvider.source), (App)Codec.INT.fieldOf("min_inclusive").forGetter(clampedIntProvider -> clampedIntProvider.min), (App)Codec.INT.fieldOf("max_inclusive").forGetter(clampedIntProvider -> clampedIntProvider.max)).apply((Applicative)instance, ClampedIntProvider::new)).comapFlatMap(clampedIntProvider -> {
-        if (clampedIntProvider.max < clampedIntProvider.min) {
-            return DataResult.error((String)("Max must be at least min, min_inclusive: " + clampedIntProvider.min + ", max_inclusive: " + clampedIntProvider.max));
+    public static final Codec<ClampedIntProvider> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)IntProvider.VALUE_CODEC.fieldOf("source").forGetter(provider -> provider.source), (App)Codec.INT.fieldOf("min_inclusive").forGetter(provider -> provider.min), (App)Codec.INT.fieldOf("max_inclusive").forGetter(provider -> provider.max)).apply((Applicative)instance, ClampedIntProvider::new)).comapFlatMap(provider -> {
+        if (provider.max < provider.min) {
+            return DataResult.error((String)("Max must be at least min, min_inclusive: " + provider.min + ", max_inclusive: " + provider.max));
         }
-        return DataResult.success((Object)clampedIntProvider);
+        return DataResult.success((Object)provider);
     }, Function.identity());
     private final IntProvider source;
     private int min;

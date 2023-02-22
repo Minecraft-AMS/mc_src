@@ -29,7 +29,7 @@ extends ChatScreen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.stopSleeping();
     }
 
@@ -52,6 +52,14 @@ extends ChatScreen {
     private void stopSleeping() {
         ClientPlayNetworkHandler clientPlayNetworkHandler = this.client.player.networkHandler;
         clientPlayNetworkHandler.sendPacket(new ClientCommandC2SPacket(this.client.player, ClientCommandC2SPacket.Mode.STOP_SLEEPING));
+    }
+
+    public void closeChatIfEmpty() {
+        if (this.chatField.getText().isEmpty()) {
+            this.client.setScreen(null);
+        } else {
+            this.client.setScreen(new ChatScreen(this.chatField.getText()));
+        }
     }
 }
 

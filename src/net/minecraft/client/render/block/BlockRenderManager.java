@@ -56,22 +56,22 @@ implements SynchronousResourceReloader {
         return this.models;
     }
 
-    public void renderDamage(BlockState state, BlockPos pos, BlockRenderView world, MatrixStack matrix, VertexConsumer vertexConsumer) {
+    public void renderDamage(BlockState state, BlockPos pos, BlockRenderView world, MatrixStack matrices, VertexConsumer vertexConsumer) {
         if (state.getRenderType() != BlockRenderType.MODEL) {
             return;
         }
         BakedModel bakedModel = this.models.getModel(state);
         long l = state.getRenderingSeed(pos);
-        this.blockModelRenderer.render(world, bakedModel, state, pos, matrix, vertexConsumer, true, this.random, l, OverlayTexture.DEFAULT_UV);
+        this.blockModelRenderer.render(world, bakedModel, state, pos, matrices, vertexConsumer, true, this.random, l, OverlayTexture.DEFAULT_UV);
     }
 
-    public boolean renderBlock(BlockState state, BlockPos pos, BlockRenderView world, MatrixStack matrix, VertexConsumer vertexConsumer, boolean cull, Random random) {
+    public boolean renderBlock(BlockState state, BlockPos pos, BlockRenderView world, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random) {
         try {
             BlockRenderType blockRenderType = state.getRenderType();
             if (blockRenderType != BlockRenderType.MODEL) {
                 return false;
             }
-            return this.blockModelRenderer.render(world, this.getModel(state), state, pos, matrix, vertexConsumer, cull, random, state.getRenderingSeed(pos), OverlayTexture.DEFAULT_UV);
+            return this.blockModelRenderer.render(world, this.getModel(state), state, pos, matrices, vertexConsumer, cull, random, state.getRenderingSeed(pos), OverlayTexture.DEFAULT_UV);
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Tesselating block in world");
@@ -81,9 +81,9 @@ implements SynchronousResourceReloader {
         }
     }
 
-    public boolean renderFluid(BlockPos pos, BlockRenderView world, VertexConsumer vertexConsumer, FluidState state) {
+    public boolean renderFluid(BlockPos pos, BlockRenderView world, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState) {
         try {
-            return this.fluidRenderer.render(world, pos, vertexConsumer, state);
+            return this.fluidRenderer.render(world, pos, vertexConsumer, blockState, fluidState);
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Tesselating liquid in world");

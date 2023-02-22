@@ -9,10 +9,10 @@
  *  com.mojang.brigadier.arguments.IntegerArgumentType
  *  com.mojang.brigadier.builder.RequiredArgumentBuilder
  *  com.mojang.brigadier.context.CommandContext
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DynamicLike
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world;
 
@@ -23,6 +23,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DynamicLike;
 import java.util.Comparator;
 import java.util.Map;
@@ -36,13 +37,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class GameRules {
     public static final int DEFAULT_RANDOM_TICK_SPEED = 3;
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<Key<?>, Type<?>> RULE_TYPES = Maps.newTreeMap(Comparator.comparing(key -> key.name));
     public static final Key<BooleanRule> DO_FIRE_TICK = GameRules.register("doFireTick", Category.UPDATES, BooleanRule.create(true));
     public static final Key<BooleanRule> DO_MOB_GRIEFING = GameRules.register("mobGriefing", Category.MOBS, BooleanRule.create(true));

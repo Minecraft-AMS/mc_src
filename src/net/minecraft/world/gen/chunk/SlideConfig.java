@@ -14,29 +14,17 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.util.math.MathHelper;
 
-public class SlideConfig {
-    public static final Codec<SlideConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("target").forGetter(SlideConfig::getTarget), (App)Codecs.NONNEGATIVE_INT.fieldOf("size").forGetter(SlideConfig::getSize), (App)Codec.INT.fieldOf("offset").forGetter(SlideConfig::getOffset)).apply((Applicative)instance, SlideConfig::new));
-    private final int target;
-    private final int size;
-    private final int offset;
+public record SlideConfig(double target, int size, int offset) {
+    public static final Codec<SlideConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.DOUBLE.fieldOf("target").forGetter(slideConfig -> slideConfig.target), (App)Codecs.NONNEGATIVE_INT.fieldOf("size").forGetter(slideConfig -> slideConfig.size), (App)Codec.INT.fieldOf("offset").forGetter(slideConfig -> slideConfig.offset)).apply((Applicative)instance, SlideConfig::new));
 
-    public SlideConfig(int target, int size, int offset) {
-        this.target = target;
-        this.size = size;
-        this.offset = offset;
-    }
-
-    public int getTarget() {
-        return this.target;
-    }
-
-    public int getSize() {
-        return this.size;
-    }
-
-    public int getOffset() {
-        return this.offset;
+    public double method_38414(double d, double e) {
+        if (this.size <= 0) {
+            return d;
+        }
+        double f = (e - (double)this.offset) / (double)this.size;
+        return MathHelper.clampedLerp(this.target, d, f);
     }
 }
 

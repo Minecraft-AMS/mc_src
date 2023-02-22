@@ -28,6 +28,7 @@ import net.minecraft.entity.mob.ShulkerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
@@ -114,7 +115,7 @@ extends BlockWithEntity {
         if (entity.getAnimationStage() != ShulkerBoxBlockEntity.AnimationStage.CLOSED) {
             return true;
         }
-        Box box = ShulkerEntity.method_33347(state.get(FACING), 0.0f, 0.5f).offset(pos).contract(1.0E-6);
+        Box box = ShulkerEntity.calculateBoundingBox(state.get(FACING), 0.0f, 0.5f).offset(pos).contract(1.0E-6);
         return world.isSpaceEmpty(box);
     }
 
@@ -135,10 +136,7 @@ extends BlockWithEntity {
             ShulkerBoxBlockEntity shulkerBoxBlockEntity = (ShulkerBoxBlockEntity)blockEntity;
             if (!world.isClient && player.isCreative() && !shulkerBoxBlockEntity.isEmpty()) {
                 ItemStack itemStack = ShulkerBoxBlock.getItemStack(this.getColor());
-                NbtCompound nbtCompound = shulkerBoxBlockEntity.writeInventoryNbt(new NbtCompound());
-                if (!nbtCompound.isEmpty()) {
-                    itemStack.setSubNbt("BlockEntityTag", nbtCompound);
-                }
+                blockEntity.setStackNbt(itemStack);
                 if (shulkerBoxBlockEntity.hasCustomName()) {
                     itemStack.setCustomName(shulkerBoxBlockEntity.getCustomName());
                 }
@@ -157,7 +155,7 @@ extends BlockWithEntity {
         BlockEntity blockEntity = builder.getNullable(LootContextParameters.BLOCK_ENTITY);
         if (blockEntity instanceof ShulkerBoxBlockEntity) {
             ShulkerBoxBlockEntity shulkerBoxBlockEntity = (ShulkerBoxBlockEntity)blockEntity;
-            builder = builder.putDrop(CONTENTS, (lootContext, consumer) -> {
+            builder = builder.putDrop(CONTENTS, (context, consumer) -> {
                 for (int i = 0; i < shulkerBoxBlockEntity.size(); ++i) {
                     consumer.accept(shulkerBoxBlockEntity.getStack(i));
                 }
@@ -189,7 +187,7 @@ extends BlockWithEntity {
     @Override
     public void appendTooltip(ItemStack stack, @Nullable BlockView world, List<Text> tooltip, TooltipContext options) {
         super.appendTooltip(stack, world, tooltip, options);
-        NbtCompound nbtCompound = stack.getSubNbt("BlockEntityTag");
+        NbtCompound nbtCompound = BlockItem.getBlockEntityNbt(stack);
         if (nbtCompound != null) {
             if (nbtCompound.contains("LootTable", 8)) {
                 tooltip.add(new LiteralText("???????"));
@@ -242,11 +240,7 @@ extends BlockWithEntity {
     @Override
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         ItemStack itemStack = super.getPickStack(world, pos, state);
-        ShulkerBoxBlockEntity shulkerBoxBlockEntity = (ShulkerBoxBlockEntity)world.getBlockEntity(pos);
-        NbtCompound nbtCompound = shulkerBoxBlockEntity.writeInventoryNbt(new NbtCompound());
-        if (!nbtCompound.isEmpty()) {
-            itemStack.setSubNbt("BlockEntityTag", nbtCompound);
-        }
+        world.getBlockEntity(pos, BlockEntityType.SHULKER_BOX).ifPresent(blockEntity -> blockEntity.setStackNbt(itemStack));
         return itemStack;
     }
 

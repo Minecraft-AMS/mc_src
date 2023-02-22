@@ -162,7 +162,7 @@ extends DrawableHelper {
     }
 
     @Nullable
-    public static AdvancementTab create(MinecraftClient minecraft, AdvancementsScreen screen, int index, Advancement root) {
+    public static AdvancementTab create(MinecraftClient client, AdvancementsScreen screen, int index, Advancement root) {
         if (root.getDisplay() == null) {
             return null;
         }
@@ -171,7 +171,7 @@ extends DrawableHelper {
                 index -= advancementTabType.getTabCount();
                 continue;
             }
-            return new AdvancementTab(minecraft, screen, advancementTabType, index, root, root.getDisplay());
+            return new AdvancementTab(client, screen, advancementTabType, index, root, root.getDisplay());
         }
         return null;
     }

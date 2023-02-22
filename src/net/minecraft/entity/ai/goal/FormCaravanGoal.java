@@ -17,7 +17,7 @@ public class FormCaravanGoal
 extends Goal {
     public final LlamaEntity llama;
     private double speed;
-    private static final int field_30217 = 8;
+    private static final int MAX_CARAVAN_LENGTH = 8;
     private int counter;
 
     public FormCaravanGoal(LlamaEntity llama, double speed) {
@@ -75,7 +75,7 @@ extends Goal {
         if (d > 676.0) {
             if (this.speed <= 3.0) {
                 this.speed *= 1.2;
-                this.counter = 40;
+                this.counter = FormCaravanGoal.toGoalTicks(40);
                 return true;
             }
             if (this.counter == 0) {

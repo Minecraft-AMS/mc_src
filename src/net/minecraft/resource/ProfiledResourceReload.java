@@ -3,12 +3,13 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.Stopwatch
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.resource;
 
 import com.google.common.base.Stopwatch;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -21,12 +22,11 @@ import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.ProfilerSystem;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class ProfiledResourceReload
 extends SimpleResourceReload<Summary> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Stopwatch reloadTimer = Stopwatch.createUnstarted();
 
     public ProfiledResourceReload(ResourceManager manager, List<ResourceReloader> reloaders, Executor prepareExecutor, Executor applyExecutor, CompletableFuture<Unit> initialStage) {
@@ -44,7 +44,10 @@ extends SimpleResourceReload<Summary> {
                 application.run();
                 atomicLong2.addAndGet(Util.getMeasuringTimeNano() - l);
             }));
-            return completableFuture.thenApplyAsync(void_ -> new Summary(reloader.getName(), profilerSystem.getResult(), profilerSystem2.getResult(), atomicLong, atomicLong2), applyExecutor);
+            return completableFuture.thenApplyAsync(dummy -> {
+                LOGGER.debug("Finished reloading " + reloader.getName());
+                return new Summary(reloader.getName(), profilerSystem.getResult(), profilerSystem2.getResult(), atomicLong, atomicLong2);
+            }, applyExecutor);
         }, initialStage);
         this.reloadTimer.start();
         this.applyStageFuture.thenAcceptAsync(this::finish, applyExecutor);
@@ -61,7 +64,7 @@ extends SimpleResourceReload<Summary> {
             int k = (int)((double)summary.applyTimeMs.get() / 1000000.0);
             int l = j + k;
             String string = summary.name;
-            LOGGER.info("{} took approximately {} ms ({} ms preparing, {} ms applying)", (Object)string, (Object)l, (Object)j, (Object)k);
+            LOGGER.info("{} took approximately {} ms ({} ms preparing, {} ms applying)", new Object[]{string, l, j, k});
             i += k;
         }
         LOGGER.info("Total blocking time: {} ms", (Object)i);

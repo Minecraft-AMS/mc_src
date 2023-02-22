@@ -16,12 +16,12 @@ import net.minecraft.world.chunk.ChunkCache;
 
 public class AmphibiousPathNodeMaker
 extends LandPathNodeMaker {
-    private final boolean penaliseDeepWater;
+    private final boolean penalizeDeepWater;
     private float oldWalkablePenalty;
     private float oldWaterBorderPenalty;
 
-    public AmphibiousPathNodeMaker(boolean penaliseDeepWater) {
-        this.penaliseDeepWater = penaliseDeepWater;
+    public AmphibiousPathNodeMaker(boolean penalizeDeepWater) {
+        this.penalizeDeepWater = penalizeDeepWater;
     }
 
     @Override
@@ -57,7 +57,7 @@ extends LandPathNodeMaker {
         PathNodeType pathNodeType = this.getNodeType(this.entity, node.x, node.y + 1, node.z);
         PathNodeType pathNodeType2 = this.getNodeType(this.entity, node.x, node.y, node.z);
         int j = this.entity.getPathfindingPenalty(pathNodeType) >= 0.0f && pathNodeType2 != PathNodeType.STICKY_HONEY ? MathHelper.floor(Math.max(1.0f, this.entity.stepHeight)) : 0;
-        double d = this.method_37003(new BlockPos(node.x, node.y, node.z));
+        double d = this.getFeetY(new BlockPos(node.x, node.y, node.z));
         PathNode pathNode = this.getPathNode(node.x, node.y + 1, node.z, Math.max(0, j - 1), d, Direction.UP, pathNodeType2);
         PathNode pathNode2 = this.getPathNode(node.x, node.y - 1, node.z, j, d, Direction.DOWN, pathNodeType2);
         if (this.isValidAdjacentSuccessor(pathNode, node)) {
@@ -68,15 +68,15 @@ extends LandPathNodeMaker {
         }
         for (int k = 0; k < i; ++k) {
             PathNode pathNode3 = successors[k];
-            if (pathNode3.type != PathNodeType.WATER || !this.penaliseDeepWater || pathNode3.y >= this.entity.world.getSeaLevel() - 10) continue;
+            if (pathNode3.type != PathNodeType.WATER || !this.penalizeDeepWater || pathNode3.y >= this.entity.world.getSeaLevel() - 10) continue;
             pathNode3.penalty += 1.0f;
         }
         return i;
     }
 
     @Override
-    protected double method_37003(BlockPos blockPos) {
-        return this.entity.isTouchingWater() ? (double)blockPos.getY() + 0.5 : super.method_37003(blockPos);
+    protected double getFeetY(BlockPos pos) {
+        return this.entity.isTouchingWater() ? (double)pos.getY() + 0.5 : super.getFeetY(pos);
     }
 
     @Override

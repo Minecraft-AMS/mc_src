@@ -7,6 +7,7 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
@@ -39,15 +40,21 @@ import net.minecraft.entity.damage.ProjectileDamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.EndermiteEntity;
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionUtil;
+import net.minecraft.potion.Potions;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -81,7 +88,8 @@ implements Angerable {
     private int ageWhenTargetSet;
     private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private int angerTime;
-    private UUID targetUuid;
+    @Nullable
+    private UUID angryAt;
 
     public EndermanEntity(EntityType<? extends EndermanEntity> entityType, World world) {
         super((EntityType<? extends HostileEntity>)entityType, world);
@@ -101,7 +109,7 @@ implements Angerable {
         this.goalSelector.add(11, new PickUpBlockGoal(this));
         this.targetSelector.add(1, new TeleportTowardsPlayerGoal(this, this::shouldAngerAt));
         this.targetSelector.add(2, new RevengeGoal(this, new Class[0]));
-        this.targetSelector.add(3, new ActiveTargetGoal<EndermiteEntity>(this, EndermiteEntity.class, true, false));
+        this.targetSelector.add(3, new ActiveTargetGoal<EndermiteEntity>((MobEntity)this, EndermiteEntity.class, true, false));
         this.targetSelector.add(4, new UniversalAngerGoal<EndermanEntity>(this, false));
     }
 
@@ -141,8 +149,8 @@ implements Angerable {
     }
 
     @Override
-    public void setAngerTime(int ticks) {
-        this.angerTime = ticks;
+    public void setAngerTime(int angerTime) {
+        this.angerTime = angerTime;
     }
 
     @Override
@@ -151,13 +159,14 @@ implements Angerable {
     }
 
     @Override
-    public void setAngryAt(@Nullable UUID uuid) {
-        this.targetUuid = uuid;
+    public void setAngryAt(@Nullable UUID angryAt) {
+        this.angryAt = angryAt;
     }
 
     @Override
+    @Nullable
     public UUID getAngryAt() {
-        return this.targetUuid;
+        return this.angryAt;
     }
 
     public void playAngrySound() {
@@ -325,17 +334,31 @@ implements Angerable {
             return false;
         }
         if (source instanceof ProjectileDamageSource) {
+            Entity entity = source.getSource();
+            boolean bl = entity instanceof PotionEntity ? this.damageFromPotion(source, (PotionEntity)entity, amount) : false;
             for (int i = 0; i < 64; ++i) {
                 if (!this.teleportRandomly()) continue;
                 return true;
             }
-            return false;
+            return bl;
         }
-        boolean bl = super.damage(source, amount);
+        boolean bl2 = super.damage(source, amount);
         if (!this.world.isClient() && !(source.getAttacker() instanceof LivingEntity) && this.random.nextInt(10) != 0) {
             this.teleportRandomly();
         }
-        return bl;
+        return bl2;
+    }
+
+    private boolean damageFromPotion(DamageSource source, PotionEntity potion, float amount) {
+        boolean bl;
+        ItemStack itemStack = potion.getStack();
+        Potion potion2 = PotionUtil.getPotion(itemStack);
+        List<StatusEffectInstance> list = PotionUtil.getPotionEffects(itemStack);
+        boolean bl2 = bl = potion2 == Potions.WATER && list.isEmpty();
+        if (bl) {
+            return super.damage(source, amount);
+        }
+        return false;
     }
 
     public boolean isAngry() {
@@ -358,6 +381,7 @@ implements Angerable {
     static class ChasePlayerGoal
     extends Goal {
         private final EndermanEntity enderman;
+        @Nullable
         private LivingEntity target;
 
         public ChasePlayerGoal(EndermanEntity enderman) {
@@ -405,7 +429,7 @@ implements Angerable {
             if (!this.enderman.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return false;
             }
-            return this.enderman.getRandom().nextInt(2000) == 0;
+            return this.enderman.getRandom().nextInt(PlaceBlockGoal.toGoalTicks(2000)) == 0;
         }
 
         @Override
@@ -451,7 +475,7 @@ implements Angerable {
             if (!this.enderman.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return false;
             }
-            return this.enderman.getRandom().nextInt(20) == 0;
+            return this.enderman.getRandom().nextInt(PickUpBlockGoal.toGoalTicks(20)) == 0;
         }
 
         @Override
@@ -478,14 +502,15 @@ implements Angerable {
     static class TeleportTowardsPlayerGoal
     extends ActiveTargetGoal<PlayerEntity> {
         private final EndermanEntity enderman;
+        @Nullable
         private PlayerEntity targetPlayer;
         private int lookAtPlayerWarmup;
         private int ticksSinceUnseenTeleport;
         private final TargetPredicate staringPlayerPredicate;
         private final TargetPredicate validTargetPredicate = TargetPredicate.createAttackable().ignoreVisibility();
 
-        public TeleportTowardsPlayerGoal(EndermanEntity enderman, @Nullable Predicate<LivingEntity> predicate) {
-            super(enderman, PlayerEntity.class, 10, false, false, predicate);
+        public TeleportTowardsPlayerGoal(EndermanEntity enderman, @Nullable Predicate<LivingEntity> targetPredicate) {
+            super(enderman, PlayerEntity.class, 10, false, false, targetPredicate);
             this.enderman = enderman;
             this.staringPlayerPredicate = TargetPredicate.createAttackable().setBaseMaxDistance(this.getFollowRange()).setPredicate(playerEntity -> enderman.isPlayerStaring((PlayerEntity)playerEntity));
         }
@@ -498,7 +523,7 @@ implements Angerable {
 
         @Override
         public void start() {
-            this.lookAtPlayerWarmup = 5;
+            this.lookAtPlayerWarmup = this.getTickCount(5);
             this.ticksSinceUnseenTeleport = 0;
             this.enderman.setProvoked();
         }
@@ -542,7 +567,7 @@ implements Angerable {
                             this.enderman.teleportRandomly();
                         }
                         this.ticksSinceUnseenTeleport = 0;
-                    } else if (this.targetEntity.squaredDistanceTo(this.enderman) > 256.0 && this.ticksSinceUnseenTeleport++ >= 30 && this.enderman.teleportTo(this.targetEntity)) {
+                    } else if (this.targetEntity.squaredDistanceTo(this.enderman) > 256.0 && this.ticksSinceUnseenTeleport++ >= this.getTickCount(30) && this.enderman.teleportTo(this.targetEntity)) {
                         this.ticksSinceUnseenTeleport = 0;
                     }
                 }

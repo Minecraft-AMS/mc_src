@@ -20,15 +20,15 @@ import net.minecraft.particle.DefaultParticleType;
 @Environment(value=EnvType.CLIENT)
 public class CampfireSmokeParticle
 extends SpriteBillboardParticle {
-    CampfireSmokeParticle(ClientWorld clientWorld, double d, double e, double f, double g, double h, double i, boolean bl) {
-        super(clientWorld, d, e, f);
+    CampfireSmokeParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, boolean signal) {
+        super(world, x, y, z);
         this.scale(3.0f);
         this.setBoundingBoxSpacing(0.25f, 0.25f);
-        this.maxAge = bl ? this.random.nextInt(50) + 280 : this.random.nextInt(50) + 80;
+        this.maxAge = signal ? this.random.nextInt(50) + 280 : this.random.nextInt(50) + 80;
         this.gravityStrength = 3.0E-6f;
-        this.velocityX = g;
-        this.velocityY = h + (double)(this.random.nextFloat() / 500.0f);
-        this.velocityZ = i;
+        this.velocityX = velocityX;
+        this.velocityY = velocityY + (double)(this.random.nextFloat() / 500.0f);
+        this.velocityZ = velocityZ;
     }
 
     @Override
@@ -36,7 +36,7 @@ extends SpriteBillboardParticle {
         this.prevPosX = this.x;
         this.prevPosY = this.y;
         this.prevPosZ = this.z;
-        if (this.age++ >= this.maxAge || this.colorAlpha <= 0.0f) {
+        if (this.age++ >= this.maxAge || this.alpha <= 0.0f) {
             this.markDead();
             return;
         }
@@ -44,8 +44,8 @@ extends SpriteBillboardParticle {
         this.velocityZ += (double)(this.random.nextFloat() / 5000.0f * (float)(this.random.nextBoolean() ? 1 : -1));
         this.velocityY -= (double)this.gravityStrength;
         this.move(this.velocityX, this.velocityY, this.velocityZ);
-        if (this.age >= this.maxAge - 60 && this.colorAlpha > 0.01f) {
-            this.colorAlpha -= 0.015f;
+        if (this.age >= this.maxAge - 60 && this.alpha > 0.01f) {
+            this.alpha -= 0.015f;
         }
     }
 
@@ -66,7 +66,7 @@ extends SpriteBillboardParticle {
         @Override
         public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             CampfireSmokeParticle campfireSmokeParticle = new CampfireSmokeParticle(clientWorld, d, e, f, g, h, i, true);
-            campfireSmokeParticle.setColorAlpha(0.95f);
+            campfireSmokeParticle.setAlpha(0.95f);
             campfireSmokeParticle.setSprite(this.spriteProvider);
             return campfireSmokeParticle;
         }
@@ -84,7 +84,7 @@ extends SpriteBillboardParticle {
         @Override
         public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             CampfireSmokeParticle campfireSmokeParticle = new CampfireSmokeParticle(clientWorld, d, e, f, g, h, i, false);
-            campfireSmokeParticle.setColorAlpha(0.9f);
+            campfireSmokeParticle.setAlpha(0.9f);
             campfireSmokeParticle.setSprite(this.spriteProvider);
             return campfireSmokeParticle;
         }

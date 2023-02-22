@@ -6,9 +6,9 @@
  *  com.google.common.base.Ticker
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.ImmutableSet$Builder
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  *  oshi.SystemInfo
  *  oshi.hardware.CentralProcessor
  */
@@ -17,6 +17,7 @@ package net.minecraft.util.profiler;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableSet;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -30,14 +31,13 @@ import net.minecraft.util.profiler.Sampler;
 import net.minecraft.util.profiler.SamplerFactory;
 import net.minecraft.util.profiler.SamplerSource;
 import net.minecraft.util.thread.ExecutorSampling;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 
 public class ServerSamplerSource
 implements SamplerSource {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Set<Sampler> samplers = new ObjectOpenHashSet();
     private final SamplerFactory factory = new SamplerFactory();
 

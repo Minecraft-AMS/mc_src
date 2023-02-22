@@ -163,12 +163,12 @@ implements ChunkLightingView {
     }
 
     @Override
-    public int doLightUpdates(int i, boolean bl, boolean bl2) {
+    public int doLightUpdates(int i, boolean doSkylight, boolean skipEdgeLightPropagation) {
         if (!this.field_15794) {
             if (((LevelPropagator)this.lightStorage).hasPendingUpdates() && (i = ((LevelPropagator)this.lightStorage).applyPendingUpdates(i)) == 0) {
                 return i;
             }
-            ((LightStorage)this.lightStorage).updateLight(this, bl, bl2);
+            ((LightStorage)this.lightStorage).updateLight(this, doSkylight, skipEdgeLightPropagation);
         }
         this.field_15794 = true;
         if (this.hasPendingUpdates()) {
@@ -183,8 +183,8 @@ implements ChunkLightingView {
         return i;
     }
 
-    protected void enqueueSectionData(long sectionPos, @Nullable ChunkNibbleArray lightArray, boolean bl) {
-        ((LightStorage)this.lightStorage).enqueueSectionData(sectionPos, lightArray, bl);
+    protected void enqueueSectionData(long sectionPos, @Nullable ChunkNibbleArray lightArray, boolean nonEdge) {
+        ((LightStorage)this.lightStorage).enqueueSectionData(sectionPos, lightArray, nonEdge);
     }
 
     @Override
@@ -221,9 +221,9 @@ implements ChunkLightingView {
     }
 
     @Override
-    public void setColumnEnabled(ChunkPos chunkPos, boolean bl) {
-        long l = ChunkSectionPos.withZeroY(ChunkSectionPos.asLong(chunkPos.x, 0, chunkPos.z));
-        ((LightStorage)this.lightStorage).setColumnEnabled(l, bl);
+    public void setColumnEnabled(ChunkPos pos, boolean retainData) {
+        long l = ChunkSectionPos.withZeroY(ChunkSectionPos.asLong(pos.x, 0, pos.z));
+        ((LightStorage)this.lightStorage).setColumnEnabled(l, retainData);
     }
 
     public void setRetainColumn(ChunkPos pos, boolean retainData) {

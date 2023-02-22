@@ -100,6 +100,9 @@ extends Task<E> {
         }
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     public static abstract class RunMode
     extends Enum<RunMode> {
         public static final /* enum */ RunMode RUN_ONE = new RunMode(){

@@ -7,12 +7,11 @@
  */
 package net.minecraft.client.particle;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.ShapeContext;
 import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.render.Camera;
@@ -20,15 +19,15 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.collection.ReusableStream;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class Particle {
     private static final Box EMPTY_BOUNDING_BOX = new Box(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    private static final double MAX_SQUARED_COLLISION_CHECK_DISTANCE = MathHelper.square(100.0);
     protected final ClientWorld world;
     protected double prevPosX;
     protected double prevPosY;
@@ -50,13 +49,13 @@ public abstract class Particle {
     protected int age;
     protected int maxAge;
     protected float gravityStrength;
-    protected float colorRed = 1.0f;
-    protected float colorGreen = 1.0f;
-    protected float colorBlue = 1.0f;
-    protected float colorAlpha = 1.0f;
+    protected float red = 1.0f;
+    protected float green = 1.0f;
+    protected float blue = 1.0f;
+    protected float alpha = 1.0f;
     protected float angle;
     protected float prevAngle;
-    protected float field_28786 = 0.98f;
+    protected float velocityMultiplier = 0.98f;
     protected boolean field_28787 = false;
 
     protected Particle(ClientWorld world, double x, double y, double z) {
@@ -100,13 +99,13 @@ public abstract class Particle {
     }
 
     public void setColor(float red, float green, float blue) {
-        this.colorRed = red;
-        this.colorGreen = green;
-        this.colorBlue = blue;
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
     }
 
-    protected void setColorAlpha(float alpha) {
-        this.colorAlpha = alpha;
+    protected void setAlpha(float alpha) {
+        this.alpha = alpha;
     }
 
     public void setMaxAge(int maxAge) {
@@ -131,9 +130,9 @@ public abstract class Particle {
             this.velocityX *= 1.1;
             this.velocityZ *= 1.1;
         }
-        this.velocityX *= (double)this.field_28786;
-        this.velocityY *= (double)this.field_28786;
-        this.velocityZ *= (double)this.field_28786;
+        this.velocityX *= (double)this.velocityMultiplier;
+        this.velocityY *= (double)this.velocityMultiplier;
+        this.velocityZ *= (double)this.velocityMultiplier;
         if (this.onGround) {
             this.velocityX *= (double)0.7f;
             this.velocityZ *= (double)0.7f;
@@ -145,7 +144,7 @@ public abstract class Particle {
     public abstract ParticleTextureSheet getType();
 
     public String toString() {
-        return this.getClass().getSimpleName() + ", Pos (" + this.x + "," + this.y + "," + this.z + "), RGBA (" + this.colorRed + "," + this.colorGreen + "," + this.colorBlue + "," + this.colorAlpha + "), Age " + this.age;
+        return this.getClass().getSimpleName() + ", Pos (" + this.x + "," + this.y + "," + this.z + "), RGBA (" + this.red + "," + this.green + "," + this.blue + "," + this.alpha + "), Age " + this.age;
     }
 
     public void markDead() {
@@ -179,8 +178,8 @@ public abstract class Particle {
         double d = dx;
         double e = dy;
         double f = dz;
-        if (this.collidesWithWorld && (dx != 0.0 || dy != 0.0 || dz != 0.0)) {
-            Vec3d vec3d = Entity.adjustMovementForCollisions(null, new Vec3d(dx, dy, dz), this.getBoundingBox(), this.world, ShapeContext.absent(), new ReusableStream<VoxelShape>(Stream.empty()));
+        if (this.collidesWithWorld && (dx != 0.0 || dy != 0.0 || dz != 0.0) && dx * dx + dy * dy + dz * dz < MAX_SQUARED_COLLISION_CHECK_DISTANCE) {
+            Vec3d vec3d = Entity.adjustMovementForCollisions(null, new Vec3d(dx, dy, dz), this.getBoundingBox(), this.world, List.of());
             dx = vec3d.x;
             dy = vec3d.y;
             dz = vec3d.z;

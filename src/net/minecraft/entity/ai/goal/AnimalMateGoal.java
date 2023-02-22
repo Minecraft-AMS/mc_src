@@ -21,6 +21,7 @@ extends Goal {
     protected final AnimalEntity animal;
     private final Class<? extends AnimalEntity> entityClass;
     protected final World world;
+    @Nullable
     protected AnimalEntity mate;
     private int timer;
     private final double chance;
@@ -59,10 +60,10 @@ extends Goal {
 
     @Override
     public void tick() {
-        this.animal.getLookControl().lookAt(this.mate, 10.0f, this.animal.getLookPitchSpeed());
+        this.animal.getLookControl().lookAt(this.mate, 10.0f, this.animal.getMaxLookPitchChange());
         this.animal.getNavigation().startMovingTo(this.mate, this.chance);
         ++this.timer;
-        if (this.timer >= 60 && this.animal.squaredDistanceTo(this.mate) < 9.0) {
+        if (this.timer >= this.getTickCount(60) && this.animal.squaredDistanceTo(this.mate) < 9.0) {
             this.breed();
         }
     }

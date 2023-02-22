@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.goal;
 
@@ -11,11 +14,13 @@ import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.predicate.entity.EntityPredicates;
+import org.jetbrains.annotations.Nullable;
 
 public class LookAtEntityGoal
 extends Goal {
     public static final float field_33760 = 0.02f;
     protected final MobEntity mob;
+    @Nullable
     protected Entity target;
     protected final float range;
     private int lookTime;
@@ -32,14 +37,14 @@ extends Goal {
         this(mob, targetType, range, chance, false);
     }
 
-    public LookAtEntityGoal(MobEntity mobEntity, Class<? extends LivingEntity> class_, float f, float g, boolean bl) {
-        this.mob = mobEntity;
-        this.targetType = class_;
-        this.range = f;
-        this.chance = g;
+    public LookAtEntityGoal(MobEntity mob, Class<? extends LivingEntity> targetType, float range, float chance, boolean bl) {
+        this.mob = mob;
+        this.targetType = targetType;
+        this.range = range;
+        this.chance = chance;
         this.field_33761 = bl;
         this.setControls(EnumSet.of(Goal.Control.LOOK));
-        this.targetPredicate = class_ == PlayerEntity.class ? TargetPredicate.createNonAttackable().setBaseMaxDistance(f).setPredicate(livingEntity -> EntityPredicates.rides(mobEntity).test((Entity)livingEntity)) : TargetPredicate.createNonAttackable().setBaseMaxDistance(f);
+        this.targetPredicate = targetType == PlayerEntity.class ? TargetPredicate.createNonAttackable().setBaseMaxDistance(range).setPredicate(entity -> EntityPredicates.rides(mob).test((Entity)entity)) : TargetPredicate.createNonAttackable().setBaseMaxDistance(range);
     }
 
     @Override
@@ -67,7 +72,7 @@ extends Goal {
 
     @Override
     public void start() {
-        this.lookTime = 40 + this.mob.getRandom().nextInt(40);
+        this.lookTime = this.getTickCount(40 + this.mob.getRandom().nextInt(40));
     }
 
     @Override
@@ -77,6 +82,9 @@ extends Goal {
 
     @Override
     public void tick() {
+        if (!this.target.isAlive()) {
+            return;
+        }
         double d = this.field_33761 ? this.mob.getEyeY() : this.target.getEyeY();
         this.mob.getLookControl().lookAt(this.target.getX(), d, this.target.getZ());
         --this.lookTime;

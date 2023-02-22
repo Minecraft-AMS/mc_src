@@ -5,6 +5,7 @@
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.DataFixer
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Dynamic
@@ -13,15 +14,15 @@
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.storage;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
@@ -30,8 +31,8 @@ import com.mojang.serialization.OptionalDynamic;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -47,14 +48,13 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.storage.StorageIoWorker;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class SerializingRegionBasedStorage<R>
 implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final String field_31427 = "Sections";
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String SECTIONS_KEY = "Sections";
     private final StorageIoWorker worker;
     private final Long2ObjectMap<Optional<R>> loadedElements = new Long2ObjectOpenHashMap();
     private final LongLinkedOpenHashSet unsavedElements = new LongLinkedOpenHashSet();
@@ -64,20 +64,24 @@ implements AutoCloseable {
     private final DataFixTypes dataFixTypes;
     protected final HeightLimitView world;
 
-    public SerializingRegionBasedStorage(File directory, Function<Runnable, Codec<R>> codecFactory, Function<Runnable, R> factory, DataFixer dataFixer, DataFixTypes dataFixTypes, boolean dsync, HeightLimitView world) {
+    public SerializingRegionBasedStorage(Path path, Function<Runnable, Codec<R>> codecFactory, Function<Runnable, R> factory, DataFixer dataFixer, DataFixTypes dataFixTypes, boolean dsync, HeightLimitView world) {
         this.codecFactory = codecFactory;
         this.factory = factory;
         this.dataFixer = dataFixer;
         this.dataFixTypes = dataFixTypes;
         this.world = world;
-        this.worker = new StorageIoWorker(directory, dsync, directory.getName());
+        this.worker = new StorageIoWorker(path, dsync, path.getFileName().toString());
     }
 
     protected void tick(BooleanSupplier shouldKeepTicking) {
-        while (!this.unsavedElements.isEmpty() && shouldKeepTicking.getAsBoolean()) {
+        while (this.hasUnsavedElements() && shouldKeepTicking.getAsBoolean()) {
             ChunkPos chunkPos = ChunkSectionPos.from(this.unsavedElements.firstLong()).toChunkPos();
             this.save(chunkPos);
         }
+    }
+
+    public boolean hasUnsavedElements() {
+        return !this.unsavedElements.isEmpty();
     }
 
     @Nullable
@@ -101,8 +105,8 @@ implements AutoCloseable {
         return optional;
     }
 
-    protected boolean isPosInvalid(long l) {
-        int i = ChunkSectionPos.getBlockCoord(ChunkSectionPos.unpackY(l));
+    protected boolean isPosInvalid(long pos) {
+        int i = ChunkSectionPos.getBlockCoord(ChunkSectionPos.unpackY(pos));
         return this.world.isOutOfHeightLimit(i);
     }
 
@@ -134,23 +138,23 @@ implements AutoCloseable {
         }
     }
 
-    private <T> void update(ChunkPos pos, DynamicOps<T> dynamicOps, @Nullable T data) {
+    private <T> void update(ChunkPos pos, DynamicOps<T> ops, @Nullable T data) {
         if (data == null) {
             for (int i = this.world.getBottomSectionCoord(); i < this.world.getTopSectionCoord(); ++i) {
-                this.loadedElements.put(SerializingRegionBasedStorage.method_33637(pos, i), Optional.empty());
+                this.loadedElements.put(SerializingRegionBasedStorage.chunkSectionPosAsLong(pos, i), Optional.empty());
             }
         } else {
             int k;
-            Dynamic dynamic2 = new Dynamic(dynamicOps, data);
+            Dynamic dynamic2 = new Dynamic(ops, data);
             int j = SerializingRegionBasedStorage.getDataVersion(dynamic2);
             boolean bl = j != (k = SharedConstants.getGameVersion().getWorldVersion());
             Dynamic dynamic22 = this.dataFixer.update(this.dataFixTypes.getTypeReference(), dynamic2, j, k);
-            OptionalDynamic optionalDynamic = dynamic22.get(field_31427);
+            OptionalDynamic optionalDynamic = dynamic22.get(SECTIONS_KEY);
             for (int l = this.world.getBottomSectionCoord(); l < this.world.getTopSectionCoord(); ++l) {
-                long m = SerializingRegionBasedStorage.method_33637(pos, l);
+                long m = SerializingRegionBasedStorage.chunkSectionPosAsLong(pos, l);
                 Optional optional = optionalDynamic.get(Integer.toString(l)).result().flatMap(dynamic -> this.codecFactory.apply(() -> this.onUpdate(m)).parse(dynamic).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)));
                 this.loadedElements.put(m, optional);
-                optional.ifPresent(object -> {
+                optional.ifPresent(sections -> {
                     this.onLoad(m);
                     if (bl) {
                         this.onUpdate(m);
@@ -173,7 +177,7 @@ implements AutoCloseable {
     private <T> Dynamic<T> method_20367(ChunkPos chunkPos, DynamicOps<T> dynamicOps) {
         HashMap map = Maps.newHashMap();
         for (int i = this.world.getBottomSectionCoord(); i < this.world.getTopSectionCoord(); ++i) {
-            long l = SerializingRegionBasedStorage.method_33637(chunkPos, i);
+            long l = SerializingRegionBasedStorage.chunkSectionPosAsLong(chunkPos, i);
             this.unsavedElements.remove(l);
             Optional optional = (Optional)this.loadedElements.get(l);
             if (optional == null || !optional.isPresent()) continue;
@@ -181,11 +185,11 @@ implements AutoCloseable {
             String string = Integer.toString(i);
             dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(object -> map.put(dynamicOps.createString(string), object));
         }
-        return new Dynamic(dynamicOps, dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString(field_31427), (Object)dynamicOps.createMap((Map)map), (Object)dynamicOps.createString("DataVersion"), (Object)dynamicOps.createInt(SharedConstants.getGameVersion().getWorldVersion()))));
+        return new Dynamic(dynamicOps, dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString(SECTIONS_KEY), (Object)dynamicOps.createMap((Map)map), (Object)dynamicOps.createString("DataVersion"), (Object)dynamicOps.createInt(SharedConstants.getGameVersion().getWorldVersion()))));
     }
 
-    private static long method_33637(ChunkPos chunkPos, int i) {
-        return ChunkSectionPos.asLong(chunkPos.x, i, chunkPos.z);
+    private static long chunkSectionPosAsLong(ChunkPos chunkPos, int y) {
+        return ChunkSectionPos.asLong(chunkPos.x, y, chunkPos.z);
     }
 
     protected void onLoad(long pos) {
@@ -205,9 +209,9 @@ implements AutoCloseable {
     }
 
     public void saveChunk(ChunkPos pos) {
-        if (!this.unsavedElements.isEmpty()) {
+        if (this.hasUnsavedElements()) {
             for (int i = this.world.getBottomSectionCoord(); i < this.world.getTopSectionCoord(); ++i) {
-                long l = SerializingRegionBasedStorage.method_33637(pos, i);
+                long l = SerializingRegionBasedStorage.chunkSectionPosAsLong(pos, i);
                 if (!this.unsavedElements.contains(l)) continue;
                 this.save(pos);
                 return;

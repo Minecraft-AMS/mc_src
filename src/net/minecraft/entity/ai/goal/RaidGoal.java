@@ -43,7 +43,7 @@ extends ActiveTargetGoal<T> {
 
     @Override
     public void start() {
-        this.cooldown = 200;
+        this.cooldown = RaidGoal.toGoalTicks(200);
         super.start();
     }
 }

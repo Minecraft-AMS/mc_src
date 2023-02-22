@@ -6,7 +6,6 @@
  */
 package net.minecraft.nbt;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -22,9 +21,13 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtNull;
+import net.minecraft.nbt.NbtEnd;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.nbt.NbtTagSizeTracker;
+import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.NbtTypes;
+import net.minecraft.nbt.scanner.NbtScanner;
+import net.minecraft.util.FixedBufferInputStream;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
@@ -38,10 +41,26 @@ public class NbtIo {
         }
     }
 
+    private static DataInputStream decompress(InputStream stream) throws IOException {
+        return new DataInputStream(new FixedBufferInputStream(new GZIPInputStream(stream)));
+    }
+
     public static NbtCompound readCompressed(InputStream stream) throws IOException {
-        try (DataInputStream dataInputStream = new DataInputStream(new BufferedInputStream(new GZIPInputStream(stream)));){
+        try (DataInputStream dataInputStream = NbtIo.decompress(stream);){
             NbtCompound nbtCompound = NbtIo.read(dataInputStream, NbtTagSizeTracker.EMPTY);
             return nbtCompound;
+        }
+    }
+
+    public static void scanCompressed(File file, NbtScanner scanner) throws IOException {
+        try (FileInputStream inputStream = new FileInputStream(file);){
+            NbtIo.scanCompressed(inputStream, scanner);
+        }
+    }
+
+    public static void scanCompressed(InputStream stream, NbtScanner scanner) throws IOException {
+        try (DataInputStream dataInputStream = NbtIo.decompress(stream);){
+            NbtIo.scan(dataInputStream, scanner);
         }
     }
 
@@ -94,7 +113,31 @@ public class NbtIo {
         NbtIo.write((NbtElement)compound, output);
     }
 
-    private static void write(NbtElement element, DataOutput output) throws IOException {
+    public static void scan(DataInput input, NbtScanner scanner) throws IOException {
+        NbtType<?> nbtType = NbtTypes.byId(input.readByte());
+        if (nbtType == NbtEnd.TYPE) {
+            if (scanner.start(NbtEnd.TYPE) == NbtScanner.Result.CONTINUE) {
+                scanner.visitEnd();
+            }
+            return;
+        }
+        switch (scanner.start(nbtType)) {
+            case HALT: {
+                break;
+            }
+            case BREAK: {
+                NbtString.skip(input);
+                nbtType.skip(input);
+                break;
+            }
+            case CONTINUE: {
+                NbtString.skip(input);
+                nbtType.doAccept(input, scanner);
+            }
+        }
+    }
+
+    public static void write(NbtElement element, DataOutput output) throws IOException {
         output.writeByte(element.getType());
         if (element.getType() == 0) {
             return;
@@ -106,9 +149,9 @@ public class NbtIo {
     private static NbtElement read(DataInput input, int depth, NbtTagSizeTracker tracker) throws IOException {
         byte b = input.readByte();
         if (b == 0) {
-            return NbtNull.INSTANCE;
+            return NbtEnd.INSTANCE;
         }
-        input.readUTF();
+        NbtString.skip(input);
         try {
             return NbtTypes.byId(b).read(input, depth, tracker);
         }

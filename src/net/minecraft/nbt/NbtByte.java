@@ -10,17 +10,28 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
+import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtByte
 extends AbstractNbtNumber {
-    private static final int field_33189 = 72;
-    public static final NbtType<NbtByte> TYPE = new NbtType<NbtByte>(){
+    private static final int SIZE = 72;
+    public static final NbtType<NbtByte> TYPE = new NbtType.OfFixedSize<NbtByte>(){
 
         @Override
         public NbtByte read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
             nbtTagSizeTracker.add(72L);
             return NbtByte.of(dataInput.readByte());
+        }
+
+        @Override
+        public NbtScanner.Result doAccept(DataInput input, NbtScanner visitor) throws IOException {
+            return visitor.visitByte(input.readByte());
+        }
+
+        @Override
+        public int getSizeInBytes() {
+            return 1;
         }
 
         @Override
@@ -127,6 +138,11 @@ extends AbstractNbtNumber {
     @Override
     public Number numberValue() {
         return this.value;
+    }
+
+    @Override
+    public NbtScanner.Result doAccept(NbtScanner visitor) {
+        return visitor.visitByte(this.value);
     }
 
     @Override

@@ -12,29 +12,27 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 import net.minecraft.structure.OceanRuinGenerator;
-import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.StructureStart;
+import net.minecraft.structure.StructureGeneratorFactory;
+import net.minecraft.structure.StructurePiecesCollector;
+import net.minecraft.structure.StructurePiecesGenerator;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.gen.feature.OceanRuinFeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
 public class OceanRuinFeature
 extends StructureFeature<OceanRuinFeatureConfig> {
-    public OceanRuinFeature(Codec<OceanRuinFeatureConfig> codec) {
-        super(codec);
+    public OceanRuinFeature(Codec<OceanRuinFeatureConfig> configCodec) {
+        super(configCodec, StructureGeneratorFactory.simple(StructureGeneratorFactory.checkForBiomeOnTop(Heightmap.Type.OCEAN_FLOOR_WG), OceanRuinFeature::addPieces));
     }
 
-    @Override
-    public StructureFeature.StructureStartFactory<OceanRuinFeatureConfig> getStructureStartFactory() {
-        return Start::new;
+    private static void addPieces(StructurePiecesCollector collector, StructurePiecesGenerator.Context<OceanRuinFeatureConfig> context) {
+        BlockPos blockPos = new BlockPos(context.chunkPos().getStartX(), 90, context.chunkPos().getStartZ());
+        BlockRotation blockRotation = BlockRotation.random(context.random());
+        OceanRuinGenerator.addPieces(context.structureManager(), blockPos, blockRotation, collector, context.random(), context.config());
     }
 
     public static final class BiomeType
@@ -81,20 +79,6 @@ extends StructureFeature<OceanRuinFeatureConfig> {
             field_14531 = BiomeType.method_36760();
             CODEC = StringIdentifiable.createCodec(BiomeType::values, BiomeType::byName);
             BY_NAME = Arrays.stream(BiomeType.values()).collect(Collectors.toMap(BiomeType::getName, biomeType -> biomeType));
-        }
-    }
-
-    public static class Start
-    extends StructureStart<OceanRuinFeatureConfig> {
-        public Start(StructureFeature<OceanRuinFeatureConfig> structureFeature, ChunkPos chunkPos, int i, long l) {
-            super(structureFeature, chunkPos, i, l);
-        }
-
-        @Override
-        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, ChunkPos chunkPos, Biome biome, OceanRuinFeatureConfig oceanRuinFeatureConfig, HeightLimitView heightLimitView) {
-            BlockPos blockPos = new BlockPos(chunkPos.getStartX(), 90, chunkPos.getStartZ());
-            BlockRotation blockRotation = BlockRotation.random(this.random);
-            OceanRuinGenerator.addPieces(structureManager, blockPos, blockRotation, this, this.random, oceanRuinFeatureConfig);
         }
     }
 }

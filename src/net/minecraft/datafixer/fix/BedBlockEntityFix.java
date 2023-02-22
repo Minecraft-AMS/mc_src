@@ -52,13 +52,13 @@ extends DataFix {
             throw new IllegalStateException("Tile entity type is not a list type.");
         }
         List.ListType listType = (List.ListType)type3;
-        return this.method_15506(type2, listType);
+        return this.fix(type2, listType);
     }
 
-    private <TE> TypeRewriteRule method_15506(Type<?> type, List.ListType<TE> listType) {
-        Type type2 = listType.getElement();
-        OpticFinder opticFinder = DSL.fieldFinder((String)"Level", type);
-        OpticFinder opticFinder2 = DSL.fieldFinder((String)"TileEntities", listType);
+    private <TE> TypeRewriteRule fix(Type<?> level, List.ListType<TE> blockEntities) {
+        Type type = blockEntities.getElement();
+        OpticFinder opticFinder = DSL.fieldFinder((String)"Level", level);
+        OpticFinder opticFinder2 = DSL.fieldFinder((String)"TileEntities", blockEntities);
         int i = 416;
         return TypeRewriteRule.seq((TypeRewriteRule)this.fixTypeEverywhere("InjectBedBlockEntityType", (Type)this.getInputSchema().findChoiceType(TypeReferences.BLOCK_ENTITY), (Type)this.getOutputSchema().findChoiceType(TypeReferences.BLOCK_ENTITY), dynamicOps -> pair -> pair), (TypeRewriteRule)this.fixTypeEverywhereTyped("BedBlockEntityInjecter", this.getOutputSchema().getType(TypeReferences.CHUNK), typed -> {
             Typed typed2 = typed.getTyped(opticFinder);
@@ -85,7 +85,7 @@ extends DataFix {
                         map.put(dynamic22.createString("y"), dynamic22.createInt(p + (l << 4)));
                         map.put(dynamic22.createString("z"), dynamic22.createInt(q + (j << 4)));
                         map.put(dynamic22.createString("color"), dynamic22.createShort((short)14));
-                        list.add(((Pair)type2.read(dynamic22.createMap((Map)map)).result().orElseThrow(() -> new IllegalStateException("Could not parse newly created bed block entity."))).getFirst());
+                        list.add(((Pair)type.read(dynamic22.createMap((Map)map)).result().orElseThrow(() -> new IllegalStateException("Could not parse newly created bed block entity."))).getFirst());
                     }
                     ++m;
                 }

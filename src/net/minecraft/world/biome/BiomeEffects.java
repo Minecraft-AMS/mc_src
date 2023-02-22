@@ -6,6 +6,7 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.biome;
 
@@ -25,6 +26,7 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeParticleConfig;
+import org.jetbrains.annotations.Nullable;
 
 public class BiomeEffects {
     public static final Codec<BiomeEffects> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("fog_color").forGetter(biomeEffects -> biomeEffects.fogColor), (App)Codec.INT.fieldOf("water_color").forGetter(biomeEffects -> biomeEffects.waterColor), (App)Codec.INT.fieldOf("water_fog_color").forGetter(biomeEffects -> biomeEffects.waterFogColor), (App)Codec.INT.fieldOf("sky_color").forGetter(biomeEffects -> biomeEffects.skyColor), (App)Codec.INT.optionalFieldOf("foliage_color").forGetter(biomeEffects -> biomeEffects.foliageColor), (App)Codec.INT.optionalFieldOf("grass_color").forGetter(biomeEffects -> biomeEffects.grassColor), (App)GrassColorModifier.CODEC.optionalFieldOf("grass_color_modifier", (Object)GrassColorModifier.NONE).forGetter(biomeEffects -> biomeEffects.grassColorModifier), (App)BiomeParticleConfig.CODEC.optionalFieldOf("particle").forGetter(biomeEffects -> biomeEffects.particleConfig), (App)SoundEvent.CODEC.optionalFieldOf("ambient_sound").forGetter(biomeEffects -> biomeEffects.loopSound), (App)BiomeMoodSound.CODEC.optionalFieldOf("mood_sound").forGetter(biomeEffects -> biomeEffects.moodSound), (App)BiomeAdditionsSound.CODEC.optionalFieldOf("additions_sound").forGetter(biomeEffects -> biomeEffects.additionsSound), (App)MusicSound.CODEC.optionalFieldOf("music").forGetter(biomeEffects -> biomeEffects.music)).apply((Applicative)instance, BiomeEffects::new));
@@ -104,6 +106,9 @@ public class BiomeEffects {
         return this.music;
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     public static abstract class GrassColorModifier
     extends Enum<GrassColorModifier>
     implements StringIdentifiable {
@@ -147,8 +152,8 @@ public class BiomeEffects {
 
         public abstract int getModifiedGrassColor(double var1, double var3, int var5);
 
-        GrassColorModifier(String string2) {
-            this.name = string2;
+        GrassColorModifier(String name) {
+            this.name = name;
         }
 
         public String getName() {
@@ -244,8 +249,8 @@ public class BiomeEffects {
             return this;
         }
 
-        public Builder music(MusicSound music) {
-            this.musicSound = Optional.of(music);
+        public Builder music(@Nullable MusicSound music) {
+            this.musicSound = Optional.ofNullable(music);
             return this;
         }
 

@@ -50,7 +50,7 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float f, int i) {
+        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
         }
 
         @Override
@@ -149,7 +149,7 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float f, int i) {
+        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
             RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
             DrawableHelper.drawTexture(matrices, 0, 0, 128.0f, 0.0f, 16, 16, 256, 256);
         }
@@ -182,7 +182,7 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float f, int i) {
+        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
             RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
             if (this.direction < 0) {
                 DrawableHelper.drawTexture(matrices, 0, 0, 144.0f, 0.0f, 16, 16, 256, 256);

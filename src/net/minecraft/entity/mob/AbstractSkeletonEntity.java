@@ -230,7 +230,7 @@ implements RangedAttackMob {
     }
 
     public boolean isShaking() {
-        return this.isFreezing();
+        return this.isFrozen();
     }
 }
 

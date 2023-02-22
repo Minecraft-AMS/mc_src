@@ -9,6 +9,7 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Dynamic
@@ -18,9 +19,8 @@
  *  com.mojang.serialization.RecordBuilder
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  org.apache.commons.lang3.mutable.MutableObject
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.ai.brain;
 
@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
@@ -55,16 +56,14 @@ import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.ai.brain.sensor.SensorType;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Util;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.registry.Registry;
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class Brain<E extends LivingEntity> {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private final Supplier<Codec<Brain<E>>> codecSupplier;
     private static final int ACTIVITY_REFRESH_COOLDOWN = 20;
     private final Map<MemoryModuleType<?>, Optional<? extends Memory<?>>> memories = Maps.newHashMap();
@@ -87,13 +86,13 @@ public class Brain<E extends LivingEntity> {
         mutableObject.setValue((Object)new MapCodec<Brain<E>>(){
 
             public <T> Stream<T> keys(DynamicOps<T> dynamicOps) {
-                return memoryModules.stream().flatMap(memoryModuleType -> Util.stream(memoryModuleType.getCodec().map(codec -> Registry.MEMORY_MODULE_TYPE.getId((MemoryModuleType<?>)memoryModuleType)))).map(identifier -> dynamicOps.createString(identifier.toString()));
+                return memoryModules.stream().flatMap(memoryModuleType -> memoryModuleType.getCodec().map(codec -> Registry.MEMORY_MODULE_TYPE.getId((MemoryModuleType<?>)memoryModuleType)).stream()).map(identifier -> dynamicOps.createString(identifier.toString()));
             }
 
             public <T> DataResult<Brain<E>> decode(DynamicOps<T> dynamicOps, MapLike<T> mapLike) {
                 MutableObject mutableObject2 = new MutableObject((Object)DataResult.success((Object)ImmutableList.builder()));
                 mapLike.entries().forEach(pair -> {
-                    DataResult dataResult = Registry.MEMORY_MODULE_TYPE.parse(dynamicOps, pair.getFirst());
+                    DataResult dataResult = Registry.MEMORY_MODULE_TYPE.getCodec().parse(dynamicOps, pair.getFirst());
                     DataResult dataResult2 = dataResult.flatMap(memoryModuleType -> this.method_28320((MemoryModuleType)memoryModuleType, dynamicOps, (Object)pair.getSecond()));
                     mutableObject2.setValue((Object)((DataResult)mutableObject2.getValue()).apply2(ImmutableList.Builder::add, dataResult2));
                 });
@@ -457,7 +456,7 @@ public class Brain<E extends LivingEntity> {
         }
 
         public <T> void serialize(DynamicOps<T> ops, RecordBuilder<T> builder) {
-            this.type.getCodec().ifPresent(codec -> this.data.ifPresent(memory -> builder.add(Registry.MEMORY_MODULE_TYPE.encodeStart(ops, this.type), codec.encodeStart(ops, memory))));
+            this.type.getCodec().ifPresent(codec -> this.data.ifPresent(memory -> builder.add(Registry.MEMORY_MODULE_TYPE.getCodec().encodeStart(ops, this.type), codec.encodeStart(ops, memory))));
         }
     }
 }

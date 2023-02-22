@@ -14,19 +14,19 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.world.HeightLimitView;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BuiltinBiomes;
-import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.WorldChunk;
 import org.jetbrains.annotations.Nullable;
 
 public class EmptyChunk
 extends WorldChunk {
-    public EmptyChunk(World world, ChunkPos pos) {
-        super(world, pos, new EmptyBiomeArray(world));
+    private final RegistryEntry<Biome> field_36407;
+
+    public EmptyChunk(World world, ChunkPos chunkPos, RegistryEntry<Biome> registryEntry) {
+        super(world, chunkPos);
+        this.field_36407 = registryEntry;
     }
 
     @Override
@@ -69,10 +69,6 @@ extends WorldChunk {
     }
 
     @Override
-    public void markDirty() {
-    }
-
-    @Override
     public boolean isEmpty() {
         return true;
     }
@@ -87,23 +83,9 @@ extends WorldChunk {
         return ChunkHolder.LevelType.BORDER;
     }
 
-    static class EmptyBiomeArray
-    extends BiomeArray {
-        private static final Biome[] EMPTY_ARRAY = new Biome[0];
-
-        public EmptyBiomeArray(World world) {
-            super(world.getRegistryManager().get(Registry.BIOME_KEY), (HeightLimitView)world, EMPTY_ARRAY);
-        }
-
-        @Override
-        public int[] toIntArray() {
-            throw new UnsupportedOperationException("Can not write biomes of an empty chunk");
-        }
-
-        @Override
-        public Biome getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
-            return BuiltinBiomes.PLAINS;
-        }
+    @Override
+    public RegistryEntry<Biome> getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
+        return this.field_36407;
     }
 }
 

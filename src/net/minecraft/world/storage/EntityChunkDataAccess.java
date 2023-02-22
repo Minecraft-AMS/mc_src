@@ -4,19 +4,20 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.mojang.datafixers.DataFixer
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
  *  it.unimi.dsi.fastutil.longs.LongSet
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.world.storage;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -35,12 +36,11 @@ import net.minecraft.util.thread.TaskExecutor;
 import net.minecraft.world.storage.ChunkDataAccess;
 import net.minecraft.world.storage.ChunkDataList;
 import net.minecraft.world.storage.StorageIoWorker;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class EntityChunkDataAccess
 implements ChunkDataAccess<Entity> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String ENTITIES_KEY = "Entities";
     private static final String POSITION_KEY = "Position";
     private final ServerWorld world;
@@ -49,11 +49,11 @@ implements ChunkDataAccess<Entity> {
     private final TaskExecutor<Runnable> taskExecutor;
     protected final DataFixer dataFixer;
 
-    public EntityChunkDataAccess(ServerWorld world, File chunkFile, DataFixer dataFixer, boolean dsync, Executor executor) {
+    public EntityChunkDataAccess(ServerWorld world, Path path, DataFixer dataFixer, boolean dsync, Executor executor) {
         this.world = world;
         this.dataFixer = dataFixer;
         this.taskExecutor = TaskExecutor.create(executor, "entity-deserializer");
-        this.dataLoadWorker = new StorageIoWorker(chunkFile, dsync, "entities");
+        this.dataLoadWorker = new StorageIoWorker(path, dsync, "entities");
     }
 
     @Override
@@ -69,7 +69,7 @@ implements ChunkDataAccess<Entity> {
             try {
                 ChunkPos chunkPos2 = EntityChunkDataAccess.getChunkPos(compound);
                 if (!Objects.equals(pos, chunkPos2)) {
-                    LOGGER.error("Chunk file at {} is in the wrong location. (Expected {}, got {})", (Object)pos, (Object)pos, (Object)chunkPos2);
+                    LOGGER.error("Chunk file at {} is in the wrong location. (Expected {}, got {})", new Object[]{pos, pos, chunkPos2});
                 }
             }
             catch (Exception exception) {
@@ -82,13 +82,13 @@ implements ChunkDataAccess<Entity> {
         }, this.taskExecutor::send);
     }
 
-    private static ChunkPos getChunkPos(NbtCompound chunkTag) {
-        int[] is = chunkTag.getIntArray(POSITION_KEY);
+    private static ChunkPos getChunkPos(NbtCompound chunkNbt) {
+        int[] is = chunkNbt.getIntArray(POSITION_KEY);
         return new ChunkPos(is[0], is[1]);
     }
 
-    private static void putChunkPos(NbtCompound chunkTag, ChunkPos pos) {
-        chunkTag.put(POSITION_KEY, new NbtIntArray(new int[]{pos.x, pos.z}));
+    private static void putChunkPos(NbtCompound chunkNbt, ChunkPos pos) {
+        chunkNbt.put(POSITION_KEY, new NbtIntArray(new int[]{pos.x, pos.z}));
     }
 
     private static ChunkDataList<Entity> emptyDataList(ChunkPos pos) {
@@ -128,13 +128,13 @@ implements ChunkDataAccess<Entity> {
         this.taskExecutor.awaitAll();
     }
 
-    private NbtCompound fixChunkData(NbtCompound chunkTag) {
-        int i = EntityChunkDataAccess.getChunkDataVersion(chunkTag);
-        return NbtHelper.update(this.dataFixer, DataFixTypes.ENTITY_CHUNK, chunkTag, i);
+    private NbtCompound fixChunkData(NbtCompound chunkNbt) {
+        int i = EntityChunkDataAccess.getChunkDataVersion(chunkNbt);
+        return NbtHelper.update(this.dataFixer, DataFixTypes.ENTITY_CHUNK, chunkNbt, i);
     }
 
-    public static int getChunkDataVersion(NbtCompound chunkTag) {
-        return chunkTag.contains("DataVersion", 99) ? chunkTag.getInt("DataVersion") : -1;
+    public static int getChunkDataVersion(NbtCompound chunkNbt) {
+        return chunkNbt.contains("DataVersion", 99) ? chunkNbt.getInt("DataVersion") : -1;
     }
 
     @Override

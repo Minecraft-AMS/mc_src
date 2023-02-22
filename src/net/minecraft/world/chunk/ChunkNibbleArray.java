@@ -14,7 +14,7 @@ public final class ChunkNibbleArray {
     public static final int COPY_TIMES = 16;
     public static final int COPY_BLOCK_SIZE = 128;
     public static final int BYTES_LENGTH = 2048;
-    private static final int field_31405 = 4;
+    private static final int NIBBLE_BITS = 4;
     @Nullable
     protected byte[] bytes;
 
@@ -48,8 +48,8 @@ public final class ChunkNibbleArray {
         if (this.bytes == null) {
             return 0;
         }
-        int i = ChunkNibbleArray.divideByTwo(index);
-        int j = ChunkNibbleArray.isOdd(index);
+        int i = ChunkNibbleArray.getArrayIndex(index);
+        int j = ChunkNibbleArray.occupiesSmallerBits(index);
         return this.bytes[i] >> 4 * j & 0xF;
     }
 
@@ -57,18 +57,18 @@ public final class ChunkNibbleArray {
         if (this.bytes == null) {
             this.bytes = new byte[2048];
         }
-        int i = ChunkNibbleArray.divideByTwo(index);
-        int j = ChunkNibbleArray.isOdd(index);
+        int i = ChunkNibbleArray.getArrayIndex(index);
+        int j = ChunkNibbleArray.occupiesSmallerBits(index);
         int k = ~(15 << 4 * j);
         int l = (value & 0xF) << 4 * j;
         this.bytes[i] = (byte)(this.bytes[i] & k | l);
     }
 
-    private static int isOdd(int i) {
+    private static int occupiesSmallerBits(int i) {
         return i & 1;
     }
 
-    private static int divideByTwo(int i) {
+    private static int getArrayIndex(int i) {
         return i >> 1;
     }
 
@@ -100,11 +100,11 @@ public final class ChunkNibbleArray {
     }
 
     @Debug
-    public String method_35320(int i) {
+    public String bottomToString(int unused) {
         StringBuilder stringBuilder = new StringBuilder();
-        for (int j = 0; j < 256; ++j) {
-            stringBuilder.append(Integer.toHexString(this.get(j)));
-            if ((j & 0xF) != 15) continue;
+        for (int i = 0; i < 256; ++i) {
+            stringBuilder.append(Integer.toHexString(this.get(i)));
+            if ((i & 0xF) != 15) continue;
             stringBuilder.append("\n");
         }
         return stringBuilder.toString();

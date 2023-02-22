@@ -18,7 +18,7 @@ import net.minecraft.world.gen.feature.MineshaftFeature;
 
 public class MineshaftFeatureConfig
 implements FeatureConfig {
-    public static final Codec<MineshaftFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("probability").forGetter(mineshaftFeatureConfig -> Float.valueOf(mineshaftFeatureConfig.probability)), (App)MineshaftFeature.Type.CODEC.fieldOf("type").forGetter(mineshaftFeatureConfig -> mineshaftFeatureConfig.type)).apply((Applicative)instance, MineshaftFeatureConfig::new));
+    public static final Codec<MineshaftFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("probability").forGetter(config -> Float.valueOf(config.probability)), (App)MineshaftFeature.Type.CODEC.fieldOf("type").forGetter(config -> config.type)).apply((Applicative)instance, MineshaftFeatureConfig::new));
     public final float probability;
     public final MineshaftFeature.Type type;
 

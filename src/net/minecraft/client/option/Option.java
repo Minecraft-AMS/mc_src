@@ -32,9 +32,14 @@ import net.minecraft.client.option.GraphicsMode;
 import net.minecraft.client.option.LogarithmicOption;
 import net.minecraft.client.option.NarratorMode;
 import net.minecraft.client.option.ParticlesMode;
+import net.minecraft.client.render.ChunkBuilderMode;
 import net.minecraft.client.resource.VideoWarningManager;
+import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.client.sound.SoundManager;
+import net.minecraft.client.sound.SoundSystem;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.Window;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
@@ -151,13 +156,17 @@ public abstract class Option {
         gameOptions.gamma = gamma;
     }, (gameOptions, option) -> {
         double d = option.getRatio(option.get((GameOptions)gameOptions));
-        if (d == 0.0) {
+        int i = (int)(d * 100.0);
+        if (i == 0) {
             return option.getGenericLabel(new TranslatableText("options.gamma.min"));
         }
-        if (d == 1.0) {
+        if (i == 50) {
+            return option.getGenericLabel(new TranslatableText("options.gamma.default"));
+        }
+        if (i == 100) {
             return option.getGenericLabel(new TranslatableText("options.gamma.max"));
         }
-        return option.getPercentAdditionLabel((int)(d * 100.0));
+        return option.getGenericLabel(i);
     });
     public static final DoubleOption MIPMAP_LEVELS = new DoubleOption("options.mipmapLevels", 0.0, 4.0, 1.0f, gameOptions -> gameOptions.mipmapLevels, (gameOptions, mipmapLevels) -> {
         gameOptions.mipmapLevels = (int)mipmapLevels.doubleValue();
@@ -182,8 +191,14 @@ public abstract class Option {
         }
     });
     public static final DoubleOption RENDER_DISTANCE = new DoubleOption("options.renderDistance", 2.0, 16.0, 1.0f, gameOptions -> gameOptions.viewDistance, (gameOptions, viewDistance) -> {
-        gameOptions.viewDistance = (int)viewDistance.doubleValue();
+        gameOptions.viewDistance = viewDistance.intValue();
         MinecraftClient.getInstance().worldRenderer.scheduleTerrainUpdate();
+    }, (gameOptions, option) -> {
+        double d = option.get((GameOptions)gameOptions);
+        return option.getGenericLabel(new TranslatableText("options.chunks", (int)d));
+    });
+    public static final DoubleOption SIMULATION_DISTANCE = new DoubleOption("options.simulationDistance", 5.0, 16.0, 1.0f, gameOptions -> gameOptions.simulationDistance, (gameOptions, simulationDistance) -> {
+        gameOptions.simulationDistance = simulationDistance.intValue();
     }, (gameOptions, option) -> {
         double d = option.get((GameOptions)gameOptions);
         return option.getGenericLabel(new TranslatableText("options.chunks", (int)d));
@@ -213,6 +228,17 @@ public abstract class Option {
     public static final CyclingOption<AoMode> AO = CyclingOption.create("options.ao", AoMode.values(), aoMode -> new TranslatableText(aoMode.getTranslationKey()), gameOptions -> gameOptions.ao, (gameOptions, option, aoMode) -> {
         gameOptions.ao = aoMode;
         MinecraftClient.getInstance().worldRenderer.reload();
+    });
+    private static final Text CHUNK_BUILDER_THREADED_TEXT = new TranslatableText("options.prioritizeChunkUpdates.none.tooltip");
+    private static final Text CHUNK_BUILDER_SEMI_BLOCKING_TEXT = new TranslatableText("options.prioritizeChunkUpdates.byPlayer.tooltip");
+    private static final Text CHUNK_BUILDER_FULLY_BLOCKING_TEXT = new TranslatableText("options.prioritizeChunkUpdates.nearby.tooltip");
+    public static final CyclingOption<ChunkBuilderMode> CHUNK_BUILDER_MODE = CyclingOption.create("options.prioritizeChunkUpdates", ChunkBuilderMode.values(), chunkBuilderMode -> new TranslatableText(chunkBuilderMode.getName()), gameOptions -> gameOptions.chunkBuilderMode, (gameOptions, option, chunkBuilderMode) -> {
+        gameOptions.chunkBuilderMode = chunkBuilderMode;
+    }).tooltip(minecraftClient -> chunkBuilderMode -> switch (chunkBuilderMode) {
+        case ChunkBuilderMode.NONE -> minecraftClient.textRenderer.wrapLines(CHUNK_BUILDER_THREADED_TEXT, 200);
+        case ChunkBuilderMode.PLAYER_AFFECTED -> minecraftClient.textRenderer.wrapLines(CHUNK_BUILDER_SEMI_BLOCKING_TEXT, 200);
+        case ChunkBuilderMode.NEARBY -> minecraftClient.textRenderer.wrapLines(CHUNK_BUILDER_FULLY_BLOCKING_TEXT, 200);
+        default -> ImmutableList.of();
     });
     public static final CyclingOption<AttackIndicator> ATTACK_INDICATOR = CyclingOption.create("options.attackIndicator", AttackIndicator.values(), attackIndicator -> new TranslatableText(attackIndicator.getTranslationKey()), gameOptions -> gameOptions.attackIndicator, (gameOptions, option, attackIndicator) -> {
         gameOptions.attackIndicator = attackIndicator;
@@ -259,6 +285,20 @@ public abstract class Option {
     });
     public static final CyclingOption GUI_SCALE = CyclingOption.create("options.guiScale", () -> IntStream.rangeClosed(0, MinecraftClient.getInstance().getWindow().calculateScaleFactor(0, MinecraftClient.getInstance().forcesUnicodeFont())).boxed().collect(Collectors.toList()), guiScale -> guiScale == 0 ? new TranslatableText("options.guiScale.auto") : new LiteralText(Integer.toString(guiScale)), gameOptions -> gameOptions.guiScale, (gameOptions, option, guiScale) -> {
         gameOptions.guiScale = guiScale;
+    });
+    public static final CyclingOption<String> AUDIO_DEVICE = CyclingOption.create("options.audioDevice", () -> Stream.concat(Stream.of(""), MinecraftClient.getInstance().getSoundManager().getSoundDevices().stream()).toList(), device -> {
+        if ("".equals(device)) {
+            return new TranslatableText("options.audioDevice.default");
+        }
+        if (device.startsWith("OpenAL Soft on ")) {
+            return new LiteralText(device.substring(SoundSystem.OPENAL_SOFT_ON_LENGTH));
+        }
+        return new LiteralText((String)device);
+    }, gameOptions -> gameOptions.soundDevice, (gameOptions, option, audioDevice) -> {
+        gameOptions.soundDevice = audioDevice;
+        SoundManager soundManager = MinecraftClient.getInstance().getSoundManager();
+        soundManager.reloadSounds();
+        soundManager.play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     });
     public static final CyclingOption<Arm> MAIN_HAND = CyclingOption.create("options.mainHand", Arm.values(), Arm::getOptionName, gameOptions -> gameOptions.mainArm, (gameOptions, option, mainArm) -> {
         gameOptions.mainArm = mainArm;
@@ -331,19 +371,16 @@ public abstract class Option {
     public static final CyclingOption<Boolean> REALMS_NOTIFICATIONS = CyclingOption.create("options.realmsNotifications", gameOptions -> gameOptions.realmsNotifications, (gameOptions, option, realmsNotifications) -> {
         gameOptions.realmsNotifications = realmsNotifications;
     });
+    private static final Text ALLOW_SERVER_LISTING_TOOLTIP = new TranslatableText("options.allowServerListing.tooltip");
+    public static final CyclingOption<Boolean> ALLOW_SERVER_LISTING = CyclingOption.create("options.allowServerListing", ALLOW_SERVER_LISTING_TOOLTIP, gameOptions -> gameOptions.allowServerListing, (gameOptions, option, allowServerListing) -> {
+        gameOptions.allowServerListing = allowServerListing;
+        gameOptions.sendClientSettings();
+    });
     public static final CyclingOption<Boolean> REDUCED_DEBUG_INFO = CyclingOption.create("options.reducedDebugInfo", gameOptions -> gameOptions.reducedDebugInfo, (gameOptions, option, reducedDebugInfo) -> {
         gameOptions.reducedDebugInfo = reducedDebugInfo;
     });
     public static final CyclingOption<Boolean> SUBTITLES = CyclingOption.create("options.showSubtitles", gameOptions -> gameOptions.showSubtitles, (gameOptions, option, showSubtitles) -> {
         gameOptions.showSubtitles = showSubtitles;
-    });
-    public static final CyclingOption<Boolean> SNOOPER = CyclingOption.create("options.snooper", gameOptions -> {
-        if (gameOptions.snooperEnabled) {
-            // empty if block
-        }
-        return false;
-    }, (gameOptions, option, snooperEnabled) -> {
-        gameOptions.snooperEnabled = snooperEnabled;
     });
     private static final Text TOGGLE_TEXT = new TranslatableText("options.key.toggle");
     private static final Text HOLD_TEXT = new TranslatableText("options.key.hold");
@@ -370,6 +407,13 @@ public abstract class Option {
     private static final Text MONOCHROME_LOGO_TOOLTIP = new TranslatableText("options.darkMojangStudiosBackgroundColor.tooltip");
     public static final CyclingOption<Boolean> MONOCHROME_LOGO = CyclingOption.create("options.darkMojangStudiosBackgroundColor", MONOCHROME_LOGO_TOOLTIP, gameOptions -> gameOptions.monochromeLogo, (gameOptions, option, monochromeLogo) -> {
         gameOptions.monochromeLogo = monochromeLogo;
+    });
+    private static final Text HIDE_LIGHTNING_FLASHES_TOOLTIP = new TranslatableText("options.hideLightningFlashes.tooltip");
+    public static final CyclingOption<Boolean> HIDE_LIGHTNING_FLASHES = CyclingOption.create("options.hideLightningFlashes", HIDE_LIGHTNING_FLASHES_TOOLTIP, gameOptions -> gameOptions.hideLightningFlashes, (gameOptions, option, hideLightningFlashes) -> {
+        gameOptions.hideLightningFlashes = hideLightningFlashes;
+    });
+    public static final CyclingOption<Boolean> SHOW_AUTOSAVE_INDICATOR = CyclingOption.create("options.autosaveIndicator", gameOptions -> gameOptions.showAutosaveIndicator, (gameOptions, option, showAutosaveIndicator) -> {
+        gameOptions.showAutosaveIndicator = showAutosaveIndicator;
     });
     private final Text key;
 

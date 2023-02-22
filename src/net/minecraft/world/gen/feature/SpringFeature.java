@@ -25,31 +25,31 @@ extends Feature<SpringFeatureConfig> {
         BlockPos blockPos;
         SpringFeatureConfig springFeatureConfig = context.getConfig();
         StructureWorldAccess structureWorldAccess = context.getWorld();
-        if (!springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState((blockPos = context.getOrigin()).up()).getBlock())) {
+        if (!structureWorldAccess.getBlockState((blockPos = context.getOrigin()).up()).isIn(springFeatureConfig.validBlocks)) {
             return false;
         }
-        if (springFeatureConfig.requiresBlockBelow && !springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.down()).getBlock())) {
+        if (springFeatureConfig.requiresBlockBelow && !structureWorldAccess.getBlockState(blockPos.down()).isIn(springFeatureConfig.validBlocks)) {
             return false;
         }
         BlockState blockState = structureWorldAccess.getBlockState(blockPos);
-        if (!blockState.isAir() && !springFeatureConfig.validBlocks.contains(blockState.getBlock())) {
+        if (!blockState.isAir() && !blockState.isIn(springFeatureConfig.validBlocks)) {
             return false;
         }
         int i = 0;
         int j = 0;
-        if (springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.west()).getBlock())) {
+        if (structureWorldAccess.getBlockState(blockPos.west()).isIn(springFeatureConfig.validBlocks)) {
             ++j;
         }
-        if (springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.east()).getBlock())) {
+        if (structureWorldAccess.getBlockState(blockPos.east()).isIn(springFeatureConfig.validBlocks)) {
             ++j;
         }
-        if (springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.north()).getBlock())) {
+        if (structureWorldAccess.getBlockState(blockPos.north()).isIn(springFeatureConfig.validBlocks)) {
             ++j;
         }
-        if (springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.south()).getBlock())) {
+        if (structureWorldAccess.getBlockState(blockPos.south()).isIn(springFeatureConfig.validBlocks)) {
             ++j;
         }
-        if (springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.down()).getBlock())) {
+        if (structureWorldAccess.getBlockState(blockPos.down()).isIn(springFeatureConfig.validBlocks)) {
             ++j;
         }
         int k = 0;
@@ -70,7 +70,7 @@ extends Feature<SpringFeatureConfig> {
         }
         if (j == springFeatureConfig.rockCount && k == springFeatureConfig.holeCount) {
             structureWorldAccess.setBlockState(blockPos, springFeatureConfig.state.getBlockState(), 2);
-            structureWorldAccess.getFluidTickScheduler().schedule(blockPos, springFeatureConfig.state.getFluid(), 0);
+            structureWorldAccess.createAndScheduleFluidTick(blockPos, springFeatureConfig.state.getFluid(), 0);
             ++i;
         }
         return i > 0;

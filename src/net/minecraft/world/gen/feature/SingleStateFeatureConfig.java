@@ -12,7 +12,7 @@ import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class SingleStateFeatureConfig
 implements FeatureConfig {
-    public static final Codec<SingleStateFeatureConfig> CODEC = BlockState.CODEC.fieldOf("state").xmap(SingleStateFeatureConfig::new, singleStateFeatureConfig -> singleStateFeatureConfig.state).codec();
+    public static final Codec<SingleStateFeatureConfig> CODEC = BlockState.CODEC.fieldOf("state").xmap(SingleStateFeatureConfig::new, config -> config.state).codec();
     public final BlockState state;
 
     public SingleStateFeatureConfig(BlockState state) {

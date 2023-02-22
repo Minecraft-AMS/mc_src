@@ -68,7 +68,6 @@ public class BookEditScreen
 extends Screen {
     private static final int MAX_TEXT_WIDTH = 114;
     private static final int MAX_TEXT_HEIGHT = 128;
-    private static final int field_32325 = 250;
     private static final int WIDTH = 192;
     private static final int HEIGHT = 192;
     private static final Text EDIT_TITLE_TEXT = new TranslatableText("book.editTitle");
@@ -561,7 +560,7 @@ extends Screen {
         MutableInt mutableInt = new MutableInt();
         MutableBoolean mutableBoolean = new MutableBoolean();
         TextHandler textHandler = this.textRenderer.getTextHandler();
-        textHandler.wrapLines(string, 114, Style.EMPTY, true, (arg_0, arg_1, arg_2) -> this.method_27586(mutableInt, string, mutableBoolean, (IntList)intList, list, arg_0, arg_1, arg_2));
+        textHandler.wrapLines(string, 114, Style.EMPTY, true, (arg_0, arg_1, arg_2) -> this.createPageFromWrappedLines(mutableInt, string, mutableBoolean, (IntList)intList, list, arg_0, arg_1, arg_2));
         int[] is = intList.toIntArray();
         boolean bl2 = bl = i == string.length();
         if (bl && mutableBoolean.isTrue()) {
@@ -622,15 +621,15 @@ extends Screen {
         return new Rect2i(i, k, j - i, l - k);
     }
 
-    private /* synthetic */ void method_27586(MutableInt mutableInt, String string, MutableBoolean mutableBoolean, IntList intList, List list, Style style, int i, int j) {
-        int k = mutableInt.getAndIncrement();
-        String string2 = string.substring(i, j);
-        mutableBoolean.setValue(string2.endsWith("\n"));
-        String string3 = StringUtils.stripEnd((String)string2, (String)" \n");
-        int l = k * this.textRenderer.fontHeight;
-        Position position = this.absolutePositionToScreenPosition(new Position(0, l));
-        intList.add(i);
-        list.add(new Line(style, string3, position.x, position.y));
+    private /* synthetic */ void createPageFromWrappedLines(MutableInt linesCount, String content, MutableBoolean anyOfLinesEndsWithNewLine, IntList starts, List lines, Style style, int start, int end) {
+        int i = linesCount.getAndIncrement();
+        String string = content.substring(start, end);
+        anyOfLinesEndsWithNewLine.setValue(string.endsWith("\n"));
+        String string2 = StringUtils.stripEnd((String)string, (String)" \n");
+        int j = i * this.textRenderer.fontHeight;
+        Position position = this.absolutePositionToScreenPosition(new Position(0, j));
+        starts.add(start);
+        lines.add(new Line(style, string2, position.x, position.y));
     }
 
     @Environment(value=EnvType.CLIENT)

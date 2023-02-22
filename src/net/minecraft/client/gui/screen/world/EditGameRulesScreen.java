@@ -82,7 +82,7 @@ extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void close() {
         this.ruleSaver.accept(Optional.empty());
     }
 
@@ -97,8 +97,8 @@ extends Screen {
         }
     }
 
-    void setTooltipDescription(@Nullable List<OrderedText> description) {
-        this.tooltip = description;
+    void setTooltip(@Nullable List<OrderedText> tooltip) {
+        this.tooltip = tooltip;
     }
 
     private void updateDoneButton() {
@@ -155,9 +155,9 @@ extends Screen {
                     map.computeIfAbsent(key.getCategory(), category -> Maps.newHashMap()).put(key, widgetFactory.create(text, (List<OrderedText>)list, (String)string3, rule));
                 }
             });
-            map.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry2 -> {
-                this.addEntry(new RuleCategoryWidget(new TranslatableText(((GameRules.Category)((Object)((Object)entry2.getKey()))).getCategory()).formatted(Formatting.BOLD, Formatting.YELLOW)));
-                ((Map)entry2.getValue()).entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRules.Key::getName))).forEach(entry -> this.addEntry((AbstractRuleWidget)entry.getValue()));
+            map.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+                this.addEntry(new RuleCategoryWidget(new TranslatableText(((GameRules.Category)((Object)((Object)entry.getKey()))).getCategory()).formatted(Formatting.BOLD, Formatting.YELLOW)));
+                ((Map)entry.getValue()).entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRules.Key::getName))).forEach(e -> this.addEntry((AbstractRuleWidget)e.getValue()));
             });
         }
 
@@ -166,7 +166,7 @@ extends Screen {
             super.render(matrices, mouseX, mouseY, delta);
             AbstractRuleWidget abstractRuleWidget = (AbstractRuleWidget)this.getHoveredEntry();
             if (abstractRuleWidget != null) {
-                EditGameRulesScreen.this.setTooltipDescription(abstractRuleWidget.description);
+                EditGameRulesScreen.this.setTooltip(abstractRuleWidget.description);
             }
         }
     }
@@ -297,12 +297,12 @@ extends Screen {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public abstract class AbstractRuleWidget
+    public static abstract class AbstractRuleWidget
     extends ElementListWidget.Entry<AbstractRuleWidget> {
         @Nullable
         final List<OrderedText> description;
 
-        public AbstractRuleWidget(List<OrderedText> description) {
+        public AbstractRuleWidget(@Nullable List<OrderedText> description) {
             this.description = description;
         }
     }

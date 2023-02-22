@@ -7,9 +7,11 @@
  *  com.google.common.collect.HashBasedTable
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  it.unimi.dsi.fastutil.ints.IntList
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.screen;
 
@@ -18,6 +20,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.List;
@@ -49,8 +52,10 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public abstract class ScreenHandler {
+    private static Logger LOGGER = LogUtils.getLogger();
     public static final int EMPTY_SPACE_SLOT_INDEX = -999;
     public static final int field_30731 = 0;
     public static final int field_30732 = 1;
@@ -111,6 +116,10 @@ public abstract class ScreenHandler {
         if (i < expectedCount) {
             throw new IllegalArgumentException("Container data count " + i + " is smaller than expected " + expectedCount);
         }
+    }
+
+    public boolean isValid(int slot) {
+        return slot == -1 || slot == -999 || slot < this.slots.size();
     }
 
     protected Slot addSlot(Slot slot) {
@@ -268,6 +277,10 @@ public abstract class ScreenHandler {
     }
 
     public void setPreviousTrackedSlotMutable(int slot, ItemStack stack) {
+        if (slot < 0 || slot >= this.previousTrackedStacks.size()) {
+            LOGGER.debug("Incorrect slot index: {} available slots: {}", (Object)slot, (Object)this.previousTrackedStacks.size());
+            return;
+        }
         this.previousTrackedStacks.set(slot, stack);
     }
 
@@ -475,8 +488,8 @@ public abstract class ScreenHandler {
                             if (itemStack2.getCount() > o) {
                                 slot3.setStack(itemStack2.split(o));
                             } else {
-                                slot3.setStack(itemStack2);
                                 playerInventory.setStack(button, ItemStack.EMPTY);
+                                slot3.setStack(itemStack2);
                             }
                             break block39;
                         }
@@ -489,8 +502,8 @@ public abstract class ScreenHandler {
                         player.dropItem(itemStack, true);
                         break block39;
                     }
-                    slot3.setStack(itemStack2);
                     playerInventory.setStack(button, itemStack);
+                    slot3.setStack(itemStack2);
                     slot3.onTakeItem(player, itemStack);
                     break block39;
                 }

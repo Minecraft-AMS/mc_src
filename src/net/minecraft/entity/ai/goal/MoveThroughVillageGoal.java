@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.goal;
 
@@ -26,11 +27,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
+import org.jetbrains.annotations.Nullable;
 
 public class MoveThroughVillageGoal
 extends Goal {
     protected final PathAwareEntity mob;
     private final double speed;
+    @Nullable
     private Path targetPath;
     private BlockPos target;
     private final boolean requiresNighttime;
@@ -64,11 +67,11 @@ extends Goal {
         if (!serverWorld.isNearOccupiedPointOfInterest(blockPos, 6)) {
             return false;
         }
-        Vec3d vec3d = FuzzyTargeting.find(this.mob, 15, 7, blockPos2 -> {
-            if (!serverWorld.isNearOccupiedPointOfInterest((BlockPos)blockPos2)) {
+        Vec3d vec3d = FuzzyTargeting.find(this.mob, 15, 7, pos -> {
+            if (!serverWorld.isNearOccupiedPointOfInterest((BlockPos)pos)) {
                 return Double.NEGATIVE_INFINITY;
             }
-            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(PointOfInterestType.ALWAYS_TRUE, this::shouldVisit, (BlockPos)blockPos2, 10, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED);
+            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(PointOfInterestType.ALWAYS_TRUE, this::shouldVisit, (BlockPos)pos, 10, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED);
             if (!optional.isPresent()) {
                 return Double.NEGATIVE_INFINITY;
             }
@@ -88,7 +91,7 @@ extends Goal {
         this.targetPath = mobNavigation.findPathTo(this.target, 0);
         mobNavigation.setCanPathThroughDoors(bl);
         if (this.targetPath == null) {
-            Vec3d vec3d2 = NoPenaltyTargeting.find(this.mob, 10, 7, Vec3d.ofBottomCenter(this.target), 1.5707963705062866);
+            Vec3d vec3d2 = NoPenaltyTargeting.findTo(this.mob, 10, 7, Vec3d.ofBottomCenter(this.target), 1.5707963705062866);
             if (vec3d2 == null) {
                 return false;
             }
@@ -101,8 +104,8 @@ extends Goal {
         }
         for (int i = 0; i < this.targetPath.getLength(); ++i) {
             PathNode pathNode = this.targetPath.getNode(i);
-            BlockPos blockPos22 = new BlockPos(pathNode.x, pathNode.y + 1, pathNode.z);
-            if (!DoorBlock.isWoodenDoor(this.mob.world, blockPos22)) continue;
+            BlockPos blockPos2 = new BlockPos(pathNode.x, pathNode.y + 1, pathNode.z);
+            if (!DoorBlock.isWoodenDoor(this.mob.world, blockPos2)) continue;
             this.targetPath = this.mob.getNavigation().findPathTo(pathNode.x, (double)pathNode.y, pathNode.z, 0);
             break;
         }

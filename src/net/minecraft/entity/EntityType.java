@@ -3,13 +3,14 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableSet
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity;
 
 import com.google.common.collect.ImmutableSet;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
@@ -148,7 +149,7 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
@@ -159,23 +160,24 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class EntityType<T extends Entity>
 implements TypeFilter<Entity, T> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final String ENTITY_TAG_KEY = "EntityTag";
+    private final RegistryEntry.Reference<EntityType<?>> registryEntry = Registry.ENTITY_TYPE.createEntry(this);
     private static final float field_30054 = 1.3964844f;
     public static final EntityType<AreaEffectCloudEntity> AREA_EFFECT_CLOUD = EntityType.register("area_effect_cloud", Builder.create(AreaEffectCloudEntity::new, SpawnGroup.MISC).makeFireImmune().setDimensions(6.0f, 0.5f).maxTrackingRange(10).trackingTickInterval(Integer.MAX_VALUE));
     public static final EntityType<ArmorStandEntity> ARMOR_STAND = EntityType.register("armor_stand", Builder.create(ArmorStandEntity::new, SpawnGroup.MISC).setDimensions(0.5f, 1.975f).maxTrackingRange(10));
     public static final EntityType<ArrowEntity> ARROW = EntityType.register("arrow", Builder.create(ArrowEntity::new, SpawnGroup.MISC).setDimensions(0.5f, 0.5f).maxTrackingRange(4).trackingTickInterval(20));
-    public static final EntityType<AxolotlEntity> AXOLOTL = EntityType.register("axolotl", Builder.create(AxolotlEntity::new, SpawnGroup.UNDERGROUND_WATER_CREATURE).setDimensions(0.75f, 0.42f).maxTrackingRange(10));
+    public static final EntityType<AxolotlEntity> AXOLOTL = EntityType.register("axolotl", Builder.create(AxolotlEntity::new, SpawnGroup.AXOLOTLS).setDimensions(0.75f, 0.42f).maxTrackingRange(10));
     public static final EntityType<BatEntity> BAT = EntityType.register("bat", Builder.create(BatEntity::new, SpawnGroup.AMBIENT).setDimensions(0.5f, 0.9f).maxTrackingRange(5));
     public static final EntityType<BeeEntity> BEE = EntityType.register("bee", Builder.create(BeeEntity::new, SpawnGroup.CREATURE).setDimensions(0.7f, 0.6f).maxTrackingRange(8));
     public static final EntityType<BlazeEntity> BLAZE = EntityType.register("blaze", Builder.create(BlazeEntity::new, SpawnGroup.MONSTER).makeFireImmune().setDimensions(0.6f, 1.8f).maxTrackingRange(8));
@@ -374,8 +376,8 @@ implements TypeFilter<Entity, T> {
         if (invertY) {
             box = box.stretch(0.0, -1.0, 0.0);
         }
-        Stream<VoxelShape> stream = world.getCollisions(null, box, entity -> true);
-        return 1.0 + VoxelShapes.calculateMaxOffset(Direction.Axis.Y, boundingBox, stream, invertY ? -2.0 : -1.0);
+        Iterable<VoxelShape> iterable = world.getCollisions(null, box);
+        return 1.0 + VoxelShapes.calculateMaxOffset(Direction.Axis.Y, boundingBox, iterable, invertY ? -2.0 : -1.0);
     }
 
     public static void loadFromEntityNbt(World world, @Nullable PlayerEntity player, @Nullable Entity entity, @Nullable NbtCompound itemNbt) {
@@ -563,8 +565,8 @@ implements TypeFilter<Entity, T> {
         return this != PLAYER && this != LLAMA_SPIT && this != WITHER && this != BAT && this != ITEM_FRAME && this != GLOW_ITEM_FRAME && this != LEASH_KNOT && this != PAINTING && this != END_CRYSTAL && this != EVOKER_FANGS;
     }
 
-    public boolean isIn(Tag<EntityType<?>> tag) {
-        return tag.contains(this);
+    public boolean isIn(TagKey<EntityType<?>> tag) {
+        return this.registryEntry.isIn(tag);
     }
 
     @Override
@@ -576,6 +578,11 @@ implements TypeFilter<Entity, T> {
     @Override
     public Class<? extends Entity> getBaseClass() {
         return Entity.class;
+    }
+
+    @Deprecated
+    public RegistryEntry.Reference<EntityType<?>> getRegistryEntry() {
+        return this.registryEntry;
     }
 
     public static class Builder<T extends Entity> {

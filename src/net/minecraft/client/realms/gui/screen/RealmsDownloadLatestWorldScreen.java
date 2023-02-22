@@ -4,17 +4,19 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.util.concurrent.RateLimiter
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.booleans.BooleanConsumer
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.gui.screen;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.RateLimiter;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -41,13 +43,13 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsDownloadLatestWorldScreen
 extends RealmsScreen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final ReentrantLock DOWNLOAD_LOCK = new ReentrantLock();
     private final Screen parent;
     private final WorldDownload worldDownload;
@@ -56,14 +58,18 @@ extends RealmsScreen {
     private ButtonWidget cancelButton;
     private final String worldName;
     private final DownloadStatus downloadStatus;
+    @Nullable
     private volatile Text downloadError;
     private volatile Text status = new TranslatableText("mco.download.preparing");
+    @Nullable
     private volatile String progress;
     private volatile boolean cancelled;
     private volatile boolean showDots = true;
     private volatile boolean finished;
     private volatile boolean extracting;
+    @Nullable
     private Long previousWrittenBytes;
+    @Nullable
     private Long previousTimeSnapshot;
     private long bytesPerSecond;
     private int animTick;
@@ -298,7 +304,7 @@ extends RealmsScreen {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public class DownloadStatus {
+    public static class DownloadStatus {
         public volatile long bytesWritten;
         public volatile long totalBytes;
     }

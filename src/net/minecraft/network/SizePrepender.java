@@ -32,8 +32,8 @@ extends MessageToByteEncoder<ByteBuf> {
         packetByteBuf.writeBytes(byteBuf, byteBuf.readerIndex(), i);
     }
 
-    protected /* synthetic */ void encode(ChannelHandlerContext channelHandlerContext, Object object, ByteBuf byteBuf) throws Exception {
-        this.encode(channelHandlerContext, (ByteBuf)object, byteBuf);
+    protected /* synthetic */ void encode(ChannelHandlerContext ctx, Object input, ByteBuf output) throws Exception {
+        this.encode(ctx, (ByteBuf)input, output);
     }
 }
 

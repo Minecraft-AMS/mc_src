@@ -2,11 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.rcon;
 
+import com.mojang.logging.LogUtils;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -16,12 +17,11 @@ import java.nio.charset.StandardCharsets;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.rcon.BufferHelper;
 import net.minecraft.server.rcon.RconBase;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class RconClient
 extends RconBase {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_29799 = 3;
     private static final int field_29800 = 2;
     private static final int field_29801 = 0;

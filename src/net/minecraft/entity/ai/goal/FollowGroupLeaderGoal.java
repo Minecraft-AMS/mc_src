@@ -25,7 +25,7 @@ extends Goal {
     }
 
     protected int getSurroundingSearchDelay(SchoolingFishEntity fish) {
-        return 200 + fish.getRandom().nextInt(200) % 20;
+        return FollowGroupLeaderGoal.toGoalTicks(200 + fish.getRandom().nextInt(200) % 20);
     }
 
     @Override
@@ -41,10 +41,10 @@ extends Goal {
             return false;
         }
         this.checkSurroundingDelay = this.getSurroundingSearchDelay(this.fish);
-        Predicate<SchoolingFishEntity> predicate = schoolingFishEntity -> schoolingFishEntity.canHaveMoreFishInGroup() || !schoolingFishEntity.hasLeader();
+        Predicate<SchoolingFishEntity> predicate = fish -> fish.canHaveMoreFishInGroup() || !fish.hasLeader();
         List<SchoolingFishEntity> list = this.fish.world.getEntitiesByClass(this.fish.getClass(), this.fish.getBoundingBox().expand(8.0, 8.0, 8.0), predicate);
-        SchoolingFishEntity schoolingFishEntity2 = (SchoolingFishEntity)DataFixUtils.orElse(list.stream().filter(SchoolingFishEntity::canHaveMoreFishInGroup).findAny(), (Object)this.fish);
-        schoolingFishEntity2.pullInOtherFish(list.stream().filter(schoolingFishEntity -> !schoolingFishEntity.hasLeader()));
+        SchoolingFishEntity schoolingFishEntity = (SchoolingFishEntity)DataFixUtils.orElse(list.stream().filter(SchoolingFishEntity::canHaveMoreFishInGroup).findAny(), (Object)this.fish);
+        schoolingFishEntity.pullInOtherFish(list.stream().filter(fish -> !fish.hasLeader()));
         return this.fish.hasLeader();
     }
 
@@ -68,7 +68,7 @@ extends Goal {
         if (--this.moveDelay > 0) {
             return;
         }
-        this.moveDelay = 10;
+        this.moveDelay = this.getTickCount(10);
         this.fish.moveTowardLeader();
     }
 }

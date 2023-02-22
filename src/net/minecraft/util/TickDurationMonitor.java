@@ -2,12 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.util;
 
+import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -17,12 +18,11 @@ import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.profiler.ProfilerSystem;
 import net.minecraft.util.profiler.ReadableProfiler;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class TickDurationMonitor {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final LongSupplier timeGetter;
     private final long overtime;
     private int tickCount;

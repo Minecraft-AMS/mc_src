@@ -3,13 +3,14 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.server.rcon;
 
 import com.google.common.collect.Lists;
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -20,13 +21,12 @@ import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.dedicated.ServerPropertiesHandler;
 import net.minecraft.server.rcon.RconBase;
 import net.minecraft.server.rcon.RconClient;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class RconListener
 extends RconBase {
-    private static final Logger SERVER_LOGGER = LogManager.getLogger();
+    private static final Logger SERVER_LOGGER = LogUtils.getLogger();
     private final ServerSocket listener;
     private final String password;
     private final List<RconClient> clients = Lists.newArrayList();
@@ -96,7 +96,7 @@ extends RconBase {
             return rconListener;
         }
         catch (IOException iOException) {
-            SERVER_LOGGER.warn("Unable to initialise RCON on {}:{}", (Object)string, (Object)i, (Object)iOException);
+            SERVER_LOGGER.warn("Unable to initialise RCON on {}:{}", new Object[]{string, i, iOException});
             return null;
         }
     }

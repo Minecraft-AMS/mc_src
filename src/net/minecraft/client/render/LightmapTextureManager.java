@@ -54,8 +54,8 @@ implements AutoCloseable {
     }
 
     public void tick() {
-        this.flickerIntensity = (float)((double)this.flickerIntensity + (Math.random() - Math.random()) * Math.random() * Math.random() * 0.1);
-        this.flickerIntensity = (float)((double)this.flickerIntensity * 0.9);
+        this.flickerIntensity += (float)((Math.random() - Math.random()) * Math.random() * Math.random() * 0.1);
+        this.flickerIntensity *= 0.9f;
         this.dirty = true;
     }
 
@@ -81,7 +81,7 @@ implements AutoCloseable {
         if (clientWorld == null) {
             return;
         }
-        float f = clientWorld.method_23783(1.0f);
+        float f = clientWorld.getStarBrightness(1.0f);
         float g = clientWorld.getLightningTicksLeft() > 0 ? 1.0f : f * 0.95f + 0.05f;
         float h = this.client.player.getUnderwaterVisibility();
         float i = this.client.player.hasStatusEffect(StatusEffects.NIGHT_VISION) ? GameRenderer.getNightVisionStrength(this.client.player, delta) : (h > 0.0f && this.client.player.hasStatusEffect(StatusEffects.CONDUIT_POWER) ? h : 0.0f);

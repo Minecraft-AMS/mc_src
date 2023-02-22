@@ -16,7 +16,7 @@ import net.minecraft.util.registry.Registry;
 
 public class BlockMatchRuleTest
 extends RuleTest {
-    public static final Codec<BlockMatchRuleTest> CODEC = Registry.BLOCK.fieldOf("block").xmap(BlockMatchRuleTest::new, blockMatchRuleTest -> blockMatchRuleTest.block).codec();
+    public static final Codec<BlockMatchRuleTest> CODEC = Registry.BLOCK.getCodec().fieldOf("block").xmap(BlockMatchRuleTest::new, blockMatchRuleTest -> blockMatchRuleTest.block).codec();
     private final Block block;
 
     public BlockMatchRuleTest(Block block) {

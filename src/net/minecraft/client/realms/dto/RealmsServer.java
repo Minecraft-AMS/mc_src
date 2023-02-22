@@ -10,11 +10,11 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParser
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.builder.EqualsBuilder
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.dto;
 
@@ -26,6 +26,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -45,17 +46,16 @@ import net.minecraft.client.realms.dto.ValueObject;
 import net.minecraft.client.realms.util.JsonUtils;
 import net.minecraft.client.realms.util.RealmsUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsServer
 extends ValueObject {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public long id;
     public String remoteSubscriptionId;
     public String name;
-    public String motd;
+    public String description;
     public State state;
     public String owner;
     public String ownerUUID;
@@ -72,7 +72,7 @@ extends ValueObject {
     public RealmsServerPing serverPing = new RealmsServerPing();
 
     public String getDescription() {
-        return this.motd;
+        return this.description;
     }
 
     public String getName() {
@@ -88,7 +88,7 @@ extends ValueObject {
     }
 
     public void setDescription(String description) {
-        this.motd = description;
+        this.description = description;
     }
 
     public void updateServerPing(RealmsServerPlayerList serverPlayerList) {
@@ -117,7 +117,7 @@ extends ValueObject {
             realmsServer.id = JsonUtils.getLongOr("id", node, -1L);
             realmsServer.remoteSubscriptionId = JsonUtils.getStringOr("remoteSubscriptionId", node, null);
             realmsServer.name = JsonUtils.getStringOr("name", node, null);
-            realmsServer.motd = JsonUtils.getStringOr("motd", node, null);
+            realmsServer.description = JsonUtils.getStringOr("motd", node, null);
             realmsServer.state = RealmsServer.getState(JsonUtils.getStringOr("state", node, State.CLOSED.name()));
             realmsServer.owner = JsonUtils.getStringOr("owner", node, null);
             if (node.get("players") != null && node.get("players").isJsonArray()) {
@@ -222,7 +222,7 @@ extends ValueObject {
     }
 
     public int hashCode() {
-        return Objects.hash(new Object[]{this.id, this.name, this.motd, this.state, this.owner, this.expired});
+        return Objects.hash(new Object[]{this.id, this.name, this.description, this.state, this.owner, this.expired});
     }
 
     public boolean equals(Object o) {
@@ -236,7 +236,7 @@ extends ValueObject {
             return false;
         }
         RealmsServer realmsServer = (RealmsServer)o;
-        return new EqualsBuilder().append(this.id, realmsServer.id).append((Object)this.name, (Object)realmsServer.name).append((Object)this.motd, (Object)realmsServer.motd).append((Object)this.state, (Object)realmsServer.state).append((Object)this.owner, (Object)realmsServer.owner).append(this.expired, realmsServer.expired).append((Object)this.worldType, (Object)this.worldType).isEquals();
+        return new EqualsBuilder().append(this.id, realmsServer.id).append((Object)this.name, (Object)realmsServer.name).append((Object)this.description, (Object)realmsServer.description).append((Object)this.state, (Object)realmsServer.state).append((Object)this.owner, (Object)realmsServer.owner).append(this.expired, realmsServer.expired).append((Object)this.worldType, (Object)this.worldType).isEquals();
     }
 
     public RealmsServer clone() {
@@ -244,7 +244,7 @@ extends ValueObject {
         realmsServer.id = this.id;
         realmsServer.remoteSubscriptionId = this.remoteSubscriptionId;
         realmsServer.name = this.name;
-        realmsServer.motd = this.motd;
+        realmsServer.description = this.description;
         realmsServer.state = this.state;
         realmsServer.owner = this.owner;
         realmsServer.players = this.players;

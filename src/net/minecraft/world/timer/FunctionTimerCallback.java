@@ -22,7 +22,12 @@ implements TimerCallback<MinecraftServer> {
     @Override
     public void call(MinecraftServer minecraftServer, Timer<MinecraftServer> timer, long l) {
         CommandFunctionManager commandFunctionManager = minecraftServer.getCommandFunctionManager();
-        commandFunctionManager.getFunction(this.name).ifPresent(commandFunction -> commandFunctionManager.execute((CommandFunction)commandFunction, commandFunctionManager.getScheduledCommandSource()));
+        commandFunctionManager.getFunction(this.name).ifPresent(function -> commandFunctionManager.execute((CommandFunction)function, commandFunctionManager.getScheduledCommandSource()));
+    }
+
+    @Override
+    public /* synthetic */ void call(Object server, Timer events, long time) {
+        this.call((MinecraftServer)server, (Timer<MinecraftServer>)events, time);
     }
 
     public static class Serializer

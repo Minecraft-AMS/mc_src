@@ -4,14 +4,15 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.advancement;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,15 +20,15 @@ import java.util.Map;
 import java.util.Set;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class AdvancementManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<Identifier, Advancement> advancements = Maps.newHashMap();
     private final Set<Advancement> roots = Sets.newLinkedHashSet();
     private final Set<Advancement> dependents = Sets.newLinkedHashSet();
+    @Nullable
     private Listener listener;
 
     private void remove(Advancement advancement) {
@@ -60,7 +61,7 @@ public class AdvancementManager {
         }
     }
 
-    public void load(Map<Identifier, Advancement.Task> map) {
+    public void load(Map<Identifier, Advancement.Builder> map) {
         HashMap map2 = Maps.newHashMap(map);
         while (!map2.isEmpty()) {
             boolean bl = false;
@@ -68,9 +69,9 @@ public class AdvancementManager {
             while (iterator.hasNext()) {
                 Map.Entry entry = iterator.next();
                 Identifier identifier = (Identifier)entry.getKey();
-                Advancement.Task task = (Advancement.Task)entry.getValue();
-                if (!task.findParent(this.advancements::get)) continue;
-                Advancement advancement = task.build(identifier);
+                Advancement.Builder builder = (Advancement.Builder)entry.getValue();
+                if (!builder.findParent(this.advancements::get)) continue;
+                Advancement advancement = builder.build(identifier);
                 this.advancements.put(identifier, advancement);
                 bl = true;
                 iterator.remove();

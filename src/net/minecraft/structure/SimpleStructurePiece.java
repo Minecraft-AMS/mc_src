@@ -4,13 +4,14 @@
  * Could not load the following classes:
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.structure;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -19,8 +20,8 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.StructureBlockMode;
 import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.Structure;
+import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
@@ -35,59 +36,58 @@ import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public abstract class SimpleStructurePiece
 extends StructurePiece {
-    private static final Logger LOGGER = LogManager.getLogger();
-    protected final String identifier;
+    private static final Logger LOGGER = LogUtils.getLogger();
+    protected final String template;
     protected Structure structure;
     protected StructurePlacementData placementData;
     protected BlockPos pos;
 
-    public SimpleStructurePiece(StructurePieceType type, int i, StructureManager structureManager, Identifier identifier, String string, StructurePlacementData placementData, BlockPos pos) {
-        super(type, i, structureManager.getStructureOrBlank(identifier).calculateBoundingBox(placementData, pos));
+    public SimpleStructurePiece(StructurePieceType type, int length, StructureManager structureManager, Identifier id, String template, StructurePlacementData placementData, BlockPos pos) {
+        super(type, length, structureManager.getStructureOrBlank(id).calculateBoundingBox(placementData, pos));
         this.setOrientation(Direction.NORTH);
-        this.identifier = string;
+        this.template = template;
         this.pos = pos;
-        this.structure = structureManager.getStructureOrBlank(identifier);
+        this.structure = structureManager.getStructureOrBlank(id);
         this.placementData = placementData;
     }
 
-    public SimpleStructurePiece(StructurePieceType type, NbtCompound nbtCompound, ServerWorld world, Function<Identifier, StructurePlacementData> function) {
-        super(type, nbtCompound);
+    public SimpleStructurePiece(StructurePieceType type, NbtCompound nbt, StructureManager structureManager, Function<Identifier, StructurePlacementData> placementDataGetter) {
+        super(type, nbt);
         this.setOrientation(Direction.NORTH);
-        this.identifier = nbtCompound.getString("Template");
-        this.pos = new BlockPos(nbtCompound.getInt("TPX"), nbtCompound.getInt("TPY"), nbtCompound.getInt("TPZ"));
+        this.template = nbt.getString("Template");
+        this.pos = new BlockPos(nbt.getInt("TPX"), nbt.getInt("TPY"), nbt.getInt("TPZ"));
         Identifier identifier = this.getId();
-        this.structure = world.getStructureManager().getStructureOrBlank(identifier);
-        this.placementData = function.apply(identifier);
+        this.structure = structureManager.getStructureOrBlank(identifier);
+        this.placementData = placementDataGetter.apply(identifier);
         this.boundingBox = this.structure.calculateBoundingBox(this.placementData, this.pos);
     }
 
     protected Identifier getId() {
-        return new Identifier(this.identifier);
+        return new Identifier(this.template);
     }
 
     @Override
-    protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+    protected void writeNbt(StructureContext context, NbtCompound nbt) {
         nbt.putInt("TPX", this.pos.getX());
         nbt.putInt("TPY", this.pos.getY());
         nbt.putInt("TPZ", this.pos.getZ());
-        nbt.putString("Template", this.identifier);
+        nbt.putString("Template", this.template);
     }
 
     @Override
-    public boolean generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox boundingBox, ChunkPos chunkPos, BlockPos pos) {
-        this.placementData.setBoundingBox(boundingBox);
+    public void generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox chunkBox, ChunkPos chunkPos, BlockPos pos) {
+        this.placementData.setBoundingBox(chunkBox);
         this.boundingBox = this.structure.calculateBoundingBox(this.placementData, this.pos);
         if (this.structure.place(world, this.pos, pos, this.placementData, random, 2)) {
             List<Structure.StructureBlockInfo> list = this.structure.getInfosForBlock(this.pos, this.placementData, Blocks.STRUCTURE_BLOCK);
             for (Structure.StructureBlockInfo structureBlockInfo : list) {
                 StructureBlockMode structureBlockMode;
                 if (structureBlockInfo.nbt == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.nbt.getString("mode"))) != StructureBlockMode.DATA) continue;
-                this.handleMetadata(structureBlockInfo.nbt.getString("metadata"), structureBlockInfo.pos, world, random, boundingBox);
+                this.handleMetadata(structureBlockInfo.nbt.getString("metadata"), structureBlockInfo.pos, world, random, chunkBox);
             }
             List<Structure.StructureBlockInfo> list2 = this.structure.getInfosForBlock(this.pos, this.placementData, Blocks.JIGSAW);
             for (Structure.StructureBlockInfo structureBlockInfo2 : list2) {
@@ -110,12 +110,12 @@ extends StructurePiece {
                 world.setBlockState(structureBlockInfo2.pos, blockState, 3);
             }
         }
-        return true;
     }
 
     protected abstract void handleMetadata(String var1, BlockPos var2, ServerWorldAccess var3, Random var4, BlockBox var5);
 
     @Override
+    @Deprecated
     public void translate(int x, int y, int z) {
         super.translate(x, y, z);
         this.pos = this.pos.add(x, y, z);

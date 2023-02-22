@@ -71,7 +71,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class CommandSuggestor {
-    private static final Pattern BACKSLASH_S_PATTERN = Pattern.compile("(\\s+)");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("(\\s+)");
     private static final Style ERROR_STYLE = Style.EMPTY.withColor(Formatting.RED);
     private static final Style INFO_STYLE = Style.EMPTY.withColor(Formatting.GRAY);
     private static final List<Style> HIGHLIGHT_STYLES = (List)Stream.of(Formatting.AQUA, Formatting.YELLOW, Formatting.GREEN, Formatting.LIGHT_PURPLE, Formatting.GOLD).map(Style.EMPTY::withColor).collect(ImmutableList.toImmutableList());
@@ -152,7 +152,7 @@ public class CommandSuggestor {
 
     private List<Suggestion> sortSuggestions(Suggestions suggestions) {
         String string = this.textField.getText().substring(0, this.textField.getCursor());
-        int i = CommandSuggestor.getLastPlayerNameStart(string);
+        int i = CommandSuggestor.getStartOfCurrentWord(string);
         String string2 = string.substring(i).toLowerCase(Locale.ROOT);
         ArrayList list = Lists.newArrayList();
         ArrayList list2 = Lists.newArrayList();
@@ -203,18 +203,18 @@ public class CommandSuggestor {
             }
         } else {
             String string2 = string.substring(0, i);
-            int j = CommandSuggestor.getLastPlayerNameStart(string2);
+            int j = CommandSuggestor.getStartOfCurrentWord(string2);
             Collection<String> collection = this.client.player.networkHandler.getCommandSource().getPlayerNames();
             this.pendingSuggestions = CommandSource.suggestMatching(collection, new SuggestionsBuilder(string2, j));
         }
     }
 
-    private static int getLastPlayerNameStart(String input) {
+    private static int getStartOfCurrentWord(String input) {
         if (Strings.isNullOrEmpty((String)input)) {
             return 0;
         }
         int i = 0;
-        Matcher matcher = BACKSLASH_S_PATTERN.matcher(input);
+        Matcher matcher = WHITESPACE_PATTERN.matcher(input);
         while (matcher.find()) {
             i = matcher.end();
         }
@@ -354,13 +354,13 @@ public class CommandSuggestor {
         private boolean completed;
         private int lastNarrationIndex;
 
-        SuggestionWindow(int i, int j, int k, List<Suggestion> list, boolean bl) {
-            int l = i - 1;
-            int m = CommandSuggestor.this.chatScreenSized ? j - 3 - Math.min(list.size(), CommandSuggestor.this.maxSuggestionSize) * 12 : j;
-            this.area = new Rect2i(l, m, k + 1, Math.min(list.size(), CommandSuggestor.this.maxSuggestionSize) * 12);
+        SuggestionWindow(int x, int y, int width, List<Suggestion> suggestions, boolean narrateFirstSuggestion) {
+            int i = x - 1;
+            int j = CommandSuggestor.this.chatScreenSized ? y - 3 - Math.min(suggestions.size(), CommandSuggestor.this.maxSuggestionSize) * 12 : y;
+            this.area = new Rect2i(i, j, width + 1, Math.min(suggestions.size(), CommandSuggestor.this.maxSuggestionSize) * 12);
             this.typedText = CommandSuggestor.this.textField.getText();
-            this.lastNarrationIndex = bl ? -1 : 0;
-            this.suggestions = list;
+            this.lastNarrationIndex = narrateFirstSuggestion ? -1 : 0;
+            this.suggestions = suggestions;
             this.select(0);
         }
 

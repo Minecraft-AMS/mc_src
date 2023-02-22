@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.Set;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.brain.LivingTargetCache;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.boss.WitherEntity;
@@ -35,16 +36,11 @@ extends Sensor<LivingEntity> {
     @Override
     protected void sense(ServerWorld world, LivingEntity entity) {
         Brain<?> brain = entity.getBrain();
-        Optional<Object> optional = Optional.empty();
         ArrayList list = Lists.newArrayList();
-        List<LivingEntity> list2 = brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse((List<LivingEntity>)ImmutableList.of());
-        for (LivingEntity livingEntity : list2) {
-            if (!(livingEntity instanceof WitherSkeletonEntity) && !(livingEntity instanceof WitherEntity)) continue;
-            optional = Optional.of((MobEntity)livingEntity);
-            break;
-        }
-        List<LivingEntity> list3 = brain.getOptionalMemory(MemoryModuleType.MOBS).orElse((List<LivingEntity>)ImmutableList.of());
-        for (LivingEntity livingEntity2 : list3) {
+        LivingTargetCache livingTargetCache = brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse(LivingTargetCache.empty());
+        Optional<MobEntity> optional = livingTargetCache.findFirst(livingEntity -> livingEntity instanceof WitherSkeletonEntity || livingEntity instanceof WitherEntity).map(MobEntity.class::cast);
+        List<LivingEntity> list2 = brain.getOptionalMemory(MemoryModuleType.MOBS).orElse((List<LivingEntity>)ImmutableList.of());
+        for (LivingEntity livingEntity2 : list2) {
             if (!(livingEntity2 instanceof AbstractPiglinEntity) || !((AbstractPiglinEntity)livingEntity2).isAdult()) continue;
             list.add((AbstractPiglinEntity)livingEntity2);
         }

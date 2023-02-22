@@ -3,11 +3,10 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.Charsets
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.stb.STBIWriteCallback
  *  org.lwjgl.stb.STBImage
@@ -17,6 +16,7 @@
  *  org.lwjgl.stb.STBTruetype
  *  org.lwjgl.system.MemoryStack
  *  org.lwjgl.system.MemoryUtil
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.texture;
 
@@ -24,6 +24,7 @@ import com.google.common.base.Charsets;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -46,8 +47,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.util.Untracker;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.stb.STBIWriteCallback;
 import org.lwjgl.stb.STBImage;
@@ -57,11 +56,12 @@ import org.lwjgl.stb.STBTTFontinfo;
 import org.lwjgl.stb.STBTruetype;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public final class NativeImage
 implements AutoCloseable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int ALPHA_OFFSET = 24;
     private static final int BLUE_OFFSET = 16;
     private static final int GREEN_OFFSET = 8;
@@ -156,7 +156,7 @@ implements AutoCloseable {
     }
 
     private static void setTextureFilter(boolean blur, boolean mipmap) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         if (blur) {
             GlStateManager._texParameter(3553, 10241, mipmap ? 9987 : 9729);
             GlStateManager._texParameter(3553, 10240, 9729);
@@ -221,7 +221,7 @@ implements AutoCloseable {
     }
 
     public void setLuminance(int x, int y, byte luminance) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (!this.format.hasLuminance()) {
             throw new IllegalArgumentException(String.format("setPixelLuminance only works on image with luminance; have %s", new Object[]{this.format}));
         }
@@ -234,7 +234,7 @@ implements AutoCloseable {
     }
 
     public byte getRed(int x, int y) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (!this.format.hasRedChannel()) {
             throw new IllegalArgumentException(String.format("no red or luminance in %s", new Object[]{this.format}));
         }
@@ -246,7 +246,7 @@ implements AutoCloseable {
     }
 
     public byte getGreen(int x, int y) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (!this.format.hasGreenChannel()) {
             throw new IllegalArgumentException(String.format("no green or luminance in %s", new Object[]{this.format}));
         }
@@ -258,7 +258,7 @@ implements AutoCloseable {
     }
 
     public byte getBlue(int x, int y) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (!this.format.hasBlueChannel()) {
             throw new IllegalArgumentException(String.format("no blue or luminance in %s", new Object[]{this.format}));
         }
@@ -356,7 +356,7 @@ implements AutoCloseable {
     }
 
     private void uploadInternal(int level, int offsetX, int offsetY, int unpackSkipPixels, int unpackSkipRows, int width, int height, boolean blur, boolean clamp, boolean mipmap, boolean close) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        RenderSystem.assertOnRenderThreadOrInit();
         this.checkAllocated();
         NativeImage.setTextureFilter(blur, mipmap);
         if (width == this.getWidth()) {
@@ -378,7 +378,7 @@ implements AutoCloseable {
     }
 
     public void loadFromTextureImage(int level, boolean removeAlpha) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         this.checkAllocated();
         this.format.setPackAlignment();
         GlStateManager._getTexImage(3553, level, this.format.toGl(), 5121, this.pointer);
@@ -392,7 +392,7 @@ implements AutoCloseable {
     }
 
     public void readDepthComponent(float unused) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (this.format.getChannelCount() != 1) {
             throw new IllegalStateException("Depth buffer must be stored in NativeImage with 1 component.");
         }
@@ -402,7 +402,7 @@ implements AutoCloseable {
     }
 
     public void drawPixels() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         this.format.setUnpackAlignment();
         GlStateManager._glDrawPixels(this.width, this.height, this.format.toGl(), 5121, this.pointer);
     }
@@ -639,12 +639,12 @@ implements AutoCloseable {
         }
 
         public void setPackAlignment() {
-            RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+            RenderSystem.assertOnRenderThread();
             GlStateManager._pixelStore(3333, this.getChannelCount());
         }
 
         public void setUnpackAlignment() {
-            RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+            RenderSystem.assertOnRenderThreadOrInit();
             GlStateManager._pixelStore(3317, this.getChannelCount());
         }
 

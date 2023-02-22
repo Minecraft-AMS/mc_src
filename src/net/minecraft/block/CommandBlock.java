@@ -2,11 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.block;
 
+import com.mojang.logging.LogUtils;
 import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -20,6 +21,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
@@ -30,21 +32,20 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
-import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.CommandBlockExecutor;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 public class CommandBlock
 extends BlockWithEntity
 implements OperatorBlock {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final DirectionProperty FACING = FacingBlock.FACING;
     public static final BooleanProperty CONDITIONAL = Properties.CONDITIONAL;
     private final boolean auto;
@@ -80,7 +81,7 @@ implements OperatorBlock {
         }
         if (bl) {
             commandBlockBlockEntity.updateConditionMet();
-            world.getBlockTickScheduler().schedule(pos, this, 1);
+            world.createAndScheduleBlockTick(pos, this, 1);
         }
     }
 
@@ -90,7 +91,7 @@ implements OperatorBlock {
         if (blockEntity instanceof CommandBlockBlockEntity) {
             CommandBlockBlockEntity commandBlockBlockEntity = (CommandBlockBlockEntity)blockEntity;
             CommandBlockExecutor commandBlockExecutor = commandBlockBlockEntity.getCommandExecutor();
-            boolean bl = !ChatUtil.isEmpty(commandBlockExecutor.getCommand());
+            boolean bl = !StringHelper.isEmpty(commandBlockExecutor.getCommand());
             CommandBlockBlockEntity.Type type = commandBlockBlockEntity.getCommandBlockType();
             boolean bl2 = commandBlockBlockEntity.isConditionMet();
             if (type == CommandBlockBlockEntity.Type.AUTO) {
@@ -101,7 +102,7 @@ implements OperatorBlock {
                     commandBlockExecutor.setSuccessCount(0);
                 }
                 if (commandBlockBlockEntity.isPowered() || commandBlockBlockEntity.isAuto()) {
-                    world.getBlockTickScheduler().schedule(pos, this, 1);
+                    world.createAndScheduleBlockTick(pos, this, 1);
                 }
             } else if (type == CommandBlockBlockEntity.Type.REDSTONE) {
                 if (bl2) {
@@ -159,8 +160,8 @@ implements OperatorBlock {
             commandBlockExecutor.setCustomName(itemStack.getName());
         }
         if (!world.isClient) {
-            if (itemStack.getSubNbt("BlockEntityTag") == null) {
-                commandBlockExecutor.setTrackingOutput(world.getGameRules().getBoolean(GameRules.SEND_COMMAND_FEEDBACK));
+            if (BlockItem.getBlockEntityNbt(itemStack) == null) {
+                commandBlockExecutor.setTrackOutput(world.getGameRules().getBoolean(GameRules.SEND_COMMAND_FEEDBACK));
                 commandBlockBlockEntity.setAuto(this.auto);
             }
             if (commandBlockBlockEntity.getCommandBlockType() == CommandBlockBlockEntity.Type.SEQUENCE) {

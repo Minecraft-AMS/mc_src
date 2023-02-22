@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Iterators
  *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.DataResult
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  org.jetbrains.annotations.Nullable
@@ -12,6 +13,7 @@ package net.minecraft.util.math;
 
 import com.google.common.collect.Iterators;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.Arrays;
@@ -45,6 +47,7 @@ implements StringIdentifiable {
     public static final /* enum */ Direction WEST = new Direction(4, 5, 1, "west", AxisDirection.NEGATIVE, Axis.X, new Vec3i(-1, 0, 0));
     public static final /* enum */ Direction EAST = new Direction(5, 4, 3, "east", AxisDirection.POSITIVE, Axis.X, new Vec3i(1, 0, 0));
     public static final Codec<Direction> CODEC;
+    public static final Codec<Direction> VERTICAL_CODEC;
     private final int id;
     private final int idOpposite;
     private final int idHorizontal;
@@ -127,27 +130,24 @@ implements StringIdentifiable {
 
     public Quaternion getRotationQuaternion() {
         Quaternion quaternion = Vec3f.POSITIVE_X.getDegreesQuaternion(90.0f);
-        switch (this) {
-            case DOWN: {
-                return Vec3f.POSITIVE_X.getDegreesQuaternion(180.0f);
-            }
-            case UP: {
-                return Quaternion.IDENTITY.copy();
-            }
-            case NORTH: {
+        return switch (this) {
+            default -> throw new IncompatibleClassChangeError();
+            case DOWN -> Vec3f.POSITIVE_X.getDegreesQuaternion(180.0f);
+            case UP -> Quaternion.IDENTITY.copy();
+            case NORTH -> {
                 quaternion.hamiltonProduct(Vec3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
-                return quaternion;
+                yield quaternion;
             }
-            case SOUTH: {
-                return quaternion;
-            }
-            case WEST: {
+            case SOUTH -> quaternion;
+            case WEST -> {
                 quaternion.hamiltonProduct(Vec3f.POSITIVE_Z.getDegreesQuaternion(90.0f));
-                return quaternion;
+                yield quaternion;
             }
-        }
-        quaternion.hamiltonProduct(Vec3f.POSITIVE_Z.getDegreesQuaternion(-90.0f));
-        return quaternion;
+            case EAST -> {
+                quaternion.hamiltonProduct(Vec3f.POSITIVE_Z.getDegreesQuaternion(-90.0f));
+                yield quaternion;
+            }
+        };
     }
 
     public int getId() {
@@ -163,15 +163,22 @@ implements StringIdentifiable {
     }
 
     public static Direction getLookDirectionForAxis(Entity entity, Axis axis) {
-        switch (axis) {
-            case X: {
-                return EAST.pointsTo(entity.getYaw(1.0f)) ? EAST : WEST;
+        return switch (axis) {
+            default -> throw new IncompatibleClassChangeError();
+            case Axis.X -> {
+                if (EAST.pointsTo(entity.getYaw(1.0f))) {
+                    yield EAST;
+                }
+                yield WEST;
             }
-            case Z: {
-                return SOUTH.pointsTo(entity.getYaw(1.0f)) ? SOUTH : NORTH;
+            case Axis.Z -> {
+                if (SOUTH.pointsTo(entity.getYaw(1.0f))) {
+                    yield SOUTH;
+                }
+                yield NORTH;
             }
-        }
-        return entity.getPitch(1.0f) < 0.0f ? UP : DOWN;
+            case Axis.Y -> entity.getPitch(1.0f) < 0.0f ? UP : DOWN;
+        };
     }
 
     public Direction getOpposite() {
@@ -179,159 +186,101 @@ implements StringIdentifiable {
     }
 
     public Direction rotateClockwise(Axis axis) {
-        switch (axis) {
-            case X: {
+        return switch (axis) {
+            default -> throw new IncompatibleClassChangeError();
+            case Axis.X -> {
                 if (this == WEST || this == EAST) {
-                    return this;
+                    yield this;
                 }
-                return this.rotateXClockwise();
+                yield this.rotateXClockwise();
             }
-            case Y: {
+            case Axis.Y -> {
                 if (this == UP || this == DOWN) {
-                    return this;
+                    yield this;
                 }
-                return this.rotateYClockwise();
+                yield this.rotateYClockwise();
             }
-            case Z: {
-                if (this == NORTH || this == SOUTH) {
-                    return this;
-                }
-                return this.rotateZClockwise();
-            }
-        }
-        throw new IllegalStateException("Unable to get CW facing for axis " + axis);
+            case Axis.Z -> this == NORTH || this == SOUTH ? this : this.rotateZClockwise();
+        };
     }
 
     public Direction rotateCounterclockwise(Axis axis) {
-        switch (axis) {
-            case X: {
+        return switch (axis) {
+            default -> throw new IncompatibleClassChangeError();
+            case Axis.X -> {
                 if (this == WEST || this == EAST) {
-                    return this;
+                    yield this;
                 }
-                return this.rotateXCounterclockwise();
+                yield this.rotateXCounterclockwise();
             }
-            case Y: {
+            case Axis.Y -> {
                 if (this == UP || this == DOWN) {
-                    return this;
+                    yield this;
                 }
-                return this.rotateYCounterclockwise();
+                yield this.rotateYCounterclockwise();
             }
-            case Z: {
-                if (this == NORTH || this == SOUTH) {
-                    return this;
-                }
-                return this.rotateZCounterclockwise();
-            }
-        }
-        throw new IllegalStateException("Unable to get CW facing for axis " + axis);
+            case Axis.Z -> this == NORTH || this == SOUTH ? this : this.rotateZCounterclockwise();
+        };
     }
 
     public Direction rotateYClockwise() {
-        switch (this) {
-            case NORTH: {
-                return EAST;
-            }
-            case EAST: {
-                return SOUTH;
-            }
-            case SOUTH: {
-                return WEST;
-            }
-            case WEST: {
-                return NORTH;
-            }
-        }
-        throw new IllegalStateException("Unable to get Y-rotated facing of " + this);
+        return switch (this) {
+            case NORTH -> EAST;
+            case EAST -> SOUTH;
+            case SOUTH -> WEST;
+            case WEST -> NORTH;
+            default -> throw new IllegalStateException("Unable to get Y-rotated facing of " + this);
+        };
     }
 
     private Direction rotateXClockwise() {
-        switch (this) {
-            case UP: {
-                return NORTH;
-            }
-            case NORTH: {
-                return DOWN;
-            }
-            case DOWN: {
-                return SOUTH;
-            }
-            case SOUTH: {
-                return UP;
-            }
-        }
-        throw new IllegalStateException("Unable to get X-rotated facing of " + this);
+        return switch (this) {
+            case UP -> NORTH;
+            case NORTH -> DOWN;
+            case DOWN -> SOUTH;
+            case SOUTH -> UP;
+            default -> throw new IllegalStateException("Unable to get X-rotated facing of " + this);
+        };
     }
 
     private Direction rotateXCounterclockwise() {
-        switch (this) {
-            case UP: {
-                return SOUTH;
-            }
-            case SOUTH: {
-                return DOWN;
-            }
-            case DOWN: {
-                return NORTH;
-            }
-            case NORTH: {
-                return UP;
-            }
-        }
-        throw new IllegalStateException("Unable to get X-rotated facing of " + this);
+        return switch (this) {
+            case UP -> SOUTH;
+            case SOUTH -> DOWN;
+            case DOWN -> NORTH;
+            case NORTH -> UP;
+            default -> throw new IllegalStateException("Unable to get X-rotated facing of " + this);
+        };
     }
 
     private Direction rotateZClockwise() {
-        switch (this) {
-            case UP: {
-                return EAST;
-            }
-            case EAST: {
-                return DOWN;
-            }
-            case DOWN: {
-                return WEST;
-            }
-            case WEST: {
-                return UP;
-            }
-        }
-        throw new IllegalStateException("Unable to get Z-rotated facing of " + this);
+        return switch (this) {
+            case UP -> EAST;
+            case EAST -> DOWN;
+            case DOWN -> WEST;
+            case WEST -> UP;
+            default -> throw new IllegalStateException("Unable to get Z-rotated facing of " + this);
+        };
     }
 
     private Direction rotateZCounterclockwise() {
-        switch (this) {
-            case UP: {
-                return WEST;
-            }
-            case WEST: {
-                return DOWN;
-            }
-            case DOWN: {
-                return EAST;
-            }
-            case EAST: {
-                return UP;
-            }
-        }
-        throw new IllegalStateException("Unable to get Z-rotated facing of " + this);
+        return switch (this) {
+            case UP -> WEST;
+            case WEST -> DOWN;
+            case DOWN -> EAST;
+            case EAST -> UP;
+            default -> throw new IllegalStateException("Unable to get Z-rotated facing of " + this);
+        };
     }
 
     public Direction rotateYCounterclockwise() {
-        switch (this) {
-            case NORTH: {
-                return WEST;
-            }
-            case EAST: {
-                return NORTH;
-            }
-            case SOUTH: {
-                return EAST;
-            }
-            case WEST: {
-                return SOUTH;
-            }
-        }
-        throw new IllegalStateException("Unable to get CCW facing of " + this);
+        return switch (this) {
+            case NORTH -> WEST;
+            case EAST -> NORTH;
+            case SOUTH -> EAST;
+            case WEST -> SOUTH;
+            default -> throw new IllegalStateException("Unable to get CCW facing of " + this);
+        };
     }
 
     public int getOffsetX() {
@@ -389,15 +338,22 @@ implements StringIdentifiable {
     }
 
     public static Direction from(Axis axis, AxisDirection direction) {
-        switch (axis) {
-            case X: {
-                return direction == AxisDirection.POSITIVE ? EAST : WEST;
+        return switch (axis) {
+            default -> throw new IncompatibleClassChangeError();
+            case Axis.X -> {
+                if (direction == AxisDirection.POSITIVE) {
+                    yield EAST;
+                }
+                yield WEST;
             }
-            case Y: {
-                return direction == AxisDirection.POSITIVE ? UP : DOWN;
+            case Axis.Y -> {
+                if (direction == AxisDirection.POSITIVE) {
+                    yield UP;
+                }
+                yield DOWN;
             }
-        }
-        return direction == AxisDirection.POSITIVE ? SOUTH : NORTH;
+            case Axis.Z -> direction == AxisDirection.POSITIVE ? SOUTH : NORTH;
+        };
     }
 
     public float asRotation() {
@@ -433,6 +389,10 @@ implements StringIdentifiable {
         return this.name;
     }
 
+    private static DataResult<Direction> validateVertical(Direction direction) {
+        return direction.getAxis().isVertical() ? DataResult.success((Object)direction) : DataResult.error((String)"Expected a vertical direction");
+    }
+
     public static Direction get(AxisDirection direction, Axis axis) {
         for (Direction direction2 : ALL) {
             if (direction2.getDirection() != direction || direction2.getAxis() != axis) continue;
@@ -459,6 +419,7 @@ implements StringIdentifiable {
     static {
         field_11037 = Direction.method_36931();
         CODEC = StringIdentifiable.createCodec(Direction::values, Direction::byName);
+        VERTICAL_CODEC = CODEC.flatXmap(Direction::validateVertical, Direction::validateVertical);
         ALL = Direction.values();
         NAME_MAP = Arrays.stream(ALL).collect(Collectors.toMap(Direction::getName, direction -> direction));
         VALUES = (Direction[])Arrays.stream(ALL).sorted(Comparator.comparingInt(direction -> direction.id)).toArray(Direction[]::new);
@@ -468,6 +429,9 @@ implements StringIdentifiable {
         }, Long2ObjectOpenHashMap::new));
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     public static abstract class Axis
     extends Enum<Axis>
     implements StringIdentifiable,
@@ -572,16 +536,11 @@ implements StringIdentifiable {
         }
 
         public Type getType() {
-            switch (this) {
-                case X: 
-                case Z: {
-                    return Type.HORIZONTAL;
-                }
-                case Y: {
-                    return Type.VERTICAL;
-                }
-            }
-            throw new Error("Someone's been tampering with the universe!");
+            return switch (this) {
+                default -> throw new IncompatibleClassChangeError();
+                case X, Z -> Type.HORIZONTAL;
+                case Y -> Type.VERTICAL;
+            };
         }
 
         @Override

@@ -22,7 +22,7 @@ import net.minecraft.util.registry.Registry;
 
 public class RandomBlockMatchRuleTest
 extends RuleTest {
-    public static final Codec<RandomBlockMatchRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.BLOCK.fieldOf("block").forGetter(randomBlockMatchRuleTest -> randomBlockMatchRuleTest.block), (App)Codec.FLOAT.fieldOf("probability").forGetter(randomBlockMatchRuleTest -> Float.valueOf(randomBlockMatchRuleTest.probability))).apply((Applicative)instance, RandomBlockMatchRuleTest::new));
+    public static final Codec<RandomBlockMatchRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.BLOCK.getCodec().fieldOf("block").forGetter(randomBlockMatchRuleTest -> randomBlockMatchRuleTest.block), (App)Codec.FLOAT.fieldOf("probability").forGetter(randomBlockMatchRuleTest -> Float.valueOf(randomBlockMatchRuleTest.probability))).apply((Applicative)instance, RandomBlockMatchRuleTest::new));
     private final Block block;
     private final float probability;
 

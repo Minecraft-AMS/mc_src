@@ -18,6 +18,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.floatprovider.FloatProvider;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.LargeDripstoneFeatureConfig;
@@ -70,14 +71,14 @@ extends Feature<LargeDripstoneFeatureConfig> {
         return new DripstoneGenerator(pos, isStalagmite, scale, bluntness.get(random), heightScale.get(random));
     }
 
-    private void method_35360(StructureWorldAccess structureWorldAccess, BlockPos blockPos, CaveSurface.Bounded bounded, WindModifier windModifier) {
-        structureWorldAccess.setBlockState(windModifier.modify(blockPos.withY(bounded.getCeiling() - 1)), Blocks.DIAMOND_BLOCK.getDefaultState(), 2);
-        structureWorldAccess.setBlockState(windModifier.modify(blockPos.withY(bounded.getFloor() + 1)), Blocks.GOLD_BLOCK.getDefaultState(), 2);
-        BlockPos.Mutable mutable = blockPos.withY(bounded.getFloor() + 2).mutableCopy();
-        while (mutable.getY() < bounded.getCeiling() - 1) {
-            BlockPos blockPos2 = windModifier.modify(mutable);
-            if (DripstoneHelper.canGenerate(structureWorldAccess, blockPos2) || structureWorldAccess.getBlockState(blockPos2).isOf(Blocks.DRIPSTONE_BLOCK)) {
-                structureWorldAccess.setBlockState(blockPos2, Blocks.CREEPER_HEAD.getDefaultState(), 2);
+    private void testGeneration(StructureWorldAccess world, BlockPos pos, CaveSurface.Bounded surface, WindModifier wind) {
+        world.setBlockState(wind.modify(pos.withY(surface.getCeiling() - 1)), Blocks.DIAMOND_BLOCK.getDefaultState(), 2);
+        world.setBlockState(wind.modify(pos.withY(surface.getFloor() + 1)), Blocks.GOLD_BLOCK.getDefaultState(), 2);
+        BlockPos.Mutable mutable = pos.withY(surface.getFloor() + 2).mutableCopy();
+        while (mutable.getY() < surface.getCeiling() - 1) {
+            BlockPos blockPos = wind.modify(mutable);
+            if (DripstoneHelper.canGenerate(world, blockPos) || world.getBlockState(blockPos).isOf(Blocks.DRIPSTONE_BLOCK)) {
+                world.setBlockState(blockPos, Blocks.CREEPER_HEAD.getDefaultState(), 2);
             }
             mutable.move(Direction.UP);
         }
@@ -90,26 +91,26 @@ extends Feature<LargeDripstoneFeatureConfig> {
         private final double bluntness;
         private final double heightScale;
 
-        DripstoneGenerator(BlockPos blockPos, boolean bl, int i, double d, double e) {
-            this.pos = blockPos;
-            this.isStalagmite = bl;
-            this.scale = i;
-            this.bluntness = d;
-            this.heightScale = e;
+        DripstoneGenerator(BlockPos pos, boolean isStalagmite, int scale, double bluntness, double heightScale) {
+            this.pos = pos;
+            this.isStalagmite = isStalagmite;
+            this.scale = scale;
+            this.bluntness = bluntness;
+            this.heightScale = heightScale;
         }
 
         private int getBaseScale() {
             return this.scale(0.0f);
         }
 
-        private int method_35361() {
+        private int getBottomY() {
             if (this.isStalagmite) {
                 return this.pos.getY();
             }
             return this.pos.getY() - this.getBaseScale();
         }
 
-        private int method_35362() {
+        private int getTopY() {
             if (!this.isStalagmite) {
                 return this.pos.getY();
             }
@@ -150,7 +151,8 @@ extends Feature<LargeDripstoneFeatureConfig> {
                     }
                     BlockPos.Mutable mutable = this.pos.add(i, 0, j).mutableCopy();
                     boolean bl = false;
-                    for (int l = 0; l < k; ++l) {
+                    int l = this.isStalagmite ? world.getTopY(Heightmap.Type.WORLD_SURFACE_WG, mutable.getX(), mutable.getZ()) : Integer.MAX_VALUE;
+                    for (int m = 0; m < k && mutable.getY() < l; ++m) {
                         BlockPos blockPos = wind.modify(mutable);
                         if (DripstoneHelper.canGenerateOrLava(world, blockPos)) {
                             bl = true;

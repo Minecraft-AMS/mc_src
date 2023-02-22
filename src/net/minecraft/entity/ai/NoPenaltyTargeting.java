@@ -24,7 +24,7 @@ public class NoPenaltyTargeting {
     }
 
     @Nullable
-    public static Vec3d find(PathAwareEntity entity, int horizontalRange, int verticalRange, Vec3d end, double angleRange) {
+    public static Vec3d findTo(PathAwareEntity entity, int horizontalRange, int verticalRange, Vec3d end, double angleRange) {
         Vec3d vec3d = end.subtract(entity.getX(), entity.getY(), entity.getZ());
         boolean bl = NavigationConditions.isPositionTargetInRange(entity, horizontalRange);
         return FuzzyPositions.guessBestPathTarget(entity, () -> {
@@ -37,8 +37,8 @@ public class NoPenaltyTargeting {
     }
 
     @Nullable
-    public static Vec3d find(PathAwareEntity entity, int horizontalRange, int verticalRange, Vec3d direction) {
-        Vec3d vec3d = entity.getPos().subtract(direction);
+    public static Vec3d findFrom(PathAwareEntity entity, int horizontalRange, int verticalRange, Vec3d start) {
+        Vec3d vec3d = entity.getPos().subtract(start);
         boolean bl = NavigationConditions.isPositionTargetInRange(entity, horizontalRange);
         return FuzzyPositions.guessBestPathTarget(entity, () -> {
             BlockPos blockPos = FuzzyPositions.localFuzz(entity.getRandom(), horizontalRange, verticalRange, 0, vec3d.x, vec3d.z, 1.5707963705062866);

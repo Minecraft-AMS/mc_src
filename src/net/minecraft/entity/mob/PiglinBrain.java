@@ -301,28 +301,28 @@ public class PiglinBrain {
         PiglinBrain.dropBarteredItem(piglin, Collections.singletonList(itemStack));
     }
 
-    private static void doBarter(PiglinEntity piglin, List<ItemStack> list) {
+    private static void doBarter(PiglinEntity piglin, List<ItemStack> items) {
         Optional<PlayerEntity> optional = piglin.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_VISIBLE_PLAYER);
         if (optional.isPresent()) {
-            PiglinBrain.dropBarteredItem(piglin, optional.get(), list);
+            PiglinBrain.dropBarteredItem(piglin, optional.get(), items);
         } else {
-            PiglinBrain.dropBarteredItem(piglin, list);
+            PiglinBrain.dropBarteredItem(piglin, items);
         }
     }
 
-    private static void dropBarteredItem(PiglinEntity piglin, List<ItemStack> list) {
-        PiglinBrain.drop(piglin, list, PiglinBrain.findGround(piglin));
+    private static void dropBarteredItem(PiglinEntity piglin, List<ItemStack> items) {
+        PiglinBrain.drop(piglin, items, PiglinBrain.findGround(piglin));
     }
 
-    private static void dropBarteredItem(PiglinEntity piglin, PlayerEntity player, List<ItemStack> list) {
-        PiglinBrain.drop(piglin, list, player.getPos());
+    private static void dropBarteredItem(PiglinEntity piglin, PlayerEntity player, List<ItemStack> items) {
+        PiglinBrain.drop(piglin, items, player.getPos());
     }
 
-    private static void drop(PiglinEntity piglin, List<ItemStack> list, Vec3d vec3d) {
-        if (!list.isEmpty()) {
+    private static void drop(PiglinEntity piglin, List<ItemStack> items, Vec3d pos) {
+        if (!items.isEmpty()) {
             piglin.swingHand(Hand.OFF_HAND);
-            for (ItemStack itemStack : list) {
-                LookTargetUtil.give(piglin, itemStack, vec3d.add(0.0, 1.0, 0.0));
+            for (ItemStack itemStack : items) {
+                LookTargetUtil.give(piglin, itemStack, pos.add(0.0, 1.0, 0.0));
             }
         }
     }
@@ -680,8 +680,8 @@ public class PiglinBrain {
         piglin.getBrain().remember(MemoryModuleType.HUNTED_RECENTLY, true, HUNT_MEMORY_DURATION.get(piglin.world.random));
     }
 
-    private static boolean method_35197(PiglinEntity piglinEntity) {
-        return piglinEntity.getBrain().hasMemoryModule(MemoryModuleType.NEAREST_PLAYER_HOLDING_WANTED_ITEM);
+    private static boolean hasNearestPlayerHoldingWantedItem(PiglinEntity piglin) {
+        return piglin.getBrain().hasMemoryModule(MemoryModuleType.NEAREST_PLAYER_HOLDING_WANTED_ITEM);
     }
 
     private static void setEatenRecently(PiglinEntity piglin) {

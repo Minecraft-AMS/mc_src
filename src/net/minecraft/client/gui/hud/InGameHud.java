@@ -37,7 +37,6 @@ import net.minecraft.client.font.TextVisitFactory;
 import net.minecraft.client.gui.ClientChatListener;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.GameInfoChatListener;
-import net.minecraft.client.gui.hud.BackgroundHelper;
 import net.minecraft.client.gui.hud.BossBarHud;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.ChatHudListener;
@@ -45,6 +44,8 @@ import net.minecraft.client.gui.hud.DebugHud;
 import net.minecraft.client.gui.hud.PlayerListHud;
 import net.minecraft.client.gui.hud.SpectatorHud;
 import net.minecraft.client.gui.hud.SubtitlesHud;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.AbstractInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.option.AttackIndicator;
 import net.minecraft.client.option.GameOptions;
@@ -76,20 +77,22 @@ import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Arm;
-import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.world.GameMode;
@@ -106,6 +109,7 @@ extends DrawableHelper {
     private static final Identifier SPYGLASS_SCOPE = new Identifier("textures/misc/spyglass_scope.png");
     private static final Identifier POWDER_SNOW_OUTLINE = new Identifier("textures/misc/powder_snow_outline.png");
     private static final Text DEMO_EXPIRED_MESSAGE = new TranslatableText("demo.demoExpired");
+    private static final Text SAVING_LEVEL_TEXT = new TranslatableText("menu.savingLevel");
     private static final int WHITE = 0xFFFFFF;
     private static final float field_32168 = 5.0f;
     private static final int field_32169 = 10;
@@ -114,6 +118,7 @@ extends DrawableHelper {
     private static final float field_32172 = 0.2f;
     private static final int field_33942 = 9;
     private static final int field_33943 = 8;
+    private static final float field_35431 = 0.2f;
     private final Random random = new Random();
     private final MinecraftClient client;
     private final ItemRenderer itemRenderer;
@@ -145,6 +150,8 @@ extends DrawableHelper {
     private long heartJumpEndTick;
     private int scaledWidth;
     private int scaledHeight;
+    private float autosaveIndicatorAlpha;
+    private float lastAutosaveIndicatorAlpha;
     private final Map<MessageType, List<ClientChatListener>> listeners = Maps.newHashMap();
     private float spyglassScale;
 
@@ -209,7 +216,7 @@ extends DrawableHelper {
             this.renderPortalOverlay(g);
         }
         if (this.client.interactionManager.getCurrentGameMode() == GameMode.SPECTATOR) {
-            this.spectatorHud.render(matrices, tickDelta);
+            this.spectatorHud.renderSpectatorMenu(matrices);
         } else if (!this.client.options.hudHidden) {
             this.renderHotbar(tickDelta, matrices);
         }
@@ -349,12 +356,13 @@ extends DrawableHelper {
             this.client.getProfiler().pop();
             matrices.pop();
             scoreboardObjective2 = scoreboard.getObjectiveForSlot(0);
-            if (this.client.options.keyPlayerList.isPressed() && (!this.client.isInSingleplayer() || this.client.player.networkHandler.getPlayerList().size() > 1 || scoreboardObjective2 != null)) {
+            if (this.client.options.playerListKey.isPressed() && (!this.client.isInSingleplayer() || this.client.player.networkHandler.getPlayerList().size() > 1 || scoreboardObjective2 != null)) {
                 this.playerListHud.setVisible(true);
                 this.playerListHud.render(matrices, this.scaledWidth, scoreboard, scoreboardObjective2);
             } else {
                 this.playerListHud.setVisible(false);
             }
+            this.renderAutosaveIndicator(matrices);
         }
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
@@ -363,7 +371,7 @@ extends DrawableHelper {
         int i = this.client.options.getTextBackgroundColor(0.0f);
         if (i != 0) {
             int j = -width / 2;
-            InGameHud.fill(matrices, j - 2, yOffset - 2, j + width + 2, yOffset + textRenderer.fontHeight + 2, BackgroundHelper.ColorMixer.mixColor(i, color));
+            InGameHud.fill(matrices, j - 2, yOffset - 2, j + width + 2, yOffset + textRenderer.fontHeight + 2, ColorHelper.Argb.mixColor(i, color));
         }
     }
 
@@ -427,8 +435,10 @@ extends DrawableHelper {
     }
 
     protected void renderStatusEffectOverlay(MatrixStack matrices) {
+        AbstractInventoryScreen abstractInventoryScreen;
+        Screen screen;
         Collection<StatusEffectInstance> collection = this.client.player.getStatusEffects();
-        if (collection.isEmpty()) {
+        if (collection.isEmpty() || (screen = this.client.currentScreen) instanceof AbstractInventoryScreen && (abstractInventoryScreen = (AbstractInventoryScreen)screen).hideStatusEffectHud()) {
             return;
         }
         RenderSystem.enableBlend();
@@ -610,7 +620,7 @@ extends DrawableHelper {
 
     public void renderDemoTimer(MatrixStack matrices) {
         this.client.getProfiler().push("demo");
-        Text text = this.client.world.getTime() >= 120500L ? DEMO_EXPIRED_MESSAGE : new TranslatableText("demo.remainingTime", ChatUtil.ticksToString((int)(120500L - this.client.world.getTime())));
+        Text text = this.client.world.getTime() >= 120500L ? DEMO_EXPIRED_MESSAGE : new TranslatableText("demo.remainingTime", StringHelper.formatTicks((int)(120500L - this.client.world.getTime())));
         int i = this.getTextRenderer().getWidth(text);
         this.getTextRenderer().drawWithShadow(matrices, text, (float)(this.scaledWidth - i - 10), 5.0f, 0xFFFFFF);
         this.client.getProfiler().pop();
@@ -947,7 +957,7 @@ extends DrawableHelper {
             return;
         }
         float f = MathHelper.clamp(1.0f - entity.getBrightnessAtEyes(), 0.0f, 1.0f);
-        this.vignetteDarkness = (float)((double)this.vignetteDarkness + (double)(f - this.vignetteDarkness) * 0.01);
+        this.vignetteDarkness += (f - this.vignetteDarkness) * 0.01f;
     }
 
     private void renderVignetteOverlay(Entity entity) {
@@ -1018,7 +1028,7 @@ extends DrawableHelper {
             return;
         }
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        float f = (float)stack.getCooldown() - tickDelta;
+        float f = (float)stack.getBobbingAnimationTime() - tickDelta;
         if (f > 0.0f) {
             float g = 1.0f + f / 5.0f;
             matrixStack.push();
@@ -1036,7 +1046,14 @@ extends DrawableHelper {
         this.itemRenderer.renderGuiItemOverlay(this.client.textRenderer, stack, x, y);
     }
 
-    public void tick() {
+    public void tick(boolean paused) {
+        this.tickAutosaveIndicator();
+        if (!paused) {
+            this.tick();
+        }
+    }
+
+    private void tick() {
         if (this.overlayRemaining > 0) {
             --this.overlayRemaining;
         }
@@ -1063,6 +1080,13 @@ extends DrawableHelper {
             }
             this.currentStack = itemStack;
         }
+    }
+
+    private void tickAutosaveIndicator() {
+        IntegratedServer minecraftServer = this.client.getServer();
+        boolean bl = minecraftServer != null && minecraftServer.isSaving();
+        this.lastAutosaveIndicatorAlpha = this.autosaveIndicatorAlpha;
+        this.autosaveIndicatorAlpha = MathHelper.lerp(0.2f, this.autosaveIndicatorAlpha, bl ? 1.0f : 0.0f);
     }
 
     public void setRecordPlayingOverlay(Text description) {
@@ -1162,6 +1186,16 @@ extends DrawableHelper {
         this.debugHud.resetChunk();
     }
 
+    private void renderAutosaveIndicator(MatrixStack matrices) {
+        int i;
+        if (this.client.options.showAutosaveIndicator && (this.autosaveIndicatorAlpha > 0.0f || this.lastAutosaveIndicatorAlpha > 0.0f) && (i = MathHelper.floor(255.0f * MathHelper.clamp(MathHelper.lerp(this.client.getTickDelta(), this.lastAutosaveIndicatorAlpha, this.autosaveIndicatorAlpha), 0.0f, 1.0f))) > 8) {
+            TextRenderer textRenderer = this.getTextRenderer();
+            int j = textRenderer.getWidth(SAVING_LEVEL_TEXT);
+            int k = 0xFFFFFF | i << 24 & 0xFF000000;
+            textRenderer.drawWithShadow(matrices, SAVING_LEVEL_TEXT, (float)(this.scaledWidth - j - 10), (float)(this.scaledHeight - 15), k);
+        }
+    }
+
     @Environment(value=EnvType.CLIENT)
     static final class HeartType
     extends Enum<HeartType> {
@@ -1201,7 +1235,7 @@ extends DrawableHelper {
         }
 
         static HeartType fromPlayerState(PlayerEntity player) {
-            HeartType heartType = player.hasStatusEffect(StatusEffects.POISON) ? POISIONED : (player.hasStatusEffect(StatusEffects.WITHER) ? WITHERED : (player.isFreezing() ? FROZEN : NORMAL));
+            HeartType heartType = player.hasStatusEffect(StatusEffects.POISON) ? POISIONED : (player.hasStatusEffect(StatusEffects.WITHER) ? WITHERED : (player.isFrozen() ? FROZEN : NORMAL));
             return heartType;
         }
 

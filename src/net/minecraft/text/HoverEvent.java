@@ -6,11 +6,10 @@
  *  com.google.common.collect.Lists
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
- *  com.google.gson.JsonSyntaxException
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.text;
 
@@ -18,8 +17,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,12 +37,11 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class HoverEvent {
-    static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private final Action<?> action;
     private final Object contents;
 
@@ -302,7 +300,7 @@ public class HoverEvent {
                 UUID uUID = UUID.fromString(nbtCompound.getString("id"));
                 return new EntityContent(entityType, uUID, text2);
             }
-            catch (JsonSyntaxException | CommandSyntaxException exception) {
+            catch (Exception exception) {
                 return null;
             }
         }

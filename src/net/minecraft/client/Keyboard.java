@@ -20,8 +20,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.screen.GameModeSelectionScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.option.ControlsOptionsScreen;
-import net.minecraft.client.gui.screen.option.NarratorOptionsScreen;
+import net.minecraft.client.gui.screen.option.KeybindsScreen;
+import net.minecraft.client.gui.screen.option.SimpleOptionsScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.option.KeyBinding;
@@ -42,8 +42,10 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.util.WinNativeModuleUtil;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
+import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -258,7 +260,7 @@ public class Keyboard {
                         break;
                     }
                     BlockEntity blockEntity = this.client.player.world.getBlockEntity(blockPos);
-                    NbtCompound nbtCompound = blockEntity != null ? blockEntity.writeNbt(new NbtCompound()) : null;
+                    NbtCompound nbtCompound = blockEntity != null ? blockEntity.createNbt() : null;
                     this.copyBlock(blockState, blockPos, nbtCompound);
                     this.debugLog("debug.inspect.client.block", new Object[0]);
                     break;
@@ -291,12 +293,6 @@ public class Keyboard {
     }
 
     private void copyBlock(BlockState state, BlockPos pos, @Nullable NbtCompound nbt) {
-        if (nbt != null) {
-            nbt.remove("x");
-            nbt.remove("y");
-            nbt.remove("z");
-            nbt.remove("id");
-        }
         StringBuilder stringBuilder = new StringBuilder(BlockArgumentParser.stringifyBlockState(state));
         if (nbt != null) {
             stringBuilder.append(nbt);
@@ -335,14 +331,14 @@ public class Keyboard {
             this.debugCrashElapsedTime = 0L;
         }
         Screen screen = this.client.currentScreen;
-        if (!(action != 1 || this.client.currentScreen instanceof ControlsOptionsScreen && ((ControlsOptionsScreen)screen).time > Util.getMeasuringTimeMs() - 20L)) {
-            if (this.client.options.keyFullscreen.matchesKey(key, scancode)) {
+        if (!(action != 1 || this.client.currentScreen instanceof KeybindsScreen && ((KeybindsScreen)screen).lastKeyCodeUpdateTime > Util.getMeasuringTimeMs() - 20L)) {
+            if (this.client.options.fullscreenKey.matchesKey(key, scancode)) {
                 this.client.getWindow().toggleFullscreen();
                 this.client.options.fullscreen = this.client.getWindow().isFullscreen();
                 this.client.options.write();
                 return;
             }
-            if (this.client.options.keyScreenshot.matchesKey(key, scancode)) {
+            if (this.client.options.screenshotKey.matchesKey(key, scancode)) {
                 if (Screen.hasControlDown()) {
                     // empty if block
                 }
@@ -357,8 +353,8 @@ public class Keyboard {
                 bl2 = this.client.options.narrator == NarratorMode.OFF;
                 this.client.options.narrator = NarratorMode.byId(this.client.options.narrator.getId() + 1);
                 NarratorManager.INSTANCE.addToast(this.client.options.narrator);
-                if (screen instanceof NarratorOptionsScreen) {
-                    ((NarratorOptionsScreen)screen).updateNarratorButtonText();
+                if (screen instanceof SimpleOptionsScreen) {
+                    ((SimpleOptionsScreen)screen).updateNarratorButtonText();
                 }
                 if (bl2 && screen != null) {
                     screen.applyNarratorModeChangeDelay();
@@ -469,7 +465,11 @@ public class Keyboard {
                 if (Screen.hasControlDown()) {
                     GlfwUtil.makeJvmCrash();
                 }
-                throw new CrashException(new CrashReport("Manually triggered debug crash", new Throwable()));
+                String string = "Manually triggered debug crash";
+                CrashReport crashReport = new CrashReport("Manually triggered debug crash", new Throwable("Manually triggered debug crash"));
+                CrashReportSection crashReportSection = crashReport.addElement("Manual crash details");
+                WinNativeModuleUtil.addDetailTo(crashReportSection);
+                throw new CrashException(crashReport);
             }
             if (n >= 1000L) {
                 if (this.debugCrashElapsedTime == 0L) {

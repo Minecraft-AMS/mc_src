@@ -47,7 +47,7 @@ extends AnimalEntity {
     public float flapSpeed = 1.0f;
     private float field_28639 = 1.0f;
     public int eggLayTime = this.random.nextInt(6000) + 6000;
-    public boolean jockey;
+    public boolean hasJockey;
 
     public ChickenEntity(EntityType<? extends ChickenEntity> entityType, World world) {
         super((EntityType<? extends AnimalEntity>)entityType, world);
@@ -80,12 +80,12 @@ extends AnimalEntity {
         super.tickMovement();
         this.prevFlapProgress = this.flapProgress;
         this.prevMaxWingDeviation = this.maxWingDeviation;
-        this.maxWingDeviation = (float)((double)this.maxWingDeviation + (double)(this.onGround ? -1 : 4) * 0.3);
+        this.maxWingDeviation += (this.onGround ? -1.0f : 4.0f) * 0.3f;
         this.maxWingDeviation = MathHelper.clamp(this.maxWingDeviation, 0.0f, 1.0f);
         if (!this.onGround && this.flapSpeed < 1.0f) {
             this.flapSpeed = 1.0f;
         }
-        this.flapSpeed = (float)((double)this.flapSpeed * 0.9);
+        this.flapSpeed *= 0.9f;
         Vec3d vec3d = this.getVelocity();
         if (!this.onGround && vec3d.y < 0.0) {
             this.setVelocity(vec3d.multiply(1.0, 0.6, 1.0));
@@ -100,12 +100,12 @@ extends AnimalEntity {
 
     @Override
     protected boolean hasWings() {
-        return this.field_28627 > this.field_28639;
+        return this.speed > this.field_28639;
     }
 
     @Override
     protected void addFlapEffects() {
-        this.field_28639 = this.field_28627 + this.maxWingDeviation / 2.0f;
+        this.field_28639 = this.speed + this.maxWingDeviation / 2.0f;
     }
 
     @Override
@@ -154,7 +154,7 @@ extends AnimalEntity {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.jockey = nbt.getBoolean("IsChickenJockey");
+        this.hasJockey = nbt.getBoolean("IsChickenJockey");
         if (nbt.contains("EggLayTime")) {
             this.eggLayTime = nbt.getInt("EggLayTime");
         }
@@ -163,7 +163,7 @@ extends AnimalEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putBoolean("IsChickenJockey", this.jockey);
+        nbt.putBoolean("IsChickenJockey", this.hasJockey);
         nbt.putInt("EggLayTime", this.eggLayTime);
     }
 
@@ -186,11 +186,11 @@ extends AnimalEntity {
     }
 
     public boolean hasJockey() {
-        return this.jockey;
+        return this.hasJockey;
     }
 
     public void setHasJockey(boolean hasJockey) {
-        this.jockey = hasJockey;
+        this.hasJockey = hasJockey;
     }
 
     @Override

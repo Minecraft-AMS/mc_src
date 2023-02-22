@@ -82,17 +82,17 @@ implements Waterloggable {
     @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
         if (!world.isClient) {
-            world.getBlockTickScheduler().schedule(pos, this, 1);
+            world.createAndScheduleBlockTick(pos, this, 1);
         }
     }
 
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         if (!world.isClient()) {
-            world.getBlockTickScheduler().schedule(pos, this, 1);
+            world.createAndScheduleBlockTick(pos, this, 1);
         }
         return state;
     }
@@ -103,7 +103,7 @@ implements Waterloggable {
         BlockState blockState = (BlockState)((BlockState)state.with(DISTANCE, i)).with(BOTTOM, this.shouldBeBottom(world, pos, i));
         if (blockState.get(DISTANCE) == 7) {
             if (state.get(DISTANCE) == 7) {
-                world.spawnEntity(new FallingBlockEntity(world, (double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5, (BlockState)blockState.with(WATERLOGGED, false)));
+                FallingBlockEntity.spawnFromBlock(world, pos, blockState);
             } else {
                 world.breakBlock(pos, true);
             }

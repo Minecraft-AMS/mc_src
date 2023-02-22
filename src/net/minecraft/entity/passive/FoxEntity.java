@@ -15,6 +15,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -47,6 +48,7 @@ import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
 import net.minecraft.entity.ai.goal.PounceAtTargetGoal;
+import net.minecraft.entity.ai.goal.PowderSnowJumpGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
 import net.minecraft.entity.ai.pathing.PathNodeType;
@@ -83,20 +85,21 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
 import org.jetbrains.annotations.Nullable;
 
 public class FoxEntity
@@ -156,6 +159,7 @@ extends AnimalEntity {
         this.followBabyTurtleGoal = new ActiveTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, false, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER);
         this.followFishGoal = new ActiveTargetGoal<FishEntity>(this, FishEntity.class, 20, false, false, entity -> entity instanceof SchoolingFishEntity);
         this.goalSelector.add(0, new FoxSwimGoal());
+        this.goalSelector.add(0, new PowderSnowJumpGoal(this, this.world));
         this.goalSelector.add(1, new StopWanderingGoal());
         this.goalSelector.add(2, new EscapeWhenNotAggressiveGoal(2.2));
         this.goalSelector.add(3, new MateGoal(1.0));
@@ -261,11 +265,15 @@ extends AnimalEntity {
         return foxEntity;
     }
 
+    public static boolean canSpawn(EntityType<FoxEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return world.getBlockState(pos.down()).isIn(BlockTags.FOXES_SPAWNABLE_ON) && FoxEntity.isLightLevelValidForNaturalSpawn(world, pos);
+    }
+
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        Optional<RegistryKey<Biome>> optional = world.getBiomeKey(this.getBlockPos());
-        Type type = Type.fromBiome(optional);
+        RegistryEntry<Biome> registryEntry = world.getBiome(this.getBlockPos());
+        Type type = Type.fromBiome(registryEntry);
         boolean bl = false;
         if (entityData instanceof FoxData) {
             type = ((FoxData)entityData).type;
@@ -721,7 +729,7 @@ extends AnimalEntity {
 
         @Override
         public void start() {
-            this.timer = 40;
+            this.timer = this.getTickCount(40);
         }
 
         @Override
@@ -742,8 +750,8 @@ extends AnimalEntity {
         }
 
         @Override
-        public boolean canStart() {
-            return !FoxEntity.this.isAggressive() && super.canStart();
+        public boolean isInDanger() {
+            return !FoxEntity.this.isAggressive() && super.isInDanger();
         }
     }
 
@@ -824,7 +832,7 @@ extends AnimalEntity {
                 FoxEntity.this.setRollingHead(true);
                 FoxEntity.this.setCrouching(true);
                 FoxEntity.this.getNavigation().stop();
-                FoxEntity.this.getLookControl().lookAt(livingEntity, FoxEntity.this.getBodyYawSpeed(), FoxEntity.this.getLookPitchSpeed());
+                FoxEntity.this.getLookControl().lookAt(livingEntity, FoxEntity.this.getMaxHeadRotation(), FoxEntity.this.getMaxLookPitchChange());
             } else {
                 FoxEntity.this.setRollingHead(false);
                 FoxEntity.this.setCrouching(false);
@@ -834,7 +842,10 @@ extends AnimalEntity {
         @Override
         public void tick() {
             LivingEntity livingEntity = FoxEntity.this.getTarget();
-            FoxEntity.this.getLookControl().lookAt(livingEntity, FoxEntity.this.getBodyYawSpeed(), FoxEntity.this.getLookPitchSpeed());
+            if (livingEntity == null) {
+                return;
+            }
+            FoxEntity.this.getLookControl().lookAt(livingEntity, FoxEntity.this.getMaxHeadRotation(), FoxEntity.this.getMaxLookPitchChange());
             if (FoxEntity.this.squaredDistanceTo(livingEntity) <= 36.0) {
                 FoxEntity.this.setRollingHead(true);
                 FoxEntity.this.setCrouching(true);
@@ -889,9 +900,11 @@ extends AnimalEntity {
             FoxEntity.this.setChasing(true);
             FoxEntity.this.setRollingHead(false);
             LivingEntity livingEntity = FoxEntity.this.getTarget();
-            FoxEntity.this.getLookControl().lookAt(livingEntity, 60.0f, 30.0f);
-            Vec3d vec3d = new Vec3d(livingEntity.getX() - FoxEntity.this.getX(), livingEntity.getY() - FoxEntity.this.getY(), livingEntity.getZ() - FoxEntity.this.getZ()).normalize();
-            FoxEntity.this.setVelocity(FoxEntity.this.getVelocity().add(vec3d.x * 0.8, 0.9, vec3d.z * 0.8));
+            if (livingEntity != null) {
+                FoxEntity.this.getLookControl().lookAt(livingEntity, 60.0f, 30.0f);
+                Vec3d vec3d = new Vec3d(livingEntity.getX() - FoxEntity.this.getX(), livingEntity.getY() - FoxEntity.this.getY(), livingEntity.getZ() - FoxEntity.this.getZ()).normalize();
+                FoxEntity.this.setVelocity(FoxEntity.this.getVelocity().add(vec3d.x * 0.8, 0.9, vec3d.z * 0.8));
+            }
             FoxEntity.this.getNavigation().stop();
         }
 
@@ -936,7 +949,7 @@ extends AnimalEntity {
 
         public AvoidDaylightGoal(double speed) {
             super(FoxEntity.this, speed);
-            this.timer = 100;
+            this.timer = AvoidDaylightGoal.toGoalTicks(100);
         }
 
         @Override
@@ -993,11 +1006,11 @@ extends AnimalEntity {
 
     class DelayedCalmDownGoal
     extends CalmDownGoal {
-        private static final int MAX_CALM_DOWN_TIME = 140;
+        private static final int MAX_CALM_DOWN_TIME = DelayedCalmDownGoal.toGoalTicks(140);
         private int timer;
 
         public DelayedCalmDownGoal() {
-            this.timer = FoxEntity.this.random.nextInt(140);
+            this.timer = FoxEntity.this.random.nextInt(MAX_CALM_DOWN_TIME);
             this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK, Goal.Control.JUMP));
         }
 
@@ -1024,7 +1037,7 @@ extends AnimalEntity {
 
         @Override
         public void stop() {
-            this.timer = FoxEntity.this.random.nextInt(140);
+            this.timer = FoxEntity.this.random.nextInt(MAX_CALM_DOWN_TIME);
             FoxEntity.this.stopActions();
         }
 
@@ -1103,7 +1116,7 @@ extends AnimalEntity {
         }
 
         @Override
-        public double getDesiredSquaredDistanceToTarget() {
+        public double getDesiredDistanceToTarget() {
             return 2.0;
         }
 
@@ -1194,7 +1207,7 @@ extends AnimalEntity {
             if (!FoxEntity.this.wantsToPickupItem()) {
                 return false;
             }
-            if (FoxEntity.this.getRandom().nextInt(10) != 0) {
+            if (FoxEntity.this.getRandom().nextInt(PickupItemGoal.toGoalTicks(10)) != 0) {
                 return false;
             }
             List<ItemEntity> list = FoxEntity.this.world.getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
@@ -1277,14 +1290,14 @@ extends AnimalEntity {
                 --this.counter;
                 this.chooseNewAngle();
             }
-            FoxEntity.this.getLookControl().lookAt(FoxEntity.this.getX() + this.lookX, FoxEntity.this.getEyeY(), FoxEntity.this.getZ() + this.lookZ, FoxEntity.this.getBodyYawSpeed(), FoxEntity.this.getLookPitchSpeed());
+            FoxEntity.this.getLookControl().lookAt(FoxEntity.this.getX() + this.lookX, FoxEntity.this.getEyeY(), FoxEntity.this.getZ() + this.lookZ, FoxEntity.this.getMaxHeadRotation(), FoxEntity.this.getMaxLookPitchChange());
         }
 
         private void chooseNewAngle() {
             double d = Math.PI * 2 * FoxEntity.this.getRandom().nextDouble();
             this.lookX = Math.cos(d);
             this.lookZ = Math.sin(d);
-            this.timer = 80 + FoxEntity.this.getRandom().nextInt(20);
+            this.timer = this.getTickCount(80 + FoxEntity.this.getRandom().nextInt(20));
         }
     }
 
@@ -1292,6 +1305,7 @@ extends AnimalEntity {
     extends ActiveTargetGoal<LivingEntity> {
         @Nullable
         private LivingEntity offender;
+        @Nullable
         private LivingEntity friend;
         private int lastAttackedTime;
 
@@ -1332,13 +1346,12 @@ extends AnimalEntity {
 
     public static final class Type
     extends Enum<Type> {
-        public static final /* enum */ Type RED = new Type(0, "red", BiomeKeys.TAIGA, BiomeKeys.TAIGA_HILLS, BiomeKeys.TAIGA_MOUNTAINS, BiomeKeys.GIANT_TREE_TAIGA, BiomeKeys.GIANT_SPRUCE_TAIGA, BiomeKeys.GIANT_TREE_TAIGA_HILLS, BiomeKeys.GIANT_SPRUCE_TAIGA_HILLS);
-        public static final /* enum */ Type SNOW = new Type(1, "snow", BiomeKeys.SNOWY_TAIGA, BiomeKeys.SNOWY_TAIGA_HILLS, BiomeKeys.SNOWY_TAIGA_MOUNTAINS);
+        public static final /* enum */ Type RED = new Type(0, "red");
+        public static final /* enum */ Type SNOW = new Type(1, "snow");
         private static final Type[] TYPES;
         private static final Map<String, Type> NAME_TYPE_MAP;
         private final int id;
         private final String key;
-        private final List<RegistryKey<Biome>> biomes;
         private static final /* synthetic */ Type[] field_18003;
 
         public static Type[] values() {
@@ -1349,10 +1362,9 @@ extends AnimalEntity {
             return Enum.valueOf(Type.class, string);
         }
 
-        private Type(int id, String key, RegistryKey<Biome> ... biomes) {
+        private Type(int id, String key) {
             this.id = id;
             this.key = key;
-            this.biomes = Arrays.asList(biomes);
         }
 
         public String getKey() {
@@ -1374,8 +1386,8 @@ extends AnimalEntity {
             return TYPES[id];
         }
 
-        public static Type fromBiome(Optional<RegistryKey<Biome>> biome) {
-            return biome.isPresent() && Type.SNOW.biomes.contains(biome.get()) ? SNOW : RED;
+        public static Type fromBiome(RegistryEntry<Biome> registryEntry) {
+            return registryEntry.value().getPrecipitation() == Biome.Precipitation.SNOW ? SNOW : RED;
         }
 
         private static /* synthetic */ Type[] method_36637() {

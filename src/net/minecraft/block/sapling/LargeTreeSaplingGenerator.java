@@ -13,10 +13,10 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.sapling.SaplingGenerator;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class LargeTreeSaplingGenerator
@@ -33,13 +33,14 @@ extends SaplingGenerator {
     }
 
     @Nullable
-    protected abstract ConfiguredFeature<TreeFeatureConfig, ?> getLargeTreeFeature(Random var1);
+    protected abstract RegistryEntry<? extends ConfiguredFeature<?, ?>> getLargeTreeFeature(Random var1);
 
     public boolean generateLargeTree(ServerWorld world, ChunkGenerator chunkGenerator, BlockPos pos, BlockState state, Random random, int x, int z) {
-        ConfiguredFeature<TreeFeatureConfig, ?> configuredFeature = this.getLargeTreeFeature(random);
-        if (configuredFeature == null) {
+        RegistryEntry<ConfiguredFeature<?, ?>> registryEntry = this.getLargeTreeFeature(random);
+        if (registryEntry == null) {
             return false;
         }
+        ConfiguredFeature<?, ?> configuredFeature = registryEntry.value();
         BlockState blockState = Blocks.AIR.getDefaultState();
         world.setBlockState(pos.add(x, 0, z), blockState, 4);
         world.setBlockState(pos.add(x + 1, 0, z), blockState, 4);

@@ -8,9 +8,6 @@ package net.minecraft.entity.passive;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
@@ -23,8 +20,8 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.TargetPredicate;
-import net.minecraft.entity.ai.control.AquaticLookControl;
 import net.minecraft.entity.ai.control.AquaticMoveControl;
+import net.minecraft.entity.ai.control.YawAdjustingLookControl;
 import net.minecraft.entity.ai.goal.BreatheAirGoal;
 import net.minecraft.entity.ai.goal.ChaseBoatGoal;
 import net.minecraft.entity.ai.goal.DolphinJumpGoal;
@@ -58,6 +55,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.ConfiguredStructureFeatureTags;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.util.ActionResult;
@@ -65,15 +63,9 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
-import net.minecraft.world.WorldAccess;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
-import net.minecraft.world.gen.feature.FeatureConfig;
-import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
 public class DolphinEntity
@@ -89,7 +81,7 @@ extends WaterCreatureEntity {
     public DolphinEntity(EntityType<? extends DolphinEntity> entityType, World world) {
         super((EntityType<? extends WaterCreatureEntity>)entityType, world);
         this.moveControl = new AquaticMoveControl(this, 85, 10, 0.02f, 0.1f, true);
-        this.lookControl = new AquaticLookControl(this, 10);
+        this.lookControl = new YawAdjustingLookControl(this, 10);
         this.setCanPickUpLoot(true);
     }
 
@@ -215,12 +207,12 @@ extends WaterCreatureEntity {
     }
 
     @Override
-    public int getLookPitchSpeed() {
+    public int getMaxLookPitchChange() {
         return 1;
     }
 
     @Override
-    public int getBodyYawSpeed() {
+    public int getMaxHeadRotation() {
         return 1;
     }
 
@@ -317,14 +309,6 @@ extends WaterCreatureEntity {
         return super.interactMob(player, hand);
     }
 
-    public static boolean canSpawn(EntityType<DolphinEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
-        if (pos.getY() <= 45 || pos.getY() >= world.getSeaLevel()) {
-            return false;
-        }
-        Optional<RegistryKey<Biome>> optional = world.getBiomeKey(pos);
-        return (!Objects.equals(optional, Optional.of(BiomeKeys.OCEAN)) || !Objects.equals(optional, Optional.of(BiomeKeys.DEEP_OCEAN))) && world.getFluidState(pos).isIn(FluidTags.WATER);
-    }
-
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
         return SoundEvents.ENTITY_DOLPHIN_HURT;
@@ -405,9 +389,6 @@ extends WaterCreatureEntity {
             return !new BlockPos((double)blockPos.getX(), this.dolphin.getY(), (double)blockPos.getZ()).isWithinDistance(this.dolphin.getPos(), 4.0) && !this.noPathToStructure && this.dolphin.getAir() >= 100;
         }
 
-        /*
-         * Enabled aggressive block sorting
-         */
         @Override
         public void start() {
             if (!(this.dolphin.world instanceof ServerWorld)) {
@@ -417,19 +398,12 @@ extends WaterCreatureEntity {
             this.noPathToStructure = false;
             this.dolphin.getNavigation().stop();
             BlockPos blockPos = this.dolphin.getBlockPos();
-            StructureFeature<FeatureConfig> structureFeature = (double)serverWorld.random.nextFloat() >= 0.5 ? StructureFeature.OCEAN_RUIN : StructureFeature.SHIPWRECK;
-            BlockPos blockPos2 = serverWorld.locateStructure(structureFeature, blockPos, 50, false);
+            BlockPos blockPos2 = serverWorld.locateStructure(ConfiguredStructureFeatureTags.DOLPHIN_LOCATED, blockPos, 50, false);
             if (blockPos2 == null) {
-                StructureFeature<FeatureConfig> structureFeature2 = structureFeature.equals(StructureFeature.OCEAN_RUIN) ? StructureFeature.SHIPWRECK : StructureFeature.OCEAN_RUIN;
-                BlockPos blockPos3 = serverWorld.locateStructure(structureFeature2, blockPos, 50, false);
-                if (blockPos3 == null) {
-                    this.noPathToStructure = true;
-                    return;
-                }
-                this.dolphin.setTreasurePos(blockPos3);
-            } else {
-                this.dolphin.setTreasurePos(blockPos2);
+                this.noPathToStructure = true;
+                return;
             }
+            this.dolphin.setTreasurePos(blockPos2);
             serverWorld.sendEntityStatus(this.dolphin, (byte)38);
         }
 
@@ -447,20 +421,20 @@ extends WaterCreatureEntity {
             if (this.dolphin.isNearTarget() || this.dolphin.getNavigation().isIdle()) {
                 BlockPos blockPos;
                 Vec3d vec3d = Vec3d.ofCenter(this.dolphin.getTreasurePos());
-                Vec3d vec3d2 = NoPenaltyTargeting.find(this.dolphin, 16, 1, vec3d, 0.3926991f);
+                Vec3d vec3d2 = NoPenaltyTargeting.findTo(this.dolphin, 16, 1, vec3d, 0.3926991f);
                 if (vec3d2 == null) {
-                    vec3d2 = NoPenaltyTargeting.find(this.dolphin, 8, 4, vec3d, 1.5707963705062866);
+                    vec3d2 = NoPenaltyTargeting.findTo(this.dolphin, 8, 4, vec3d, 1.5707963705062866);
                 }
                 if (!(vec3d2 == null || world.getFluidState(blockPos = new BlockPos(vec3d2)).isIn(FluidTags.WATER) && world.getBlockState(blockPos).canPathfindThrough(world, blockPos, NavigationType.WATER))) {
-                    vec3d2 = NoPenaltyTargeting.find(this.dolphin, 8, 5, vec3d, 1.5707963705062866);
+                    vec3d2 = NoPenaltyTargeting.findTo(this.dolphin, 8, 5, vec3d, 1.5707963705062866);
                 }
                 if (vec3d2 == null) {
                     this.noPathToStructure = true;
                     return;
                 }
-                this.dolphin.getLookControl().lookAt(vec3d2.x, vec3d2.y, vec3d2.z, this.dolphin.getBodyYawSpeed() + 20, this.dolphin.getLookPitchSpeed());
+                this.dolphin.getLookControl().lookAt(vec3d2.x, vec3d2.y, vec3d2.z, this.dolphin.getMaxHeadRotation() + 20, this.dolphin.getMaxLookPitchChange());
                 this.dolphin.getNavigation().startMovingTo(vec3d2.x, vec3d2.y, vec3d2.z, 1.3);
-                if (world.random.nextInt(80) == 0) {
+                if (world.random.nextInt(this.getTickCount(80)) == 0) {
                     world.sendEntityStatus(this.dolphin, (byte)38);
                 }
             }
@@ -471,6 +445,7 @@ extends WaterCreatureEntity {
     extends Goal {
         private final DolphinEntity dolphin;
         private final double speed;
+        @Nullable
         private PlayerEntity closestPlayer;
 
         SwimWithPlayerGoal(DolphinEntity dolphin, double speed) {
@@ -506,7 +481,7 @@ extends WaterCreatureEntity {
 
         @Override
         public void tick() {
-            this.dolphin.getLookControl().lookAt(this.closestPlayer, this.dolphin.getBodyYawSpeed() + 20, this.dolphin.getLookPitchSpeed());
+            this.dolphin.getLookControl().lookAt(this.closestPlayer, this.dolphin.getMaxHeadRotation() + 20, this.dolphin.getMaxLookPitchChange());
             if (this.dolphin.squaredDistanceTo(this.closestPlayer) < 6.25) {
                 this.dolphin.getNavigation().stop();
             } else {

@@ -50,10 +50,10 @@ extends ConditionalLootFunction {
     final LootNbtProvider source;
     final List<Operation> operations;
 
-    CopyNbtLootFunction(LootCondition[] lootConditions, LootNbtProvider lootNbtProvider, List<Operation> list) {
-        super(lootConditions);
-        this.source = lootNbtProvider;
-        this.operations = ImmutableList.copyOf(list);
+    CopyNbtLootFunction(LootCondition[] conditions, LootNbtProvider source, List<Operation> operations) {
+        super(conditions);
+        this.source = source;
+        this.operations = ImmutableList.copyOf(operations);
     }
 
     @Override
@@ -97,8 +97,8 @@ extends ConditionalLootFunction {
         private final LootNbtProvider source;
         private final List<Operation> operations = Lists.newArrayList();
 
-        Builder(LootNbtProvider lootNbtProvider) {
-            this.source = lootNbtProvider;
+        Builder(LootNbtProvider source) {
+            this.source = source;
         }
 
         public Builder withOperation(String source, String target, Operator operator) {
@@ -133,19 +133,19 @@ extends ConditionalLootFunction {
         private final NbtPathArgumentType.NbtPath parsedTargetPath;
         private final Operator operator;
 
-        Operation(String string, String string2, Operator operator) {
-            this.sourcePath = string;
-            this.parsedSourcePath = CopyNbtLootFunction.parseNbtPath(string);
-            this.targetPath = string2;
-            this.parsedTargetPath = CopyNbtLootFunction.parseNbtPath(string2);
+        Operation(String sourcePath, String targetPath, Operator operator) {
+            this.sourcePath = sourcePath;
+            this.parsedSourcePath = CopyNbtLootFunction.parseNbtPath(sourcePath);
+            this.targetPath = targetPath;
+            this.parsedTargetPath = CopyNbtLootFunction.parseNbtPath(targetPath);
             this.operator = operator;
         }
 
-        public void execute(Supplier<NbtElement> itemTagTagGetter, NbtElement sourceEntityTag) {
+        public void execute(Supplier<NbtElement> itemNbtGetter, NbtElement sourceEntityNbt) {
             try {
-                List<NbtElement> list = this.parsedSourcePath.get(sourceEntityTag);
+                List<NbtElement> list = this.parsedSourcePath.get(sourceEntityNbt);
                 if (!list.isEmpty()) {
-                    this.operator.merge(itemTagTagGetter.get(), this.parsedTargetPath, list);
+                    this.operator.merge(itemNbtGetter.get(), this.parsedTargetPath, list);
                 }
             }
             catch (CommandSyntaxException commandSyntaxException) {
@@ -198,23 +198,26 @@ extends ConditionalLootFunction {
         }
     }
 
+    /*
+     * Uses 'sealed' constructs - enablewith --sealed true
+     */
     public static abstract class Operator
     extends Enum<Operator> {
         public static final /* enum */ Operator REPLACE = new Operator("replace"){
 
             @Override
-            public void merge(NbtElement itemTag, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceTags) throws CommandSyntaxException {
-                targetPath.put(itemTag, ((NbtElement)Iterables.getLast(sourceTags))::copy);
+            public void merge(NbtElement itemNbt, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceNbts) throws CommandSyntaxException {
+                targetPath.put(itemNbt, ((NbtElement)Iterables.getLast(sourceNbts))::copy);
             }
         };
         public static final /* enum */ Operator APPEND = new Operator("append"){
 
             @Override
-            public void merge(NbtElement itemTag, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceTags) throws CommandSyntaxException {
-                List<NbtElement> list = targetPath.getOrInit(itemTag, NbtList::new);
-                list.forEach(foundTag -> {
-                    if (foundTag instanceof NbtList) {
-                        sourceTags.forEach(listTag -> ((NbtList)foundTag).add(listTag.copy()));
+            public void merge(NbtElement itemNbt, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceNbts) throws CommandSyntaxException {
+                List<NbtElement> list = targetPath.getOrInit(itemNbt, NbtList::new);
+                list.forEach(foundNbt -> {
+                    if (foundNbt instanceof NbtList) {
+                        sourceNbts.forEach(sourceNbt -> ((NbtList)foundNbt).add(sourceNbt.copy()));
                     }
                 });
             }
@@ -222,13 +225,13 @@ extends ConditionalLootFunction {
         public static final /* enum */ Operator MERGE = new Operator("merge"){
 
             @Override
-            public void merge(NbtElement itemTag, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceTags) throws CommandSyntaxException {
-                List<NbtElement> list = targetPath.getOrInit(itemTag, NbtCompound::new);
-                list.forEach(foundTag -> {
-                    if (foundTag instanceof NbtCompound) {
-                        sourceTags.forEach(compoundTag -> {
-                            if (compoundTag instanceof NbtCompound) {
-                                ((NbtCompound)foundTag).copyFrom((NbtCompound)compoundTag);
+            public void merge(NbtElement itemNbt, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceNbts) throws CommandSyntaxException {
+                List<NbtElement> list = targetPath.getOrInit(itemNbt, NbtCompound::new);
+                list.forEach(foundNbt -> {
+                    if (foundNbt instanceof NbtCompound) {
+                        sourceNbts.forEach(sourceNbt -> {
+                            if (sourceNbt instanceof NbtCompound) {
+                                ((NbtCompound)foundNbt).copyFrom((NbtCompound)sourceNbt);
                             }
                         });
                     }
@@ -248,8 +251,8 @@ extends ConditionalLootFunction {
 
         public abstract void merge(NbtElement var1, NbtPathArgumentType.NbtPath var2, List<NbtElement> var3) throws CommandSyntaxException;
 
-        Operator(String string2) {
-            this.name = string2;
+        Operator(String name) {
+            this.name = name;
         }
 
         public static Operator get(String name) {

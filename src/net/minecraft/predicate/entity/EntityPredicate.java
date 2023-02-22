@@ -40,7 +40,7 @@ import net.minecraft.predicate.entity.LocationPredicate;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.Vec3d;
@@ -86,7 +86,7 @@ public class EntityPredicate {
         this.catType = catType;
     }
 
-    EntityPredicate(EntityTypePredicate type, DistancePredicate distance, LocationPredicate location, LocationPredicate steppingOn, EntityEffectPredicate effects, NbtPredicate nbt, EntityFlagsPredicate flags, EntityEquipmentPredicate equipment, PlayerPredicate player, FishingHookPredicate fishingHook, LightningBoltPredicate lightningBoltPredicate, EntityPredicate vehicle, EntityPredicate entityPredicate, EntityPredicate targetedEntity, @Nullable String team, @Nullable Identifier catType) {
+    EntityPredicate(EntityTypePredicate type, DistancePredicate distance, LocationPredicate location, LocationPredicate steppingOn, EntityEffectPredicate effects, NbtPredicate nbt, EntityFlagsPredicate flags, EntityEquipmentPredicate equipment, PlayerPredicate player, FishingHookPredicate fishingHook, LightningBoltPredicate lightningBolt, EntityPredicate vehicle, EntityPredicate passenger, EntityPredicate targetedEntity, @Nullable String team, @Nullable Identifier catType) {
         this.type = type;
         this.distance = distance;
         this.location = location;
@@ -97,16 +97,16 @@ public class EntityPredicate {
         this.equipment = equipment;
         this.player = player;
         this.fishingHook = fishingHook;
-        this.lightningBolt = lightningBoltPredicate;
+        this.lightningBolt = lightningBolt;
         this.vehicle = vehicle;
-        this.passenger = entityPredicate;
+        this.passenger = passenger;
         this.targetedEntity = targetedEntity;
         this.team = team;
         this.catType = catType;
     }
 
     public boolean test(ServerPlayerEntity player, @Nullable Entity entity) {
-        return this.test(player.getServerWorld(), player.getPos(), entity);
+        return this.test(player.getWorld(), player.getPos(), entity);
     }
 
     public boolean test(ServerWorld world, @Nullable Vec3d pos, @Nullable Entity entity2) {
@@ -217,7 +217,7 @@ public class EntityPredicate {
     }
 
     public static LootContext createAdvancementEntityLootContext(ServerPlayerEntity player, Entity target) {
-        return new LootContext.Builder(player.getServerWorld()).parameter(LootContextParameters.THIS_ENTITY, target).parameter(LootContextParameters.ORIGIN, player.getPos()).random(player.getRandom()).build(LootContextTypes.ADVANCEMENT_ENTITY);
+        return new LootContext.Builder(player.getWorld()).parameter(LootContextParameters.THIS_ENTITY, target).parameter(LootContextParameters.ORIGIN, player.getPos()).random(player.getRandom()).build(LootContextTypes.ADVANCEMENT_ENTITY);
     }
 
     public static class Builder {
@@ -235,7 +235,9 @@ public class EntityPredicate {
         private EntityPredicate vehicle = ANY;
         private EntityPredicate passenger = ANY;
         private EntityPredicate targetedEntity = ANY;
+        @Nullable
         private String team;
+        @Nullable
         private Identifier catType;
 
         public static Builder create() {
@@ -247,7 +249,7 @@ public class EntityPredicate {
             return this;
         }
 
-        public Builder type(Tag<EntityType<?>> tag) {
+        public Builder type(TagKey<EntityType<?>> tag) {
             this.type = EntityTypePredicate.create(tag);
             return this;
         }

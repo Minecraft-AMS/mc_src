@@ -49,24 +49,24 @@ extends DataFix {
         super(outputSchema, changesType);
     }
 
-    private static <A> Type<Pair<A, Dynamic<?>>> method_29913(String string, Type<A> type) {
+    protected static <A> Type<Pair<A, Dynamic<?>>> method_29913(String string, Type<A> type) {
         return DSL.and((Type)DSL.field((String)string, type), (Type)DSL.remainderType());
     }
 
-    private static <A> Type<Pair<Either<A, Unit>, Dynamic<?>>> method_29915(String string, Type<A> type) {
+    protected static <A> Type<Pair<Either<A, Unit>, Dynamic<?>>> method_29915(String string, Type<A> type) {
         return DSL.and((Type)DSL.optional((Type)DSL.field((String)string, type)), (Type)DSL.remainderType());
     }
 
-    private static <A1, A2> Type<Pair<Either<A1, Unit>, Pair<Either<A2, Unit>, Dynamic<?>>>> method_29914(String string, Type<A1> type, String string2, Type<A2> type2) {
+    protected static <A1, A2> Type<Pair<Either<A1, Unit>, Pair<Either<A2, Unit>, Dynamic<?>>>> method_29914(String string, Type<A1> type, String string2, Type<A2> type2) {
         return DSL.and((Type)DSL.optional((Type)DSL.field((String)string, type)), (Type)DSL.optional((Type)DSL.field((String)string2, type2)), (Type)DSL.remainderType());
     }
 
     protected TypeRewriteRule makeRule() {
         Schema schema = this.getInputSchema();
-        TaggedChoice.TaggedChoiceType taggedChoiceType = new TaggedChoice.TaggedChoiceType("type", DSL.string(), (Map)ImmutableMap.of((Object)"minecraft:debug", (Object)DSL.remainderType(), (Object)"minecraft:flat", MissingDimensionFix.method_29915("settings", MissingDimensionFix.method_29914("biome", schema.getType(TypeReferences.BIOME), "layers", DSL.list(MissingDimensionFix.method_29915("block", schema.getType(TypeReferences.BLOCK_NAME))))), (Object)"minecraft:noise", MissingDimensionFix.method_29914("biome_source", DSL.taggedChoiceType((String)"type", (Type)DSL.string(), (Map)ImmutableMap.of((Object)"minecraft:fixed", MissingDimensionFix.method_29913("biome", schema.getType(TypeReferences.BIOME)), (Object)"minecraft:multi_noise", (Object)DSL.list(MissingDimensionFix.method_29913("biome", schema.getType(TypeReferences.BIOME))), (Object)"minecraft:checkerboard", MissingDimensionFix.method_29913("biomes", DSL.list((Type)schema.getType(TypeReferences.BIOME))), (Object)"minecraft:vanilla_layered", (Object)DSL.remainderType(), (Object)"minecraft:the_end", (Object)DSL.remainderType())), "settings", DSL.or((Type)DSL.string(), MissingDimensionFix.method_29914("default_block", schema.getType(TypeReferences.BLOCK_NAME), "default_fluid", schema.getType(TypeReferences.BLOCK_NAME))))));
+        TaggedChoice.TaggedChoiceType taggedChoiceType = new TaggedChoice.TaggedChoiceType("type", DSL.string(), (Map)ImmutableMap.of((Object)"minecraft:debug", (Object)DSL.remainderType(), (Object)"minecraft:flat", MissingDimensionFix.method_38820(schema), (Object)"minecraft:noise", MissingDimensionFix.method_29914("biome_source", DSL.taggedChoiceType((String)"type", (Type)DSL.string(), (Map)ImmutableMap.of((Object)"minecraft:fixed", MissingDimensionFix.method_29913("biome", schema.getType(TypeReferences.BIOME)), (Object)"minecraft:multi_noise", (Object)DSL.list(MissingDimensionFix.method_29913("biome", schema.getType(TypeReferences.BIOME))), (Object)"minecraft:checkerboard", MissingDimensionFix.method_29913("biomes", DSL.list((Type)schema.getType(TypeReferences.BIOME))), (Object)"minecraft:vanilla_layered", (Object)DSL.remainderType(), (Object)"minecraft:the_end", (Object)DSL.remainderType())), "settings", DSL.or((Type)DSL.string(), MissingDimensionFix.method_29914("default_block", schema.getType(TypeReferences.BLOCK_NAME), "default_fluid", schema.getType(TypeReferences.BLOCK_NAME))))));
         CompoundList.CompoundListType compoundListType = DSL.compoundList(IdentifierNormalizingSchema.getIdentifierType(), MissingDimensionFix.method_29913("generator", taggedChoiceType));
         Type type = DSL.and((Type)compoundListType, (Type)DSL.remainderType());
-        Type type2 = schema.getType(TypeReferences.CHUNK_GENERATOR_SETTINGS);
+        Type type2 = schema.getType(TypeReferences.WORLD_GEN_SETTINGS);
         FieldFinder fieldFinder = new FieldFinder("dimensions", type);
         if (!type2.findFieldType("dimensions").equals((Object)type)) {
             throw new IllegalStateException();
@@ -83,6 +83,10 @@ extends DataFix {
             }
             return typed2;
         })));
+    }
+
+    protected static Type<? extends Pair<? extends Either<? extends Pair<? extends Either<?, Unit>, ? extends Pair<? extends Either<? extends List<? extends Pair<? extends Either<?, Unit>, Dynamic<?>>>, Unit>, Dynamic<?>>>, Unit>, Dynamic<?>>> method_38820(Schema schema) {
+        return MissingDimensionFix.method_29915("settings", MissingDimensionFix.method_29914("biome", schema.getType(TypeReferences.BIOME), "layers", DSL.list(MissingDimensionFix.method_29915("block", schema.getType(TypeReferences.BLOCK_NAME)))));
     }
 
     private <T> Dynamic<T> method_29912(Dynamic<T> dynamic) {

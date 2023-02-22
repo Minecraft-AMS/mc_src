@@ -271,10 +271,10 @@ public class MathHelper {
         return MathHelper.abs(MathHelper.subtractAngles(first, second));
     }
 
-    public static float stepAngleTowards(float from, float to, float step) {
-        float f = MathHelper.subtractAngles(from, to);
-        float g = MathHelper.clamp(f, -step, step);
-        return to - g;
+    public static float clampAngle(float value, float mean, float delta) {
+        float f = MathHelper.subtractAngles(value, mean);
+        float g = MathHelper.clamp(f, -delta, delta);
+        return mean - g;
     }
 
     public static float stepTowards(float from, float to, float step) {
@@ -325,13 +325,13 @@ public class MathHelper {
         return value != 0 && (value & value - 1) == 0;
     }
 
-    public static int log2DeBruijn(int value) {
+    public static int ceilLog2(int value) {
         value = MathHelper.isPowerOfTwo(value) ? value : MathHelper.smallestEncompassingPowerOfTwo(value);
         return MULTIPLY_DE_BRUIJN_BIT_POSITION[(int)((long)value * 125613361L >> 27) & 0x1F];
     }
 
-    public static int log2(int value) {
-        return MathHelper.log2DeBruijn(value) - (MathHelper.isPowerOfTwo(value) ? 0 : 1);
+    public static int floorLog2(int value) {
+        return MathHelper.ceilLog2(value) - (MathHelper.isPowerOfTwo(value) ? 0 : 1);
     }
 
     public static int packRgb(float r, float g, float b) {
@@ -405,6 +405,10 @@ public class MathHelper {
     }
 
     public static double getLerpProgress(double value, double start, double end) {
+        return (value - start) / (end - start);
+    }
+
+    public static float getLerpProgress(float value, float start, float end) {
         return (value - start) / (end - start);
     }
 
@@ -580,14 +584,14 @@ public class MathHelper {
     }
 
     public static double[] getCumulativeDistribution(double ... values) {
-        float f = 0.0f;
-        for (double d : values) {
-            f = (float)((double)f + d);
+        double d = 0.0;
+        for (double e : values) {
+            d += e;
         }
         int i = 0;
         while (i < values.length) {
             int n = i++;
-            values[n] = values[n] / (double)f;
+            values[n] = values[n] / d;
         }
         for (i = 0; i < values.length; ++i) {
             values[i] = (i == 0 ? 0.0 : values[i - 1]) + values[i];
@@ -634,19 +638,19 @@ public class MathHelper {
         return ds;
     }
 
-    public static int binarySearch(int start, int end, IntPredicate leftPredicate) {
-        int i = end - start;
+    public static int binarySearch(int min, int max, IntPredicate predicate) {
+        int i = max - min;
         while (i > 0) {
             int j = i / 2;
-            int k = start + j;
-            if (leftPredicate.test(k)) {
+            int k = min + j;
+            if (predicate.test(k)) {
                 i = j;
                 continue;
             }
-            start = k + 1;
+            min = k + 1;
             i -= j + 1;
         }
-        return start;
+        return min;
     }
 
     public static float lerp(float delta, float start, float end) {
@@ -726,11 +730,23 @@ public class MathHelper {
         return n * n;
     }
 
+    public static long square(long n) {
+        return n * n;
+    }
+
     public static double clampedLerpFromProgress(double lerpValue, double lerpStart, double lerpEnd, double start, double end) {
         return MathHelper.clampedLerp(start, end, MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd));
     }
 
+    public static float clampedLerpFromProgress(float lerpValue, float lerpStart, float lerpEnd, float start, float end) {
+        return MathHelper.clampedLerp(start, end, MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd));
+    }
+
     public static double lerpFromProgress(double lerpValue, double lerpStart, double lerpEnd, double start, double end) {
+        return MathHelper.lerp(MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd), start, end);
+    }
+
+    public static float lerpFromProgress(float lerpValue, float lerpStart, float lerpEnd, float start, float end) {
         return MathHelper.lerp(MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd), start, end);
     }
 
@@ -739,7 +755,11 @@ public class MathHelper {
     }
 
     public static int roundUpToMultiple(int value, int divisor) {
-        return (value + divisor - 1) / divisor * divisor;
+        return MathHelper.ceilDiv(value, divisor) * divisor;
+    }
+
+    public static int ceilDiv(int a, int b) {
+        return -Math.floorDiv(-a, b);
     }
 
     public static int nextBetween(Random random, int min, int max) {
@@ -754,8 +774,24 @@ public class MathHelper {
         return mean + (float)random.nextGaussian() * deviation;
     }
 
-    public static double magnitude(int x, double y, int z) {
-        return Math.sqrt((double)(x * x) + y * y + (double)(z * z));
+    public static double squaredHypot(double a, double b) {
+        return a * a + b * b;
+    }
+
+    public static double hypot(double a, double b) {
+        return Math.sqrt(MathHelper.squaredHypot(a, b));
+    }
+
+    public static double squaredMagnitude(double a, double b, double c) {
+        return a * a + b * b + c * c;
+    }
+
+    public static double magnitude(double a, double b, double c) {
+        return Math.sqrt(MathHelper.squaredMagnitude(a, b, c));
+    }
+
+    public static int roundDownToMultiple(double a, int b) {
+        return MathHelper.floor(a / (double)b) * b;
     }
 
     static {

@@ -13,7 +13,6 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.village.Merchant;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOfferList;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class SimpleMerchant
@@ -27,12 +26,12 @@ implements Merchant {
     }
 
     @Override
-    public PlayerEntity getCurrentCustomer() {
+    public PlayerEntity getCustomer() {
         return this.player;
     }
 
     @Override
-    public void setCurrentCustomer(@Nullable PlayerEntity customer) {
+    public void setCustomer(@Nullable PlayerEntity customer) {
     }
 
     @Override
@@ -55,8 +54,8 @@ implements Merchant {
     }
 
     @Override
-    public World getMerchantWorld() {
-        return this.player.world;
+    public boolean isClient() {
+        return this.player.getWorld().isClient;
     }
 
     @Override

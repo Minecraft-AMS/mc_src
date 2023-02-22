@@ -4,15 +4,21 @@
 package net.minecraft.resource;
 
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.util.Unit;
 
 public interface ResourceReload {
-    public CompletableFuture<Unit> whenComplete();
+    public CompletableFuture<?> whenComplete();
 
     public float getProgress();
 
-    public boolean isComplete();
+    default public boolean isComplete() {
+        return this.whenComplete().isDone();
+    }
 
-    public void throwException();
+    default public void throwException() {
+        CompletableFuture<?> completableFuture = this.whenComplete();
+        if (completableFuture.isCompletedExceptionally()) {
+            completableFuture.join();
+        }
+    }
 }
 

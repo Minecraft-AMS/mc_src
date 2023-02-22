@@ -44,7 +44,7 @@ import net.minecraft.screen.PropertyDelegate;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.ItemTags;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.DefaultedList;
@@ -52,6 +52,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -202,13 +204,13 @@ RecipeInputProvider {
     }
 
     private static boolean isNonFlammableWood(Item item) {
-        return ItemTags.NON_FLAMMABLE_WOOD.contains(item);
+        return item.getRegistryEntry().isIn(ItemTags.NON_FLAMMABLE_WOOD);
     }
 
-    private static void addFuel(Map<Item, Integer> fuelTimes, Tag<Item> tag, int fuelTime) {
-        for (Item item : tag.values()) {
-            if (AbstractFurnaceBlockEntity.isNonFlammableWood(item)) continue;
-            fuelTimes.put(item, fuelTime);
+    private static void addFuel(Map<Item, Integer> fuelTimes, TagKey<Item> tag, int fuelTime) {
+        for (RegistryEntry<Item> registryEntry : Registry.ITEM.iterateEntries(tag)) {
+            if (AbstractFurnaceBlockEntity.isNonFlammableWood(registryEntry.value())) continue;
+            fuelTimes.put(registryEntry.value(), fuelTime);
         }
     }
 
@@ -243,16 +245,15 @@ RecipeInputProvider {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.putShort("BurnTime", (short)this.burnTime);
         nbt.putShort("CookTime", (short)this.cookTime);
         nbt.putShort("CookTimeTotal", (short)this.cookTimeTotal);
         Inventories.writeNbt(nbt, this.inventory);
         NbtCompound nbtCompound = new NbtCompound();
-        this.recipesUsed.forEach((identifier, integer) -> nbtCompound.putInt(identifier.toString(), (int)integer));
+        this.recipesUsed.forEach((identifier, count) -> nbtCompound.putInt(identifier.toString(), (int)count));
         nbt.put("RecipesUsed", nbtCompound);
-        return nbt;
     }
 
     public static void tick(World world, BlockPos pos, BlockState state, AbstractFurnaceBlockEntity blockEntity) {
@@ -473,7 +474,7 @@ RecipeInputProvider {
     }
 
     public void dropExperienceForRecipesUsed(ServerPlayerEntity player) {
-        List<Recipe<?>> list = this.getRecipesUsedAndDropExperience(player.getServerWorld(), player.getPos());
+        List<Recipe<?>> list = this.getRecipesUsedAndDropExperience(player.getWorld(), player.getPos());
         player.unlockRecipes(list);
         this.recipesUsed.clear();
     }

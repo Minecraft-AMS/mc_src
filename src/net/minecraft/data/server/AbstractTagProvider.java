@@ -7,8 +7,8 @@
  *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  com.mojang.logging.LogUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.data.server;
 
@@ -17,6 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.logging.LogUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,14 +34,16 @@ import net.minecraft.data.DataCache;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.DataProvider;
 import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
+import net.minecraft.tag.TagManagerLoader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.util.registry.RegistryKey;
+import org.slf4j.Logger;
 
 public abstract class AbstractTagProvider<T>
 implements DataProvider {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     protected final DataGenerator root;
     protected final Registry<T> registry;
@@ -58,7 +61,7 @@ implements DataProvider {
         this.tagBuilders.clear();
         this.configure();
         this.tagBuilders.forEach((id, builder) -> {
-            List list = builder.streamEntries().filter(trackedEntry -> !trackedEntry.getEntry().canAdd(this.registry::containsId, this.tagBuilders::containsKey)).collect(Collectors.toList());
+            List<Tag.TrackedEntry> list = builder.streamEntries().filter(tag -> !tag.entry().canAdd(this.registry::containsId, this.tagBuilders::containsKey)).toList();
             if (!list.isEmpty()) {
                 throw new IllegalArgumentException(String.format("Couldn't define tag %s as it is missing following references: %s", id, list.stream().map(Objects::toString).collect(Collectors.joining(","))));
             }
@@ -81,15 +84,18 @@ implements DataProvider {
         });
     }
 
-    protected abstract Path getOutput(Identifier var1);
+    private Path getOutput(Identifier id) {
+        RegistryKey<Registry<T>> registryKey = this.registry.getKey();
+        return this.root.getOutput().resolve("data/" + id.getNamespace() + "/" + TagManagerLoader.getPath(registryKey) + "/" + id.getPath() + ".json");
+    }
 
-    protected ObjectBuilder<T> getOrCreateTagBuilder(Tag.Identified<T> tag) {
+    protected ObjectBuilder<T> getOrCreateTagBuilder(TagKey<T> tag) {
         Tag.Builder builder = this.getTagBuilder(tag);
         return new ObjectBuilder<T>(builder, this.registry, "vanilla");
     }
 
-    protected Tag.Builder getTagBuilder(Tag.Identified<T> tag) {
-        return this.tagBuilders.computeIfAbsent(tag.getId(), id -> new Tag.Builder());
+    protected Tag.Builder getTagBuilder(TagKey<T> tag) {
+        return this.tagBuilders.computeIfAbsent(tag.id(), id -> new Tag.Builder());
     }
 
     protected static class ObjectBuilder<T> {
@@ -108,13 +114,21 @@ implements DataProvider {
             return this;
         }
 
+        @SafeVarargs
+        public final ObjectBuilder<T> add(RegistryKey<T> ... keys) {
+            for (RegistryKey<T> registryKey : keys) {
+                this.builder.add(registryKey.getValue(), this.source);
+            }
+            return this;
+        }
+
         public ObjectBuilder<T> addOptional(Identifier id) {
             this.builder.addOptional(id, this.source);
             return this;
         }
 
-        public ObjectBuilder<T> addTag(Tag.Identified<T> identifiedTag) {
-            this.builder.addTag(identifiedTag.getId(), this.source);
+        public ObjectBuilder<T> addTag(TagKey<T> identifiedTag) {
+            this.builder.addTag(identifiedTag.id(), this.source);
             return this;
         }
 

@@ -10,6 +10,7 @@ package net.minecraft.entity.passive;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Dynamic;
+import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
@@ -20,10 +21,6 @@ import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.ai.brain.sensor.SensorType;
-import net.minecraft.entity.ai.pathing.EntityNavigation;
-import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
-import net.minecraft.entity.ai.pathing.MobNavigation;
-import net.minecraft.entity.ai.pathing.PathNodeNavigator;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -45,15 +42,15 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class GoatEntity
@@ -72,6 +69,8 @@ extends AnimalEntity {
     public GoatEntity(EntityType<? extends GoatEntity> entityType, World world) {
         super((EntityType<? extends AnimalEntity>)entityType, world);
         this.getNavigation().setCanSwim(true);
+        this.setPathfindingPenalty(PathNodeType.POWDER_SNOW, -1.0f);
+        this.setPathfindingPenalty(PathNodeType.DANGER_POWDER_SNOW, -1.0f);
     }
 
     protected Brain.Profile<GoatEntity> createBrainProfile() {
@@ -164,13 +163,13 @@ extends AnimalEntity {
     }
 
     @Override
-    public int getBodyYawSpeed() {
+    public int getMaxHeadRotation() {
         return 15;
     }
 
     @Override
     public void setHeadYaw(float headYaw) {
-        int i = this.getBodyYawSpeed();
+        int i = this.getMaxHeadRotation();
         float f = MathHelper.subtractAngles(this.bodyYaw, headYaw);
         float g = MathHelper.clamp(f, (float)(-i), (float)i);
         super.setHeadYaw(this.bodyYaw + g);
@@ -263,45 +262,13 @@ extends AnimalEntity {
         return (float)this.field_33488 / 20.0f * 30.0f * ((float)Math.PI / 180);
     }
 
-    @Override
-    protected EntityNavigation createNavigation(World world) {
-        return new GoatNavigation(this, world);
+    public static boolean canSpawn(EntityType<? extends AnimalEntity> entityType, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return world.getBlockState(pos.down()).isIn(BlockTags.GOATS_SPAWNABLE_ON) && GoatEntity.isLightLevelValidForNaturalSpawn(world, pos);
     }
 
     @Override
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
-    }
-
-    static class GoatNavigation
-    extends MobNavigation {
-        GoatNavigation(GoatEntity goat, World world) {
-            super(goat, world);
-        }
-
-        @Override
-        protected PathNodeNavigator createPathNodeNavigator(int range) {
-            this.nodeMaker = new GoatPathNodeMaker();
-            return new PathNodeNavigator(this.nodeMaker, range);
-        }
-    }
-
-    static class GoatPathNodeMaker
-    extends LandPathNodeMaker {
-        private final BlockPos.Mutable pos = new BlockPos.Mutable();
-
-        GoatPathNodeMaker() {
-        }
-
-        @Override
-        public PathNodeType getDefaultNodeType(BlockView world, int x, int y, int z) {
-            this.pos.set(x, y - 1, z);
-            PathNodeType pathNodeType = GoatPathNodeMaker.getCommonNodeType(world, this.pos);
-            if (pathNodeType == PathNodeType.POWDER_SNOW) {
-                return PathNodeType.BLOCKED;
-            }
-            return GoatPathNodeMaker.getLandNodeType(world, this.pos.move(Direction.UP));
-        }
     }
 }
 

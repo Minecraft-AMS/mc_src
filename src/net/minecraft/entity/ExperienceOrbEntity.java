@@ -166,6 +166,9 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
+        if (this.world.isClient) {
+            return true;
+        }
         this.scheduleVelocityUpdate();
         this.health = (int)((float)this.health - amount);
         if (this.health <= 0) {

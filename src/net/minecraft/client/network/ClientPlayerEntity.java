@@ -12,7 +12,9 @@ package net.minecraft.client.network;
 import com.google.common.collect.Lists;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
@@ -23,6 +25,7 @@ import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.DeathScreen;
+import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
 import net.minecraft.client.gui.screen.ingame.BookEditScreen;
 import net.minecraft.client.gui.screen.ingame.CommandBlockScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -98,6 +101,7 @@ extends AbstractClientPlayerEntity {
     private static final int field_32673 = 100;
     private static final float field_32674 = 0.6f;
     private static final double field_32675 = 0.35;
+    private static final double MAX_SOFT_COLLISION_RADIANS = 0.13962633907794952;
     public final ClientPlayNetworkHandler networkHandler;
     private final StatHandler statHandler;
     private final ClientRecipeBook recipeBook;
@@ -114,6 +118,7 @@ extends AbstractClientPlayerEntity {
     private boolean lastSprinting;
     private int ticksSinceLastPositionPacketSent;
     private boolean healthInitialized;
+    @Nullable
     private String serverBrand;
     public Input input;
     protected final MinecraftClient client;
@@ -128,6 +133,7 @@ extends AbstractClientPlayerEntity {
     public float nextNauseaStrength;
     public float lastNauseaStrength;
     private boolean usingItem;
+    @Nullable
     private Hand activeHand;
     private boolean riding;
     private boolean autoJumpEnabled = true;
@@ -166,11 +172,6 @@ extends AbstractClientPlayerEntity {
         if (entity instanceof AbstractMinecartEntity) {
             this.client.getSoundManager().play(new MinecartInsideSoundInstance(this, (AbstractMinecartEntity)entity, true));
             this.client.getSoundManager().play(new MinecartInsideSoundInstance(this, (AbstractMinecartEntity)entity, false));
-        }
-        if (entity instanceof BoatEntity) {
-            this.prevYaw = entity.getYaw();
-            this.setYaw(entity.getYaw());
-            this.setHeadYaw(entity.getYaw());
         }
         return true;
     }
@@ -244,7 +245,7 @@ extends AbstractClientPlayerEntity {
             double g = this.getYaw() - this.lastYaw;
             double h = this.getPitch() - this.lastPitch;
             ++this.ticksSinceLastPositionPacketSent;
-            boolean bl3 = d * d + e * e + f * f > 9.0E-4 || this.ticksSinceLastPositionPacketSent >= 20;
+            boolean bl3 = MathHelper.squaredMagnitude(d, e, f) > MathHelper.square(2.0E-4) || this.ticksSinceLastPositionPacketSent >= 20;
             boolean bl5 = bl4 = g != 0.0 || h != 0.0;
             if (this.hasVehicle()) {
                 Vec3d vec3d = this.getVelocity();
@@ -368,10 +369,11 @@ extends AbstractClientPlayerEntity {
         this.networkHandler.sendPacket(new ClientCommandC2SPacket(this, ClientCommandC2SPacket.Mode.OPEN_INVENTORY));
     }
 
-    public void setServerBrand(String serverBrand) {
+    public void setServerBrand(@Nullable String serverBrand) {
         this.serverBrand = serverBrand;
     }
 
+    @Nullable
     public String getServerBrand() {
         return this.serverBrand;
     }
@@ -437,10 +439,10 @@ extends AbstractClientPlayerEntity {
         }
     }
 
-    private boolean wouldCollideAt(BlockPos pos2) {
+    private boolean wouldCollideAt(BlockPos pos) {
         Box box = this.getBoundingBox();
-        Box box2 = new Box(pos2.getX(), box.minY, pos2.getZ(), (double)pos2.getX() + 1.0, box.maxY, (double)pos2.getZ() + 1.0).contract(1.0E-7);
-        return this.world.hasBlockCollision(this, box2, (state, pos) -> state.shouldSuffocate(this.world, (BlockPos)pos));
+        Box box2 = new Box(pos.getX(), box.minY, pos.getZ(), (double)pos.getX() + 1.0, box.maxY, (double)pos.getZ() + 1.0).contract(1.0E-7);
+        return this.world.canCollide(this, box2);
     }
 
     @Override
@@ -469,8 +471,8 @@ extends AbstractClientPlayerEntity {
         }
     }
 
-    public void setShowsDeathScreen(boolean shouldShow) {
-        this.showsDeathScreen = shouldShow;
+    public void setShowsDeathScreen(boolean showsDeathScreen) {
+        this.showsDeathScreen = showsDeathScreen;
     }
 
     public boolean showsDeathScreen() {
@@ -516,7 +518,7 @@ extends AbstractClientPlayerEntity {
 
     @Override
     public Hand getActiveHand() {
-        return this.activeHand;
+        return Objects.requireNonNullElse(this.activeHand, Hand.MAIN_HAND);
     }
 
     @Override
@@ -611,8 +613,8 @@ extends AbstractClientPlayerEntity {
             this.jumping = this.input.jumping;
             this.lastRenderYaw = this.renderYaw;
             this.lastRenderPitch = this.renderPitch;
-            this.renderPitch = (float)((double)this.renderPitch + (double)(this.getPitch() - this.renderPitch) * 0.5);
-            this.renderYaw = (float)((double)this.renderYaw + (double)(this.getYaw() - this.renderYaw) * 0.5);
+            this.renderPitch += (this.getPitch() - this.renderPitch) * 0.5f;
+            this.renderYaw += (this.getYaw() - this.renderYaw) * 0.5f;
         }
     }
 
@@ -673,19 +675,19 @@ extends AbstractClientPlayerEntity {
         }
         boolean bl7 = bl5 = (float)this.getHungerManager().getFoodLevel() > 6.0f || this.getAbilities().allowFlying;
         if (!(!this.onGround && !this.isSubmergedInWater() || bl2 || bl3 || !this.isWalking() || this.isSprinting() || !bl5 || this.isUsingItem() || this.hasStatusEffect(StatusEffects.BLINDNESS))) {
-            if (this.ticksLeftToDoubleTapSprint > 0 || this.client.options.keySprint.isPressed()) {
+            if (this.ticksLeftToDoubleTapSprint > 0 || this.client.options.sprintKey.isPressed()) {
                 this.setSprinting(true);
             } else {
                 this.ticksLeftToDoubleTapSprint = 7;
             }
         }
-        if (!this.isSprinting() && (!this.isTouchingWater() || this.isSubmergedInWater()) && this.isWalking() && bl5 && !this.isUsingItem() && !this.hasStatusEffect(StatusEffects.BLINDNESS) && this.client.options.keySprint.isPressed()) {
+        if (!this.isSprinting() && (!this.isTouchingWater() || this.isSubmergedInWater()) && this.isWalking() && bl5 && !this.isUsingItem() && !this.hasStatusEffect(StatusEffects.BLINDNESS) && this.client.options.sprintKey.isPressed()) {
             this.setSprinting(true);
         }
         if (this.isSprinting()) {
             boolean bl72;
             bl6 = !this.input.hasForwardMovement() || !bl5;
-            boolean bl8 = bl72 = bl6 || this.horizontalCollision || this.isTouchingWater() && !this.isSubmergedInWater();
+            boolean bl8 = bl72 = bl6 || this.horizontalCollision && !this.collidedSoftly || this.isTouchingWater() && !this.isSubmergedInWater();
             if (this.isSwimming()) {
                 if (!this.onGround && !this.input.sneaking && bl6 || !this.isTouchingWater()) {
                     this.setSprinting(false);
@@ -779,7 +781,7 @@ extends AbstractClientPlayerEntity {
     private void updateNausea() {
         this.lastNauseaStrength = this.nextNauseaStrength;
         if (this.inNetherPortal) {
-            if (this.client.currentScreen != null && !this.client.currentScreen.isPauseScreen() && !(this.client.currentScreen instanceof DeathScreen)) {
+            if (!(this.client.currentScreen == null || this.client.currentScreen.shouldPause() || this.client.currentScreen instanceof DeathScreen || this.client.currentScreen instanceof DownloadingTerrainScreen)) {
                 if (this.client.currentScreen instanceof HandledScreen) {
                     this.closeHandledScreen();
                 }
@@ -904,7 +906,8 @@ extends AbstractClientPlayerEntity {
         Vec3d vec3d11 = vec3d7.subtract(vec3d9);
         Vec3d vec3d12 = vec3d6.add(vec3d9);
         Vec3d vec3d13 = vec3d7.add(vec3d9);
-        Iterator iterator = this.world.getCollisions(this, box, entity -> true).flatMap(voxelShape -> voxelShape.getBoundingBoxes().stream()).iterator();
+        Iterable<VoxelShape> iterable = this.world.getCollisions(this, box);
+        Iterator iterator = StreamSupport.stream(iterable.spliterator(), false).flatMap(shape -> shape.getBoundingBoxes().stream()).iterator();
         float r = Float.MIN_VALUE;
         while (iterator.hasNext()) {
             Box box2 = (Box)iterator.next();
@@ -917,8 +920,8 @@ extends AbstractClientPlayerEntity {
                 BlockState blockState4;
                 BlockPos blockPos3 = blockPos2.up(s);
                 BlockState blockState3 = this.world.getBlockState(blockPos3);
-                VoxelShape voxelShape2 = blockState3.getCollisionShape(this.world, blockPos3, shapeContext);
-                if (!voxelShape2.isEmpty() && (double)(r = (float)voxelShape2.getMax(Direction.Axis.Y) + (float)blockPos3.getY()) - this.getY() > (double)n) {
+                VoxelShape voxelShape = blockState3.getCollisionShape(this.world, blockPos3, shapeContext);
+                if (!voxelShape.isEmpty() && (double)(r = (float)voxelShape.getMax(Direction.Axis.Y) + (float)blockPos3.getY()) - this.getY() > (double)n) {
                     return;
                 }
                 if (s > 1 && !(blockState4 = this.world.getBlockState(blockPos = blockPos.up())).getCollisionShape(this.world, blockPos, shapeContext).isEmpty()) {
@@ -936,6 +939,23 @@ extends AbstractClientPlayerEntity {
             return;
         }
         this.ticksToNextAutojump = 1;
+    }
+
+    @Override
+    protected boolean hasCollidedSoftly(Vec3d adjustedMovement) {
+        float f = this.getYaw() * ((float)Math.PI / 180);
+        double d = MathHelper.sin(f);
+        double e = MathHelper.cos(f);
+        double g = (double)this.sidewaysSpeed * e - (double)this.forwardSpeed * d;
+        double h = (double)this.forwardSpeed * e + (double)this.sidewaysSpeed * d;
+        double i = MathHelper.square(g) + MathHelper.square(h);
+        double j = MathHelper.square(adjustedMovement.x) + MathHelper.square(adjustedMovement.z);
+        if (i < (double)1.0E-5f || j < (double)1.0E-5f) {
+            return false;
+        }
+        double k = g * adjustedMovement.x + h * adjustedMovement.z;
+        double l = Math.acos(k / Math.sqrt(i * j));
+        return l < 0.13962633907794952;
     }
 
     private boolean shouldAutoJump() {
@@ -989,15 +1009,15 @@ extends AbstractClientPlayerEntity {
     }
 
     @Override
-    public Vec3d method_30951(float f) {
+    public Vec3d getLeashPos(float delta) {
         if (this.client.options.getPerspective().isFirstPerson()) {
-            float g = MathHelper.lerp(f * 0.5f, this.getYaw(), this.prevYaw) * ((float)Math.PI / 180);
-            float h = MathHelper.lerp(f * 0.5f, this.getPitch(), this.prevPitch) * ((float)Math.PI / 180);
+            float f = MathHelper.lerp(delta * 0.5f, this.getYaw(), this.prevYaw) * ((float)Math.PI / 180);
+            float g = MathHelper.lerp(delta * 0.5f, this.getPitch(), this.prevPitch) * ((float)Math.PI / 180);
             double d = this.getMainArm() == Arm.RIGHT ? -1.0 : 1.0;
             Vec3d vec3d = new Vec3d(0.39 * d, -0.6, 0.3);
-            return vec3d.rotateX(-h).rotateY(-g).add(this.getCameraPosVec(f));
+            return vec3d.rotateX(-g).rotateY(-f).add(this.getCameraPosVec(delta));
         }
-        return super.method_30951(f);
+        return super.getLeashPos(delta);
     }
 
     @Override

@@ -26,7 +26,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class ChatScreen
 extends Screen {
-    public static final int field_32237 = 7;
+    public static final double SHIFT_SCROLL_AMOUNT = 7.0;
     private static final Text USAGE_TEXT = new TranslatableText("chat_screen.usage");
     private String chatLastMessage = "";
     private int messageHistorySize = -1;
@@ -126,19 +126,13 @@ extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-        if (amount > 1.0) {
-            amount = 1.0;
-        }
-        if (amount < -1.0) {
-            amount = -1.0;
-        }
-        if (this.commandSuggestor.mouseScrolled(amount)) {
+        if (this.commandSuggestor.mouseScrolled(amount = MathHelper.clamp(amount, -1.0, 1.0))) {
             return true;
         }
         if (!ChatScreen.hasShiftDown()) {
             amount *= 7.0;
         }
-        this.client.inGameHud.getChatHud().scroll(amount);
+        this.client.inGameHud.getChatHud().scroll((int)amount);
         return true;
     }
 
@@ -206,7 +200,7 @@ extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() {
+    public boolean shouldPause() {
         return false;
     }
 

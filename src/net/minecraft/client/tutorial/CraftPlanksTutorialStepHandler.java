@@ -18,9 +18,11 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.stat.Stats;
 import net.minecraft.tag.ItemTags;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 
 @Environment(value=EnvType.CLIENT)
 public class CraftPlanksTutorialStepHandler
@@ -75,9 +77,9 @@ implements TutorialStepHandler {
         }
     }
 
-    public static boolean hasCrafted(ClientPlayerEntity player, Tag<Item> tag) {
-        for (Item item : tag.values()) {
-            if (player.getStatHandler().getStat(Stats.CRAFTED.getOrCreateStat(item)) <= 0) continue;
+    public static boolean hasCrafted(ClientPlayerEntity player, TagKey<Item> tag) {
+        for (RegistryEntry<Item> registryEntry : Registry.ITEM.iterateEntries(tag)) {
+            if (player.getStatHandler().getStat(Stats.CRAFTED.getOrCreateStat(registryEntry.value())) <= 0) continue;
             return true;
         }
         return false;

@@ -3,18 +3,21 @@
  * 
  * Could not load the following classes:
  *  com.google.common.annotations.VisibleForTesting
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.gui;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.mojang.logging.LogUtils;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +37,11 @@ import net.minecraft.client.realms.dto.RealmsServer;
 import net.minecraft.client.realms.dto.RealmsServerPlayerLists;
 import net.minecraft.client.realms.gui.FetchTask;
 import net.minecraft.client.realms.util.RealmsPersistence;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsDataFetcher {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final MinecraftClient client;
     private final RealmsClient realms;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
@@ -117,7 +119,7 @@ public class RealmsDataFetcher {
     }
 
     public synchronized List<RealmsServer> getServers() {
-        return Lists.newArrayList(this.servers);
+        return ImmutableList.copyOf(this.servers);
     }
 
     public synchronized int getPendingInvitesCount() {
@@ -179,9 +181,10 @@ public class RealmsDataFetcher {
         this.servers = newServers;
     }
 
-    public synchronized void removeItem(RealmsServer server) {
+    public synchronized List<RealmsServer> removeItem(RealmsServer server) {
         this.servers.remove(server);
         this.removedServers.add(server);
+        return ImmutableList.copyOf(this.servers);
     }
 
     private boolean isActive() {

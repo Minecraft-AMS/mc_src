@@ -54,7 +54,7 @@ public class DispenserBlock
 extends BlockWithEntity {
     public static final DirectionProperty FACING = FacingBlock.FACING;
     public static final BooleanProperty TRIGGERED = Properties.TRIGGERED;
-    private static final Map<Item, DispenserBehavior> BEHAVIORS = (Map)Util.make(new Object2ObjectOpenHashMap(), object2ObjectOpenHashMap -> object2ObjectOpenHashMap.defaultReturnValue((Object)new ItemDispenserBehavior()));
+    private static final Map<Item, DispenserBehavior> BEHAVIORS = (Map)Util.make(new Object2ObjectOpenHashMap(), map -> map.defaultReturnValue((Object)new ItemDispenserBehavior()));
     private static final int SCHEDULED_TICK_DELAY = 4;
 
     public static void registerBehavior(ItemConvertible provider, DispenserBehavior behavior) {
@@ -108,7 +108,7 @@ extends BlockWithEntity {
         boolean bl = world.isReceivingRedstonePower(pos) || world.isReceivingRedstonePower(pos.up());
         boolean bl2 = state.get(TRIGGERED);
         if (bl && !bl2) {
-            world.getBlockTickScheduler().schedule(pos, this, 4);
+            world.createAndScheduleBlockTick(pos, this, 4);
             world.setBlockState(pos, (BlockState)state.with(TRIGGERED, true), 4);
         } else if (!bl && bl2) {
             world.setBlockState(pos, (BlockState)state.with(TRIGGERED, false), 4);

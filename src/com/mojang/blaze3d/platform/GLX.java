@@ -4,15 +4,15 @@
  * Could not load the following classes:
  *  com.google.common.base.Joiner
  *  com.google.common.collect.Lists
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.lwjgl.Version
  *  org.lwjgl.glfw.GLFW
  *  org.lwjgl.glfw.GLFWErrorCallback
  *  org.lwjgl.glfw.GLFWErrorCallbackI
  *  org.lwjgl.glfw.GLFWVidMode
+ *  org.slf4j.Logger
  *  oshi.SystemInfo
  *  oshi.hardware.CentralProcessor
  */
@@ -22,6 +22,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -36,24 +37,23 @@ import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.Window;
 import net.minecraft.util.annotation.DeobfuscateClass;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWVidMode;
+import org.slf4j.Logger;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 
 @Environment(value=EnvType.CLIENT)
 @DeobfuscateClass
 public class GLX {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static String cpuInfo;
 
     public static String getOpenGLVersionString() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         if (GLFW.glfwGetCurrentContext() == 0L) {
             return "NO CONTEXT";
         }
@@ -61,7 +61,7 @@ public class GLX {
     }
 
     public static int _getRefreshRate(Window window) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         long l = GLFW.glfwGetWindowMonitor((long)window.getHandle());
         if (l == 0L) {
             l = GLFW.glfwGetPrimaryMonitor();
@@ -71,13 +71,13 @@ public class GLX {
     }
 
     public static String _getLWJGLVersion() {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         return Version.getVersion();
     }
 
     public static LongSupplier _initGlfw() {
         LongSupplier longSupplier;
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         Window.acceptError((integer, string) -> {
             throw new IllegalStateException(String.format("GLFW error before init: [0x%X]%s", integer, string));
         });
@@ -96,7 +96,7 @@ public class GLX {
     }
 
     public static void _setGlfwErrorCallback(GLFWErrorCallbackI callback) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         GLFWErrorCallback gLFWErrorCallback = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)callback);
         if (gLFWErrorCallback != null) {
             gLFWErrorCallback.free();
@@ -108,7 +108,7 @@ public class GLX {
     }
 
     public static void _init(int debugVerbosity, boolean debugSync) {
-        RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        RenderSystem.assertInInitPhase();
         try {
             CentralProcessor centralProcessor = new SystemInfo().getHardware().getProcessor();
             cpuInfo = String.format("%dx %s", centralProcessor.getLogicalProcessorCount(), centralProcessor.getProcessorIdentifier().getName()).replaceAll("\\s+", " ");
@@ -124,7 +124,7 @@ public class GLX {
     }
 
     public static void _renderCrosshair(int size, boolean drawX, boolean drawY, boolean drawZ) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        RenderSystem.assertOnRenderThread();
         GlStateManager._disableTexture();
         GlStateManager._depthMask(false);
         GlStateManager._disableCull();
