@@ -20,7 +20,7 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.ai.control.MoveControl;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
@@ -32,6 +32,7 @@ import net.minecraft.entity.ai.goal.WanderAroundGoal;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.ai.pathing.SwimNavigation;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
@@ -49,8 +50,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,11 +59,11 @@ public class GuardianEntity
 extends HostileEntity {
     private static final TrackedData<Boolean> SPIKES_RETRACTED = DataTracker.registerData(GuardianEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> BEAM_TARGET_ID = DataTracker.registerData(GuardianEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    protected float spikesExtension;
-    protected float prevSpikesExtension;
-    protected float spikesExtensionRate;
-    protected float tailAngle;
-    protected float prevTailAngle;
+    private float tailAngle;
+    private float prevTailAngle;
+    private float spikesExtensionRate;
+    private float spikesExtension;
+    private float prevSpikesExtension;
     private LivingEntity cachedBeamTarget;
     private int beamTicks;
     private boolean flopping;
@@ -73,7 +74,7 @@ extends HostileEntity {
         this.experiencePoints = 10;
         this.setPathfindingPenalty(PathNodeType.WATER, 0.0f);
         this.moveControl = new GuardianMoveControl(this);
-        this.prevSpikesExtension = this.spikesExtension = this.random.nextFloat();
+        this.prevTailAngle = this.tailAngle = this.random.nextFloat();
     }
 
     @Override
@@ -91,13 +92,8 @@ extends HostileEntity {
         this.targetSelector.add(1, new FollowTargetGoal<LivingEntity>(this, LivingEntity.class, 10, true, false, new GuardianTargetPredicate(this)));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(6.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.5);
-        this.getAttributeInstance(EntityAttributes.FOLLOW_RANGE).setBaseValue(16.0);
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(30.0);
+    public static DefaultAttributeContainer.Builder createGuardianAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 6.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.5).add(EntityAttributes.GENERIC_FOLLOW_RANGE, 16.0).add(EntityAttributes.GENERIC_MAX_HEALTH, 30.0);
     }
 
     @Override
@@ -134,8 +130,8 @@ extends HostileEntity {
         return 80;
     }
 
-    private void setBeamTarget(int progress) {
-        this.dataTracker.set(BEAM_TARGET_ID, progress);
+    private void setBeamTarget(int entityId) {
+        this.dataTracker.set(BEAM_TARGET_ID, entityId);
     }
 
     public boolean hasBeamTarget() {
@@ -201,11 +197,11 @@ extends HostileEntity {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
-        if (worldView.getFluidState(pos).matches(FluidTags.WATER)) {
-            return 10.0f + worldView.getBrightness(pos) - 0.5f;
+    public float getPathfindingFavor(BlockPos pos, WorldView world) {
+        if (world.getFluidState(pos).isIn(FluidTags.WATER)) {
+            return 10.0f + world.getBrightness(pos) - 0.5f;
         }
-        return super.getPathfindingFavor(pos, worldView);
+        return super.getPathfindingFavor(pos, world);
     }
 
     @Override
@@ -213,20 +209,20 @@ extends HostileEntity {
         if (this.isAlive()) {
             if (this.world.isClient) {
                 Vec3d vec3d;
-                this.prevSpikesExtension = this.spikesExtension;
+                this.prevTailAngle = this.tailAngle;
                 if (!this.isTouchingWater()) {
                     this.spikesExtensionRate = 2.0f;
                     vec3d = this.getVelocity();
                     if (vec3d.y > 0.0 && this.flopping && !this.isSilent()) {
                         this.world.playSound(this.getX(), this.getY(), this.getZ(), this.getFlopSound(), this.getSoundCategory(), 1.0f, 1.0f, false);
                     }
-                    this.flopping = vec3d.y < 0.0 && this.world.isTopSolid(new BlockPos(this).down(), this);
+                    this.flopping = vec3d.y < 0.0 && this.world.isTopSolid(this.getBlockPos().down(), this);
                 } else {
                     this.spikesExtensionRate = this.areSpikesRetracted() ? (this.spikesExtensionRate < 0.5f ? 4.0f : (this.spikesExtensionRate += (0.5f - this.spikesExtensionRate) * 0.1f)) : (this.spikesExtensionRate += (0.125f - this.spikesExtensionRate) * 0.2f);
                 }
-                this.spikesExtension += this.spikesExtensionRate;
-                this.prevTailAngle = this.tailAngle;
-                this.tailAngle = !this.isInsideWaterOrBubbleColumn() ? this.random.nextFloat() : (this.areSpikesRetracted() ? (this.tailAngle += (0.0f - this.tailAngle) * 0.25f) : (this.tailAngle += (1.0f - this.tailAngle) * 0.06f));
+                this.tailAngle += this.spikesExtensionRate;
+                this.prevSpikesExtension = this.spikesExtension;
+                this.spikesExtension = !this.isInsideWaterOrBubbleColumn() ? this.random.nextFloat() : (this.areSpikesRetracted() ? (this.spikesExtension += (0.0f - this.spikesExtension) * 0.25f) : (this.spikesExtension += (1.0f - this.spikesExtension) * 0.06f));
                 if (this.areSpikesRetracted() && this.isTouchingWater()) {
                     vec3d = this.getRotationVec(0.0f);
                     for (int i = 0; i < 2; ++i) {
@@ -276,13 +272,13 @@ extends HostileEntity {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public float getSpikesExtension(float tickDelta) {
-        return MathHelper.lerp(tickDelta, this.prevSpikesExtension, this.spikesExtension);
+    public float getTailAngle(float tickDelta) {
+        return MathHelper.lerp(tickDelta, this.prevTailAngle, this.tailAngle);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public float getTailAngle(float tickDelta) {
-        return MathHelper.lerp(tickDelta, this.prevTailAngle, this.tailAngle);
+    public float getSpikesExtension(float tickDelta) {
+        return MathHelper.lerp(tickDelta, this.prevSpikesExtension, this.spikesExtension);
     }
 
     public float getBeamProgress(float tickDelta) {
@@ -294,13 +290,13 @@ extends HostileEntity {
         return world.intersectsEntities(this);
     }
 
-    public static boolean canSpawn(EntityType<? extends GuardianEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        return !(random.nextInt(20) != 0 && world.isSkyVisibleAllowingSea(pos) || world.getDifficulty() == Difficulty.PEACEFUL || spawnType != SpawnType.SPAWNER && !world.getFluidState(pos).matches(FluidTags.WATER));
+    public static boolean canSpawn(EntityType<? extends GuardianEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return !(random.nextInt(20) != 0 && world.isSkyVisibleAllowingSea(pos) || world.getDifficulty() == Difficulty.PEACEFUL || spawnReason != SpawnReason.SPAWNER && !world.getFluidState(pos).isIn(FluidTags.WATER));
     }
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (!this.areSpikesRetracted() && !source.getMagic() && source.getSource() instanceof LivingEntity) {
+        if (!this.areSpikesRetracted() && !source.isMagic() && source.getSource() instanceof LivingEntity) {
             LivingEntity livingEntity = (LivingEntity)source.getSource();
             if (!source.isExplosive()) {
                 livingEntity.damage(DamageSource.thorns(this), 2.0f);
@@ -353,8 +349,8 @@ extends HostileEntity {
             double f = vec3d.y / d;
             double g = vec3d.z / d;
             float h = (float)(MathHelper.atan2(vec3d.z, vec3d.x) * 57.2957763671875) - 90.0f;
-            this.guardian.bodyYaw = this.guardian.yaw = this.changeAngle(this.guardian.yaw, h, 90.0f);
-            float i = (float)(this.speed * this.guardian.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).getValue());
+            this.guardian.bodyYaw = this.guardian.yaw = this.wrapDegrees(this.guardian.yaw, h, 90.0f);
+            float i = (float)(this.speed * this.guardian.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
             float j = MathHelper.lerp(0.125f, this.guardian.getMovementSpeed(), i);
             this.guardian.setMovementSpeed(j);
             double k = Math.sin((double)(this.guardian.age + this.guardian.getEntityId()) * 0.5) * 0.05;
@@ -429,7 +425,9 @@ extends HostileEntity {
             ++this.beamTicks;
             if (this.beamTicks == 0) {
                 this.guardian.setBeamTarget(this.guardian.getTarget().getEntityId());
-                this.guardian.world.sendEntityStatus(this.guardian, (byte)21);
+                if (!this.guardian.isSilent()) {
+                    this.guardian.world.sendEntityStatus(this.guardian, (byte)21);
+                }
             } else if (this.beamTicks >= this.guardian.getWarmupTime()) {
                 float f = 1.0f;
                 if (this.guardian.world.getDifficulty() == Difficulty.HARD) {
@@ -439,7 +437,7 @@ extends HostileEntity {
                     f += 2.0f;
                 }
                 livingEntity.damage(DamageSource.magic(this.guardian, this.guardian), f);
-                livingEntity.damage(DamageSource.mob(this.guardian), (float)this.guardian.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).getValue());
+                livingEntity.damage(DamageSource.mob(this.guardian), (float)this.guardian.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
                 this.guardian.setTarget(null);
             }
             super.tick();

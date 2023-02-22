@@ -13,22 +13,23 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
-import net.minecraft.entity.FireworkEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.SeekSkyTask;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.entity.raid.Raid;
+import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.item.FireworkItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.DyeColor;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.village.raid.Raid;
 import org.jetbrains.annotations.Nullable;
 
 public class CelebrateRaidWinTask
@@ -42,7 +43,7 @@ extends Task<VillagerEntity> {
 
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, VillagerEntity villagerEntity) {
-        BlockPos blockPos = new BlockPos(villagerEntity);
+        BlockPos blockPos = villagerEntity.getBlockPos();
         this.raid = serverWorld.getRaidAt(blockPos);
         return this.raid != null && this.raid.hasWon() && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity, blockPos);
     }
@@ -64,32 +65,32 @@ extends Task<VillagerEntity> {
         if (random.nextInt(100) == 0) {
             villagerEntity.playCelebrateSound();
         }
-        if (random.nextInt(200) == 0 && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity, new BlockPos(villagerEntity))) {
-            DyeColor dyeColor = DyeColor.values()[random.nextInt(DyeColor.values().length)];
+        if (random.nextInt(200) == 0 && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity, villagerEntity.getBlockPos())) {
+            DyeColor dyeColor = Util.getRandom(DyeColor.values(), random);
             int i = random.nextInt(3);
             ItemStack itemStack = this.createFirework(dyeColor, i);
-            FireworkEntity fireworkEntity = new FireworkEntity(villagerEntity.world, villagerEntity.getX(), villagerEntity.getEyeY(), villagerEntity.getZ(), itemStack);
-            villagerEntity.world.spawnEntity(fireworkEntity);
+            FireworkRocketEntity fireworkRocketEntity = new FireworkRocketEntity(villagerEntity.world, villagerEntity, villagerEntity.getX(), villagerEntity.getEyeY(), villagerEntity.getZ(), itemStack);
+            villagerEntity.world.spawnEntity(fireworkRocketEntity);
         }
     }
 
     private ItemStack createFirework(DyeColor color, int flight) {
         ItemStack itemStack = new ItemStack(Items.FIREWORK_ROCKET, 1);
         ItemStack itemStack2 = new ItemStack(Items.FIREWORK_STAR);
-        CompoundTag compoundTag = itemStack2.getOrCreateSubTag("Explosion");
+        NbtCompound nbtCompound = itemStack2.getOrCreateSubTag("Explosion");
         ArrayList list = Lists.newArrayList();
         list.add(color.getFireworkColor());
-        compoundTag.putIntArray("Colors", list);
-        compoundTag.putByte("Type", (byte)FireworkItem.Type.BURST.getId());
-        CompoundTag compoundTag2 = itemStack.getOrCreateSubTag("Fireworks");
-        ListTag listTag = new ListTag();
-        CompoundTag compoundTag3 = itemStack2.getSubTag("Explosion");
-        if (compoundTag3 != null) {
-            listTag.add(compoundTag3);
+        nbtCompound.putIntArray("Colors", list);
+        nbtCompound.putByte("Type", (byte)FireworkItem.Type.BURST.getId());
+        NbtCompound nbtCompound2 = itemStack.getOrCreateSubTag("Fireworks");
+        NbtList nbtList = new NbtList();
+        NbtCompound nbtCompound3 = itemStack2.getSubTag("Explosion");
+        if (nbtCompound3 != null) {
+            nbtList.add(nbtCompound3);
         }
-        compoundTag2.putByte("Flight", (byte)flight);
-        if (!listTag.isEmpty()) {
-            compoundTag2.put("Explosions", listTag);
+        nbtCompound2.putByte("Flight", (byte)flight);
+        if (!nbtList.isEmpty()) {
+            nbtCompound2.put("Explosions", nbtList);
         }
         return itemStack;
     }

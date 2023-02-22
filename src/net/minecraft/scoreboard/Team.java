@@ -18,6 +18,8 @@ import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.util.Formatting;
@@ -29,19 +31,21 @@ extends AbstractTeam {
     private final String name;
     private final Set<String> playerList = Sets.newHashSet();
     private Text displayName;
-    private Text prefix = new LiteralText("");
-    private Text suffix = new LiteralText("");
+    private Text prefix = LiteralText.EMPTY;
+    private Text suffix = LiteralText.EMPTY;
     private boolean friendlyFire = true;
     private boolean showFriendlyInvisibles = true;
     private AbstractTeam.VisibilityRule nameTagVisibilityRule = AbstractTeam.VisibilityRule.ALWAYS;
     private AbstractTeam.VisibilityRule deathMessageVisibilityRule = AbstractTeam.VisibilityRule.ALWAYS;
     private Formatting color = Formatting.RESET;
     private AbstractTeam.CollisionRule collisionRule = AbstractTeam.CollisionRule.ALWAYS;
+    private final Style field_24195;
 
     public Team(Scoreboard scoreboard, String name) {
         this.scoreboard = scoreboard;
         this.name = name;
         this.displayName = new LiteralText(name);
+        this.field_24195 = Style.EMPTY.withInsertion(name).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new LiteralText(name)));
     }
 
     @Override
@@ -53,25 +57,25 @@ extends AbstractTeam {
         return this.displayName;
     }
 
-    public Text getFormattedName() {
-        Text text = Texts.bracketed(this.displayName.deepCopy().styled(style -> style.setInsertion(this.name).setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new LiteralText(this.name)))));
+    public MutableText getFormattedName() {
+        MutableText mutableText = Texts.bracketed(this.displayName.shallowCopy().fillStyle(this.field_24195));
         Formatting formatting = this.getColor();
         if (formatting != Formatting.RESET) {
-            text.formatted(formatting);
+            mutableText.formatted(formatting);
         }
-        return text;
+        return mutableText;
     }
 
-    public void setDisplayName(Text text) {
-        if (text == null) {
+    public void setDisplayName(Text displayName) {
+        if (displayName == null) {
             throw new IllegalArgumentException("Name cannot be null");
         }
-        this.displayName = text;
+        this.displayName = displayName;
         this.scoreboard.updateScoreboardTeam(this);
     }
 
-    public void setPrefix(@Nullable Text text) {
-        this.prefix = text == null ? new LiteralText("") : text.deepCopy();
+    public void setPrefix(@Nullable Text prefix) {
+        this.prefix = prefix == null ? LiteralText.EMPTY : prefix;
         this.scoreboard.updateScoreboardTeam(this);
     }
 
@@ -79,8 +83,8 @@ extends AbstractTeam {
         return this.prefix;
     }
 
-    public void setSuffix(@Nullable Text text) {
-        this.suffix = text == null ? new LiteralText("") : text.deepCopy();
+    public void setSuffix(@Nullable Text suffix) {
+        this.suffix = suffix == null ? LiteralText.EMPTY : suffix;
         this.scoreboard.updateScoreboardTeam(this);
     }
 
@@ -94,20 +98,20 @@ extends AbstractTeam {
     }
 
     @Override
-    public Text modifyText(Text text) {
-        Text text2 = new LiteralText("").append(this.prefix).append(text).append(this.suffix);
+    public MutableText decorateName(Text name) {
+        MutableText mutableText = new LiteralText("").append(this.prefix).append(name).append(this.suffix);
         Formatting formatting = this.getColor();
         if (formatting != Formatting.RESET) {
-            text2.formatted(formatting);
+            mutableText.formatted(formatting);
         }
-        return text2;
+        return mutableText;
     }
 
-    public static Text modifyText(@Nullable AbstractTeam abstractTeam, Text text) {
-        if (abstractTeam == null) {
-            return text.deepCopy();
+    public static MutableText decorateName(@Nullable AbstractTeam team, Text name) {
+        if (team == null) {
+            return name.shallowCopy();
         }
-        return abstractTeam.modifyText(text);
+        return team.decorateName(name);
     }
 
     @Override
@@ -140,13 +144,13 @@ extends AbstractTeam {
         return this.deathMessageVisibilityRule;
     }
 
-    public void setNameTagVisibilityRule(AbstractTeam.VisibilityRule visibilityRule) {
-        this.nameTagVisibilityRule = visibilityRule;
+    public void setNameTagVisibilityRule(AbstractTeam.VisibilityRule nameTagVisibilityRule) {
+        this.nameTagVisibilityRule = nameTagVisibilityRule;
         this.scoreboard.updateScoreboardTeam(this);
     }
 
-    public void setDeathMessageVisibilityRule(AbstractTeam.VisibilityRule visibilityRule) {
-        this.deathMessageVisibilityRule = visibilityRule;
+    public void setDeathMessageVisibilityRule(AbstractTeam.VisibilityRule deathMessageVisibilityRule) {
+        this.deathMessageVisibilityRule = deathMessageVisibilityRule;
         this.scoreboard.updateScoreboardTeam(this);
     }
 
@@ -172,9 +176,9 @@ extends AbstractTeam {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public void setFriendlyFlagsBitwise(int i) {
-        this.setFriendlyFireAllowed((i & 1) > 0);
-        this.setShowFriendlyInvisibles((i & 2) > 0);
+    public void setFriendlyFlagsBitwise(int flags) {
+        this.setFriendlyFireAllowed((flags & 1) > 0);
+        this.setShowFriendlyInvisibles((flags & 2) > 0);
     }
 
     public void setColor(Formatting color) {

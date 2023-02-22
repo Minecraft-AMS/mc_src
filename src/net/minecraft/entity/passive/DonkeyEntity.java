@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
@@ -10,9 +13,11 @@ import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.HorseBaseEntity;
 import net.minecraft.entity.passive.HorseEntity;
 import net.minecraft.entity.passive.PassiveEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 public class DonkeyEntity
 extends AbstractDonkeyEntity {
@@ -27,9 +32,21 @@ extends AbstractDonkeyEntity {
     }
 
     @Override
+    protected SoundEvent getAngrySound() {
+        super.getAngrySound();
+        return SoundEvents.ENTITY_DONKEY_ANGRY;
+    }
+
+    @Override
     protected SoundEvent getDeathSound() {
         super.getDeathSound();
         return SoundEvents.ENTITY_DONKEY_DEATH;
+    }
+
+    @Override
+    @Nullable
+    protected SoundEvent getEatSound() {
+        return SoundEvents.ENTITY_DONKEY_EAT;
     }
 
     @Override
@@ -50,10 +67,10 @@ extends AbstractDonkeyEntity {
     }
 
     @Override
-    public PassiveEntity createChild(PassiveEntity mate) {
-        EntityType<AbstractDonkeyEntity> entityType = mate instanceof HorseEntity ? EntityType.MULE : EntityType.DONKEY;
-        HorseBaseEntity horseBaseEntity = entityType.create(this.world);
-        this.setChildAttributes(mate, horseBaseEntity);
+    public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        EntityType<AbstractDonkeyEntity> entityType = entity instanceof HorseEntity ? EntityType.MULE : EntityType.DONKEY;
+        HorseBaseEntity horseBaseEntity = entityType.create(world);
+        this.setChildAttributes(entity, horseBaseEntity);
         return horseBaseEntity;
     }
 }

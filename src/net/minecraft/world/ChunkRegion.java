@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
@@ -26,22 +27,26 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.structure.StructureStart;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.MultiTickScheduler;
+import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.TickScheduler;
-import net.minecraft.world.World;
+import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
@@ -49,15 +54,15 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.light.LightingProvider;
-import net.minecraft.world.dimension.Dimension;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
-import net.minecraft.world.level.LevelProperties;
+import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.gen.StructureAccessor;
+import net.minecraft.world.gen.feature.StructureFeature;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkRegion
-implements IWorld {
+implements StructureWorldAccess {
     private static final Logger LOGGER = LogManager.getLogger();
     private final List<Chunk> chunks;
     private final int centerChunkX;
@@ -65,14 +70,15 @@ implements IWorld {
     private final int width;
     private final ServerWorld world;
     private final long seed;
-    private final int seaLevel;
-    private final LevelProperties levelProperties;
+    private final WorldProperties levelProperties;
     private final Random random;
-    private final Dimension dimension;
-    private final ChunkGeneratorConfig generatorSettings;
-    private final TickScheduler<Block> blockTickScheduler = new MultiTickScheduler<Block>(blockPos -> this.getChunk((BlockPos)blockPos).getBlockTickScheduler());
-    private final TickScheduler<Fluid> fluidTickScheduler = new MultiTickScheduler<Fluid>(blockPos -> this.getChunk((BlockPos)blockPos).getFluidTickScheduler());
+    private final DimensionType dimension;
+    private final TickScheduler<Block> blockTickScheduler = new MultiTickScheduler<Block>(pos -> this.getChunk((BlockPos)pos).getBlockTickScheduler());
+    private final TickScheduler<Fluid> fluidTickScheduler = new MultiTickScheduler<Fluid>(pos -> this.getChunk((BlockPos)pos).getFluidTickScheduler());
     private final BiomeAccess biomeAccess;
+    private final ChunkPos lowerCorner;
+    private final ChunkPos upperCorner;
+    private final StructureAccessor field_26822;
 
     public ChunkRegion(ServerWorld world, List<Chunk> chunks) {
         int i = MathHelper.floor(Math.sqrt(chunks.size()));
@@ -86,12 +92,13 @@ implements IWorld {
         this.width = i;
         this.world = world;
         this.seed = world.getSeed();
-        this.generatorSettings = world.getChunkManager().getChunkGenerator().getConfig();
-        this.seaLevel = world.getSeaLevel();
         this.levelProperties = world.getLevelProperties();
         this.random = world.getRandom();
         this.dimension = world.getDimension();
-        this.biomeAccess = new BiomeAccess(this, LevelProperties.sha256Hash(this.seed), this.dimension.getType().getBiomeAccessType());
+        this.biomeAccess = new BiomeAccess(this, BiomeAccess.hashSeed(this.seed), world.getDimension().getBiomeAccessType());
+        this.lowerCorner = chunks.get(0).getPos();
+        this.upperCorner = chunks.get(chunks.size() - 1).getPos();
+        this.field_26822 = world.getStructureAccessor().forRegion(this);
     }
 
     public int getCenterChunkX() {
@@ -112,9 +119,8 @@ implements IWorld {
     public Chunk getChunk(int chunkX, int chunkZ, ChunkStatus leastStatus, boolean create) {
         Chunk chunk;
         if (this.isChunkLoaded(chunkX, chunkZ)) {
-            ChunkPos chunkPos = this.chunks.get(0).getPos();
-            int i = chunkX - chunkPos.x;
-            int j = chunkZ - chunkPos.z;
+            int i = chunkX - this.lowerCorner.x;
+            int j = chunkZ - this.lowerCorner.z;
             chunk = this.chunks.get(i + j * this.width);
             if (chunk.getStatus().isAtLeast(leastStatus)) {
                 return chunk;
@@ -125,10 +131,8 @@ implements IWorld {
         if (!create) {
             return null;
         }
-        Chunk chunk2 = this.chunks.get(0);
-        Chunk chunk3 = this.chunks.get(this.chunks.size() - 1);
         LOGGER.error("Requested chunk : {} {}", (Object)chunkX, (Object)chunkZ);
-        LOGGER.error("Region bounds : {} {} | {} {}", (Object)chunk2.getPos().x, (Object)chunk2.getPos().z, (Object)chunk3.getPos().x, (Object)chunk3.getPos().z);
+        LOGGER.error("Region bounds : {} {} | {} {}", (Object)this.lowerCorner.x, (Object)this.lowerCorner.z, (Object)this.upperCorner.x, (Object)this.upperCorner.z);
         if (chunk != null) {
             throw Util.throwOrPause(new RuntimeException(String.format("Chunk is not of correct status. Expecting %s, got %s | %s %s", leastStatus, chunk.getStatus(), chunkX, chunkZ)));
         }
@@ -137,9 +141,7 @@ implements IWorld {
 
     @Override
     public boolean isChunkLoaded(int chunkX, int chunkZ) {
-        Chunk chunk = this.chunks.get(0);
-        Chunk chunk2 = this.chunks.get(this.chunks.size() - 1);
-        return chunkX >= chunk.getPos().x && chunkX <= chunk2.getPos().x && chunkZ >= chunk.getPos().z && chunkZ <= chunk2.getPos().z;
+        return chunkX >= this.lowerCorner.x && chunkX <= this.upperCorner.x && chunkZ >= this.lowerCorner.z && chunkZ <= this.upperCorner.z;
     }
 
     @Override
@@ -174,12 +176,18 @@ implements IWorld {
     }
 
     @Override
+    @Environment(value=EnvType.CLIENT)
+    public float getBrightness(Direction direction, boolean shaded) {
+        return 1.0f;
+    }
+
+    @Override
     public LightingProvider getLightingProvider() {
         return this.world.getLightingProvider();
     }
 
     @Override
-    public boolean breakBlock(BlockPos pos, boolean drop, @Nullable Entity breakingEntity) {
+    public boolean breakBlock(BlockPos pos, boolean drop, @Nullable Entity breakingEntity, int maxUpdateDepth) {
         BlockState blockState = this.getBlockState(pos);
         if (blockState.isAir()) {
             return false;
@@ -188,7 +196,7 @@ implements IWorld {
             BlockEntity blockEntity = blockState.getBlock().hasBlockEntity() ? this.getBlockEntity(pos) : null;
             Block.dropStacks(blockState, this.world, pos, blockEntity, breakingEntity, ItemStack.EMPTY);
         }
-        return this.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
+        return this.setBlockState(pos, Blocks.AIR.getDefaultState(), 3, maxUpdateDepth);
     }
 
     @Override
@@ -199,30 +207,31 @@ implements IWorld {
         if (blockEntity != null) {
             return blockEntity;
         }
-        CompoundTag compoundTag = chunk.getBlockEntityTagAt(pos);
-        if (compoundTag != null) {
-            if ("DUMMY".equals(compoundTag.getString("id"))) {
-                Block block = this.getBlockState(pos).getBlock();
+        NbtCompound nbtCompound = chunk.getBlockEntityNbt(pos);
+        BlockState blockState = chunk.getBlockState(pos);
+        if (nbtCompound != null) {
+            if ("DUMMY".equals(nbtCompound.getString("id"))) {
+                Block block = blockState.getBlock();
                 if (!(block instanceof BlockEntityProvider)) {
                     return null;
                 }
                 blockEntity = ((BlockEntityProvider)((Object)block)).createBlockEntity(this.world);
             } else {
-                blockEntity = BlockEntity.createFromTag(compoundTag);
+                blockEntity = BlockEntity.createFromTag(blockState, nbtCompound);
             }
             if (blockEntity != null) {
                 chunk.setBlockEntity(pos, blockEntity);
                 return blockEntity;
             }
         }
-        if (chunk.getBlockState(pos).getBlock() instanceof BlockEntityProvider) {
+        if (blockState.getBlock() instanceof BlockEntityProvider) {
             LOGGER.warn("Tried to access a block entity before it was created. {}", (Object)pos);
         }
         return null;
     }
 
     @Override
-    public boolean setBlockState(BlockPos pos, BlockState state, int flags) {
+    public boolean setBlockState(BlockPos pos, BlockState state, int flags, int maxUpdateDepth) {
         Block block;
         Chunk chunk = this.getChunk(pos);
         BlockState blockState = chunk.setBlockState(pos, state, false);
@@ -230,15 +239,15 @@ implements IWorld {
             this.world.onBlockChanged(pos, blockState, state);
         }
         if ((block = state.getBlock()).hasBlockEntity()) {
-            if (chunk.getStatus().getChunkType() == ChunkStatus.ChunkType.LEVELCHUNK) {
+            if (chunk.getStatus().getChunkType() == ChunkStatus.ChunkType.field_12807) {
                 chunk.setBlockEntity(pos, ((BlockEntityProvider)((Object)block)).createBlockEntity(this));
             } else {
-                CompoundTag compoundTag = new CompoundTag();
-                compoundTag.putInt("x", pos.getX());
-                compoundTag.putInt("y", pos.getY());
-                compoundTag.putInt("z", pos.getZ());
-                compoundTag.putString("id", "DUMMY");
-                chunk.addPendingBlockEntityTag(compoundTag);
+                NbtCompound nbtCompound = new NbtCompound();
+                nbtCompound.putInt("x", pos.getX());
+                nbtCompound.putInt("y", pos.getY());
+                nbtCompound.putInt("z", pos.getZ());
+                nbtCompound.putString("id", "DUMMY");
+                chunk.addPendingBlockEntityNbt(nbtCompound);
             }
         } else if (blockState != null && blockState.getBlock().hasBlockEntity()) {
             chunk.removeBlockEntity(pos);
@@ -249,8 +258,8 @@ implements IWorld {
         return true;
     }
 
-    private void markBlockForPostProcessing(BlockPos blockPos) {
-        this.getChunk(blockPos).markBlockForPostProcessing(blockPos);
+    private void markBlockForPostProcessing(BlockPos pos) {
+        this.getChunk(pos).markBlockForPostProcessing(pos);
     }
 
     @Override
@@ -278,12 +287,17 @@ implements IWorld {
 
     @Override
     @Deprecated
-    public ServerWorld getWorld() {
+    public ServerWorld toServerWorld() {
         return this.world;
     }
 
     @Override
-    public LevelProperties getLevelProperties() {
+    public DynamicRegistryManager getRegistryManager() {
+        return this.world.getRegistryManager();
+    }
+
+    @Override
+    public WorldProperties getLevelProperties() {
         return this.levelProperties;
     }
 
@@ -317,7 +331,7 @@ implements IWorld {
 
     @Override
     public int getSeaLevel() {
-        return this.seaLevel;
+        return this.world.getSeaLevel();
     }
 
     @Override
@@ -326,16 +340,12 @@ implements IWorld {
     }
 
     @Override
-    public void updateNeighbors(BlockPos pos, Block block) {
-    }
-
-    @Override
     public int getTopY(Heightmap.Type heightmap, int x, int z) {
         return this.getChunk(x >> 4, z >> 4).sampleHeightmap(heightmap, x & 0xF, z & 0xF) + 1;
     }
 
     @Override
-    public void playSound(@Nullable PlayerEntity player, BlockPos blockPos, SoundEvent soundEvent, SoundCategory soundCategory, float volume, float pitch) {
+    public void playSound(@Nullable PlayerEntity player, BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch) {
     }
 
     @Override
@@ -343,32 +353,26 @@ implements IWorld {
     }
 
     @Override
-    public void playLevelEvent(@Nullable PlayerEntity player, int eventId, BlockPos blockPos, int data) {
+    public void syncWorldEvent(@Nullable PlayerEntity player, int eventId, BlockPos pos, int data) {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public BlockPos getSpawnPos() {
-        return this.world.getSpawnPos();
-    }
-
-    @Override
-    public Dimension getDimension() {
+    public DimensionType getDimension() {
         return this.dimension;
     }
 
     @Override
-    public boolean testBlockState(BlockPos blockPos, Predicate<BlockState> state) {
-        return state.test(this.getBlockState(blockPos));
+    public boolean testBlockState(BlockPos pos, Predicate<BlockState> state) {
+        return state.test(this.getBlockState(pos));
     }
 
     @Override
-    public <T extends Entity> List<T> getEntities(Class<? extends T> entityClass, Box box, @Nullable Predicate<? super T> predicate) {
+    public <T extends Entity> List<T> getEntitiesByClass(Class<? extends T> entityClass, Box box, @Nullable Predicate<? super T> predicate) {
         return Collections.emptyList();
     }
 
     @Override
-    public List<Entity> getEntities(@Nullable Entity except, Box box, @Nullable Predicate<? super Entity> predicate) {
+    public List<Entity> getOtherEntities(@Nullable Entity except, Box box, @Nullable Predicate<? super Entity> predicate) {
         return Collections.emptyList();
     }
 
@@ -377,9 +381,8 @@ implements IWorld {
     }
 
     @Override
-    @Deprecated
-    public /* synthetic */ World getWorld() {
-        return this.getWorld();
+    public Stream<? extends StructureStart<?>> getStructures(ChunkSectionPos pos, StructureFeature<?> feature) {
+        return this.field_26822.getStructuresWithChildren(pos, feature);
     }
 }
 

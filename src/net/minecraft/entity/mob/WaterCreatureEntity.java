@@ -7,15 +7,15 @@ import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 
 public abstract class WaterCreatureEntity
-extends MobEntityWithAi {
-    protected WaterCreatureEntity(EntityType<? extends WaterCreatureEntity> type, World world) {
-        super((EntityType<? extends MobEntityWithAi>)type, world);
+extends PathAwareEntity {
+    protected WaterCreatureEntity(EntityType<? extends WaterCreatureEntity> entityType, World world) {
+        super((EntityType<? extends PathAwareEntity>)entityType, world);
         this.setPathfindingPenalty(PathNodeType.WATER, 0.0f);
     }
 
@@ -40,7 +40,7 @@ extends MobEntityWithAi {
     }
 
     @Override
-    protected int getCurrentExperience(PlayerEntity player) {
+    protected int getXpToDrop(PlayerEntity player) {
         return 1 + this.world.random.nextInt(3);
     }
 
@@ -64,7 +64,7 @@ extends MobEntityWithAi {
     }
 
     @Override
-    public boolean canFly() {
+    public boolean isPushedByFluids() {
         return false;
     }
 

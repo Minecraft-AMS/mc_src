@@ -18,6 +18,7 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.Durations;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.AttackWithOwnerGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
@@ -32,14 +33,17 @@ import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.TrackOwnerAttackerGoal;
+import net.minecraft.entity.ai.goal.UniversalAngerGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
 import net.minecraft.entity.ai.goal.WolfBegGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.AbstractSkeletonEntity;
+import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.GhastEntity;
 import net.minecraft.entity.mob.MobEntity;
@@ -50,28 +54,32 @@ import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.DyeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.SpawnEggItem;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.IntRange;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class WolfEntity
-extends TameableEntity {
+extends TameableEntity
+implements Angerable {
     private static final TrackedData<Boolean> BEGGING = DataTracker.registerData(WolfEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> COLLAR_COLOR = DataTracker.registerData(WolfEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> ANGER_TIME = DataTracker.registerData(WolfEntity.class, TrackedDataHandlerRegistry.INTEGER);
     public static final Predicate<LivingEntity> FOLLOW_TAMED_PREDICATE = livingEntity -> {
         EntityType<?> entityType = livingEntity.getType();
         return entityType == EntityType.SHEEP || entityType == EntityType.RABBIT || entityType == EntityType.FOX;
@@ -82,6 +90,8 @@ extends TameableEntity {
     private boolean canShakeWaterOff;
     private float shakeProgress;
     private float lastShakeProgress;
+    private static final IntRange ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
+    private UUID targetUuid;
 
     public WolfEntity(EntityType<? extends WolfEntity> entityType, World world) {
         super((EntityType<? extends TameableEntity>)entityType, world);
@@ -90,9 +100,8 @@ extends TameableEntity {
 
     @Override
     protected void initGoals() {
-        this.sitGoal = new SitGoal(this);
         this.goalSelector.add(1, new SwimGoal(this));
-        this.goalSelector.add(2, this.sitGoal);
+        this.goalSelector.add(2, new SitGoal(this));
         this.goalSelector.add(3, new AvoidLlamaGoal<LlamaEntity>(this, LlamaEntity.class, 24.0f, 1.5, 1.5));
         this.goalSelector.add(4, new PounceAtTargetGoal(this, 0.4f));
         this.goalSelector.add(5, new MeleeAttackGoal(this, 1.0, true));
@@ -105,31 +114,15 @@ extends TameableEntity {
         this.targetSelector.add(1, new TrackOwnerAttackerGoal(this));
         this.targetSelector.add(2, new AttackWithOwnerGoal(this));
         this.targetSelector.add(3, new RevengeGoal(this, new Class[0]).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(4, new FollowTargetIfTamedGoal<AnimalEntity>(this, AnimalEntity.class, false, FOLLOW_TAMED_PREDICATE));
-        this.targetSelector.add(4, new FollowTargetIfTamedGoal<TurtleEntity>(this, TurtleEntity.class, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
-        this.targetSelector.add(5, new FollowTargetGoal<AbstractSkeletonEntity>((MobEntity)this, AbstractSkeletonEntity.class, false));
+        this.targetSelector.add(4, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
+        this.targetSelector.add(5, new FollowTargetIfTamedGoal<AnimalEntity>(this, AnimalEntity.class, false, FOLLOW_TAMED_PREDICATE));
+        this.targetSelector.add(6, new FollowTargetIfTamedGoal<TurtleEntity>(this, TurtleEntity.class, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
+        this.targetSelector.add(7, new FollowTargetGoal<AbstractSkeletonEntity>((MobEntity)this, AbstractSkeletonEntity.class, false));
+        this.targetSelector.add(8, new UniversalAngerGoal<WolfEntity>(this, true));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.3f);
-        if (this.isTamed()) {
-            this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(20.0);
-        } else {
-            this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(8.0);
-        }
-        this.getAttributes().register(EntityAttributes.ATTACK_DAMAGE).setBaseValue(2.0);
-    }
-
-    @Override
-    public void setTarget(@Nullable LivingEntity target) {
-        super.setTarget(target);
-        if (target == null) {
-            this.setAngry(false);
-        } else if (!this.isTamed()) {
-            this.setAngry(true);
-        }
+    public static DefaultAttributeContainer.Builder createWolfAttributes() {
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.3f).add(EntityAttributes.GENERIC_MAX_HEALTH, 8.0).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 2.0);
     }
 
     @Override
@@ -137,6 +130,7 @@ extends TameableEntity {
         super.initDataTracker();
         this.dataTracker.startTracking(BEGGING, false);
         this.dataTracker.startTracking(COLLAR_COLOR, DyeColor.RED.getId());
+        this.dataTracker.startTracking(ANGER_TIME, 0);
     }
 
     @Override
@@ -145,24 +139,24 @@ extends TameableEntity {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putBoolean("Angry", this.isAngry());
-        tag.putByte("CollarColor", (byte)this.getCollarColor().getId());
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putByte("CollarColor", (byte)this.getCollarColor().getId());
+        this.writeAngerToNbt(nbt);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.setAngry(tag.getBoolean("Angry"));
-        if (tag.contains("CollarColor", 99)) {
-            this.setCollarColor(DyeColor.byId(tag.getInt("CollarColor")));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("CollarColor", 99)) {
+            this.setCollarColor(DyeColor.byId(nbt.getInt("CollarColor")));
         }
+        this.angerFromTag((ServerWorld)this.world, nbt);
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        if (this.isAngry()) {
+        if (this.hasAngerTime()) {
             return SoundEvents.ENTITY_WOLF_GROWL;
         }
         if (this.random.nextInt(3) == 0) {
@@ -198,8 +192,8 @@ extends TameableEntity {
             this.lastShakeProgress = 0.0f;
             this.world.sendEntityStatus(this, (byte)8);
         }
-        if (!this.world.isClient && this.getTarget() == null && this.isAngry()) {
-            this.setAngry(false);
+        if (!this.world.isClient) {
+            this.tickAngerLogic((ServerWorld)this.world, true);
         }
     }
 
@@ -213,9 +207,10 @@ extends TameableEntity {
         this.begAnimationProgress = this.isBegging() ? (this.begAnimationProgress += (1.0f - this.begAnimationProgress) * 0.4f) : (this.begAnimationProgress += (0.0f - this.begAnimationProgress) * 0.4f);
         if (this.isWet()) {
             this.furWet = true;
-            this.canShakeWaterOff = false;
-            this.shakeProgress = 0.0f;
-            this.lastShakeProgress = 0.0f;
+            if (this.canShakeWaterOff && !this.world.isClient) {
+                this.world.sendEntityStatus(this, (byte)56);
+                this.method_31167();
+            }
         } else if ((this.furWet || this.canShakeWaterOff) && this.canShakeWaterOff) {
             if (this.shakeProgress == 0.0f) {
                 this.playSound(SoundEvents.ENTITY_WOLF_SHAKE, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
@@ -241,6 +236,12 @@ extends TameableEntity {
         }
     }
 
+    private void method_31167() {
+        this.canShakeWaterOff = false;
+        this.shakeProgress = 0.0f;
+        this.lastShakeProgress = 0.0f;
+    }
+
     @Override
     public void onDeath(DamageSource source) {
         this.furWet = false;
@@ -257,7 +258,7 @@ extends TameableEntity {
 
     @Environment(value=EnvType.CLIENT)
     public float getFurWetBrightnessMultiplier(float tickDelta) {
-        return 0.75f + MathHelper.lerp(tickDelta, this.lastShakeProgress, this.shakeProgress) / 2.0f * 0.25f;
+        return Math.min(0.5f + MathHelper.lerp(tickDelta, this.lastShakeProgress, this.shakeProgress) / 2.0f * 0.5f, 1.0f);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -283,7 +284,7 @@ extends TameableEntity {
 
     @Override
     public int getLookPitchSpeed() {
-        if (this.isSitting()) {
+        if (this.isInSittingPose()) {
             return 20;
         }
         return super.getLookPitchSpeed();
@@ -295,10 +296,8 @@ extends TameableEntity {
             return false;
         }
         Entity entity = source.getAttacker();
-        if (this.sitGoal != null) {
-            this.sitGoal.setEnabledWithOwner(false);
-        }
-        if (entity != null && !(entity instanceof PlayerEntity) && !(entity instanceof ProjectileEntity)) {
+        this.setSitting(false);
+        if (entity != null && !(entity instanceof PlayerEntity) && !(entity instanceof PersistentProjectileEntity)) {
             amount = (amount + 1.0f) / 2.0f;
         }
         return super.damage(source, amount);
@@ -306,7 +305,7 @@ extends TameableEntity {
 
     @Override
     public boolean tryAttack(Entity target) {
-        boolean bl = target.damage(DamageSource.mob(this), (int)this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).getValue());
+        boolean bl = target.damage(DamageSource.mob(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
         if (bl) {
             this.dealDamage(this, target);
         }
@@ -317,70 +316,65 @@ extends TameableEntity {
     public void setTamed(boolean tamed) {
         super.setTamed(tamed);
         if (tamed) {
-            this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(20.0);
+            this.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH).setBaseValue(20.0);
             this.setHealth(20.0f);
         } else {
-            this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(8.0);
+            this.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH).setBaseValue(8.0);
         }
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(4.0);
+        this.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE).setBaseValue(4.0);
     }
 
+    /*
+     * Enabled force condition propagation
+     * Lifted jumps to return sites
+     */
     @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
-        if (itemStack.getItem() instanceof SpawnEggItem) {
-            return super.interactMob(player, hand);
-        }
         if (this.world.isClient) {
-            return this.isOwner(player) || item == Items.BONE && !this.isAngry();
+            boolean bl = this.isOwner(player) || this.isTamed() || item == Items.BONE && !this.isTamed() && !this.hasAngerTime();
+            return bl ? ActionResult.CONSUME : ActionResult.PASS;
         }
         if (this.isTamed()) {
-            if (item.isFood() && item.getFoodComponent().isMeat() && this.getHealth() < this.getMaximumHealth()) {
+            if (this.isBreedingItem(itemStack) && this.getHealth() < this.getMaxHealth()) {
                 if (!player.abilities.creativeMode) {
                     itemStack.decrement(1);
                 }
                 this.heal(item.getFoodComponent().getHunger());
-                return true;
+                return ActionResult.SUCCESS;
             }
             if (item instanceof DyeItem) {
                 DyeColor dyeColor = ((DyeItem)item).getColor();
-                if (dyeColor != this.getCollarColor()) {
-                    this.setCollarColor(dyeColor);
-                    if (!player.abilities.creativeMode) {
-                        itemStack.decrement(1);
-                    }
-                    return true;
-                }
-            } else {
-                boolean bl = super.interactMob(player, hand);
-                if (!bl || this.isBaby()) {
-                    this.sitGoal.setEnabledWithOwner(!this.isSitting());
-                }
-                return bl;
-            }
-            if (this.isOwner(player) && !this.isBreedingItem(itemStack)) {
-                this.sitGoal.setEnabledWithOwner(!this.isSitting());
-                this.jumping = false;
-                this.navigation.stop();
-                this.setTarget(null);
-            }
-        } else if (item == Items.BONE && !this.isAngry()) {
-            if (!player.abilities.creativeMode) {
+                if (dyeColor == this.getCollarColor()) return super.interactMob(player, hand);
+                this.setCollarColor(dyeColor);
+                if (player.abilities.creativeMode) return ActionResult.SUCCESS;
                 itemStack.decrement(1);
+                return ActionResult.SUCCESS;
             }
-            if (this.random.nextInt(3) == 0) {
-                this.setOwner(player);
-                this.navigation.stop();
-                this.setTarget(null);
-                this.sitGoal.setEnabledWithOwner(true);
-                this.world.sendEntityStatus(this, (byte)7);
-            } else {
-                this.world.sendEntityStatus(this, (byte)6);
-            }
-            return true;
+            ActionResult actionResult = super.interactMob(player, hand);
+            if (actionResult.isAccepted() && !this.isBaby() || !this.isOwner(player)) return actionResult;
+            this.setSitting(!this.isSitting());
+            this.jumping = false;
+            this.navigation.stop();
+            this.setTarget(null);
+            return ActionResult.SUCCESS;
         }
-        return super.interactMob(player, hand);
+        if (item != Items.BONE || this.hasAngerTime()) return super.interactMob(player, hand);
+        if (!player.abilities.creativeMode) {
+            itemStack.decrement(1);
+        }
+        if (this.random.nextInt(3) == 0) {
+            this.setOwner(player);
+            this.navigation.stop();
+            this.setTarget(null);
+            this.setSitting(true);
+            this.world.sendEntityStatus(this, (byte)7);
+            return ActionResult.SUCCESS;
+        } else {
+            this.world.sendEntityStatus(this, (byte)6);
+        }
+        return ActionResult.SUCCESS;
     }
 
     @Override
@@ -390,18 +384,20 @@ extends TameableEntity {
             this.canShakeWaterOff = true;
             this.shakeProgress = 0.0f;
             this.lastShakeProgress = 0.0f;
+        } else if (status == 56) {
+            this.method_31167();
         } else {
             super.handleStatus(status);
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    public float method_6714() {
-        if (this.isAngry()) {
+    public float getTailAngle() {
+        if (this.hasAngerTime()) {
             return 1.5393804f;
         }
         if (this.isTamed()) {
-            return (0.55f - (this.getMaximumHealth() - this.getHealth()) * 0.02f) * (float)Math.PI;
+            return (0.55f - (this.getMaxHealth() - this.getHealth()) * 0.02f) * (float)Math.PI;
         }
         return 0.62831855f;
     }
@@ -417,17 +413,30 @@ extends TameableEntity {
         return 8;
     }
 
-    public boolean isAngry() {
-        return ((Byte)this.dataTracker.get(TAMEABLE_FLAGS) & 2) != 0;
+    @Override
+    public int getAngerTime() {
+        return this.dataTracker.get(ANGER_TIME);
     }
 
-    public void setAngry(boolean angry) {
-        byte b = (Byte)this.dataTracker.get(TAMEABLE_FLAGS);
-        if (angry) {
-            this.dataTracker.set(TAMEABLE_FLAGS, (byte)(b | 2));
-        } else {
-            this.dataTracker.set(TAMEABLE_FLAGS, (byte)(b & 0xFFFFFFFD));
-        }
+    @Override
+    public void setAngerTime(int ticks) {
+        this.dataTracker.set(ANGER_TIME, ticks);
+    }
+
+    @Override
+    public void chooseRandomAngerTime() {
+        this.setAngerTime(ANGER_TIME_RANGE.choose(this.random));
+    }
+
+    @Override
+    @Nullable
+    public UUID getAngryAt() {
+        return this.targetUuid;
+    }
+
+    @Override
+    public void setAngryAt(@Nullable UUID uuid) {
+        this.targetUuid = uuid;
     }
 
     public DyeColor getCollarColor() {
@@ -439,8 +448,8 @@ extends TameableEntity {
     }
 
     @Override
-    public WolfEntity createChild(PassiveEntity passiveEntity) {
-        WolfEntity wolfEntity = EntityType.WOLF.create(this.world);
+    public WolfEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
+        WolfEntity wolfEntity = EntityType.WOLF.create(serverWorld);
         UUID uUID = this.getOwnerUuid();
         if (uUID != null) {
             wolfEntity.setOwnerUuid(uUID);
@@ -468,7 +477,7 @@ extends TameableEntity {
         if (!wolfEntity.isTamed()) {
             return false;
         }
-        if (wolfEntity.isSitting()) {
+        if (wolfEntity.isInSittingPose()) {
             return false;
         }
         return this.isInLove() && wolfEntity.isInLove();
@@ -498,12 +507,18 @@ extends TameableEntity {
 
     @Override
     public boolean canBeLeashedBy(PlayerEntity player) {
-        return !this.isAngry() && super.canBeLeashedBy(player);
+        return !this.hasAngerTime() && super.canBeLeashedBy(player);
     }
 
     @Override
-    public /* synthetic */ PassiveEntity createChild(PassiveEntity mate) {
-        return this.createChild(mate);
+    @Environment(value=EnvType.CLIENT)
+    public Vec3d method_29919() {
+        return new Vec3d(0.0, 0.6f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
+    }
+
+    @Override
+    public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        return this.createChild(world, entity);
     }
 
     class AvoidLlamaGoal<T extends LivingEntity>

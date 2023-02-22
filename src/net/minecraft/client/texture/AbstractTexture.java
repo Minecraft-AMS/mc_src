@@ -19,7 +19,8 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
-public abstract class AbstractTexture {
+public abstract class AbstractTexture
+implements AutoCloseable {
     protected int glId = -1;
     protected boolean bilinear;
     protected boolean mipmap;
@@ -44,7 +45,7 @@ public abstract class AbstractTexture {
     public int getGlId() {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         if (this.glId == -1) {
-            this.glId = TextureUtil.generateTextureId();
+            this.glId = TextureUtil.generateId();
         }
         return this.glId;
     }
@@ -53,12 +54,12 @@ public abstract class AbstractTexture {
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
                 if (this.glId != -1) {
-                    TextureUtil.releaseTextureId(this.glId);
+                    TextureUtil.deleteId(this.glId);
                     this.glId = -1;
                 }
             });
         } else if (this.glId != -1) {
-            TextureUtil.releaseTextureId(this.glId);
+            TextureUtil.deleteId(this.glId);
             this.glId = -1;
         }
     }
@@ -75,6 +76,10 @@ public abstract class AbstractTexture {
 
     public void registerTexture(TextureManager textureManager, ResourceManager resourceManager, Identifier identifier, Executor executor) {
         textureManager.registerTexture(identifier, this);
+    }
+
+    @Override
+    public void close() {
     }
 }
 

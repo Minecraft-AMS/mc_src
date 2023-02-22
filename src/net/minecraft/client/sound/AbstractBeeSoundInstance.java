@@ -37,12 +37,12 @@ extends MovingSoundInstance {
     @Override
     public void tick() {
         boolean bl = this.shouldReplace();
-        if (bl && !this.done) {
+        if (bl && !this.isDone()) {
             MinecraftClient.getInstance().getSoundManager().playNextTick(this.getReplacement());
             this.replaced = true;
         }
         if (this.bee.removed || this.replaced) {
-            this.done = true;
+            this.setDone();
             return;
         }
         this.x = (float)this.bee.getX();
@@ -75,6 +75,11 @@ extends MovingSoundInstance {
     @Override
     public boolean shouldAlwaysPlay() {
         return true;
+    }
+
+    @Override
+    public boolean canPlay() {
+        return !this.bee.isSilent();
     }
 
     protected abstract MovingSoundInstance getReplacement();

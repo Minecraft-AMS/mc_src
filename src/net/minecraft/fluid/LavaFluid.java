@@ -11,10 +11,11 @@ package net.minecraft.fluid;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
-import net.minecraft.fluid.BaseFluid;
+import net.minecraft.fluid.FlowableFluid;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
@@ -30,13 +31,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class LavaFluid
-extends BaseFluid {
+extends FlowableFluid {
     @Override
     public Fluid getFlowing() {
         return Fluids.FLOWING_LAVA;
@@ -56,11 +57,11 @@ extends BaseFluid {
     @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(World world, BlockPos pos, FluidState state, Random random) {
         BlockPos blockPos = pos.up();
-        if (world.getBlockState(blockPos).isAir() && !world.getBlockState(blockPos).isFullOpaque(world, blockPos)) {
+        if (world.getBlockState(blockPos).isAir() && !world.getBlockState(blockPos).isOpaqueFullCube(world, blockPos)) {
             if (random.nextInt(100) == 0) {
-                double d = (float)pos.getX() + random.nextFloat();
-                double e = pos.getY() + 1;
-                double f = (float)pos.getZ() + random.nextFloat();
+                double d = (double)pos.getX() + random.nextDouble();
+                double e = (double)pos.getY() + 1.0;
+                double f = (double)pos.getZ() + random.nextDouble();
                 world.addParticle(ParticleTypes.LAVA, d, e, f, 0.0, 0.0, 0.0);
                 world.playSound(d, e, f, SoundEvents.BLOCK_LAVA_POP, SoundCategory.BLOCKS, 0.2f + random.nextFloat() * 0.2f, 0.9f + random.nextFloat() * 0.15f, false);
             }
@@ -85,7 +86,7 @@ extends BaseFluid {
                 BlockState blockState = world.getBlockState(blockPos);
                 if (blockState.isAir()) {
                     if (!this.canLightFire(world, blockPos)) continue;
-                    world.setBlockState(blockPos, Blocks.FIRE.getDefaultState());
+                    world.setBlockState(blockPos, AbstractFireBlock.getState(world, blockPos));
                     return;
                 }
                 if (!blockState.getMaterial().blocksMovement()) continue;
@@ -98,7 +99,7 @@ extends BaseFluid {
                     return;
                 }
                 if (!world.isAir(blockPos2.up()) || !this.hasBurnableBlock(world, blockPos2)) continue;
-                world.setBlockState(blockPos2.up(), Blocks.FIRE.getDefaultState());
+                world.setBlockState(blockPos2.up(), AbstractFireBlock.getState(world, blockPos2));
             }
         }
     }
@@ -126,18 +127,18 @@ extends BaseFluid {
     }
 
     @Override
-    protected void beforeBreakingBlock(IWorld world, BlockPos pos, BlockState state) {
+    protected void beforeBreakingBlock(WorldAccess world, BlockPos pos, BlockState state) {
         this.playExtinguishEvent(world, pos);
     }
 
     @Override
-    public int method_15733(WorldView worldView) {
-        return worldView.getDimension().doesWaterVaporize() ? 4 : 2;
+    public int getFlowSpeed(WorldView world) {
+        return world.getDimension().isUltrawarm() ? 4 : 2;
     }
 
     @Override
     public BlockState toBlockState(FluidState state) {
-        return (BlockState)Blocks.LAVA.getDefaultState().with(FluidBlock.LEVEL, LavaFluid.method_15741(state));
+        return (BlockState)Blocks.LAVA.getDefaultState().with(FluidBlock.LEVEL, LavaFluid.getBlockStateLevel(state));
     }
 
     @Override
@@ -147,17 +148,17 @@ extends BaseFluid {
 
     @Override
     public int getLevelDecreasePerBlock(WorldView world) {
-        return world.getDimension().doesWaterVaporize() ? 1 : 2;
+        return world.getDimension().isUltrawarm() ? 1 : 2;
     }
 
     @Override
     public boolean canBeReplacedWith(FluidState state, BlockView world, BlockPos pos, Fluid fluid, Direction direction) {
-        return state.getHeight(world, pos) >= 0.44444445f && fluid.matches(FluidTags.WATER);
+        return state.getHeight(world, pos) >= 0.44444445f && fluid.isIn(FluidTags.WATER);
     }
 
     @Override
     public int getTickRate(WorldView world) {
-        return world.getDimension().isNether() ? 10 : 30;
+        return world.getDimension().isUltrawarm() ? 10 : 30;
     }
 
     @Override
@@ -169,8 +170,8 @@ extends BaseFluid {
         return i;
     }
 
-    private void playExtinguishEvent(IWorld world, BlockPos pos) {
-        world.playLevelEvent(1501, pos, 0);
+    private void playExtinguishEvent(WorldAccess world, BlockPos pos) {
+        world.syncWorldEvent(1501, pos, 0);
     }
 
     @Override
@@ -179,10 +180,10 @@ extends BaseFluid {
     }
 
     @Override
-    protected void flow(IWorld world, BlockPos pos, BlockState state, Direction direction, FluidState fluidState) {
+    protected void flow(WorldAccess world, BlockPos pos, BlockState state, Direction direction, FluidState fluidState) {
         if (direction == Direction.DOWN) {
             FluidState fluidState2 = world.getFluidState(pos);
-            if (this.matches(FluidTags.LAVA) && fluidState2.matches(FluidTags.WATER)) {
+            if (this.isIn(FluidTags.LAVA) && fluidState2.isIn(FluidTags.WATER)) {
                 if (state.getBlock() instanceof FluidBlock) {
                     world.setBlockState(pos, Blocks.STONE.getDefaultState(), 3);
                 }

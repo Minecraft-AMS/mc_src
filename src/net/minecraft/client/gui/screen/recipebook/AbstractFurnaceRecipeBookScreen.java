@@ -17,13 +17,13 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.container.Slot;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.Recipe;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.screen.slot.Slot;
+import net.minecraft.util.collection.DefaultedList;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -36,50 +36,14 @@ extends RecipeBookWidget {
     private float frameTime;
 
     @Override
-    protected boolean toggleFilteringCraftable() {
-        boolean bl = !this.isFilteringCraftable();
-        this.setFilteringCraftable(bl);
-        return bl;
-    }
-
-    protected abstract boolean isFilteringCraftable();
-
-    protected abstract void setFilteringCraftable(boolean var1);
-
-    @Override
-    public boolean isOpen() {
-        return this.isGuiOpen();
-    }
-
-    protected abstract boolean isGuiOpen();
-
-    @Override
-    protected void setOpen(boolean opened) {
-        this.setGuiOpen(opened);
-        if (!opened) {
-            this.recipesArea.hideAlternates();
-        }
-        this.sendBookDataPacket();
-    }
-
-    protected abstract void setGuiOpen(boolean var1);
-
-    @Override
     protected void setBookButtonTexture() {
         this.toggleCraftableButton.setTextureUV(152, 182, 28, 18, TEXTURE);
     }
 
     @Override
-    protected String getCraftableButtonText() {
-        return I18n.translate(this.toggleCraftableButton.isToggled() ? this.getToggleCraftableButtonText() : "gui.recipebook.toggleRecipes.all", new Object[0]);
-    }
-
-    protected abstract String getToggleCraftableButtonText();
-
-    @Override
     public void slotClicked(@Nullable Slot slot) {
         super.slotClicked(slot);
-        if (slot != null && slot.id < this.craftingContainer.getCraftingSlotCount()) {
+        if (slot != null && slot.id < this.craftingScreenHandler.getCraftingSlotCount()) {
             this.outputSlot = null;
         }
     }
@@ -88,8 +52,8 @@ extends RecipeBookWidget {
     public void showGhostRecipe(Recipe<?> recipe, List<Slot> slots) {
         ItemStack itemStack = recipe.getOutput();
         this.ghostSlots.setRecipe(recipe);
-        this.ghostSlots.addSlot(Ingredient.ofStacks(itemStack), slots.get((int)2).xPosition, slots.get((int)2).yPosition);
-        DefaultedList<Ingredient> defaultedList = recipe.getPreviewInputs();
+        this.ghostSlots.addSlot(Ingredient.ofStacks(itemStack), slots.get((int)2).x, slots.get((int)2).y);
+        DefaultedList<Ingredient> defaultedList = recipe.getIngredients();
         this.outputSlot = slots.get(1);
         if (this.fuels == null) {
             this.fuels = this.getAllowedFuels();
@@ -104,27 +68,27 @@ extends RecipeBookWidget {
             Ingredient ingredient = (Ingredient)iterator.next();
             if (ingredient.isEmpty()) continue;
             Slot slot = slots.get(i);
-            this.ghostSlots.addSlot(ingredient, slot.xPosition, slot.yPosition);
+            this.ghostSlots.addSlot(ingredient, slot.x, slot.y);
         }
     }
 
     protected abstract Set<Item> getAllowedFuels();
 
     @Override
-    public void drawGhostSlots(int left, int top, boolean isBig, float lastFrameDuration) {
-        super.drawGhostSlots(left, top, isBig, lastFrameDuration);
+    public void drawGhostSlots(MatrixStack matrices, int i, int j, boolean bl, float f) {
+        super.drawGhostSlots(matrices, i, j, bl, f);
         if (this.outputSlot == null) {
             return;
         }
         if (!Screen.hasControlDown()) {
-            this.frameTime += lastFrameDuration;
+            this.frameTime += f;
         }
-        int i = this.outputSlot.xPosition + left;
-        int j = this.outputSlot.yPosition + top;
-        DrawableHelper.fill(i, j, i + 16, j + 16, 0x30FF0000);
-        this.client.getItemRenderer().renderGuiItem(this.client.player, this.getItem().getStackForRender(), i, j);
+        int k = this.outputSlot.x + i;
+        int l = this.outputSlot.y + j;
+        DrawableHelper.fill(matrices, k, l, k + 16, l + 16, 0x30FF0000);
+        this.client.getItemRenderer().renderInGuiWithOverrides(this.client.player, this.getItem().getDefaultStack(), k, l);
         RenderSystem.depthFunc(516);
-        DrawableHelper.fill(i, j, i + 16, j + 16, 0x30FFFFFF);
+        DrawableHelper.fill(matrices, k, l, k + 16, l + 16, 0x30FFFFFF);
         RenderSystem.depthFunc(515);
     }
 

@@ -47,9 +47,9 @@ public class CrashReport {
     private boolean hasStackTrace = true;
     private StackTraceElement[] stackTrace = new StackTraceElement[0];
 
-    public CrashReport(String message, Throwable throwable) {
+    public CrashReport(String message, Throwable cause) {
         this.message = message;
-        this.cause = throwable;
+        this.cause = cause;
         this.fillSystemDetails();
     }
 
@@ -84,25 +84,25 @@ public class CrashReport {
         return this.cause;
     }
 
-    public void addStackTrace(StringBuilder stringBuilder) {
+    public void addStackTrace(StringBuilder crashReportBuilder) {
         if (!(this.stackTrace != null && this.stackTrace.length > 0 || this.otherSections.isEmpty())) {
             this.stackTrace = (StackTraceElement[])ArrayUtils.subarray((Object[])this.otherSections.get(0).getStackTrace(), (int)0, (int)1);
         }
         if (this.stackTrace != null && this.stackTrace.length > 0) {
-            stringBuilder.append("-- Head --\n");
-            stringBuilder.append("Thread: ").append(Thread.currentThread().getName()).append("\n");
-            stringBuilder.append("Stacktrace:\n");
+            crashReportBuilder.append("-- Head --\n");
+            crashReportBuilder.append("Thread: ").append(Thread.currentThread().getName()).append("\n");
+            crashReportBuilder.append("Stacktrace:\n");
             for (StackTraceElement stackTraceElement : this.stackTrace) {
-                stringBuilder.append("\t").append("at ").append(stackTraceElement);
-                stringBuilder.append("\n");
+                crashReportBuilder.append("\t").append("at ").append(stackTraceElement);
+                crashReportBuilder.append("\n");
             }
-            stringBuilder.append("\n");
+            crashReportBuilder.append("\n");
         }
         for (CrashReportSection crashReportSection : this.otherSections) {
-            crashReportSection.addStackTrace(stringBuilder);
-            stringBuilder.append("\n\n");
+            crashReportSection.addStackTrace(crashReportBuilder);
+            crashReportBuilder.append("\n\n");
         }
-        this.systemDetailsSection.addStackTrace(stringBuilder);
+        this.systemDetailsSection.addStackTrace(crashReportBuilder);
     }
 
     /*
@@ -259,7 +259,7 @@ public class CrashReport {
         return crashReport;
     }
 
-    public static void method_24305() {
+    public static void initCrashReport() {
         new CrashReport("Don't panic!", new Throwable()).asString();
     }
 }

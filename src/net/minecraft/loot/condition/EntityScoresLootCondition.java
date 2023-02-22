@@ -25,12 +25,14 @@ import java.util.Set;
 import net.minecraft.entity.Entity;
 import net.minecraft.loot.UniformLootTableRange;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 
 public class EntityScoresLootCondition
 implements LootCondition {
@@ -40,6 +42,11 @@ implements LootCondition {
     private EntityScoresLootCondition(Map<String, UniformLootTableRange> scores, LootContext.EntityTarget target) {
         this.scores = ImmutableMap.copyOf(scores);
         this.target = target;
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.ENTITY_SCORES;
     }
 
     @Override
@@ -78,12 +85,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<EntityScoresLootCondition> {
-        protected Factory() {
-            super(new Identifier("entity_scores"), EntityScoresLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<EntityScoresLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, EntityScoresLootCondition entityScoresLootCondition, JsonSerializationContext jsonSerializationContext) {
             JsonObject jsonObject2 = new JsonObject();
@@ -105,7 +108,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

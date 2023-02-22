@@ -2,23 +2,24 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  */
 package net.minecraft.advancement.criterion;
 
-import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.CriterionConditions;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateSerializer;
+import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.predicate.entity.LocationPredicate;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonHelper;
 
 public class LocationArrivalCriterion
 extends AbstractCriterion<Conditions> {
@@ -34,39 +35,40 @@ extends AbstractCriterion<Conditions> {
     }
 
     @Override
-    public Conditions conditionsFromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
-        LocationPredicate locationPredicate = LocationPredicate.fromJson((JsonElement)jsonObject);
-        return new Conditions(this.id, locationPredicate);
+    public Conditions conditionsFromJson(JsonObject jsonObject, EntityPredicate.Extended extended, AdvancementEntityPredicateDeserializer advancementEntityPredicateDeserializer) {
+        JsonObject jsonObject2 = JsonHelper.getObject(jsonObject, "location", jsonObject);
+        LocationPredicate locationPredicate = LocationPredicate.fromJson((JsonElement)jsonObject2);
+        return new Conditions(this.id, extended, locationPredicate);
     }
 
     public void trigger(ServerPlayerEntity player) {
-        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(player.getServerWorld(), player.getX(), player.getY(), player.getZ()));
+        this.test(player, conditions -> conditions.matches(player.getServerWorld(), player.getX(), player.getY(), player.getZ()));
     }
 
     @Override
-    public /* synthetic */ CriterionConditions conditionsFromJson(JsonObject obj, JsonDeserializationContext context) {
-        return this.conditionsFromJson(obj, context);
+    public /* synthetic */ AbstractCriterionConditions conditionsFromJson(JsonObject obj, EntityPredicate.Extended playerPredicate, AdvancementEntityPredicateDeserializer predicateDeserializer) {
+        return this.conditionsFromJson(obj, playerPredicate, predicateDeserializer);
     }
 
     public static class Conditions
     extends AbstractCriterionConditions {
         private final LocationPredicate location;
 
-        public Conditions(Identifier id, LocationPredicate location) {
-            super(id);
+        public Conditions(Identifier id, EntityPredicate.Extended player, LocationPredicate location) {
+            super(id, player);
             this.location = location;
         }
 
         public static Conditions create(LocationPredicate location) {
-            return new Conditions(Criterions.LOCATION.id, location);
+            return new Conditions(Criteria.LOCATION.id, EntityPredicate.Extended.EMPTY, location);
         }
 
         public static Conditions createSleptInBed() {
-            return new Conditions(Criterions.SLEPT_IN_BED.id, LocationPredicate.ANY);
+            return new Conditions(Criteria.SLEPT_IN_BED.id, EntityPredicate.Extended.EMPTY, LocationPredicate.ANY);
         }
 
         public static Conditions createHeroOfTheVillage() {
-            return new Conditions(Criterions.HERO_OF_THE_VILLAGE.id, LocationPredicate.ANY);
+            return new Conditions(Criteria.HERO_OF_THE_VILLAGE.id, EntityPredicate.Extended.EMPTY, LocationPredicate.ANY);
         }
 
         public boolean matches(ServerWorld world, double x, double y, double z) {
@@ -74,8 +76,10 @@ extends AbstractCriterion<Conditions> {
         }
 
         @Override
-        public JsonElement toJson() {
-            return this.location.toJson();
+        public JsonObject toJson(AdvancementEntityPredicateSerializer predicateSerializer) {
+            JsonObject jsonObject = super.toJson(predicateSerializer);
+            jsonObject.add("location", this.location.toJson());
+            return jsonObject;
         }
     }
 }

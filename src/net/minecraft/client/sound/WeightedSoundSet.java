@@ -29,11 +29,12 @@ implements SoundContainer<Sound> {
     private final List<SoundContainer<Sound>> sounds = Lists.newArrayList();
     private final Random random = new Random();
     private final Identifier id;
+    @Nullable
     private final Text subtitle;
 
     public WeightedSoundSet(Identifier id, @Nullable String subtitle) {
         this.id = id;
-        this.subtitle = subtitle == null ? null : new TranslatableText(subtitle, new Object[0]);
+        this.subtitle = subtitle == null ? null : new TranslatableText(subtitle);
     }
 
     @Override

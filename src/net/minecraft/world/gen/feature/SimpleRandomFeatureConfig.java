@@ -2,36 +2,29 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.serialization.Codec;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class SimpleRandomFeatureConfig
 implements FeatureConfig {
-    public final List<ConfiguredFeature<?, ?>> features;
+    public static final Codec<SimpleRandomFeatureConfig> CODEC = ConfiguredFeature.field_26756.fieldOf("features").xmap(SimpleRandomFeatureConfig::new, simpleRandomFeatureConfig -> simpleRandomFeatureConfig.features).codec();
+    public final List<Supplier<ConfiguredFeature<?, ?>>> features;
 
-    public SimpleRandomFeatureConfig(List<ConfiguredFeature<?, ?>> list) {
-        this.features = list;
+    public SimpleRandomFeatureConfig(List<Supplier<ConfiguredFeature<?, ?>>> features) {
+        this.features = features;
     }
 
     @Override
-    public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        return new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString("features"), (Object)ops.createList(this.features.stream().map(configuredFeature -> configuredFeature.serialize(ops).getValue())))));
-    }
-
-    public static <T> SimpleRandomFeatureConfig deserialize(Dynamic<T> dynamic) {
-        List list = dynamic.get("features").asList(ConfiguredFeature::deserialize);
-        return new SimpleRandomFeatureConfig(list);
+    public Stream<ConfiguredFeature<?, ?>> method_30649() {
+        return this.features.stream().flatMap(supplier -> ((ConfiguredFeature)supplier.get()).method_30648());
     }
 }
 

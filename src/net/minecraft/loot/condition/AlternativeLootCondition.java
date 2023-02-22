@@ -17,10 +17,11 @@ import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
-import net.minecraft.loot.condition.LootConditions;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 
 public class AlternativeLootCondition
 implements LootCondition {
@@ -29,7 +30,12 @@ implements LootCondition {
 
     private AlternativeLootCondition(LootCondition[] terms) {
         this.terms = terms;
-        this.predicate = LootConditions.joinOr(terms);
+        this.predicate = LootConditionTypes.joinOr(terms);
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.ALTERNATIVE;
     }
 
     @Override
@@ -38,10 +44,10 @@ implements LootCondition {
     }
 
     @Override
-    public void check(LootTableReporter reporter) {
-        LootCondition.super.check(reporter);
+    public void validate(LootTableReporter reporter) {
+        LootCondition.super.validate(reporter);
         for (int i = 0; i < this.terms.length; ++i) {
-            this.terms[i].check(reporter.makeChild(".term[" + i + "]"));
+            this.terms[i].validate(reporter.makeChild(".term[" + i + "]"));
         }
     }
 
@@ -54,12 +60,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<AlternativeLootCondition> {
-        public Factory() {
-            super(new Identifier("alternative"), AlternativeLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<AlternativeLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, AlternativeLootCondition alternativeLootCondition, JsonSerializationContext jsonSerializationContext) {
             jsonObject.add("terms", jsonSerializationContext.serialize((Object)alternativeLootCondition.terms));
@@ -72,7 +74,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }
@@ -88,7 +90,7 @@ implements LootCondition {
         }
 
         @Override
-        public Builder withCondition(LootCondition.Builder condition) {
+        public Builder or(LootCondition.Builder condition) {
             this.terms.add(condition.build());
             return this;
         }

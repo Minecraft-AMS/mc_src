@@ -16,9 +16,10 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.GlobalPos;
+import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
 
 public class SecondaryPointsOfInterestSensor
 extends Sensor<VillagerEntity> {
@@ -28,8 +29,8 @@ extends Sensor<VillagerEntity> {
 
     @Override
     protected void sense(ServerWorld serverWorld, VillagerEntity villagerEntity) {
-        DimensionType dimensionType = serverWorld.getDimension().getType();
-        BlockPos blockPos = new BlockPos(villagerEntity);
+        RegistryKey<World> registryKey = serverWorld.getRegistryKey();
+        BlockPos blockPos = villagerEntity.getBlockPos();
         ArrayList list = Lists.newArrayList();
         int i = 4;
         for (int j = -4; j <= 4; ++j) {
@@ -37,13 +38,13 @@ extends Sensor<VillagerEntity> {
                 for (int l = -4; l <= 4; ++l) {
                     BlockPos blockPos2 = blockPos.add(j, k, l);
                     if (!villagerEntity.getVillagerData().getProfession().getSecondaryJobSites().contains((Object)serverWorld.getBlockState(blockPos2).getBlock())) continue;
-                    list.add(GlobalPos.create(dimensionType, blockPos2));
+                    list.add(GlobalPos.create(registryKey, blockPos2));
                 }
             }
         }
         Brain<VillagerEntity> brain = villagerEntity.getBrain();
         if (!list.isEmpty()) {
-            brain.putMemory(MemoryModuleType.SECONDARY_JOB_SITE, list);
+            brain.remember(MemoryModuleType.SECONDARY_JOB_SITE, list);
         } else {
             brain.forget(MemoryModuleType.SECONDARY_JOB_SITE);
         }

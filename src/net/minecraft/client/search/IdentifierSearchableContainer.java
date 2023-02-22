@@ -50,8 +50,8 @@ implements SearchableContainer<T> {
         for (T object : this.entries) {
             this.index(object);
         }
-        this.byNamespace.sort();
-        this.byPath.sort();
+        this.byNamespace.build();
+        this.byPath.build();
     }
 
     @Override

@@ -15,12 +15,18 @@ import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.function.ConditionalLootFunction;
-import net.minecraft.util.Identifier;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
 
 public class ExplosionDecayLootFunction
 extends ConditionalLootFunction {
     private ExplosionDecayLootFunction(LootCondition[] conditions) {
         super(conditions);
+    }
+
+    @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.EXPLOSION_DECAY;
     }
 
     @Override
@@ -44,12 +50,8 @@ extends ConditionalLootFunction {
         return ExplosionDecayLootFunction.builder(ExplosionDecayLootFunction::new);
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<ExplosionDecayLootFunction> {
-        protected Factory() {
-            super(new Identifier("explosion_decay"), ExplosionDecayLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<ExplosionDecayLootFunction> {
         @Override
         public ExplosionDecayLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
             return new ExplosionDecayLootFunction(lootConditions);

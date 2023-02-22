@@ -12,21 +12,28 @@ import java.util.Random;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.ExperienceOrbEntity;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.stat.Stats;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,8 +42,10 @@ extends PassiveEntity {
     private int loveTicks;
     private UUID lovingPlayer;
 
-    protected AnimalEntity(EntityType<? extends AnimalEntity> type, World world) {
-        super((EntityType<? extends PassiveEntity>)type, world);
+    protected AnimalEntity(EntityType<? extends AnimalEntity> entityType, World world) {
+        super((EntityType<? extends PassiveEntity>)entityType, world);
+        this.setPathfindingPenalty(PathNodeType.DANGER_FIRE, 16.0f);
+        this.setPathfindingPenalty(PathNodeType.DAMAGE_FIRE, -1.0f);
     }
 
     @Override
@@ -74,19 +83,19 @@ extends PassiveEntity {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
-        if (worldView.getBlockState(pos.down()).getBlock() == Blocks.GRASS_BLOCK) {
+    public float getPathfindingFavor(BlockPos pos, WorldView world) {
+        if (world.getBlockState(pos.down()).isOf(Blocks.GRASS_BLOCK)) {
             return 10.0f;
         }
-        return worldView.getBrightness(pos) - 0.5f;
+        return world.getBrightness(pos) - 0.5f;
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("InLove", this.loveTicks);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("InLove", this.loveTicks);
         if (this.lovingPlayer != null) {
-            tag.putUuid("LoveCause", this.lovingPlayer);
+            nbt.putUuid("LoveCause", this.lovingPlayer);
         }
     }
 
@@ -96,14 +105,14 @@ extends PassiveEntity {
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.loveTicks = tag.getInt("InLove");
-        this.lovingPlayer = tag.containsUuid("LoveCause") ? tag.getUuid("LoveCause") : null;
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.loveTicks = nbt.getInt("InLove");
+        this.lovingPlayer = nbt.containsUuid("LoveCause") ? nbt.getUuid("LoveCause") : null;
     }
 
-    public static boolean isValidNaturalSpawn(EntityType<? extends AnimalEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        return world.getBlockState(pos.down()).getBlock() == Blocks.GRASS_BLOCK && world.getBaseLightLevel(pos, 0) > 8;
+    public static boolean isValidNaturalSpawn(EntityType<? extends AnimalEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return world.getBlockState(pos.down()).isOf(Blocks.GRASS_BLOCK) && world.getBaseLightLevel(pos, 0) > 8;
     }
 
     @Override
@@ -117,7 +126,7 @@ extends PassiveEntity {
     }
 
     @Override
-    protected int getCurrentExperience(PlayerEntity player) {
+    protected int getXpToDrop(PlayerEntity player) {
         return 1 + this.world.random.nextInt(3);
     }
 
@@ -126,19 +135,22 @@ extends PassiveEntity {
     }
 
     @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (this.isBreedingItem(itemStack)) {
-            if (!this.world.isClient && this.getBreedingAge() == 0 && this.canEat()) {
+            int i = this.getBreedingAge();
+            if (!this.world.isClient && i == 0 && this.canEat()) {
                 this.eat(player, itemStack);
                 this.lovePlayer(player);
-                player.swingHand(hand, true);
-                return true;
+                return ActionResult.SUCCESS;
             }
             if (this.isBaby()) {
                 this.eat(player, itemStack);
-                this.growUp((int)((float)(-this.getBreedingAge() / 20) * 0.1f), true);
-                return true;
+                this.growUp((int)((float)(-i / 20) * 0.1f), true);
+                return ActionResult.success(this.world.isClient);
+            }
+            if (this.world.isClient) {
+                return ActionResult.CONSUME;
             }
         }
         return super.interactMob(player, hand);
@@ -164,6 +176,10 @@ extends PassiveEntity {
 
     public void setLoveTicks(int loveTicks) {
         this.loveTicks = loveTicks;
+    }
+
+    public int getLoveTicks() {
+        return this.loveTicks;
     }
 
     @Nullable
@@ -194,6 +210,32 @@ extends PassiveEntity {
             return false;
         }
         return this.isInLove() && other.isInLove();
+    }
+
+    public void breed(ServerWorld world, AnimalEntity other) {
+        PassiveEntity passiveEntity = this.createChild(world, other);
+        if (passiveEntity == null) {
+            return;
+        }
+        ServerPlayerEntity serverPlayerEntity = this.getLovingPlayer();
+        if (serverPlayerEntity == null && other.getLovingPlayer() != null) {
+            serverPlayerEntity = other.getLovingPlayer();
+        }
+        if (serverPlayerEntity != null) {
+            serverPlayerEntity.incrementStat(Stats.ANIMALS_BRED);
+            Criteria.BRED_ANIMALS.trigger(serverPlayerEntity, this, other, passiveEntity);
+        }
+        this.setBreedingAge(6000);
+        other.setBreedingAge(6000);
+        this.resetLoveTicks();
+        other.resetLoveTicks();
+        passiveEntity.setBaby(true);
+        passiveEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), 0.0f, 0.0f);
+        world.spawnEntityAndPassengers(passiveEntity);
+        world.sendEntityStatus(this, (byte)18);
+        if (world.getGameRules().getBoolean(GameRules.DO_MOB_LOOT)) {
+            world.spawnEntity(new ExperienceOrbEntity(world, this.getX(), this.getY(), this.getZ(), this.getRandom().nextInt(7) + 1));
+        }
     }
 
     @Override

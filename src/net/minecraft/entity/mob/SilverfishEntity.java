@@ -12,13 +12,14 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.EntityDamageSource;
@@ -30,8 +31,8 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 
 public class SilverfishEntity
@@ -60,15 +61,11 @@ extends HostileEntity {
 
     @Override
     protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
-        return 0.1f;
+        return 0.13f;
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(8.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.25);
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(1.0);
+    public static DefaultAttributeContainer.Builder createSilverfishAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 8.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 1.0);
     }
 
     @Override
@@ -114,21 +111,21 @@ extends HostileEntity {
     }
 
     @Override
-    public void setYaw(float yaw) {
-        this.yaw = yaw;
-        super.setYaw(yaw);
+    public void setBodyYaw(float bodyYaw) {
+        this.yaw = bodyYaw;
+        super.setBodyYaw(bodyYaw);
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
-        if (InfestedBlock.isInfestable(worldView.getBlockState(pos.down()))) {
+    public float getPathfindingFavor(BlockPos pos, WorldView world) {
+        if (InfestedBlock.isInfestable(world.getBlockState(pos.down()))) {
             return 10.0f;
         }
-        return super.getPathfindingFavor(pos, worldView);
+        return super.getPathfindingFavor(pos, world);
     }
 
-    public static boolean canSpawn(EntityType<SilverfishEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        if (SilverfishEntity.canSpawnIgnoreLightLevel(type, world, spawnType, pos, random)) {
+    public static boolean canSpawn(EntityType<SilverfishEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        if (SilverfishEntity.canSpawnIgnoreLightLevel(type, world, spawnReason, pos, random)) {
             PlayerEntity playerEntity = world.getClosestPlayer((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 5.0, true);
             return playerEntity == null;
         }
@@ -159,7 +156,7 @@ extends HostileEntity {
                 return false;
             }
             Random random = this.mob.getRandom();
-            if (this.mob.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) && random.nextInt(10) == 0) {
+            if (this.mob.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) && random.nextInt(10) == 0) {
                 this.direction = Direction.random(random);
                 BlockPos blockPos = new BlockPos(this.mob.getX(), this.mob.getY() + 0.5, this.mob.getZ()).offset(this.direction);
                 BlockState blockState = this.mob.world.getBlockState(blockPos);
@@ -186,11 +183,11 @@ extends HostileEntity {
                 super.start();
                 return;
             }
-            World iWorld = this.mob.world;
+            World worldAccess = this.mob.world;
             BlockPos blockPos = new BlockPos(this.mob.getX(), this.mob.getY() + 0.5, this.mob.getZ()).offset(this.direction);
-            BlockState blockState = iWorld.getBlockState(blockPos);
+            BlockState blockState = worldAccess.getBlockState(blockPos);
             if (InfestedBlock.isInfestable(blockState)) {
-                iWorld.setBlockState(blockPos, InfestedBlock.fromRegularBlock(blockState.getBlock()), 3);
+                worldAccess.setBlockState(blockPos, InfestedBlock.fromRegularBlock(blockState.getBlock()), 3);
                 this.mob.playSpawnEffects();
                 this.mob.remove();
             }
@@ -223,7 +220,7 @@ extends HostileEntity {
             if (this.delay <= 0) {
                 World world = this.silverfish.world;
                 Random random = this.silverfish.getRandom();
-                BlockPos blockPos = new BlockPos(this.silverfish);
+                BlockPos blockPos = this.silverfish.getBlockPos();
                 int i = 0;
                 block0: while (i <= 5 && i >= -5) {
                     int j = 0;
@@ -234,7 +231,7 @@ extends HostileEntity {
                             BlockState blockState = world.getBlockState(blockPos2);
                             Block block = blockState.getBlock();
                             if (block instanceof InfestedBlock) {
-                                if (world.getGameRules().getBoolean(GameRules.MOB_GRIEFING)) {
+                                if (world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                                     world.breakBlock(blockPos2, true, this.silverfish);
                                 } else {
                                     world.setBlockState(blockPos2, ((InfestedBlock)block).getRegularBlock().getDefaultState(), 3);

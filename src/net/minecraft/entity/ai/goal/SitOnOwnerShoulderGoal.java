@@ -37,7 +37,7 @@ extends Goal {
 
     @Override
     public void tick() {
-        if (this.mounted || this.tameable.isSitting() || this.tameable.isLeashed()) {
+        if (this.mounted || this.tameable.isInSittingPose() || this.tameable.isLeashed()) {
             return;
         }
         if (this.tameable.getBoundingBox().intersects(this.owner.getBoundingBox())) {

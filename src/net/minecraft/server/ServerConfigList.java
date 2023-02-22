@@ -7,14 +7,9 @@
  *  com.google.common.io.Files
  *  com.google.gson.Gson
  *  com.google.gson.GsonBuilder
- *  com.google.gson.JsonDeserializationContext
- *  com.google.gson.JsonDeserializer
+ *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
- *  com.google.gson.JsonParseException
- *  com.google.gson.JsonSerializationContext
- *  com.google.gson.JsonSerializer
- *  org.apache.commons.io.IOUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -26,80 +21,42 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import net.minecraft.server.ServerConfigEntry;
 import net.minecraft.util.JsonHelper;
-import org.apache.commons.io.IOUtils;
+import net.minecraft.util.Util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
-public class ServerConfigList<K, V extends ServerConfigEntry<K>> {
+public abstract class ServerConfigList<K, V extends ServerConfigEntry<K>> {
     protected static final Logger LOGGER = LogManager.getLogger();
-    protected final Gson GSON;
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final File file;
     private final Map<String, V> map = Maps.newHashMap();
-    private boolean enabled = true;
-    private static final ParameterizedType field_14369 = new ParameterizedType(){
-
-        @Override
-        public Type[] getActualTypeArguments() {
-            return new Type[]{ServerConfigEntry.class};
-        }
-
-        @Override
-        public Type getRawType() {
-            return List.class;
-        }
-
-        @Override
-        public Type getOwnerType() {
-            return null;
-        }
-    };
 
     public ServerConfigList(File file) {
         this.file = file;
-        GsonBuilder gsonBuilder = new GsonBuilder().setPrettyPrinting();
-        gsonBuilder.registerTypeHierarchyAdapter(ServerConfigEntry.class, (Object)new DeSerializer());
-        this.GSON = gsonBuilder.create();
-    }
-
-    public boolean isEnabled() {
-        return this.enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
     }
 
     public File getFile() {
         return this.file;
     }
 
-    public void add(V serverConfigEntry) {
-        this.map.put(this.toString(((ServerConfigEntry)serverConfigEntry).getKey()), serverConfigEntry);
+    public void add(V entry) {
+        this.map.put(this.toString(((ServerConfigEntry)entry).getKey()), entry);
         try {
             this.save();
         }
@@ -109,13 +66,13 @@ public class ServerConfigList<K, V extends ServerConfigEntry<K>> {
     }
 
     @Nullable
-    public V get(K object) {
+    public V get(K key) {
         this.removeInvalidEntries();
-        return (V)((ServerConfigEntry)this.map.get(this.toString(object)));
+        return (V)((ServerConfigEntry)this.map.get(this.toString(key)));
     }
 
-    public void remove(K object) {
-        this.map.remove(this.toString(object));
+    public void remove(K key) {
+        this.map.remove(this.toString(key));
         try {
             this.save();
         }
@@ -124,8 +81,8 @@ public class ServerConfigList<K, V extends ServerConfigEntry<K>> {
         }
     }
 
-    public void removeEntry(ServerConfigEntry<K> serverConfigEntry) {
-        this.remove(serverConfigEntry.getKey());
+    public void remove(ServerConfigEntry<K> entry) {
+        this.remove(entry.getKey());
     }
 
     public String[] getNames() {
@@ -155,84 +112,33 @@ public class ServerConfigList<K, V extends ServerConfigEntry<K>> {
         }
     }
 
-    protected ServerConfigEntry<K> fromJson(JsonObject jsonObject) {
-        return new ServerConfigEntry<Object>(null, jsonObject);
-    }
+    protected abstract ServerConfigEntry<K> fromJson(JsonObject var1);
 
     public Collection<V> values() {
         return this.map.values();
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     public void save() throws IOException {
-        Collection<V> collection = this.map.values();
-        String string = this.GSON.toJson(collection);
-        BufferedWriter bufferedWriter = null;
-        try {
-            bufferedWriter = Files.newWriter((File)this.file, (Charset)StandardCharsets.UTF_8);
-            bufferedWriter.write(string);
+        JsonArray jsonArray = new JsonArray();
+        this.map.values().stream().map(serverConfigEntry -> Util.make(new JsonObject(), serverConfigEntry::fromJson)).forEach(arg_0 -> ((JsonArray)jsonArray).add(arg_0));
+        try (BufferedWriter bufferedWriter = Files.newWriter((File)this.file, (Charset)StandardCharsets.UTF_8);){
+            GSON.toJson((JsonElement)jsonArray, (Appendable)bufferedWriter);
         }
-        catch (Throwable throwable) {
-            IOUtils.closeQuietly(bufferedWriter);
-            throw throwable;
-        }
-        IOUtils.closeQuietly((Writer)bufferedWriter);
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    public void load() throws FileNotFoundException {
+    public void load() throws IOException {
         if (!this.file.exists()) {
             return;
         }
-        BufferedReader bufferedReader = null;
-        try {
-            bufferedReader = Files.newReader((File)this.file, (Charset)StandardCharsets.UTF_8);
-            Collection collection = (Collection)JsonHelper.deserialize(this.GSON, (Reader)bufferedReader, (Type)field_14369);
-            if (collection != null) {
-                this.map.clear();
-                for (ServerConfigEntry serverConfigEntry : collection) {
-                    if (serverConfigEntry.getKey() == null) continue;
-                    this.map.put(this.toString(serverConfigEntry.getKey()), serverConfigEntry);
-                }
+        try (BufferedReader bufferedReader = Files.newReader((File)this.file, (Charset)StandardCharsets.UTF_8);){
+            JsonArray jsonArray = (JsonArray)GSON.fromJson((Reader)bufferedReader, JsonArray.class);
+            this.map.clear();
+            for (JsonElement jsonElement : jsonArray) {
+                JsonObject jsonObject = JsonHelper.asObject(jsonElement, "entry");
+                ServerConfigEntry<K> serverConfigEntry = this.fromJson(jsonObject);
+                if (serverConfigEntry.getKey() == null) continue;
+                this.map.put(this.toString(serverConfigEntry.getKey()), serverConfigEntry);
             }
-        }
-        catch (Throwable throwable) {
-            IOUtils.closeQuietly(bufferedReader);
-            throw throwable;
-        }
-        IOUtils.closeQuietly((Reader)bufferedReader);
-    }
-
-    class DeSerializer
-    implements JsonDeserializer<ServerConfigEntry<K>>,
-    JsonSerializer<ServerConfigEntry<K>> {
-        private DeSerializer() {
-        }
-
-        public JsonElement serialize(ServerConfigEntry<K> serverConfigEntry, Type type, JsonSerializationContext jsonSerializationContext) {
-            JsonObject jsonObject = new JsonObject();
-            serverConfigEntry.serialize(jsonObject);
-            return jsonObject;
-        }
-
-        public ServerConfigEntry<K> deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            if (jsonElement.isJsonObject()) {
-                JsonObject jsonObject = jsonElement.getAsJsonObject();
-                return ServerConfigList.this.fromJson(jsonObject);
-            }
-            return null;
-        }
-
-        public /* synthetic */ JsonElement serialize(Object entry, Type unused, JsonSerializationContext context) {
-            return this.serialize((ServerConfigEntry)entry, unused, context);
-        }
-
-        public /* synthetic */ Object deserialize(JsonElement functionJson, Type unused, JsonDeserializationContext context) throws JsonParseException {
-            return this.deserialize(functionJson, unused, context);
         }
     }
 }

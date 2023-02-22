@@ -11,7 +11,6 @@ package net.minecraft.entity.passive;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -19,7 +18,7 @@ import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.AttackGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
@@ -29,13 +28,14 @@ import net.minecraft.entity.ai.goal.PounceAtTargetGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.TemptGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.passive.PassiveEntity;
@@ -43,19 +43,23 @@ import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.BlockTags;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,15 +85,15 @@ extends AnimalEntity {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putBoolean("Trusting", this.isTrusting());
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putBoolean("Trusting", this.isTrusting());
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.setTrusting(tag.getBoolean("Trusting"));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.setTrusting(nbt.getBoolean("Trusting"));
     }
 
     @Override
@@ -106,7 +110,7 @@ extends AnimalEntity {
         this.goalSelector.add(7, new PounceAtTargetGoal(this, 0.3f));
         this.goalSelector.add(8, new AttackGoal(this));
         this.goalSelector.add(9, new AnimalMateGoal(this, 0.8));
-        this.goalSelector.add(10, new WanderAroundFarGoal((MobEntityWithAi)this, 0.8, 1.0000001E-5f));
+        this.goalSelector.add(10, new WanderAroundFarGoal((PathAwareEntity)this, 0.8, 1.0000001E-5f));
         this.goalSelector.add(11, new LookAtEntityGoal(this, PlayerEntity.class, 10.0f));
         this.targetSelector.add(1, new FollowTargetGoal<ChickenEntity>((MobEntity)this, ChickenEntity.class, false));
         this.targetSelector.add(1, new FollowTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, false, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
@@ -137,12 +141,8 @@ extends AnimalEntity {
         return !this.isTrusting() && this.age > 2400;
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(10.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.3f);
-        this.getAttributes().register(EntityAttributes.ATTACK_DAMAGE).setBaseValue(3.0);
+    public static DefaultAttributeContainer.Builder createOcelotAttributes() {
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 10.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.3f).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 3.0);
     }
 
     @Override
@@ -171,13 +171,13 @@ extends AnimalEntity {
         return SoundEvents.ENTITY_OCELOT_DEATH;
     }
 
-    private float method_22329() {
-        return (float)this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).getValue();
+    private float getAttackDamage() {
+        return (float)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
     }
 
     @Override
     public boolean tryAttack(Entity target) {
-        return target.damage(DamageSource.mob(this), this.method_22329());
+        return target.damage(DamageSource.mob(this), this.getAttackDamage());
     }
 
     @Override
@@ -189,7 +189,7 @@ extends AnimalEntity {
     }
 
     @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if ((this.temptGoal == null || this.temptGoal.isActive()) && !this.isTrusting() && this.isBreedingItem(itemStack) && player.squaredDistanceTo(this) < 9.0) {
             this.eat(player, itemStack);
@@ -203,7 +203,7 @@ extends AnimalEntity {
                     this.world.sendEntityStatus(this, (byte)40);
                 }
             }
-            return true;
+            return ActionResult.success(this.world.isClient);
         }
         return super.interactMob(player, hand);
     }
@@ -244,8 +244,8 @@ extends AnimalEntity {
     }
 
     @Override
-    public OcelotEntity createChild(PassiveEntity passiveEntity) {
-        return EntityType.OCELOT.create(this.world);
+    public OcelotEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
+        return EntityType.OCELOT.create(serverWorld);
     }
 
     @Override
@@ -253,20 +253,19 @@ extends AnimalEntity {
         return TAMING_INGREDIENT.test(stack);
     }
 
-    public static boolean canSpawn(EntityType<OcelotEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+    public static boolean canSpawn(EntityType<OcelotEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
         return random.nextInt(3) != 0;
     }
 
     @Override
     public boolean canSpawn(WorldView world) {
         if (world.intersectsEntities(this) && !world.containsFluid(this.getBoundingBox())) {
-            BlockPos blockPos = new BlockPos(this);
+            BlockPos blockPos = this.getBlockPos();
             if (blockPos.getY() < world.getSeaLevel()) {
                 return false;
             }
             BlockState blockState = world.getBlockState(blockPos.down());
-            Block block = blockState.getBlock();
-            if (block == Blocks.GRASS_BLOCK || blockState.matches(BlockTags.LEAVES)) {
+            if (blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isIn(BlockTags.LEAVES)) {
                 return true;
             }
         }
@@ -275,17 +274,22 @@ extends AnimalEntity {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         if (entityData == null) {
-            entityData = new PassiveEntity.EntityData();
-            ((PassiveEntity.EntityData)entityData).setBabyChance(1.0f);
+            entityData = new PassiveEntity.PassiveData(1.0f);
         }
-        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
+        return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     @Override
-    public /* synthetic */ PassiveEntity createChild(PassiveEntity mate) {
-        return this.createChild(mate);
+    @Environment(value=EnvType.CLIENT)
+    public Vec3d method_29919() {
+        return new Vec3d(0.0, 0.5f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
+    }
+
+    @Override
+    public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        return this.createChild(world, entity);
     }
 
     static class OcelotTemptGoal
@@ -293,7 +297,7 @@ extends AnimalEntity {
         private final OcelotEntity ocelot;
 
         public OcelotTemptGoal(OcelotEntity ocelot, double speed, Ingredient food, boolean canBeScared) {
-            super((MobEntityWithAi)ocelot, speed, food, canBeScared);
+            super((PathAwareEntity)ocelot, speed, food, canBeScared);
             this.ocelot = ocelot;
         }
 

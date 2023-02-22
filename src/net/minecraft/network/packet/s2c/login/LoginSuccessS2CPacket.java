@@ -14,8 +14,9 @@ import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientLoginPacketListener;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 
 public class LoginSuccessS2CPacket
 implements Packet<ClientLoginPacketListener> {
@@ -30,16 +31,20 @@ implements Packet<ClientLoginPacketListener> {
 
     @Override
     public void read(PacketByteBuf buf) throws IOException {
-        String string = buf.readString(36);
-        String string2 = buf.readString(16);
-        UUID uUID = UUID.fromString(string);
-        this.profile = new GameProfile(uUID, string2);
+        int[] is = new int[4];
+        for (int i = 0; i < is.length; ++i) {
+            is[i] = buf.readInt();
+        }
+        UUID uUID = DynamicSerializableUuid.toUuid(is);
+        String string = buf.readString(16);
+        this.profile = new GameProfile(uUID, string);
     }
 
     @Override
     public void write(PacketByteBuf buf) throws IOException {
-        UUID uUID = this.profile.getId();
-        buf.writeString(uUID == null ? "" : uUID.toString());
+        for (int i : DynamicSerializableUuid.toIntArray(this.profile.getId())) {
+            buf.writeInt(i);
+        }
         buf.writeString(this.profile.getName());
     }
 

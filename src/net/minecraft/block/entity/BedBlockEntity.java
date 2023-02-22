@@ -23,14 +23,14 @@ extends BlockEntity {
         super(BlockEntityType.BED);
     }
 
-    public BedBlockEntity(DyeColor dyeColor) {
+    public BedBlockEntity(DyeColor color) {
         this();
-        this.setColor(dyeColor);
+        this.setColor(color);
     }
 
     @Override
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 11, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 11, this.toInitialChunkDataNbt());
     }
 
     @Environment(value=EnvType.CLIENT)

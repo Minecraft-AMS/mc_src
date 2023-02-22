@@ -10,14 +10,14 @@ package net.minecraft.block;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractFurnaceBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SmokerBlockEntity;
-import net.minecraft.container.NameableContainerFactory;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
@@ -27,20 +27,20 @@ import net.minecraft.world.World;
 
 public class SmokerBlock
 extends AbstractFurnaceBlock {
-    protected SmokerBlock(Block.Settings settings) {
+    protected SmokerBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new SmokerBlockEntity();
     }
 
     @Override
-    protected void openContainer(World world, BlockPos pos, PlayerEntity player) {
+    protected void openScreen(World world, BlockPos pos, PlayerEntity player) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof SmokerBlockEntity) {
-            player.openContainer((NameableContainerFactory)((Object)blockEntity));
+            player.openHandledScreen((NamedScreenHandlerFactory)((Object)blockEntity));
             player.incrementStat(Stats.INTERACT_WITH_SMOKER);
         }
     }

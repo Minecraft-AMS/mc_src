@@ -16,7 +16,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.render.model.json.ModelItemPropertyOverrideList;
+import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.util.math.Direction;
@@ -26,15 +26,15 @@ import org.jetbrains.annotations.Nullable;
 public class BuiltinBakedModel
 implements BakedModel {
     private final ModelTransformation transformation;
-    private final ModelItemPropertyOverrideList itemPropertyOverrides;
+    private final ModelOverrideList itemPropertyOverrides;
     private final Sprite sprite;
-    private final boolean field_21862;
+    private final boolean sideLit;
 
-    public BuiltinBakedModel(ModelTransformation transformation, ModelItemPropertyOverrideList itemPropertyOverrides, Sprite sprite, boolean bl) {
+    public BuiltinBakedModel(ModelTransformation transformation, ModelOverrideList itemPropertyOverrides, Sprite sprite, boolean sideLit) {
         this.transformation = transformation;
         this.itemPropertyOverrides = itemPropertyOverrides;
         this.sprite = sprite;
-        this.field_21862 = bl;
+        this.sideLit = sideLit;
     }
 
     @Override
@@ -54,7 +54,7 @@ implements BakedModel {
 
     @Override
     public boolean isSideLit() {
-        return this.field_21862;
+        return this.sideLit;
     }
 
     @Override
@@ -73,7 +73,7 @@ implements BakedModel {
     }
 
     @Override
-    public ModelItemPropertyOverrideList getItemPropertyOverrides() {
+    public ModelOverrideList getOverrides() {
         return this.itemPropertyOverrides;
     }
 }

@@ -2,24 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.decorator;
 
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.serialization.Codec;
 import net.minecraft.world.gen.decorator.DecoratorConfig;
 
 public class NopeDecoratorConfig
 implements DecoratorConfig {
-    @Override
-    public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        return new Dynamic(ops, ops.emptyMap());
-    }
-
-    public static NopeDecoratorConfig deserialize(Dynamic<?> dynamic) {
-        return new NopeDecoratorConfig();
-    }
+    public static final Codec<NopeDecoratorConfig> CODEC = Codec.unit(() -> INSTANCE);
+    public static final NopeDecoratorConfig INSTANCE = new NopeDecoratorConfig();
 }
 

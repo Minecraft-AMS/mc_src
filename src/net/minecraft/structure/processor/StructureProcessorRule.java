@@ -2,48 +2,55 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.structure.processor;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import java.util.Map;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
 import java.util.Random;
 import net.minecraft.block.BlockState;
-import net.minecraft.datafixer.NbtOps;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.structure.rule.AlwaysTrueRuleTest;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.structure.rule.AlwaysTruePosRuleTest;
+import net.minecraft.structure.rule.PosRuleTest;
 import net.minecraft.structure.rule.RuleTest;
-import net.minecraft.util.DynamicDeserializer;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 public class StructureProcessorRule {
+    public static final Codec<StructureProcessorRule> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RuleTest.field_25012.fieldOf("input_predicate").forGetter(structureProcessorRule -> structureProcessorRule.inputPredicate), (App)RuleTest.field_25012.fieldOf("location_predicate").forGetter(structureProcessorRule -> structureProcessorRule.locationPredicate), (App)PosRuleTest.field_25007.optionalFieldOf("position_predicate", (Object)AlwaysTruePosRuleTest.INSTANCE).forGetter(structureProcessorRule -> structureProcessorRule.positionPredicate), (App)BlockState.CODEC.fieldOf("output_state").forGetter(structureProcessorRule -> structureProcessorRule.outputState), (App)NbtCompound.CODEC.optionalFieldOf("output_nbt").forGetter(structureProcessorRule -> Optional.ofNullable(structureProcessorRule.outputNbt))).apply((Applicative)instance, StructureProcessorRule::new));
     private final RuleTest inputPredicate;
     private final RuleTest locationPredicate;
+    private final PosRuleTest positionPredicate;
     private final BlockState outputState;
     @Nullable
-    private final CompoundTag tag;
+    private final NbtCompound outputNbt;
 
     public StructureProcessorRule(RuleTest ruleTest, RuleTest ruleTest2, BlockState blockState) {
-        this(ruleTest, ruleTest2, blockState, null);
+        this(ruleTest, ruleTest2, AlwaysTruePosRuleTest.INSTANCE, blockState, Optional.empty());
     }
 
-    public StructureProcessorRule(RuleTest ruleTest, RuleTest ruleTest2, BlockState blockState, @Nullable CompoundTag compoundTag) {
+    public StructureProcessorRule(RuleTest ruleTest, RuleTest ruleTest2, PosRuleTest posRuleTest, BlockState blockState) {
+        this(ruleTest, ruleTest2, posRuleTest, blockState, Optional.empty());
+    }
+
+    public StructureProcessorRule(RuleTest ruleTest, RuleTest ruleTest2, PosRuleTest posRuleTest, BlockState blockState, Optional<NbtCompound> optional) {
         this.inputPredicate = ruleTest;
         this.locationPredicate = ruleTest2;
+        this.positionPredicate = posRuleTest;
         this.outputState = blockState;
-        this.tag = compoundTag;
+        this.outputNbt = optional.orElse(null);
     }
 
-    public boolean test(BlockState input, BlockState location, Random random) {
-        return this.inputPredicate.test(input, random) && this.locationPredicate.test(location, random);
+    public boolean test(BlockState input, BlockState location, BlockPos blockPos, BlockPos blockPos2, BlockPos blockPos3, Random random) {
+        return this.inputPredicate.test(input, random) && this.locationPredicate.test(location, random) && this.positionPredicate.test(blockPos, blockPos2, blockPos3, random);
     }
 
     public BlockState getOutputState() {
@@ -51,26 +58,8 @@ public class StructureProcessorRule {
     }
 
     @Nullable
-    public CompoundTag getTag() {
-        return this.tag;
-    }
-
-    public <T> Dynamic<T> method_16764(DynamicOps<T> dynamicOps) {
-        Object object = dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString("input_predicate"), (Object)this.inputPredicate.serializeWithId(dynamicOps).getValue(), (Object)dynamicOps.createString("location_predicate"), (Object)this.locationPredicate.serializeWithId(dynamicOps).getValue(), (Object)dynamicOps.createString("output_state"), (Object)BlockState.serialize(dynamicOps, this.outputState).getValue()));
-        if (this.tag == null) {
-            return new Dynamic(dynamicOps, object);
-        }
-        return new Dynamic(dynamicOps, dynamicOps.mergeInto(object, dynamicOps.createString("output_nbt"), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)this.tag).convert(dynamicOps).getValue()));
-    }
-
-    public static <T> StructureProcessorRule method_16765(Dynamic<T> dynamic2) {
-        Dynamic dynamic22 = dynamic2.get("input_predicate").orElseEmptyMap();
-        Dynamic dynamic3 = dynamic2.get("location_predicate").orElseEmptyMap();
-        RuleTest ruleTest = DynamicDeserializer.deserialize(dynamic22, Registry.RULE_TEST, "predicate_type", AlwaysTrueRuleTest.INSTANCE);
-        RuleTest ruleTest2 = DynamicDeserializer.deserialize(dynamic3, Registry.RULE_TEST, "predicate_type", AlwaysTrueRuleTest.INSTANCE);
-        BlockState blockState = BlockState.deserialize(dynamic2.get("output_state").orElseEmptyMap());
-        CompoundTag compoundTag = dynamic2.get("output_nbt").map(dynamic -> (Tag)dynamic.convert((DynamicOps)NbtOps.INSTANCE).getValue()).orElse(null);
-        return new StructureProcessorRule(ruleTest, ruleTest2, blockState, compoundTag);
+    public NbtCompound getOutputNbt() {
+        return this.outputNbt;
     }
 }
 

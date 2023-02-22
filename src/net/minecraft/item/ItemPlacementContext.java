@@ -22,12 +22,16 @@ extends ItemUsageContext {
     private final BlockPos placementPos;
     protected boolean canReplaceExisting = true;
 
-    public ItemPlacementContext(ItemUsageContext context) {
-        this(context.getWorld(), context.getPlayer(), context.getHand(), context.getStack(), context.hit);
+    public ItemPlacementContext(PlayerEntity playerEntity, Hand hand, ItemStack itemStack, BlockHitResult blockHitResult) {
+        this(playerEntity.world, playerEntity, hand, itemStack, blockHitResult);
     }
 
-    protected ItemPlacementContext(World world, @Nullable PlayerEntity player, Hand hand, ItemStack itemStack, BlockHitResult blockHitResult) {
-        super(world, player, hand, itemStack, blockHitResult);
+    public ItemPlacementContext(ItemUsageContext context) {
+        this(context.getWorld(), context.getPlayer(), context.getHand(), context.getStack(), context.getHitResult());
+    }
+
+    protected ItemPlacementContext(World world, @Nullable PlayerEntity playerEntity, Hand hand, ItemStack itemStack, BlockHitResult blockHitResult) {
+        super(world, playerEntity, hand, itemStack, blockHitResult);
         this.placementPos = blockHitResult.getBlockPos().offset(blockHitResult.getSide());
         this.canReplaceExisting = world.getBlockState(blockHitResult.getBlockPos()).canReplace(this);
     }
@@ -50,12 +54,12 @@ extends ItemUsageContext {
     }
 
     public Direction getPlayerLookDirection() {
-        return Direction.getEntityFacingOrder(this.player)[0];
+        return Direction.getEntityFacingOrder(this.getPlayer())[0];
     }
 
     public Direction[] getPlacementDirections() {
         int i;
-        Direction[] directions = Direction.getEntityFacingOrder(this.player);
+        Direction[] directions = Direction.getEntityFacingOrder(this.getPlayer());
         if (this.canReplaceExisting) {
             return directions;
         }

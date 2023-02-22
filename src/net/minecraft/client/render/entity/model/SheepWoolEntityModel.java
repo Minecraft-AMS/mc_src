@@ -23,9 +23,9 @@ extends QuadrupedEntityModel<T> {
         this.head = new ModelPart(this, 0, 0);
         this.head.addCuboid(-3.0f, -4.0f, -4.0f, 6.0f, 6.0f, 6.0f, 0.6f);
         this.head.setPivot(0.0f, 6.0f, -8.0f);
-        this.torso = new ModelPart(this, 28, 8);
-        this.torso.addCuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f, 1.75f);
-        this.torso.setPivot(0.0f, 5.0f, 2.0f);
+        this.body = new ModelPart(this, 28, 8);
+        this.body.addCuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f, 1.75f);
+        this.body.setPivot(0.0f, 5.0f, 2.0f);
         float f = 0.5f;
         this.backRightLeg = new ModelPart(this, 0, 16);
         this.backRightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 6.0f, 4.0f, 0.5f);
@@ -44,8 +44,8 @@ extends QuadrupedEntityModel<T> {
     @Override
     public void animateModel(T sheepEntity, float f, float g, float h) {
         super.animateModel(sheepEntity, f, g, h);
-        this.head.pivotY = 6.0f + ((SheepEntity)sheepEntity).method_6628(h) * 9.0f;
-        this.field_3541 = ((SheepEntity)sheepEntity).method_6641(h);
+        this.head.pivotY = 6.0f + ((SheepEntity)sheepEntity).getNeckAngle(h) * 9.0f;
+        this.field_3541 = ((SheepEntity)sheepEntity).getHeadAngle(h);
     }
 
     @Override

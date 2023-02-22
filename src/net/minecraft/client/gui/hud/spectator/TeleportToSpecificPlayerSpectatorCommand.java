@@ -21,6 +21,7 @@ import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenu;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.util.DefaultSkinHelper;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.c2s.play.SpectatorTeleportC2SPacket;
 import net.minecraft.text.LiteralText;
@@ -32,12 +33,14 @@ public class TeleportToSpecificPlayerSpectatorCommand
 implements SpectatorMenuCommand {
     private final GameProfile gameProfile;
     private final Identifier skinId;
+    private final LiteralText name;
 
     public TeleportToSpecificPlayerSpectatorCommand(GameProfile gameProfile) {
         this.gameProfile = gameProfile;
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraftClient.getSkinProvider().getTextures(gameProfile);
         this.skinId = map.containsKey(MinecraftProfileTexture.Type.SKIN) ? minecraftClient.getSkinProvider().loadSkin(map.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN) : DefaultSkinHelper.getTexture(PlayerEntity.getUuidFromProfile(gameProfile));
+        this.name = new LiteralText(gameProfile.getName());
     }
 
     @Override
@@ -47,15 +50,15 @@ implements SpectatorMenuCommand {
 
     @Override
     public Text getName() {
-        return new LiteralText(this.gameProfile.getName());
+        return this.name;
     }
 
     @Override
-    public void renderIcon(float brightness, int alpha) {
+    public void renderIcon(MatrixStack matrices, float f, int i) {
         MinecraftClient.getInstance().getTextureManager().bindTexture(this.skinId);
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, (float)alpha / 255.0f);
-        DrawableHelper.blit(2, 2, 12, 12, 8.0f, 8.0f, 8, 8, 64, 64);
-        DrawableHelper.blit(2, 2, 12, 12, 40.0f, 8.0f, 8, 8, 64, 64);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, (float)i / 255.0f);
+        DrawableHelper.drawTexture(matrices, 2, 2, 12, 12, 8.0f, 8.0f, 8, 8, 64, 64);
+        DrawableHelper.drawTexture(matrices, 2, 2, 12, 12, 40.0f, 8.0f, 8, 8, 64, 64);
     }
 
     @Override

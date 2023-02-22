@@ -7,6 +7,7 @@
 package net.minecraft.recipe;
 
 import com.google.gson.JsonObject;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.ArmorDyeRecipe;
 import net.minecraft.recipe.BannerDuplicateRecipe;
 import net.minecraft.recipe.BlastingRecipe;
@@ -26,13 +27,13 @@ import net.minecraft.recipe.ShapelessRecipe;
 import net.minecraft.recipe.ShieldDecorationRecipe;
 import net.minecraft.recipe.ShulkerBoxColoringRecipe;
 import net.minecraft.recipe.SmeltingRecipe;
+import net.minecraft.recipe.SmithingRecipe;
 import net.minecraft.recipe.SmokingRecipe;
 import net.minecraft.recipe.SpecialRecipeSerializer;
 import net.minecraft.recipe.StonecuttingRecipe;
 import net.minecraft.recipe.SuspiciousStewRecipe;
 import net.minecraft.recipe.TippedArrowRecipe;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.registry.Registry;
 
 public interface RecipeSerializer<T extends Recipe<?>> {
@@ -56,6 +57,7 @@ public interface RecipeSerializer<T extends Recipe<?>> {
     public static final CookingRecipeSerializer<SmokingRecipe> SMOKING = RecipeSerializer.register("smoking", new CookingRecipeSerializer<SmokingRecipe>(SmokingRecipe::new, 100));
     public static final CookingRecipeSerializer<CampfireCookingRecipe> CAMPFIRE_COOKING = RecipeSerializer.register("campfire_cooking", new CookingRecipeSerializer<CampfireCookingRecipe>(CampfireCookingRecipe::new, 100));
     public static final RecipeSerializer<StonecuttingRecipe> STONECUTTING = RecipeSerializer.register("stonecutting", new CuttingRecipe.Serializer<StonecuttingRecipe>(StonecuttingRecipe::new));
+    public static final RecipeSerializer<SmithingRecipe> SMITHING = RecipeSerializer.register("smithing", new SmithingRecipe.Serializer());
 
     public T read(Identifier var1, JsonObject var2);
 

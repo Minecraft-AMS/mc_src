@@ -6,11 +6,11 @@
  */
 package net.minecraft.entity.vehicle;
 
-import net.minecraft.container.Container;
-import net.minecraft.container.NameableContainerFactory;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
@@ -21,30 +21,32 @@ import net.minecraft.loot.LootTable;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.ItemScatterer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
-import net.minecraft.world.dimension.DimensionType;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class StorageMinecartEntity
 extends AbstractMinecartEntity
 implements Inventory,
-NameableContainerFactory {
+NamedScreenHandlerFactory {
     private DefaultedList<ItemStack> inventory = DefaultedList.ofSize(36, ItemStack.EMPTY);
     private boolean field_7733 = true;
     @Nullable
     private Identifier lootTableId;
     private long lootSeed;
 
-    protected StorageMinecartEntity(EntityType<?> type, World world) {
-        super(type, world);
+    protected StorageMinecartEntity(EntityType<?> entityType, World world) {
+        super(entityType, world);
     }
 
     protected StorageMinecartEntity(EntityType<?> type, double x, double y, double z, World world) {
@@ -55,12 +57,16 @@ NameableContainerFactory {
     public void dropItems(DamageSource damageSource) {
         super.dropItems(damageSource);
         if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+            Entity entity;
             ItemScatterer.spawn(this.world, this, (Inventory)this);
+            if (!this.world.isClient && (entity = damageSource.getSource()) != null && entity.getType() == EntityType.PLAYER) {
+                PiglinBrain.onGuardedBlockInteracted((PlayerEntity)entity, true);
+            }
         }
     }
 
     @Override
-    public boolean isInvEmpty() {
+    public boolean isEmpty() {
         for (ItemStack itemStack : this.inventory) {
             if (itemStack.isEmpty()) continue;
             return false;
@@ -69,20 +75,20 @@ NameableContainerFactory {
     }
 
     @Override
-    public ItemStack getInvStack(int slot) {
-        this.method_7563(null);
+    public ItemStack getStack(int slot) {
+        this.generateLoot(null);
         return this.inventory.get(slot);
     }
 
     @Override
-    public ItemStack takeInvStack(int slot, int amount) {
-        this.method_7563(null);
+    public ItemStack removeStack(int slot, int amount) {
+        this.generateLoot(null);
         return Inventories.splitStack(this.inventory, slot, amount);
     }
 
     @Override
-    public ItemStack removeInvStack(int slot) {
-        this.method_7563(null);
+    public ItemStack removeStack(int slot) {
+        this.generateLoot(null);
         ItemStack itemStack = this.inventory.get(slot);
         if (itemStack.isEmpty()) {
             return ItemStack.EMPTY;
@@ -92,18 +98,18 @@ NameableContainerFactory {
     }
 
     @Override
-    public void setInvStack(int slot, ItemStack stack) {
-        this.method_7563(null);
+    public void setStack(int slot, ItemStack stack) {
+        this.generateLoot(null);
         this.inventory.set(slot, stack);
-        if (!stack.isEmpty() && stack.getCount() > this.getInvMaxStackAmount()) {
-            stack.setCount(this.getInvMaxStackAmount());
+        if (!stack.isEmpty() && stack.getCount() > this.getMaxCountPerStack()) {
+            stack.setCount(this.getMaxCountPerStack());
         }
     }
 
     @Override
     public boolean equip(int slot, ItemStack item) {
-        if (slot >= 0 && slot < this.getInvSize()) {
-            this.setInvStack(slot, item);
+        if (slot >= 0 && slot < this.size()) {
+            this.setStack(slot, item);
             return true;
         }
         return false;
@@ -114,7 +120,7 @@ NameableContainerFactory {
     }
 
     @Override
-    public boolean canPlayerUseInv(PlayerEntity player) {
+    public boolean canPlayerUse(PlayerEntity player) {
         if (this.removed) {
             return false;
         }
@@ -123,9 +129,9 @@ NameableContainerFactory {
 
     @Override
     @Nullable
-    public Entity changeDimension(DimensionType newDimension) {
+    public Entity moveToWorld(ServerWorld destination) {
         this.field_7733 = false;
-        return super.changeDimension(newDimension);
+        return super.moveToWorld(destination);
     }
 
     @Override
@@ -137,53 +143,60 @@ NameableContainerFactory {
     }
 
     @Override
-    protected void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
         if (this.lootTableId != null) {
-            tag.putString("LootTable", this.lootTableId.toString());
+            nbt.putString("LootTable", this.lootTableId.toString());
             if (this.lootSeed != 0L) {
-                tag.putLong("LootTableSeed", this.lootSeed);
+                nbt.putLong("LootTableSeed", this.lootSeed);
             }
         } else {
-            Inventories.toTag(tag, this.inventory);
+            Inventories.writeNbt(nbt, this.inventory);
         }
     }
 
     @Override
-    protected void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.inventory = DefaultedList.ofSize(this.getInvSize(), ItemStack.EMPTY);
-        if (tag.contains("LootTable", 8)) {
-            this.lootTableId = new Identifier(tag.getString("LootTable"));
-            this.lootSeed = tag.getLong("LootTableSeed");
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
+        if (nbt.contains("LootTable", 8)) {
+            this.lootTableId = new Identifier(nbt.getString("LootTable"));
+            this.lootSeed = nbt.getLong("LootTableSeed");
         } else {
-            Inventories.fromTag(tag, this.inventory);
+            Inventories.readNbt(nbt, this.inventory);
         }
     }
 
     @Override
-    public boolean interact(PlayerEntity player, Hand hand) {
-        player.openContainer(this);
-        return true;
+    public ActionResult interact(PlayerEntity player, Hand hand) {
+        player.openHandledScreen(this);
+        if (!player.world.isClient) {
+            PiglinBrain.onGuardedBlockInteracted(player, true);
+            return ActionResult.CONSUME;
+        }
+        return ActionResult.SUCCESS;
     }
 
     @Override
     protected void applySlowdown() {
         float f = 0.98f;
         if (this.lootTableId == null) {
-            int i = 15 - Container.calculateComparatorOutput(this);
+            int i = 15 - ScreenHandler.calculateComparatorOutput(this);
             f += (float)i * 0.001f;
         }
         this.setVelocity(this.getVelocity().multiply(f, 0.0, f));
     }
 
-    public void method_7563(@Nullable PlayerEntity playerEntity) {
+    public void generateLoot(@Nullable PlayerEntity player) {
         if (this.lootTableId != null && this.world.getServer() != null) {
-            LootTable lootTable = this.world.getServer().getLootManager().getSupplier(this.lootTableId);
+            LootTable lootTable = this.world.getServer().getLootManager().getTable(this.lootTableId);
+            if (player instanceof ServerPlayerEntity) {
+                Criteria.PLAYER_GENERATES_CONTAINER_LOOT.test((ServerPlayerEntity)player, this.lootTableId);
+            }
             this.lootTableId = null;
-            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).put(LootContextParameters.POSITION, new BlockPos(this)).setRandom(this.lootSeed);
-            if (playerEntity != null) {
-                builder.setLuck(playerEntity.getLuck()).put(LootContextParameters.THIS_ENTITY, playerEntity);
+            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).parameter(LootContextParameters.ORIGIN, this.getPos()).random(this.lootSeed);
+            if (player != null) {
+                builder.luck(player.getLuck()).parameter(LootContextParameters.THIS_ENTITY, player);
             }
             lootTable.supplyInventory(this, builder.build(LootContextTypes.CHEST));
         }
@@ -191,25 +204,25 @@ NameableContainerFactory {
 
     @Override
     public void clear() {
-        this.method_7563(null);
+        this.generateLoot(null);
         this.inventory.clear();
     }
 
-    public void setLootTable(Identifier id, long l) {
+    public void setLootTable(Identifier id, long lootSeed) {
         this.lootTableId = id;
-        this.lootSeed = l;
+        this.lootSeed = lootSeed;
     }
 
     @Override
     @Nullable
-    public Container createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity playerEntity) {
+    public ScreenHandler createMenu(int i, PlayerInventory playerInventory, PlayerEntity playerEntity) {
         if (this.lootTableId == null || !playerEntity.isSpectator()) {
-            this.method_7563(playerInventory.player);
-            return this.getContainer(syncId, playerInventory);
+            this.generateLoot(playerInventory.player);
+            return this.getScreenHandler(i, playerInventory);
         }
         return null;
     }
 
-    protected abstract Container getContainer(int var1, PlayerInventory var2);
+    protected abstract ScreenHandler getScreenHandler(int var1, PlayerInventory var2);
 }
 

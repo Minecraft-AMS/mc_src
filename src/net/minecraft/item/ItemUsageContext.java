@@ -17,11 +17,12 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemUsageContext {
-    protected final PlayerEntity player;
-    protected final Hand hand;
-    protected final BlockHitResult hit;
-    protected final World world;
-    protected final ItemStack stack;
+    @Nullable
+    private final PlayerEntity player;
+    private final Hand hand;
+    private final BlockHitResult hit;
+    private final World world;
+    private final ItemStack stack;
 
     public ItemUsageContext(PlayerEntity player, Hand hand, BlockHitResult hit) {
         this(player.world, player, hand, player.getStackInHand(hand), hit);
@@ -33,6 +34,10 @@ public class ItemUsageContext {
         this.hit = hit;
         this.stack = stack;
         this.world = world;
+    }
+
+    protected final BlockHitResult getHitResult() {
+        return this.hit;
     }
 
     public BlockPos getBlockPos() {

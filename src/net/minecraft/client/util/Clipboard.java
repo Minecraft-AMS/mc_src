@@ -18,7 +18,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.SharedConstants;
+import net.minecraft.client.font.TextVisitFactory;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -32,7 +32,7 @@ public class Clipboard {
     public String getClipboard(long window, GLFWErrorCallbackI gLFWErrorCallbackI) {
         GLFWErrorCallback gLFWErrorCallback = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)gLFWErrorCallbackI);
         String string = GLFW.glfwGetClipboardString((long)window);
-        string = string != null ? SharedConstants.stripSupplementaryChars(string) : "";
+        string = string != null ? TextVisitFactory.validateSurrogates(string) : "";
         GLFWErrorCallback gLFWErrorCallback2 = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)gLFWErrorCallback);
         if (gLFWErrorCallback2 != null) {
             gLFWErrorCallback2.free();

@@ -2,17 +2,20 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMultimap
+ *  com.google.common.collect.ImmutableMultimap$Builder
  *  com.google.common.collect.Multimap
  */
 package net.minecraft.item;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.Material;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
@@ -20,19 +23,24 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ToolItem;
 import net.minecraft.item.ToolMaterial;
+import net.minecraft.item.Vanishable;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 public class SwordItem
-extends ToolItem {
+extends ToolItem
+implements Vanishable {
     private final float attackDamage;
-    private final float attackSpeed;
+    private final Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers;
 
-    public SwordItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
-        super(material, settings);
-        this.attackSpeed = attackSpeed;
-        this.attackDamage = (float)attackDamage + material.getAttackDamage();
+    public SwordItem(ToolMaterial toolMaterial, int attackDamage, float attackSpeed, Item.Settings settings) {
+        super(toolMaterial, settings);
+        this.attackDamage = (float)attackDamage + toolMaterial.getAttackDamage();
+        ImmutableMultimap.Builder builder = ImmutableMultimap.builder();
+        builder.put((Object)EntityAttributes.GENERIC_ATTACK_DAMAGE, (Object)new EntityAttributeModifier(ATTACK_DAMAGE_MODIFIER_ID, "Weapon modifier", (double)this.attackDamage, EntityAttributeModifier.Operation.ADDITION));
+        builder.put((Object)EntityAttributes.GENERIC_ATTACK_SPEED, (Object)new EntityAttributeModifier(ATTACK_SPEED_MODIFIER_ID, "Weapon modifier", (double)attackSpeed, EntityAttributeModifier.Operation.ADDITION));
+        this.attributeModifiers = builder.build();
     }
 
     public float getAttackDamage() {
@@ -45,13 +53,12 @@ extends ToolItem {
     }
 
     @Override
-    public float getMiningSpeed(ItemStack stack, BlockState state) {
-        Block block = state.getBlock();
-        if (block == Blocks.COBWEB) {
+    public float getMiningSpeedMultiplier(ItemStack stack, BlockState state) {
+        if (state.isOf(Blocks.COBWEB)) {
             return 15.0f;
         }
         Material material = state.getMaterial();
-        if (material == Material.PLANT || material == Material.REPLACEABLE_PLANT || material == Material.UNUSED_PLANT || state.matches(BlockTags.LEAVES) || material == Material.GOURD) {
+        if (material == Material.PLANT || material == Material.REPLACEABLE_PLANT || material == Material.MOSS_BLOCK || state.isIn(BlockTags.LEAVES) || material == Material.GOURD) {
             return 1.5f;
         }
         return 1.0f;
@@ -72,18 +79,16 @@ extends ToolItem {
     }
 
     @Override
-    public boolean isEffectiveOn(BlockState state) {
-        return state.getBlock() == Blocks.COBWEB;
+    public boolean isSuitableFor(BlockState state) {
+        return state.isOf(Blocks.COBWEB);
     }
 
     @Override
-    public Multimap<String, EntityAttributeModifier> getModifiers(EquipmentSlot slot) {
-        Multimap<String, EntityAttributeModifier> multimap = super.getModifiers(slot);
+    public Multimap<EntityAttribute, EntityAttributeModifier> getAttributeModifiers(EquipmentSlot slot) {
         if (slot == EquipmentSlot.MAINHAND) {
-            multimap.put((Object)EntityAttributes.ATTACK_DAMAGE.getId(), (Object)new EntityAttributeModifier(ATTACK_DAMAGE_MODIFIER_UUID, "Weapon modifier", (double)this.attackDamage, EntityAttributeModifier.Operation.ADDITION));
-            multimap.put((Object)EntityAttributes.ATTACK_SPEED.getId(), (Object)new EntityAttributeModifier(ATTACK_SPEED_MODIFIER_UUID, "Weapon modifier", (double)this.attackSpeed, EntityAttributeModifier.Operation.ADDITION));
+            return this.attributeModifiers;
         }
-        return multimap;
+        return super.getAttributeModifiers(slot);
     }
 }
 

@@ -14,10 +14,10 @@ import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.fluid.FluidState;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -36,8 +36,8 @@ extends AbstractMinecartEntity {
         super(entityType, world);
     }
 
-    public TntMinecartEntity(World world, double d, double e, double f) {
-        super(EntityType.TNT_MINECART, world, d, e, f);
+    public TntMinecartEntity(World world, double x, double y, double z) {
+        super(EntityType.TNT_MINECART, world, x, y, z);
     }
 
     @Override
@@ -67,10 +67,10 @@ extends AbstractMinecartEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        ProjectileEntity projectileEntity;
+        PersistentProjectileEntity persistentProjectileEntity;
         Entity entity = source.getSource();
-        if (entity instanceof ProjectileEntity && (projectileEntity = (ProjectileEntity)entity).isOnFire()) {
-            this.explode(projectileEntity.getVelocity().lengthSquared());
+        if (entity instanceof PersistentProjectileEntity && (persistentProjectileEntity = (PersistentProjectileEntity)entity).isOnFire()) {
+            this.explode(persistentProjectileEntity.getVelocity().lengthSquared());
         }
         return super.damage(source, amount);
     }
@@ -91,13 +91,13 @@ extends AbstractMinecartEntity {
         }
     }
 
-    protected void explode(double d) {
+    protected void explode(double velocity) {
         if (!this.world.isClient) {
-            double e = Math.sqrt(d);
-            if (e > 5.0) {
-                e = 5.0;
+            double d = Math.sqrt(velocity);
+            if (d > 5.0) {
+                d = 5.0;
             }
-            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * e), Explosion.DestructionType.BREAK);
+            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * d), Explosion.DestructionType.BREAK);
             this.remove();
         }
     }
@@ -149,7 +149,7 @@ extends AbstractMinecartEntity {
 
     @Override
     public float getEffectiveExplosionResistance(Explosion explosion, BlockView world, BlockPos pos, BlockState blockState, FluidState fluidState, float max) {
-        if (this.isPrimed() && (blockState.matches(BlockTags.RAILS) || world.getBlockState(pos.up()).matches(BlockTags.RAILS))) {
+        if (this.isPrimed() && (blockState.isIn(BlockTags.RAILS) || world.getBlockState(pos.up()).isIn(BlockTags.RAILS))) {
             return 0.0f;
         }
         return super.getEffectiveExplosionResistance(explosion, world, pos, blockState, fluidState, max);
@@ -157,24 +157,24 @@ extends AbstractMinecartEntity {
 
     @Override
     public boolean canExplosionDestroyBlock(Explosion explosion, BlockView world, BlockPos pos, BlockState state, float explosionPower) {
-        if (this.isPrimed() && (state.matches(BlockTags.RAILS) || world.getBlockState(pos.up()).matches(BlockTags.RAILS))) {
+        if (this.isPrimed() && (state.isIn(BlockTags.RAILS) || world.getBlockState(pos.up()).isIn(BlockTags.RAILS))) {
             return false;
         }
         return super.canExplosionDestroyBlock(explosion, world, pos, state, explosionPower);
     }
 
     @Override
-    protected void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        if (tag.contains("TNTFuse", 99)) {
-            this.fuseTicks = tag.getInt("TNTFuse");
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("TNTFuse", 99)) {
+            this.fuseTicks = nbt.getInt("TNTFuse");
         }
     }
 
     @Override
-    protected void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("TNTFuse", this.fuseTicks);
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("TNTFuse", this.fuseTicks);
     }
 }
 

@@ -35,7 +35,7 @@ extends Task<LivingEntity> {
         BlockState blockState;
         Brain<?> brain = entity.getBrain();
         BlockPos blockPos = brain.getOptionalMemory(MemoryModuleType.MEETING_POINT).get().getPos();
-        if (blockPos.isWithinDistance(new BlockPos(entity), 3.0) && (blockState = world.getBlockState(blockPos)).getBlock() == Blocks.BELL) {
+        if (blockPos.isWithinDistance(entity.getBlockPos(), 3.0) && (blockState = world.getBlockState(blockPos)).isOf(Blocks.BELL)) {
             BellBlock bellBlock = (BellBlock)blockState.getBlock();
             bellBlock.ring(world, blockPos, null);
         }

@@ -18,8 +18,9 @@ import net.minecraft.entity.Entity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.structure.StructureStart;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.ChunkTickScheduler;
@@ -33,6 +34,7 @@ import net.minecraft.world.chunk.UpgradeData;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
 public class ReadOnlyChunk
@@ -68,7 +70,7 @@ extends ProtoChunk {
 
     @Override
     @Nullable
-    public BlockState setBlockState(BlockPos pos, BlockState state, boolean bl) {
+    public BlockState setBlockState(BlockPos pos, BlockState state, boolean moved) {
         return null;
     }
 
@@ -81,7 +83,7 @@ extends ProtoChunk {
     }
 
     @Override
-    public void setStatus(ChunkStatus chunkStatus) {
+    public void setStatus(ChunkStatus status) {
     }
 
     @Override
@@ -125,39 +127,39 @@ extends ProtoChunk {
 
     @Override
     @Nullable
-    public StructureStart getStructureStart(String structure) {
+    public StructureStart<?> getStructureStart(StructureFeature<?> structure) {
         return this.wrapped.getStructureStart(structure);
     }
 
     @Override
-    public void setStructureStart(String structure, StructureStart start) {
+    public void setStructureStart(StructureFeature<?> structure, StructureStart<?> start) {
     }
 
     @Override
-    public Map<String, StructureStart> getStructureStarts() {
+    public Map<StructureFeature<?>, StructureStart<?>> getStructureStarts() {
         return this.wrapped.getStructureStarts();
     }
 
     @Override
-    public void setStructureStarts(Map<String, StructureStart> map) {
+    public void setStructureStarts(Map<StructureFeature<?>, StructureStart<?>> structureStarts) {
     }
 
     @Override
-    public LongSet getStructureReferences(String structure) {
+    public LongSet getStructureReferences(StructureFeature<?> structure) {
         return this.wrapped.getStructureReferences(structure);
     }
 
     @Override
-    public void addStructureReference(String structure, long reference) {
+    public void addStructureReference(StructureFeature<?> structure, long reference) {
     }
 
     @Override
-    public Map<String, LongSet> getStructureReferences() {
+    public Map<StructureFeature<?>, LongSet> getStructureReferences() {
         return this.wrapped.getStructureReferences();
     }
 
     @Override
-    public void setStructureReferences(Map<String, LongSet> structureReferences) {
+    public void setStructureReferences(Map<StructureFeature<?>, LongSet> structureReferences) {
     }
 
     @Override
@@ -180,31 +182,31 @@ extends ProtoChunk {
     }
 
     @Override
-    public void removeBlockEntity(BlockPos blockPos) {
+    public void removeBlockEntity(BlockPos pos) {
     }
 
     @Override
-    public void markBlockForPostProcessing(BlockPos blockPos) {
+    public void markBlockForPostProcessing(BlockPos pos) {
     }
 
     @Override
-    public void addPendingBlockEntityTag(CompoundTag compoundTag) {
-    }
-
-    @Override
-    @Nullable
-    public CompoundTag getBlockEntityTagAt(BlockPos pos) {
-        return this.wrapped.getBlockEntityTagAt(pos);
+    public void addPendingBlockEntityNbt(NbtCompound nbt) {
     }
 
     @Override
     @Nullable
-    public CompoundTag method_20598(BlockPos blockPos) {
-        return this.wrapped.method_20598(blockPos);
+    public NbtCompound getBlockEntityNbt(BlockPos pos) {
+        return this.wrapped.getBlockEntityNbt(pos);
     }
 
     @Override
-    public void method_22405(BiomeArray biomeArray) {
+    @Nullable
+    public NbtCompound getPackedBlockEntityNbt(BlockPos pos) {
+        return this.wrapped.getPackedBlockEntityNbt(pos);
+    }
+
+    @Override
+    public void setBiomes(BiomeArray biomes) {
     }
 
     @Override
@@ -224,7 +226,12 @@ extends ProtoChunk {
 
     @Override
     public BitSet getCarvingMask(GenerationStep.Carver carver) {
-        return this.wrapped.getCarvingMask(carver);
+        throw Util.throwOrPause(new UnsupportedOperationException("Meaningless in this context"));
+    }
+
+    @Override
+    public BitSet getOrCreateCarvingMask(GenerationStep.Carver carver) {
+        throw Util.throwOrPause(new UnsupportedOperationException("Meaningless in this context"));
     }
 
     public WorldChunk getWrappedChunk() {

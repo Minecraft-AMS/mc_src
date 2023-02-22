@@ -22,7 +22,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class CreeperEntityRenderer
 extends MobEntityRenderer<CreeperEntity, CreeperEntityModel<CreeperEntity>> {
-    private static final Identifier SKIN = new Identifier("textures/entity/creeper/creeper.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/creeper/creeper.png");
 
     public CreeperEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new CreeperEntityModel(), 0.5f);
@@ -42,7 +42,7 @@ extends MobEntityRenderer<CreeperEntity, CreeperEntityModel<CreeperEntity>> {
     }
 
     @Override
-    protected float getWhiteOverlayProgress(CreeperEntity creeperEntity, float f) {
+    protected float getAnimationCounter(CreeperEntity creeperEntity, float f) {
         float g = creeperEntity.getClientFuseTime(f);
         if ((int)(g * 10.0f) % 2 == 0) {
             return 0.0f;
@@ -52,12 +52,12 @@ extends MobEntityRenderer<CreeperEntity, CreeperEntityModel<CreeperEntity>> {
 
     @Override
     public Identifier getTexture(CreeperEntity creeperEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 
     @Override
-    protected /* synthetic */ float getWhiteOverlayProgress(LivingEntity entity, float tickDelta) {
-        return this.getWhiteOverlayProgress((CreeperEntity)entity, tickDelta);
+    protected /* synthetic */ float getAnimationCounter(LivingEntity entity, float tickDelta) {
+        return this.getAnimationCounter((CreeperEntity)entity, tickDelta);
     }
 }
 

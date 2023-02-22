@@ -5,12 +5,12 @@
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFixUtils
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.schemas.Schema
- *  com.mojang.datafixers.types.DynamicOps
  *  com.mojang.datafixers.types.Type
  *  com.mojang.datafixers.types.templates.Hook$HookFunction
  *  com.mojang.datafixers.types.templates.TypeTemplate
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
@@ -19,12 +19,12 @@ package net.minecraft.datafixer.schema;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFixUtils;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.datafixers.types.DynamicOps;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.Hook;
 import com.mojang.datafixers.types.templates.TypeTemplate;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -36,7 +36,7 @@ import org.apache.logging.log4j.Logger;
 
 public class Schema99
 extends Schema {
-    private static final Logger field_5749 = LogManager.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger();
     private static final Map<String, String> field_5748 = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         hashMap.put("minecraft:furnace", "Furnace");
         hashMap.put("minecraft:lit_furnace", "Furnace");
@@ -80,16 +80,16 @@ extends Schema {
         }
     };
 
-    public Schema99(int i, Schema schema) {
-        super(i, schema);
+    public Schema99(int versionKey, Schema parent) {
+        super(versionKey, parent);
     }
 
-    protected static TypeTemplate method_5353(Schema schema) {
+    protected static TypeTemplate targetEquipment(Schema schema) {
         return DSL.optionalFields((String)"Equipment", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
     }
 
     protected static void method_5339(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> Schema99.method_5353(schema));
+        schema.register(map, string, () -> Schema99.targetEquipment(schema));
     }
 
     protected static void method_5368(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
@@ -144,7 +144,7 @@ extends Schema {
         Schema99.method_5339(schema, map, "Slime");
         Schema99.method_5339(schema, map, "Ghast");
         Schema99.method_5339(schema, map, "PigZombie");
-        schema.register((Map)map, "Enderman", string -> DSL.optionalFields((String)"carried", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)Schema99.method_5353(schema)));
+        schema.register((Map)map, "Enderman", string -> DSL.optionalFields((String)"carried", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)Schema99.targetEquipment(schema)));
         Schema99.method_5339(schema, map, "CaveSpider");
         Schema99.method_5339(schema, map, "Silverfish");
         Schema99.method_5339(schema, map, "Blaze");
@@ -165,9 +165,9 @@ extends Schema {
         Schema99.method_5339(schema, map, "SnowMan");
         Schema99.method_5339(schema, map, "Ozelot");
         Schema99.method_5339(schema, map, "VillagerGolem");
-        schema.register((Map)map, "EntityHorse", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema99.method_5353(schema)));
+        schema.register((Map)map, "EntityHorse", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema99.targetEquipment(schema)));
         Schema99.method_5339(schema, map, "Rabbit");
-        schema.register((Map)map, "Villager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema99.method_5353(schema)));
+        schema.register((Map)map, "Villager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema99.targetEquipment(schema)));
         schema.registerSimple((Map)map, "EnderCrystal");
         schema.registerSimple((Map)map, "AreaEffectCloud");
         schema.registerSimple((Map)map, "ShulkerBullet");
@@ -203,18 +203,18 @@ extends Schema {
         return map;
     }
 
-    public void registerTypes(Schema schema, Map<String, Supplier<TypeTemplate>> map, Map<String, Supplier<TypeTemplate>> map2) {
+    public void registerTypes(Schema schema, Map<String, Supplier<TypeTemplate>> entityTypes, Map<String, Supplier<TypeTemplate>> blockEntityTypes) {
         schema.registerType(false, TypeReferences.LEVEL, DSL::remainder);
         schema.registerType(false, TypeReferences.PLAYER, () -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"EnderItems", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
         schema.registerType(false, TypeReferences.CHUNK, () -> DSL.fields((String)"Level", (TypeTemplate)DSL.optionalFields((String)"Entities", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ENTITY_TREE.in(schema)), (String)"TileEntities", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.BLOCK_ENTITY.in(schema)), (String)"TileTicks", (TypeTemplate)DSL.list((TypeTemplate)DSL.fields((String)"i", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema))))));
-        schema.registerType(true, TypeReferences.BLOCK_ENTITY, () -> DSL.taggedChoiceLazy((String)"id", (Type)DSL.string(), (Map)map2));
+        schema.registerType(true, TypeReferences.BLOCK_ENTITY, () -> DSL.taggedChoiceLazy((String)"id", (Type)DSL.string(), (Map)blockEntityTypes));
         schema.registerType(true, TypeReferences.ENTITY_TREE, () -> DSL.optionalFields((String)"Riding", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema), (TypeTemplate)TypeReferences.ENTITY.in(schema)));
-        schema.registerType(false, TypeReferences.ENTITY_NAME, () -> DSL.constType((Type)DSL.namespacedString()));
-        schema.registerType(true, TypeReferences.ENTITY, () -> DSL.taggedChoiceLazy((String)"id", (Type)DSL.string(), (Map)map));
+        schema.registerType(false, TypeReferences.ENTITY_NAME, () -> DSL.constType(IdentifierNormalizingSchema.getIdentifierType()));
+        schema.registerType(true, TypeReferences.ENTITY, () -> DSL.taggedChoiceLazy((String)"id", (Type)DSL.string(), (Map)entityTypes));
         schema.registerType(true, TypeReferences.ITEM_STACK, () -> DSL.hook((TypeTemplate)DSL.optionalFields((String)"id", (TypeTemplate)DSL.or((TypeTemplate)DSL.constType((Type)DSL.intType()), (TypeTemplate)TypeReferences.ITEM_NAME.in(schema)), (String)"tag", (TypeTemplate)DSL.optionalFields((String)"EntityTag", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema), (String)"BlockEntityTag", (TypeTemplate)TypeReferences.BLOCK_ENTITY.in(schema), (String)"CanDestroy", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)), (String)"CanPlaceOn", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)))), (Hook.HookFunction)field_5747, (Hook.HookFunction)Hook.HookFunction.IDENTITY));
         schema.registerType(false, TypeReferences.OPTIONS, DSL::remainder);
-        schema.registerType(false, TypeReferences.BLOCK_NAME, () -> DSL.or((TypeTemplate)DSL.constType((Type)DSL.intType()), (TypeTemplate)DSL.constType((Type)DSL.namespacedString())));
-        schema.registerType(false, TypeReferences.ITEM_NAME, () -> DSL.constType((Type)DSL.namespacedString()));
+        schema.registerType(false, TypeReferences.BLOCK_NAME, () -> DSL.or((TypeTemplate)DSL.constType((Type)DSL.intType()), (TypeTemplate)DSL.constType(IdentifierNormalizingSchema.getIdentifierType())));
+        schema.registerType(false, TypeReferences.ITEM_NAME, () -> DSL.constType(IdentifierNormalizingSchema.getIdentifierType()));
         schema.registerType(false, TypeReferences.STATS, DSL::remainder);
         schema.registerType(false, TypeReferences.SAVED_DATA, () -> DSL.optionalFields((String)"data", (TypeTemplate)DSL.optionalFields((String)"Features", (TypeTemplate)DSL.compoundList((TypeTemplate)TypeReferences.STRUCTURE_FEATURE.in(schema)), (String)"Objectives", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.OBJECTIVE.in(schema)), (String)"Teams", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.TEAM.in(schema)))));
         schema.registerType(false, TypeReferences.STRUCTURE_FEATURE, DSL::remainder);
@@ -222,6 +222,7 @@ extends Schema {
         schema.registerType(false, TypeReferences.TEAM, DSL::remainder);
         schema.registerType(true, TypeReferences.UNTAGGED_SPAWNER, DSL::remainder);
         schema.registerType(false, TypeReferences.POI_CHUNK, DSL::remainder);
+        schema.registerType(true, TypeReferences.CHUNK_GENERATOR_SETTINGS, DSL::remainder);
     }
 
     protected static <T> T method_5359(Dynamic<T> dynamic, Map<String, String> map, String string) {
@@ -231,7 +232,7 @@ extends Schema {
             if (string2 != null) {
                 return dynamic2.set("id", dynamic.createString(string2));
             }
-            field_5749.warn("Unable to resolve BlockEntity for ItemStack: {}", (Object)string);
+            LOGGER.warn("Unable to resolve BlockEntity for ItemStack: {}", (Object)string);
             return dynamic2;
         }).update("EntityTag", dynamic2 -> {
             String string2 = dynamic.get("id").asString("");

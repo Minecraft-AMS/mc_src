@@ -15,9 +15,10 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CarpetBlock;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.RangedAttackMob;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.EscapeDangerGoal;
@@ -31,6 +32,7 @@ import net.minecraft.entity.ai.goal.ProjectileAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
@@ -46,25 +48,29 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.recipe.Ingredient;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.IWorld;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class LlamaEntity
 extends AbstractDonkeyEntity
 implements RangedAttackMob {
-    private static final TrackedData<Integer> ATTR_STRENGTH = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final Ingredient TAMING_INGREDIENT = Ingredient.ofItems(Items.WHEAT, Blocks.HAY_BLOCK.asItem());
+    private static final TrackedData<Integer> STRENGTH = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> CARPET_COLOR = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> ATTR_VARIANT = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> VARIANT = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private boolean spit;
     @Nullable
     private LlamaEntity following;
@@ -81,7 +87,7 @@ implements RangedAttackMob {
     }
 
     private void setStrength(int strength) {
-        this.dataTracker.set(ATTR_STRENGTH, Math.max(1, Math.min(5, strength)));
+        this.dataTracker.set(STRENGTH, Math.max(1, Math.min(5, strength)));
     }
 
     private void initializeStrength() {
@@ -90,26 +96,26 @@ implements RangedAttackMob {
     }
 
     public int getStrength() {
-        return this.dataTracker.get(ATTR_STRENGTH);
+        return this.dataTracker.get(STRENGTH);
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("Variant", this.getVariant());
-        tag.putInt("Strength", this.getStrength());
-        if (!this.items.getInvStack(1).isEmpty()) {
-            tag.put("DecorItem", this.items.getInvStack(1).toTag(new CompoundTag()));
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("Variant", this.getVariant());
+        nbt.putInt("Strength", this.getStrength());
+        if (!this.items.getStack(1).isEmpty()) {
+            nbt.put("DecorItem", this.items.getStack(1).writeNbt(new NbtCompound()));
         }
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        this.setStrength(tag.getInt("Strength"));
-        super.readCustomDataFromTag(tag);
-        this.setVariant(tag.getInt("Variant"));
-        if (tag.contains("DecorItem", 10)) {
-            this.items.setInvStack(1, ItemStack.fromTag(tag.getCompound("DecorItem")));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        this.setStrength(nbt.getInt("Strength"));
+        super.readCustomDataFromNbt(nbt);
+        this.setVariant(nbt.getInt("Variant"));
+        if (nbt.contains("DecorItem", 10)) {
+            this.items.setStack(1, ItemStack.fromNbt(nbt.getCompound("DecorItem")));
         }
         this.updateSaddle();
     }
@@ -130,32 +136,30 @@ implements RangedAttackMob {
         this.targetSelector.add(2, new ChaseWolvesGoal(this));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.FOLLOW_RANGE).setBaseValue(40.0);
+    public static DefaultAttributeContainer.Builder createLlamaAttributes() {
+        return LlamaEntity.createAbstractDonkeyAttributes().add(EntityAttributes.GENERIC_FOLLOW_RANGE, 40.0);
     }
 
     @Override
     protected void initDataTracker() {
         super.initDataTracker();
-        this.dataTracker.startTracking(ATTR_STRENGTH, 0);
+        this.dataTracker.startTracking(STRENGTH, 0);
         this.dataTracker.startTracking(CARPET_COLOR, -1);
-        this.dataTracker.startTracking(ATTR_VARIANT, 0);
+        this.dataTracker.startTracking(VARIANT, 0);
     }
 
     public int getVariant() {
-        return MathHelper.clamp(this.dataTracker.get(ATTR_VARIANT), 0, 3);
+        return MathHelper.clamp(this.dataTracker.get(VARIANT), 0, 3);
     }
 
     public void setVariant(int variant) {
-        this.dataTracker.set(ATTR_VARIANT, variant);
+        this.dataTracker.set(VARIANT, variant);
     }
 
     @Override
     protected int getInventorySize() {
         if (this.hasChest()) {
-            return 2 + 3 * this.method_6702();
+            return 2 + 3 * this.getInventoryColumns();
         }
         return super.getInventorySize();
     }
@@ -168,7 +172,7 @@ implements RangedAttackMob {
         float f = MathHelper.cos(this.bodyYaw * ((float)Math.PI / 180));
         float g = MathHelper.sin(this.bodyYaw * ((float)Math.PI / 180));
         float h = 0.3f;
-        passenger.updatePosition(this.getX() + (double)(0.3f * g), this.getY() + this.getMountedHeightOffset() + passenger.getHeightOffset(), this.getZ() - (double)(0.3f * f));
+        passenger.setPosition(this.getX() + (double)(0.3f * g), this.getY() + this.getMountedHeightOffset() + passenger.getHeightOffset(), this.getZ() - (double)(0.3f * f));
     }
 
     @Override
@@ -182,7 +186,13 @@ implements RangedAttackMob {
     }
 
     @Override
+    public boolean isBreedingItem(ItemStack stack) {
+        return TAMING_INGREDIENT.test(stack);
+    }
+
+    @Override
     protected boolean receiveFood(PlayerEntity player, ItemStack item) {
+        SoundEvent soundEvent;
         int i = 0;
         int j = 0;
         float f = 0.0f;
@@ -201,7 +211,7 @@ implements RangedAttackMob {
                 this.lovePlayer(player);
             }
         }
-        if (this.getHealth() < this.getMaximumHealth() && f > 0.0f) {
+        if (this.getHealth() < this.getMaxHealth() && f > 0.0f) {
             this.heal(f);
             bl = true;
         }
@@ -218,30 +228,30 @@ implements RangedAttackMob {
                 this.addTemper(j);
             }
         }
-        if (bl && !this.isSilent()) {
-            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_LLAMA_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+        if (bl && !this.isSilent() && (soundEvent = this.getEatSound()) != null) {
+            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), this.getEatSound(), this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
         }
         return bl;
     }
 
     @Override
     protected boolean isImmobile() {
-        return this.getHealth() <= 0.0f || this.isEatingGrass();
+        return this.isDead() || this.isEatingGrass();
     }
 
     @Override
     @Nullable
-    public net.minecraft.entity.EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable net.minecraft.entity.EntityData entityData, @Nullable CompoundTag entityTag) {
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         int i;
         this.initializeStrength();
-        if (entityData instanceof EntityData) {
-            i = ((EntityData)entityData).variant;
+        if (entityData instanceof LlamaData) {
+            i = ((LlamaData)entityData).variant;
         } else {
             i = this.random.nextInt(4);
-            entityData = new EntityData(i);
+            entityData = new LlamaData(i);
         }
         this.setVariant(i);
-        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
+        return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     @Override
@@ -265,6 +275,12 @@ implements RangedAttackMob {
     }
 
     @Override
+    @Nullable
+    protected SoundEvent getEatSound() {
+        return SoundEvents.ENTITY_LLAMA_EAT;
+    }
+
+    @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
         this.playSound(SoundEvents.ENTITY_LLAMA_STEP, 0.15f, 1.0f);
     }
@@ -283,17 +299,22 @@ implements RangedAttackMob {
     }
 
     @Override
-    public int method_6702() {
+    public int getInventoryColumns() {
         return this.getStrength();
     }
 
     @Override
-    public boolean canEquip() {
+    public boolean hasArmorSlot() {
         return true;
     }
 
     @Override
-    public boolean canEquip(ItemStack item) {
+    public boolean hasArmorInSlot() {
+        return !this.items.getStack(1).isEmpty();
+    }
+
+    @Override
+    public boolean isHorseArmor(ItemStack item) {
         Item item2 = item.getItem();
         return ItemTags.CARPETS.contains(item2);
     }
@@ -304,9 +325,9 @@ implements RangedAttackMob {
     }
 
     @Override
-    public void onInvChange(Inventory inventory) {
+    public void onInventoryChanged(Inventory sender) {
         DyeColor dyeColor = this.getCarpetColor();
-        super.onInvChange(inventory);
+        super.onInventoryChanged(sender);
         DyeColor dyeColor2 = this.getCarpetColor();
         if (this.age > 20 && dyeColor2 != null && dyeColor2 != dyeColor) {
             this.playSound(SoundEvents.ENTITY_LLAMA_SWAG, 0.5f, 1.0f);
@@ -319,7 +340,7 @@ implements RangedAttackMob {
             return;
         }
         super.updateSaddle();
-        this.setCarpetColor(LlamaEntity.getColorFromCarpet(this.items.getInvStack(1)));
+        this.setCarpetColor(LlamaEntity.getColorFromCarpet(this.items.getStack(1)));
     }
 
     private void setCarpetColor(@Nullable DyeColor color) {
@@ -352,7 +373,7 @@ implements RangedAttackMob {
     }
 
     @Override
-    public LlamaEntity createChild(PassiveEntity passiveEntity) {
+    public LlamaEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         LlamaEntity llamaEntity = this.createChild();
         this.setChildAttributes(passiveEntity, llamaEntity);
         LlamaEntity llamaEntity2 = (LlamaEntity)passiveEntity;
@@ -376,7 +397,9 @@ implements RangedAttackMob {
         double f = target.getZ() - this.getZ();
         float g = MathHelper.sqrt(d * d + f * f) * 0.2f;
         llamaSpitEntity.setVelocity(d, e + (double)g, f, 1.5f, 10.0f);
-        this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_LLAMA_SPIT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+        if (!this.isSilent()) {
+            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_LLAMA_SPIT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+        }
         this.world.spawnEntity(llamaSpitEntity);
         this.spit = true;
     }
@@ -410,8 +433,8 @@ implements RangedAttackMob {
         this.following = null;
     }
 
-    public void follow(LlamaEntity llamaEntity) {
-        this.following = llamaEntity;
+    public void follow(LlamaEntity llama) {
+        this.following = llama;
         this.following.follower = this;
     }
 
@@ -446,13 +469,19 @@ implements RangedAttackMob {
     }
 
     @Override
-    public void attack(LivingEntity target, float f) {
+    public void attack(LivingEntity target, float pullProgress) {
         this.spitAt(target);
     }
 
     @Override
-    public /* synthetic */ PassiveEntity createChild(PassiveEntity mate) {
-        return this.createChild(mate);
+    @Environment(value=EnvType.CLIENT)
+    public Vec3d method_29919() {
+        return new Vec3d(0.0, 0.75 * (double)this.getStandingEyeHeight(), (double)this.getWidth() * 0.5);
+    }
+
+    @Override
+    public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        return this.createChild(world, entity);
     }
 
     static class ChaseWolvesGoal
@@ -469,8 +498,8 @@ implements RangedAttackMob {
 
     static class SpitRevengeGoal
     extends RevengeGoal {
-        public SpitRevengeGoal(LlamaEntity llamaEntity) {
-            super(llamaEntity, new Class[0]);
+        public SpitRevengeGoal(LlamaEntity llama) {
+            super(llama, new Class[0]);
         }
 
         @Override
@@ -484,11 +513,12 @@ implements RangedAttackMob {
         }
     }
 
-    static class EntityData
-    extends PassiveEntity.EntityData {
+    static class LlamaData
+    extends PassiveEntity.PassiveData {
         public final int variant;
 
-        private EntityData(int variant) {
+        private LlamaData(int variant) {
+            super(true);
             this.variant = variant;
         }
     }

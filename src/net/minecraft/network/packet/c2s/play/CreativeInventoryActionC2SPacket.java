@@ -12,8 +12,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class CreativeInventoryActionC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -24,9 +24,9 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public CreativeInventoryActionC2SPacket(int i, ItemStack itemStack) {
-        this.slot = i;
-        this.stack = itemStack.copy();
+    public CreativeInventoryActionC2SPacket(int slot, ItemStack stack) {
+        this.slot = slot;
+        this.stack = stack.copy();
     }
 
     @Override

@@ -9,17 +9,18 @@ package net.minecraft.block;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Predicate;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractRailBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.RailPlacementHelper;
 import net.minecraft.block.enums.RailShape;
-import net.minecraft.container.Container;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.entity.vehicle.CommandBlockMinecartEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
@@ -33,7 +34,6 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class DetectorRailBlock
@@ -41,14 +41,9 @@ extends AbstractRailBlock {
     public static final EnumProperty<RailShape> SHAPE = Properties.STRAIGHT_RAIL_SHAPE;
     public static final BooleanProperty POWERED = Properties.POWERED;
 
-    public DetectorRailBlock(Block.Settings settings) {
+    public DetectorRailBlock(AbstractBlock.Settings settings) {
         super(true, settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(POWERED, false)).with(SHAPE, RailShape.NORTH_SOUTH));
-    }
-
-    @Override
-    public int getTickRate(WorldView worldView) {
-        return 20;
     }
 
     @Override
@@ -76,20 +71,23 @@ extends AbstractRailBlock {
     }
 
     @Override
-    public int getWeakRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
+    public int getWeakRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
         return state.get(POWERED) != false ? 15 : 0;
     }
 
     @Override
-    public int getStrongRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
+    public int getStrongRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
         if (!state.get(POWERED).booleanValue()) {
             return 0;
         }
-        return facing == Direction.UP ? 15 : 0;
+        return direction == Direction.UP ? 15 : 0;
     }
 
     private void updatePoweredStatus(World world, BlockPos pos, BlockState state) {
         BlockState blockState;
+        if (!this.canPlaceAt(state, world, pos)) {
+            return;
+        }
         boolean bl = state.get(POWERED);
         boolean bl2 = false;
         List<AbstractMinecartEntity> list = this.getCarts(world, pos, AbstractMinecartEntity.class, null);
@@ -102,7 +100,7 @@ extends AbstractRailBlock {
             this.updateNearbyRails(world, pos, blockState, true);
             world.updateNeighborsAlways(pos, this);
             world.updateNeighborsAlways(pos.down(), this);
-            world.checkBlockRerender(pos, state, blockState);
+            world.scheduleBlockRerenderIfNeeded(pos, state, blockState);
         }
         if (!bl2 && bl) {
             blockState = (BlockState)state.with(POWERED, false);
@@ -110,12 +108,12 @@ extends AbstractRailBlock {
             this.updateNearbyRails(world, pos, blockState, false);
             world.updateNeighborsAlways(pos, this);
             world.updateNeighborsAlways(pos.down(), this);
-            world.checkBlockRerender(pos, state, blockState);
+            world.scheduleBlockRerenderIfNeeded(pos, state, blockState);
         }
         if (bl2) {
-            world.getBlockTickScheduler().schedule(pos, this, this.getTickRate(world));
+            world.getBlockTickScheduler().schedule(pos, this, 20);
         }
-        world.updateHorizontalAdjacent(pos, this);
+        world.updateComparators(pos, this);
     }
 
     protected void updateNearbyRails(World world, BlockPos pos, BlockState state, boolean unpowering) {
@@ -128,12 +126,11 @@ extends AbstractRailBlock {
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
-        if (oldState.getBlock() == state.getBlock()) {
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        if (oldState.isOf(state.getBlock())) {
             return;
         }
-        super.onBlockAdded(state, world, pos, oldState, moved);
-        this.updatePoweredStatus(world, pos, state);
+        this.updatePoweredStatus(world, pos, this.updateCurves(state, world, pos, notify));
     }
 
     @Override
@@ -155,19 +152,19 @@ extends AbstractRailBlock {
             }
             List<AbstractMinecartEntity> list2 = this.getCarts(world, pos, AbstractMinecartEntity.class, EntityPredicates.VALID_INVENTORIES);
             if (!list2.isEmpty()) {
-                return Container.calculateComparatorOutput((Inventory)((Object)list2.get(0)));
+                return ScreenHandler.calculateComparatorOutput((Inventory)((Object)list2.get(0)));
             }
         }
         return 0;
     }
 
     protected <T extends AbstractMinecartEntity> List<T> getCarts(World world, BlockPos pos, Class<T> entityClass, @Nullable Predicate<Entity> entityPredicate) {
-        return world.getEntities(entityClass, this.getCartDetectionBox(pos), entityPredicate);
+        return world.getEntitiesByClass(entityClass, this.getCartDetectionBox(pos), entityPredicate);
     }
 
     private Box getCartDetectionBox(BlockPos pos) {
-        float f = 0.2f;
-        return new Box((float)pos.getX() + 0.2f, pos.getY(), (float)pos.getZ() + 0.2f, (float)(pos.getX() + 1) - 0.2f, (float)(pos.getY() + 1) - 0.2f, (float)(pos.getZ() + 1) - 0.2f);
+        double d = 0.2;
+        return new Box((double)pos.getX() + 0.2, pos.getY(), (double)pos.getZ() + 0.2, (double)(pos.getX() + 1) - 0.2, (double)(pos.getY() + 1) - 0.2, (double)(pos.getZ() + 1) - 0.2);
     }
 
     @Override

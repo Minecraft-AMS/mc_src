@@ -36,8 +36,8 @@ extends EntityModel<E> {
         this(RenderLayer::getEntityCutoutNoCull, headScaled, childHeadYOffset, childHeadZOffset, invertedChildHeadScale, invertedChildBodyScale, childBodyYOffset);
     }
 
-    protected AnimalModel(Function<Identifier, RenderLayer> function, boolean headScaled, float childHeadYOffset, float childHeadZOffset, float invertedChildHeadScale, float invertedChildBodyScale, float childBodyYOffset) {
-        super(function);
+    protected AnimalModel(Function<Identifier, RenderLayer> renderLayerFactory, boolean headScaled, float childHeadYOffset, float childHeadZOffset, float invertedChildHeadScale, float invertedChildBodyScale, float childBodyYOffset) {
+        super(renderLayerFactory);
         this.headScaled = headScaled;
         this.childHeadYOffset = childHeadYOffset;
         this.childHeadZOffset = childHeadZOffset;
@@ -51,7 +51,7 @@ extends EntityModel<E> {
     }
 
     @Override
-    public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
+    public void render(MatrixStack matrices, VertexConsumer vertices, int light, int overlay, float red, float green, float blue, float alpha) {
         if (this.child) {
             float f;
             matrices.push();
@@ -60,17 +60,17 @@ extends EntityModel<E> {
                 matrices.scale(f, f, f);
             }
             matrices.translate(0.0, this.childHeadYOffset / 16.0f, this.childHeadZOffset / 16.0f);
-            this.getHeadParts().forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha));
+            this.getHeadParts().forEach(modelPart -> modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha));
             matrices.pop();
             matrices.push();
             f = 1.0f / this.invertedChildBodyScale;
             matrices.scale(f, f, f);
             matrices.translate(0.0, this.childBodyYOffset / 16.0f, 0.0);
-            this.getBodyParts().forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha));
+            this.getBodyParts().forEach(modelPart -> modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha));
             matrices.pop();
         } else {
-            this.getHeadParts().forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha));
-            this.getBodyParts().forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha));
+            this.getHeadParts().forEach(modelPart -> modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha));
+            this.getBodyParts().forEach(modelPart -> modelPart.render(matrices, vertices, light, overlay, red, green, blue, alpha));
         }
     }
 

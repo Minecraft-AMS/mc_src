@@ -11,30 +11,33 @@ package net.minecraft.client.gui.widget;
 
 import com.google.common.collect.ImmutableList;
 import java.util.List;
+import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.widget.AbstractButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
-import net.minecraft.client.options.GameOptions;
-import net.minecraft.client.options.Option;
+import net.minecraft.client.gui.widget.OptionButtonWidget;
+import net.minecraft.client.option.GameOptions;
+import net.minecraft.client.option.Option;
+import net.minecraft.client.util.math.MatrixStack;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class ButtonListWidget
 extends ElementListWidget<ButtonEntry> {
-    public ButtonListWidget(MinecraftClient client, int width, int height, int top, int bottom, int itemHeight) {
-        super(client, width, height, top, bottom, itemHeight);
+    public ButtonListWidget(MinecraftClient minecraftClient, int i, int j, int k, int l, int m) {
+        super(minecraftClient, i, j, k, l, m);
         this.centerListVertically = false;
     }
 
     public int addSingleOptionEntry(Option option) {
-        return this.addEntry(ButtonEntry.create(this.minecraft.options, this.width, option));
+        return this.addEntry(ButtonEntry.create(this.client.options, this.width, option));
     }
 
     public void addOptionEntry(Option firstOption, @Nullable Option secondOption) {
-        this.addEntry(ButtonEntry.create(this.minecraft.options, this.width, firstOption, secondOption));
+        this.addEntry(ButtonEntry.create(this.client.options, this.width, firstOption, secondOption));
     }
 
     public void addAll(Option[] options) {
@@ -49,36 +52,57 @@ extends ElementListWidget<ButtonEntry> {
     }
 
     @Override
-    protected int getScrollbarPosition() {
-        return super.getScrollbarPosition() + 32;
+    protected int getScrollbarPositionX() {
+        return super.getScrollbarPositionX() + 32;
+    }
+
+    @Nullable
+    public ClickableWidget getButtonFor(Option option) {
+        for (ButtonEntry buttonEntry : this.children()) {
+            for (ClickableWidget clickableWidget : buttonEntry.buttons) {
+                if (!(clickableWidget instanceof OptionButtonWidget) || ((OptionButtonWidget)clickableWidget).getOption() != option) continue;
+                return clickableWidget;
+            }
+        }
+        return null;
+    }
+
+    public Optional<ClickableWidget> getHoveredButton(double mouseX, double mouseY) {
+        for (ButtonEntry buttonEntry : this.children()) {
+            for (ClickableWidget clickableWidget : buttonEntry.buttons) {
+                if (!clickableWidget.isMouseOver(mouseX, mouseY)) continue;
+                return Optional.of(clickableWidget);
+            }
+        }
+        return Optional.empty();
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class ButtonEntry
     extends ElementListWidget.Entry<ButtonEntry> {
-        private final List<AbstractButtonWidget> buttons;
+        private final List<ClickableWidget> buttons;
 
-        private ButtonEntry(List<AbstractButtonWidget> buttons) {
+        private ButtonEntry(List<ClickableWidget> buttons) {
             this.buttons = buttons;
         }
 
         public static ButtonEntry create(GameOptions options, int width, Option option) {
-            return new ButtonEntry((List<AbstractButtonWidget>)ImmutableList.of((Object)option.createButton(options, width / 2 - 155, 0, 310)));
+            return new ButtonEntry((List<ClickableWidget>)ImmutableList.of((Object)option.createButton(options, width / 2 - 155, 0, 310)));
         }
 
         public static ButtonEntry create(GameOptions options, int width, Option firstOption, @Nullable Option secondOption) {
-            AbstractButtonWidget abstractButtonWidget = firstOption.createButton(options, width / 2 - 155, 0, 150);
+            ClickableWidget clickableWidget = firstOption.createButton(options, width / 2 - 155, 0, 150);
             if (secondOption == null) {
-                return new ButtonEntry((List<AbstractButtonWidget>)ImmutableList.of((Object)abstractButtonWidget));
+                return new ButtonEntry((List<ClickableWidget>)ImmutableList.of((Object)clickableWidget));
             }
-            return new ButtonEntry((List<AbstractButtonWidget>)ImmutableList.of((Object)abstractButtonWidget, (Object)secondOption.createButton(options, width / 2 - 155 + 160, 0, 150)));
+            return new ButtonEntry((List<ClickableWidget>)ImmutableList.of((Object)clickableWidget, (Object)secondOption.createButton(options, width / 2 - 155 + 160, 0, 150)));
         }
 
         @Override
-        public void render(int i, int j, int k, int l, int m, int n, int o, boolean bl, float f) {
+        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             this.buttons.forEach(button -> {
-                button.y = j;
-                button.render(n, o, f);
+                button.y = y;
+                button.render(matrices, mouseX, mouseY, tickDelta);
             });
         }
 

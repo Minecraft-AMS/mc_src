@@ -27,8 +27,9 @@ import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.dimension.DimensionType;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -86,8 +87,7 @@ implements DebugRenderer.Renderer {
 
         private ChunkLoadingStatus(IntegratedServer integratedServer, double d, double e) {
             ClientWorld clientWorld = ((ChunkLoadingDebugRenderer)ChunkLoadingDebugRenderer.this).client.world;
-            DimensionType dimensionType = ((ChunkLoadingDebugRenderer)ChunkLoadingDebugRenderer.this).client.world.dimension.getType();
-            ServerWorld serverWorld = integratedServer.getWorld(dimensionType) != null ? integratedServer.getWorld(dimensionType) : null;
+            RegistryKey<World> registryKey = clientWorld.getRegistryKey();
             int i = (int)d >> 4;
             int j = (int)e >> 4;
             ImmutableMap.Builder builder = ImmutableMap.builder();
@@ -109,12 +109,16 @@ implements DebugRenderer.Renderer {
             }
             this.clientStates = builder.build();
             this.serverStates = integratedServer.submit(() -> {
+                ServerWorld serverWorld = integratedServer.getWorld(registryKey);
+                if (serverWorld == null) {
+                    return ImmutableMap.of();
+                }
                 ImmutableMap.Builder builder = ImmutableMap.builder();
                 ServerChunkManager serverChunkManager = serverWorld.getChunkManager();
                 for (int k = i - 12; k <= i + 12; ++k) {
                     for (int l = j - 12; l <= j + 12; ++l) {
                         ChunkPos chunkPos = new ChunkPos(k, l);
-                        builder.put((Object)chunkPos, (Object)("Server: " + serverChunkManager.method_23273(chunkPos)));
+                        builder.put((Object)chunkPos, (Object)("Server: " + serverChunkManager.getChunkLoadingDebugInfo(chunkPos)));
                     }
                 }
                 return builder.build();

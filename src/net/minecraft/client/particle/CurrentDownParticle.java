@@ -14,18 +14,18 @@ import net.minecraft.client.particle.ParticleFactory;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
 public class CurrentDownParticle
 extends SpriteBillboardParticle {
-    private float field_3897;
+    private float accelerationAngle;
 
-    private CurrentDownParticle(World world, double x, double y, double z) {
+    private CurrentDownParticle(ClientWorld world, double x, double y, double z) {
         super(world, x, y, z);
         this.maxAge = (int)(Math.random() * 60.0) + 30;
         this.collidesWithWorld = false;
@@ -52,30 +52,30 @@ extends SpriteBillboardParticle {
             return;
         }
         float f = 0.6f;
-        this.velocityX += (double)(0.6f * MathHelper.cos(this.field_3897));
-        this.velocityZ += (double)(0.6f * MathHelper.sin(this.field_3897));
+        this.velocityX += (double)(0.6f * MathHelper.cos(this.accelerationAngle));
+        this.velocityZ += (double)(0.6f * MathHelper.sin(this.accelerationAngle));
         this.velocityX *= 0.07;
         this.velocityZ *= 0.07;
         this.move(this.velocityX, this.velocityY, this.velocityZ);
-        if (!this.world.getFluidState(new BlockPos(this.x, this.y, this.z)).matches(FluidTags.WATER) || this.onGround) {
+        if (!this.world.getFluidState(new BlockPos(this.x, this.y, this.z)).isIn(FluidTags.WATER) || this.onGround) {
             this.markDead();
         }
-        this.field_3897 = (float)((double)this.field_3897 + 0.08);
+        this.accelerationAngle = (float)((double)this.accelerationAngle + 0.08);
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class Factory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_17890;
+        private final SpriteProvider spriteProvider;
 
         public Factory(SpriteProvider spriteProvider) {
-            this.field_17890 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            CurrentDownParticle currentDownParticle = new CurrentDownParticle(world, d, e, f);
-            currentDownParticle.setSprite(this.field_17890);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            CurrentDownParticle currentDownParticle = new CurrentDownParticle(clientWorld, d, e, f);
+            currentDownParticle.setSprite(this.spriteProvider);
             return currentDownParticle;
         }
     }

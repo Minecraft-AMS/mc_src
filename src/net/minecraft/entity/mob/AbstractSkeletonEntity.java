@@ -17,8 +17,7 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ProjectileUtil;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.RangedAttackMob;
 import net.minecraft.entity.ai.goal.AvoidSunlightGoal;
 import net.minecraft.entity.ai.goal.BowAttackGoal;
@@ -30,25 +29,28 @@ import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.item.RangedWeaponItem;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,8 +73,8 @@ implements RangedAttackMob {
         }
     };
 
-    protected AbstractSkeletonEntity(EntityType<? extends AbstractSkeletonEntity> type, World world) {
-        super((EntityType<? extends HostileEntity>)type, world);
+    protected AbstractSkeletonEntity(EntityType<? extends AbstractSkeletonEntity> entityType, World world) {
+        super((EntityType<? extends HostileEntity>)entityType, world);
         this.updateAttackType();
     }
 
@@ -90,10 +92,8 @@ implements RangedAttackMob {
         this.targetSelector.add(3, new FollowTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.25);
+    public static DefaultAttributeContainer.Builder createAbstractSkeletonAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25);
     }
 
     @Override
@@ -110,7 +110,7 @@ implements RangedAttackMob {
 
     @Override
     public void tickMovement() {
-        boolean bl = this.isInDaylight();
+        boolean bl = this.isAffectedByDaylight();
         if (bl) {
             ItemStack itemStack = this.getEquippedStack(EquipmentSlot.HEAD);
             if (!itemStack.isEmpty()) {
@@ -133,9 +133,9 @@ implements RangedAttackMob {
     @Override
     public void tickRiding() {
         super.tickRiding();
-        if (this.getVehicle() instanceof MobEntityWithAi) {
-            MobEntityWithAi mobEntityWithAi = (MobEntityWithAi)this.getVehicle();
-            this.bodyYaw = mobEntityWithAi.bodyYaw;
+        if (this.getVehicle() instanceof PathAwareEntity) {
+            PathAwareEntity pathAwareEntity = (PathAwareEntity)this.getVehicle();
+            this.bodyYaw = pathAwareEntity.bodyYaw;
         }
     }
 
@@ -147,8 +147,8 @@ implements RangedAttackMob {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        entityData = super.initialize(world, difficulty, spawnType, entityData, entityTag);
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
+        entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         this.initEquipment(difficulty);
         this.updateEnchantments(difficulty);
         this.updateAttackType();
@@ -185,25 +185,30 @@ implements RangedAttackMob {
     }
 
     @Override
-    public void attack(LivingEntity target, float f) {
+    public void attack(LivingEntity target, float pullProgress) {
         ItemStack itemStack = this.getArrowType(this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW)));
-        ProjectileEntity projectileEntity = this.createArrowProjectile(itemStack, f);
+        PersistentProjectileEntity persistentProjectileEntity = this.createArrowProjectile(itemStack, pullProgress);
         double d = target.getX() - this.getX();
-        double e = target.getBodyY(0.3333333333333333) - projectileEntity.getY();
-        double g = target.getZ() - this.getZ();
-        double h = MathHelper.sqrt(d * d + g * g);
-        projectileEntity.setVelocity(d, e + h * (double)0.2f, g, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
+        double e = target.getBodyY(0.3333333333333333) - persistentProjectileEntity.getY();
+        double f = target.getZ() - this.getZ();
+        double g = MathHelper.sqrt(d * d + f * f);
+        persistentProjectileEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-        this.world.spawnEntity(projectileEntity);
+        this.world.spawnEntity(persistentProjectileEntity);
     }
 
-    protected ProjectileEntity createArrowProjectile(ItemStack arrow, float f) {
-        return ProjectileUtil.createArrowProjectile(this, arrow, f);
+    protected PersistentProjectileEntity createArrowProjectile(ItemStack arrow, float damageModifier) {
+        return ProjectileUtil.createArrowProjectile(this, arrow, damageModifier);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
+    public boolean canUseRangedWeapon(RangedWeaponItem weapon) {
+        return weapon == Items.BOW;
+    }
+
+    @Override
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
         this.updateAttackType();
     }
 

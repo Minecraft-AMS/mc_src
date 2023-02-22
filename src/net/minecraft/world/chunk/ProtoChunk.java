@@ -7,6 +7,7 @@
  *  com.google.common.collect.Sets
  *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
  *  it.unimi.dsi.fastutil.longs.LongSet
+ *  it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
  *  it.unimi.dsi.fastutil.shorts.ShortList
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -19,6 +20,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.shorts.ShortList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -37,7 +39,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -53,6 +55,7 @@ import net.minecraft.world.chunk.UpgradeData;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.feature.StructureFeature;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -63,40 +66,40 @@ implements Chunk {
     private final ChunkPos pos;
     private volatile boolean shouldSave;
     @Nullable
-    private BiomeArray field_20656;
+    private BiomeArray biomes;
     @Nullable
     private volatile LightingProvider lightingProvider;
     private final Map<Heightmap.Type, Heightmap> heightmaps = Maps.newEnumMap(Heightmap.Type.class);
     private volatile ChunkStatus status = ChunkStatus.EMPTY;
     private final Map<BlockPos, BlockEntity> blockEntities = Maps.newHashMap();
-    private final Map<BlockPos, CompoundTag> blockEntityTags = Maps.newHashMap();
+    private final Map<BlockPos, NbtCompound> blockEntityTags = Maps.newHashMap();
     private final ChunkSection[] sections = new ChunkSection[16];
-    private final List<CompoundTag> entities = Lists.newArrayList();
+    private final List<NbtCompound> entities = Lists.newArrayList();
     private final List<BlockPos> lightSources = Lists.newArrayList();
     private final ShortList[] postProcessingLists = new ShortList[16];
-    private final Map<String, StructureStart> structureStarts = Maps.newHashMap();
-    private final Map<String, LongSet> structureReferences = Maps.newHashMap();
+    private final Map<StructureFeature<?>, StructureStart<?>> structureStarts = Maps.newHashMap();
+    private final Map<StructureFeature<?>, LongSet> structureReferences = Maps.newHashMap();
     private final UpgradeData upgradeData;
     private final ChunkTickScheduler<Block> blockTickScheduler;
     private final ChunkTickScheduler<Fluid> fluidTickScheduler;
     private long inhabitedTime;
-    private final Map<GenerationStep.Carver, BitSet> carvingMasks = Maps.newHashMap();
-    private volatile boolean isLightOn;
+    private final Map<GenerationStep.Carver, BitSet> carvingMasks = new Object2ObjectArrayMap();
+    private volatile boolean lightOn;
 
-    public ProtoChunk(ChunkPos chunkPos, UpgradeData upgradeData) {
-        this(chunkPos, upgradeData, null, new ChunkTickScheduler<Block>(block -> block == null || block.getDefaultState().isAir(), chunkPos), new ChunkTickScheduler<Fluid>(fluid -> fluid == null || fluid == Fluids.EMPTY, chunkPos));
+    public ProtoChunk(ChunkPos pos, UpgradeData upgradeData) {
+        this(pos, upgradeData, null, new ChunkTickScheduler<Block>(block -> block == null || block.getDefaultState().isAir(), pos), new ChunkTickScheduler<Fluid>(fluid -> fluid == null || fluid == Fluids.EMPTY, pos));
     }
 
-    public ProtoChunk(ChunkPos chunkPos, UpgradeData upgradeData, @Nullable ChunkSection[] chunkSections, ChunkTickScheduler<Block> chunkTickScheduler, ChunkTickScheduler<Fluid> chunkTickScheduler2) {
-        this.pos = chunkPos;
+    public ProtoChunk(ChunkPos pos, UpgradeData upgradeData, @Nullable ChunkSection[] sections, ChunkTickScheduler<Block> blockTickScheduler, ChunkTickScheduler<Fluid> fluidTickScheduler) {
+        this.pos = pos;
         this.upgradeData = upgradeData;
-        this.blockTickScheduler = chunkTickScheduler;
-        this.fluidTickScheduler = chunkTickScheduler2;
-        if (chunkSections != null) {
-            if (this.sections.length == chunkSections.length) {
-                System.arraycopy(chunkSections, 0, this.sections, 0, this.sections.length);
+        this.blockTickScheduler = blockTickScheduler;
+        this.fluidTickScheduler = fluidTickScheduler;
+        if (sections != null) {
+            if (this.sections.length == sections.length) {
+                System.arraycopy(sections, 0, this.sections, 0, this.sections.length);
             } else {
-                LOGGER.warn("Could not set level chunk sections, array length is {} instead of {}", (Object)chunkSections.length, (Object)this.sections.length);
+                LOGGER.warn("Could not set level chunk sections, array length is {} instead of {}", (Object)sections.length, (Object)this.sections.length);
             }
         }
     }
@@ -104,7 +107,7 @@ implements Chunk {
     @Override
     public BlockState getBlockState(BlockPos pos) {
         int i = pos.getY();
-        if (World.isHeightInvalid(i)) {
+        if (World.isOutOfBuildLimitVertically(i)) {
             return Blocks.VOID_AIR.getDefaultState();
         }
         ChunkSection chunkSection = this.getSectionArray()[i >> 4];
@@ -117,7 +120,7 @@ implements Chunk {
     @Override
     public FluidState getFluidState(BlockPos pos) {
         int i = pos.getY();
-        if (World.isHeightInvalid(i)) {
+        if (World.isOutOfBuildLimitVertically(i)) {
             return Fluids.EMPTY.getDefaultState();
         }
         ChunkSection chunkSection = this.getSectionArray()[i >> 4];
@@ -150,14 +153,14 @@ implements Chunk {
 
     @Override
     @Nullable
-    public BlockState setBlockState(BlockPos pos, BlockState state, boolean bl) {
+    public BlockState setBlockState(BlockPos pos, BlockState state, boolean moved) {
         int i = pos.getX();
         int j = pos.getY();
         int k = pos.getZ();
         if (j < 0 || j >= 256) {
             return Blocks.VOID_AIR.getDefaultState();
         }
-        if (this.sections[j >> 4] == WorldChunk.EMPTY_SECTION && state.getBlock() == Blocks.AIR) {
+        if (this.sections[j >> 4] == WorldChunk.EMPTY_SECTION && state.isOf(Blocks.AIR)) {
             return state;
         }
         if (state.getLuminance() > 0) {
@@ -172,7 +175,7 @@ implements Chunk {
         EnumSet<Heightmap.Type> enumSet = this.getStatus().getHeightmapTypes();
         EnumSet<Heightmap.Type> enumSet2 = null;
         for (Heightmap.Type type : enumSet) {
-            Heightmap heightmap = this.heightmaps.get((Object)type);
+            Heightmap heightmap = this.heightmaps.get(type);
             if (heightmap != null) continue;
             if (enumSet2 == null) {
                 enumSet2 = EnumSet.noneOf(Heightmap.Type.class);
@@ -183,7 +186,7 @@ implements Chunk {
             Heightmap.populateHeightmaps(this, enumSet2);
         }
         for (Heightmap.Type type : enumSet) {
-            this.heightmaps.get((Object)type).trackUpdate(i & 0xF, j, k & 0xF, state);
+            this.heightmaps.get(type).trackUpdate(i & 0xF, j, k & 0xF, state);
         }
         return blockState;
     }
@@ -218,29 +221,32 @@ implements Chunk {
         return this.blockEntities;
     }
 
-    public void addEntity(CompoundTag entityTag) {
+    public void addEntity(NbtCompound entityTag) {
         this.entities.add(entityTag);
     }
 
     @Override
     public void addEntity(Entity entity) {
-        CompoundTag compoundTag = new CompoundTag();
-        entity.saveToTag(compoundTag);
-        this.addEntity(compoundTag);
+        if (entity.hasVehicle()) {
+            return;
+        }
+        NbtCompound nbtCompound = new NbtCompound();
+        entity.saveNbt(nbtCompound);
+        this.addEntity(nbtCompound);
     }
 
-    public List<CompoundTag> getEntities() {
+    public List<NbtCompound> getEntities() {
         return this.entities;
     }
 
-    public void method_22405(BiomeArray biomeArray) {
-        this.field_20656 = biomeArray;
+    public void setBiomes(BiomeArray biomes) {
+        this.biomes = biomes;
     }
 
     @Override
     @Nullable
     public BiomeArray getBiomeArray() {
-        return this.field_20656;
+        return this.biomes;
     }
 
     @Override
@@ -258,8 +264,8 @@ implements Chunk {
         return this.status;
     }
 
-    public void setStatus(ChunkStatus chunkStatus) {
-        this.status = chunkStatus;
+    public void setStatus(ChunkStatus status) {
+        this.status = status;
         this.setShouldSave(true);
     }
 
@@ -285,15 +291,15 @@ implements Chunk {
 
     @Override
     public Heightmap getHeightmap(Heightmap.Type type2) {
-        return this.heightmaps.computeIfAbsent(type2, type -> new Heightmap(this, (Heightmap.Type)((Object)type)));
+        return this.heightmaps.computeIfAbsent(type2, type -> new Heightmap(this, (Heightmap.Type)type));
     }
 
     @Override
     public int sampleHeightmap(Heightmap.Type type, int x, int z) {
-        Heightmap heightmap = this.heightmaps.get((Object)type);
+        Heightmap heightmap = this.heightmaps.get(type);
         if (heightmap == null) {
             Heightmap.populateHeightmaps(this, EnumSet.of(type));
-            heightmap = this.heightmaps.get((Object)type);
+            heightmap = this.heightmaps.get(type);
         }
         return heightmap.get(x & 0xF, z & 0xF) - 1;
     }
@@ -309,46 +315,46 @@ implements Chunk {
 
     @Override
     @Nullable
-    public StructureStart getStructureStart(String structure) {
+    public StructureStart<?> getStructureStart(StructureFeature<?> structure) {
         return this.structureStarts.get(structure);
     }
 
     @Override
-    public void setStructureStart(String structure, StructureStart start) {
+    public void setStructureStart(StructureFeature<?> structure, StructureStart<?> start) {
         this.structureStarts.put(structure, start);
         this.shouldSave = true;
     }
 
     @Override
-    public Map<String, StructureStart> getStructureStarts() {
+    public Map<StructureFeature<?>, StructureStart<?>> getStructureStarts() {
         return Collections.unmodifiableMap(this.structureStarts);
     }
 
     @Override
-    public void setStructureStarts(Map<String, StructureStart> map) {
+    public void setStructureStarts(Map<StructureFeature<?>, StructureStart<?>> structureStarts) {
         this.structureStarts.clear();
-        this.structureStarts.putAll(map);
+        this.structureStarts.putAll(structureStarts);
         this.shouldSave = true;
     }
 
     @Override
-    public LongSet getStructureReferences(String structure) {
-        return this.structureReferences.computeIfAbsent(structure, string -> new LongOpenHashSet());
+    public LongSet getStructureReferences(StructureFeature<?> structure2) {
+        return this.structureReferences.computeIfAbsent(structure2, structure -> new LongOpenHashSet());
     }
 
     @Override
-    public void addStructureReference(String structure, long reference) {
-        this.structureReferences.computeIfAbsent(structure, string -> new LongOpenHashSet()).add(reference);
+    public void addStructureReference(StructureFeature<?> structure2, long reference) {
+        this.structureReferences.computeIfAbsent(structure2, structure -> new LongOpenHashSet()).add(reference);
         this.shouldSave = true;
     }
 
     @Override
-    public Map<String, LongSet> getStructureReferences() {
+    public Map<StructureFeature<?>, LongSet> getStructureReferences() {
         return Collections.unmodifiableMap(this.structureReferences);
     }
 
     @Override
-    public void setStructureReferences(Map<String, LongSet> structureReferences) {
+    public void setStructureReferences(Map<StructureFeature<?>, LongSet> structureReferences) {
         this.structureReferences.clear();
         this.structureReferences.putAll(structureReferences);
         this.shouldSave = true;
@@ -372,9 +378,9 @@ implements Chunk {
     }
 
     @Override
-    public void markBlockForPostProcessing(BlockPos blockPos) {
-        if (!World.isHeightInvalid(blockPos)) {
-            Chunk.getList(this.postProcessingLists, blockPos.getY() >> 4).add(ProtoChunk.getPackedSectionRelative(blockPos));
+    public void markBlockForPostProcessing(BlockPos pos) {
+        if (!World.isOutOfBuildLimitVertically(pos)) {
+            Chunk.getList(this.postProcessingLists, pos.getY() >> 4).add(ProtoChunk.getPackedSectionRelative(pos));
         }
     }
 
@@ -384,8 +390,8 @@ implements Chunk {
     }
 
     @Override
-    public void markBlockForPostProcessing(short s, int i) {
-        Chunk.getList(this.postProcessingLists, i).add(s);
+    public void markBlockForPostProcessing(short packedPos, int index) {
+        Chunk.getList(this.postProcessingLists, index).add(packedPos);
     }
 
     public ChunkTickScheduler<Block> getBlockTickScheduler() {
@@ -412,37 +418,41 @@ implements Chunk {
     }
 
     @Override
-    public void addPendingBlockEntityTag(CompoundTag compoundTag) {
-        this.blockEntityTags.put(new BlockPos(compoundTag.getInt("x"), compoundTag.getInt("y"), compoundTag.getInt("z")), compoundTag);
+    public void addPendingBlockEntityNbt(NbtCompound nbt) {
+        this.blockEntityTags.put(new BlockPos(nbt.getInt("x"), nbt.getInt("y"), nbt.getInt("z")), nbt);
     }
 
-    public Map<BlockPos, CompoundTag> getBlockEntityTags() {
+    public Map<BlockPos, NbtCompound> getBlockEntityNbts() {
         return Collections.unmodifiableMap(this.blockEntityTags);
     }
 
     @Override
-    public CompoundTag getBlockEntityTagAt(BlockPos pos) {
+    public NbtCompound getBlockEntityNbt(BlockPos pos) {
         return this.blockEntityTags.get(pos);
     }
 
     @Override
     @Nullable
-    public CompoundTag method_20598(BlockPos blockPos) {
-        BlockEntity blockEntity = this.getBlockEntity(blockPos);
+    public NbtCompound getPackedBlockEntityNbt(BlockPos pos) {
+        BlockEntity blockEntity = this.getBlockEntity(pos);
         if (blockEntity != null) {
-            return blockEntity.toTag(new CompoundTag());
+            return blockEntity.writeNbt(new NbtCompound());
         }
-        return this.blockEntityTags.get(blockPos);
+        return this.blockEntityTags.get(pos);
     }
 
     @Override
-    public void removeBlockEntity(BlockPos blockPos) {
-        this.blockEntities.remove(blockPos);
-        this.blockEntityTags.remove(blockPos);
+    public void removeBlockEntity(BlockPos pos) {
+        this.blockEntities.remove(pos);
+        this.blockEntityTags.remove(pos);
     }
 
-    @Override
-    public BitSet getCarvingMask(GenerationStep.Carver carver2) {
+    @Nullable
+    public BitSet getCarvingMask(GenerationStep.Carver carver) {
+        return this.carvingMasks.get(carver);
+    }
+
+    public BitSet getOrCreateCarvingMask(GenerationStep.Carver carver2) {
         return this.carvingMasks.computeIfAbsent(carver2, carver -> new BitSet(65536));
     }
 
@@ -456,12 +466,12 @@ implements Chunk {
 
     @Override
     public boolean isLightOn() {
-        return this.isLightOn;
+        return this.lightOn;
     }
 
     @Override
     public void setLightOn(boolean lightOn) {
-        this.isLightOn = lightOn;
+        this.lightOn = lightOn;
         this.setShouldSave(true);
     }
 

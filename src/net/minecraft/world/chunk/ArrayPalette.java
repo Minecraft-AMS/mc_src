@@ -4,21 +4,20 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.lang3.ArrayUtils
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.util.IdList;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.collection.IdList;
 import net.minecraft.world.chunk.Palette;
 import net.minecraft.world.chunk.PaletteResizeListener;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 
 public class ArrayPalette<T>
@@ -26,11 +25,11 @@ implements Palette<T> {
     private final IdList<T> idList;
     private final T[] array;
     private final PaletteResizeListener<T> resizeListener;
-    private final Function<CompoundTag, T> valueDeserializer;
+    private final Function<NbtCompound, T> valueDeserializer;
     private final int indexBits;
     private int size;
 
-    public ArrayPalette(IdList<T> idList, int integer, PaletteResizeListener<T> resizeListener, Function<CompoundTag, T> valueDeserializer) {
+    public ArrayPalette(IdList<T> idList, int integer, PaletteResizeListener<T> resizeListener, Function<NbtCompound, T> valueDeserializer) {
         this.idList = idList;
         this.array = new Object[1 << integer];
         this.indexBits = integer;
@@ -53,8 +52,12 @@ implements Palette<T> {
     }
 
     @Override
-    public boolean accepts(T object) {
-        return ArrayUtils.contains((Object[])this.array, object);
+    public boolean accepts(Predicate<T> predicate) {
+        for (int i = 0; i < this.size; ++i) {
+            if (!predicate.test(this.array[i])) continue;
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -79,15 +82,15 @@ implements Palette<T> {
     public void toPacket(PacketByteBuf buf) {
         buf.writeVarInt(this.size);
         for (int i = 0; i < this.size; ++i) {
-            buf.writeVarInt(this.idList.getId(this.array[i]));
+            buf.writeVarInt(this.idList.getRawId(this.array[i]));
         }
     }
 
     @Override
     public int getPacketSize() {
-        int i = PacketByteBuf.getVarIntSizeBytes(this.getSize());
+        int i = PacketByteBuf.getVarIntLength(this.getSize());
         for (int j = 0; j < this.getSize(); ++j) {
-            i += PacketByteBuf.getVarIntSizeBytes(this.idList.getId(this.array[j]));
+            i += PacketByteBuf.getVarIntLength(this.idList.getRawId(this.array[j]));
         }
         return i;
     }
@@ -97,11 +100,11 @@ implements Palette<T> {
     }
 
     @Override
-    public void fromTag(ListTag tag) {
-        for (int i = 0; i < tag.size(); ++i) {
-            this.array[i] = this.valueDeserializer.apply(tag.getCompound(i));
+    public void readNbt(NbtList nbt) {
+        for (int i = 0; i < nbt.size(); ++i) {
+            this.array[i] = this.valueDeserializer.apply(nbt.getCompound(i));
         }
-        this.size = tag.size();
+        this.size = nbt.size();
     }
 }
 

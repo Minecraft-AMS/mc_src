@@ -18,7 +18,8 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
@@ -89,17 +90,22 @@ extends Entity {
 
     @Override
     public void tick() {
-        if (this.obstructionCheckCounter++ == 100 && !this.world.isClient) {
-            this.obstructionCheckCounter = 0;
-            if (!this.removed && !this.canStayAttached()) {
-                this.remove();
-                this.onBreak(null);
+        if (!this.world.isClient) {
+            if (this.getY() < -64.0) {
+                this.tickInVoid();
+            }
+            if (this.obstructionCheckCounter++ == 100) {
+                this.obstructionCheckCounter = 0;
+                if (!this.removed && !this.canStayAttached()) {
+                    this.remove();
+                    this.onBreak(null);
+                }
             }
         }
     }
 
     public boolean canStayAttached() {
-        if (!this.world.doesNotCollide(this)) {
+        if (!this.world.isSpaceEmpty(this)) {
             return false;
         }
         int i = Math.max(1, this.getWidthPixels() / 16);
@@ -111,13 +117,13 @@ extends Entity {
             for (int l = 0; l < j; ++l) {
                 int m = (i - 1) / -2;
                 int n = (j - 1) / -2;
-                mutable.set(blockPos).setOffset(direction, k + m).setOffset(Direction.UP, l + n);
+                mutable.set(blockPos).move(direction, k + m).move(Direction.UP, l + n);
                 BlockState blockState = this.world.getBlockState(mutable);
                 if (blockState.getMaterial().isSolid() || AbstractRedstoneGateBlock.isRedstoneGate(blockState)) continue;
                 return false;
             }
         }
-        return this.world.getEntities(this, this.getBoundingBox(), PREDICATE).isEmpty();
+        return this.world.getOtherEntities(this, this.getBoundingBox(), PREDICATE).isEmpty();
     }
 
     @Override
@@ -156,7 +162,7 @@ extends Entity {
     }
 
     @Override
-    public void move(MovementType type, Vec3d movement) {
+    public void move(MovementType movementType, Vec3d movement) {
         if (!this.world.isClient && !this.removed && movement.lengthSquared() > 0.0) {
             this.remove();
             this.onBreak(null);
@@ -172,18 +178,16 @@ extends Entity {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        tag.putByte("Facing", (byte)this.facing.getHorizontal());
+    public void writeCustomDataToNbt(NbtCompound nbt) {
         BlockPos blockPos = this.getDecorationBlockPos();
-        tag.putInt("TileX", blockPos.getX());
-        tag.putInt("TileY", blockPos.getY());
-        tag.putInt("TileZ", blockPos.getZ());
+        nbt.putInt("TileX", blockPos.getX());
+        nbt.putInt("TileY", blockPos.getY());
+        nbt.putInt("TileZ", blockPos.getZ());
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        this.attachmentPos = new BlockPos(tag.getInt("TileX"), tag.getInt("TileY"), tag.getInt("TileZ"));
-        this.facing = Direction.fromHorizontal(tag.getByte("Facing"));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        this.attachmentPos = new BlockPos(nbt.getInt("TileX"), nbt.getInt("TileY"), nbt.getInt("TileZ"));
     }
 
     public abstract int getWidthPixels();
@@ -208,7 +212,7 @@ extends Entity {
     }
 
     @Override
-    public void updatePosition(double x, double y, double z) {
+    public void setPosition(double x, double y, double z) {
         this.attachmentPos = new BlockPos(x, y, z);
         this.updateAttachmentPosition();
         this.velocityDirty = true;
@@ -257,7 +261,7 @@ extends Entity {
     }
 
     @Override
-    public void onStruckByLightning(LightningEntity lightning) {
+    public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
     }
 
     @Override

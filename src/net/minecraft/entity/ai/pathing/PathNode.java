@@ -10,7 +10,7 @@ package net.minecraft.entity.ai.pathing;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.ai.pathing.PathNodeType;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 
@@ -82,8 +82,7 @@ public class PathNode {
         return f + g + h;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public BlockPos getPos() {
+    public BlockPos getBlockPos() {
         return new BlockPos(this.x, this.y, this.z);
     }
 
@@ -108,13 +107,13 @@ public class PathNode {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static PathNode fromBuffer(PacketByteBuf buffer) {
-        PathNode pathNode = new PathNode(buffer.readInt(), buffer.readInt(), buffer.readInt());
-        pathNode.pathLength = buffer.readFloat();
-        pathNode.penalty = buffer.readFloat();
-        pathNode.visited = buffer.readBoolean();
-        pathNode.type = PathNodeType.values()[buffer.readInt()];
-        pathNode.heapWeight = buffer.readFloat();
+    public static PathNode readBuf(PacketByteBuf buf) {
+        PathNode pathNode = new PathNode(buf.readInt(), buf.readInt(), buf.readInt());
+        pathNode.pathLength = buf.readFloat();
+        pathNode.penalty = buf.readFloat();
+        pathNode.visited = buf.readBoolean();
+        pathNode.type = PathNodeType.values()[buf.readInt()];
+        pathNode.heapWeight = buf.readFloat();
         return pathNode;
     }
 }

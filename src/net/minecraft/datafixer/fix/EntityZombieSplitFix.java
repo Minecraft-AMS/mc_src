@@ -2,15 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.serialization.Dynamic
  */
 package net.minecraft.datafixer.fix;
 
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Dynamic;
 import java.util.Objects;
 import net.minecraft.datafixer.fix.EntitySimpleTransformFix;
 
@@ -21,10 +21,10 @@ extends EntitySimpleTransformFix {
     }
 
     @Override
-    protected Pair<String, Dynamic<?>> transform(String choice, Dynamic<?> tag) {
+    protected Pair<String, Dynamic<?>> transform(String choice, Dynamic<?> dynamic) {
         if (Objects.equals("Zombie", choice)) {
             String string = "Zombie";
-            int i = tag.get("ZombieType").asInt(0);
+            int i = dynamic.get("ZombieType").asInt(0);
             switch (i) {
                 default: {
                     break;
@@ -35,17 +35,17 @@ extends EntitySimpleTransformFix {
                 case 4: 
                 case 5: {
                     string = "ZombieVillager";
-                    tag = tag.set("Profession", tag.createInt(i - 1));
+                    dynamic = dynamic.set("Profession", dynamic.createInt(i - 1));
                     break;
                 }
                 case 6: {
                     string = "Husk";
                 }
             }
-            tag = tag.remove("ZombieType");
-            return Pair.of((Object)string, (Object)tag);
+            dynamic = dynamic.remove("ZombieType");
+            return Pair.of((Object)string, (Object)dynamic);
         }
-        return Pair.of((Object)choice, tag);
+        return Pair.of((Object)choice, dynamic);
     }
 }
 

@@ -21,7 +21,7 @@ import net.minecraft.item.FireworkItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.SpecialCraftingRecipe;
@@ -58,8 +58,8 @@ extends SpecialCraftingRecipe {
         boolean bl3 = false;
         boolean bl4 = false;
         boolean bl5 = false;
-        for (int i = 0; i < craftingInventory.getInvSize(); ++i) {
-            ItemStack itemStack = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size(); ++i) {
+            ItemStack itemStack = craftingInventory.getStack(i);
             if (itemStack.isEmpty()) continue;
             if (TYPE_MODIFIER.test(itemStack)) {
                 if (bl3) {
@@ -101,29 +101,29 @@ extends SpecialCraftingRecipe {
     @Override
     public ItemStack craft(CraftingInventory craftingInventory) {
         ItemStack itemStack = new ItemStack(Items.FIREWORK_STAR);
-        CompoundTag compoundTag = itemStack.getOrCreateSubTag("Explosion");
+        NbtCompound nbtCompound = itemStack.getOrCreateSubTag("Explosion");
         FireworkItem.Type type = FireworkItem.Type.SMALL_BALL;
         ArrayList list = Lists.newArrayList();
-        for (int i = 0; i < craftingInventory.getInvSize(); ++i) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size(); ++i) {
+            ItemStack itemStack2 = craftingInventory.getStack(i);
             if (itemStack2.isEmpty()) continue;
             if (TYPE_MODIFIER.test(itemStack2)) {
                 type = TYPE_MODIFIER_MAP.get(itemStack2.getItem());
                 continue;
             }
             if (FLICKER_MODIFIER.test(itemStack2)) {
-                compoundTag.putBoolean("Flicker", true);
+                nbtCompound.putBoolean("Flicker", true);
                 continue;
             }
             if (TRAIL_MODIFIER.test(itemStack2)) {
-                compoundTag.putBoolean("Trail", true);
+                nbtCompound.putBoolean("Trail", true);
                 continue;
             }
             if (!(itemStack2.getItem() instanceof DyeItem)) continue;
             list.add(((DyeItem)itemStack2.getItem()).getColor().getFireworkColor());
         }
-        compoundTag.putIntArray("Colors", list);
-        compoundTag.putByte("Type", (byte)type.getId());
+        nbtCompound.putIntArray("Colors", list);
+        nbtCompound.putByte("Type", (byte)type.getId());
         return itemStack;
     }
 

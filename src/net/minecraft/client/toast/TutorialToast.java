@@ -14,6 +14,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.client.toast.ToastManager;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -22,8 +23,8 @@ import org.jetbrains.annotations.Nullable;
 public class TutorialToast
 implements Toast {
     private final Type type;
-    private final String title;
-    private final String description;
+    private final Text title;
+    private final Text description;
     private Toast.Visibility visibility = Toast.Visibility.SHOW;
     private long lastTime;
     private float lastProgress;
@@ -32,30 +33,30 @@ implements Toast {
 
     public TutorialToast(Type type, Text title, @Nullable Text description, boolean hasProgressBar) {
         this.type = type;
-        this.title = title.asFormattedString();
-        this.description = description == null ? null : description.asFormattedString();
+        this.title = title;
+        this.description = description;
         this.hasProgressBar = hasProgressBar;
     }
 
     @Override
-    public Toast.Visibility draw(ToastManager manager, long currentTime) {
-        manager.getGame().getTextureManager().bindTexture(TOASTS_TEX);
+    public Toast.Visibility draw(MatrixStack matrices, ToastManager manager, long startTime) {
+        manager.getGame().getTextureManager().bindTexture(TEXTURE);
         RenderSystem.color3f(1.0f, 1.0f, 1.0f);
-        manager.blit(0, 0, 0, 96, 160, 32);
-        this.type.drawIcon(manager, 6, 6);
+        manager.drawTexture(matrices, 0, 0, 0, 96, this.getWidth(), this.getHeight());
+        this.type.drawIcon(matrices, manager, 6, 6);
         if (this.description == null) {
-            manager.getGame().textRenderer.draw(this.title, 30.0f, 12.0f, -11534256);
+            manager.getGame().textRenderer.draw(matrices, this.title, 30.0f, 12.0f, -11534256);
         } else {
-            manager.getGame().textRenderer.draw(this.title, 30.0f, 7.0f, -11534256);
-            manager.getGame().textRenderer.draw(this.description, 30.0f, 18.0f, -16777216);
+            manager.getGame().textRenderer.draw(matrices, this.title, 30.0f, 7.0f, -11534256);
+            manager.getGame().textRenderer.draw(matrices, this.description, 30.0f, 18.0f, -16777216);
         }
         if (this.hasProgressBar) {
-            DrawableHelper.fill(3, 28, 157, 29, -1);
-            float f = (float)MathHelper.clampedLerp(this.lastProgress, this.progress, (float)(currentTime - this.lastTime) / 100.0f);
+            DrawableHelper.fill(matrices, 3, 28, 157, 29, -1);
+            float f = (float)MathHelper.clampedLerp(this.lastProgress, this.progress, (float)(startTime - this.lastTime) / 100.0f);
             int i = this.progress >= this.lastProgress ? -16755456 : -11206656;
-            DrawableHelper.fill(3, 28, (int)(3.0f + 154.0f * f), 29, i);
+            DrawableHelper.fill(matrices, 3, 28, (int)(3.0f + 154.0f * f), 29, i);
             this.lastProgress = f;
-            this.lastTime = currentTime;
+            this.lastTime = startTime;
         }
         return this.visibility;
     }
@@ -74,7 +75,8 @@ implements Toast {
         MOUSE(1, 0),
         TREE(2, 0),
         RECIPE_BOOK(0, 1),
-        WOODEN_PLANKS(1, 1);
+        WOODEN_PLANKS(1, 1),
+        SOCIAL_INTERACTIONS(2, 1);
 
         private final int textureSlotX;
         private final int textureSlotY;
@@ -84,9 +86,9 @@ implements Toast {
             this.textureSlotY = textureSlotY;
         }
 
-        public void drawIcon(DrawableHelper drawableHelper, int x, int y) {
+        public void drawIcon(MatrixStack matrices, DrawableHelper helper, int x, int y) {
             RenderSystem.enableBlend();
-            drawableHelper.blit(x, y, 176 + this.textureSlotX * 20, this.textureSlotY * 20, 20, 20);
+            helper.drawTexture(matrices, x, y, 176 + this.textureSlotX * 20, this.textureSlotY * 20, 20, 20);
             RenderSystem.enableBlend();
         }
     }

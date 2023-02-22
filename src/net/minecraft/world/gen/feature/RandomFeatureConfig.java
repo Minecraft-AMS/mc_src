@@ -2,42 +2,40 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.RandomFeatureEntry;
 
 public class RandomFeatureConfig
 implements FeatureConfig {
-    public final List<RandomFeatureEntry<?>> features;
-    public final ConfiguredFeature<?, ?> defaultFeature;
+    public static final Codec<RandomFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.apply2(RandomFeatureConfig::new, (App)RandomFeatureEntry.CODEC.listOf().fieldOf("features").forGetter(randomFeatureConfig -> randomFeatureConfig.features), (App)ConfiguredFeature.REGISTRY_CODEC.fieldOf("default").forGetter(randomFeatureConfig -> randomFeatureConfig.defaultFeature)));
+    public final List<RandomFeatureEntry> features;
+    public final Supplier<ConfiguredFeature<?, ?>> defaultFeature;
 
-    public RandomFeatureConfig(List<RandomFeatureEntry<?>> list, ConfiguredFeature<?, ?> configuredFeature) {
-        this.features = list;
-        this.defaultFeature = configuredFeature;
+    public RandomFeatureConfig(List<RandomFeatureEntry> features, ConfiguredFeature<?, ?> defaultFeature) {
+        this(features, () -> defaultFeature);
+    }
+
+    private RandomFeatureConfig(List<RandomFeatureEntry> features, Supplier<ConfiguredFeature<?, ?>> defaultFeature) {
+        this.features = features;
+        this.defaultFeature = defaultFeature;
     }
 
     @Override
-    public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        Object object = ops.createList(this.features.stream().map(randomFeatureEntry -> randomFeatureEntry.serialize(ops).getValue()));
-        Object object2 = this.defaultFeature.serialize(ops).getValue();
-        return new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString("features"), (Object)object, (Object)ops.createString("default"), (Object)object2)));
-    }
-
-    public static <T> RandomFeatureConfig deserialize(Dynamic<T> dynamic) {
-        List list = dynamic.get("features").asList(RandomFeatureEntry::deserialize);
-        ConfiguredFeature<?, ?> configuredFeature = ConfiguredFeature.deserialize(dynamic.get("default").orElseEmptyMap());
-        return new RandomFeatureConfig(list, configuredFeature);
+    public Stream<ConfiguredFeature<?, ?>> method_30649() {
+        return Stream.concat(this.features.stream().flatMap(randomFeatureEntry -> randomFeatureEntry.feature.get().method_30648()), this.defaultFeature.get().method_30648());
     }
 }
 

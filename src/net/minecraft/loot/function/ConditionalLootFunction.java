@@ -21,11 +21,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.condition.LootConditionConsumingBuilder;
-import net.minecraft.loot.condition.LootConditions;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.function.LootFunction;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 import org.apache.commons.lang3.ArrayUtils;
 
 public abstract class ConditionalLootFunction
@@ -35,7 +35,7 @@ implements LootFunction {
 
     protected ConditionalLootFunction(LootCondition[] conditions) {
         this.conditions = conditions;
-        this.predicate = LootConditions.joinAnd(conditions);
+        this.predicate = LootConditionTypes.joinAnd(conditions);
     }
 
     @Override
@@ -46,10 +46,10 @@ implements LootFunction {
     protected abstract ItemStack process(ItemStack var1, LootContext var2);
 
     @Override
-    public void check(LootTableReporter reporter) {
-        LootFunction.super.check(reporter);
+    public void validate(LootTableReporter reporter) {
+        LootFunction.super.validate(reporter);
         for (int i = 0; i < this.conditions.length; ++i) {
-            this.conditions[i].check(reporter.makeChild(".conditions[" + i + "]"));
+            this.conditions[i].validate(reporter.makeChild(".conditions[" + i + "]"));
         }
     }
 
@@ -62,12 +62,8 @@ implements LootFunction {
         return this.apply((ItemStack)itemStack, (LootContext)context);
     }
 
-    public static abstract class Factory<T extends ConditionalLootFunction>
-    extends LootFunction.Factory<T> {
-        public Factory(Identifier identifier, Class<T> class_) {
-            super(identifier, class_);
-        }
-
+    public static abstract class Serializer<T extends ConditionalLootFunction>
+    implements JsonSerializer<T> {
         @Override
         public void toJson(JsonObject jsonObject, T conditionalLootFunction, JsonSerializationContext jsonSerializationContext) {
             if (!ArrayUtils.isEmpty((Object[])((ConditionalLootFunction)conditionalLootFunction).conditions)) {
@@ -84,7 +80,7 @@ implements LootFunction {
         public abstract T fromJson(JsonObject var1, JsonDeserializationContext var2, LootCondition[] var3);
 
         @Override
-        public /* synthetic */ LootFunction fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }
@@ -119,7 +115,7 @@ implements LootFunction {
         private final List<LootCondition> conditionList = Lists.newArrayList();
 
         @Override
-        public T withCondition(LootCondition.Builder builder) {
+        public T conditionally(LootCondition.Builder builder) {
             this.conditionList.add(builder.build());
             return this.getThisBuilder();
         }
@@ -141,8 +137,8 @@ implements LootFunction {
         }
 
         @Override
-        public /* synthetic */ Object withCondition(LootCondition.Builder builder) {
-            return this.withCondition(builder);
+        public /* synthetic */ Object conditionally(LootCondition.Builder condition) {
+            return this.conditionally(condition);
         }
     }
 }

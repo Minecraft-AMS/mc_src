@@ -13,8 +13,9 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.util.ThrowableDeliverer;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.storage.RegionFile;
 import org.jetbrains.annotations.Nullable;
@@ -23,9 +24,11 @@ public final class RegionBasedStorage
 implements AutoCloseable {
     private final Long2ObjectLinkedOpenHashMap<RegionFile> cachedRegionFiles = new Long2ObjectLinkedOpenHashMap();
     private final File directory;
+    private final boolean dsync;
 
-    RegionBasedStorage(File directory) {
+    RegionBasedStorage(File directory, boolean dsync) {
         this.directory = directory;
+        this.dsync = dsync;
     }
 
     private RegionFile getRegionFile(ChunkPos pos) throws IOException {
@@ -41,35 +44,48 @@ implements AutoCloseable {
             this.directory.mkdirs();
         }
         File file = new File(this.directory, "r." + pos.getRegionX() + "." + pos.getRegionZ() + ".mca");
-        RegionFile regionFile2 = new RegionFile(file, this.directory);
+        RegionFile regionFile2 = new RegionFile(file, this.directory, this.dsync);
         this.cachedRegionFiles.putAndMoveToFirst(l, (Object)regionFile2);
         return regionFile2;
     }
 
     @Nullable
-    public CompoundTag getTagAt(ChunkPos pos) throws IOException {
+    public NbtCompound getTagAt(ChunkPos pos) throws IOException {
         RegionFile regionFile = this.getRegionFile(pos);
         try (DataInputStream dataInputStream = regionFile.getChunkInputStream(pos);){
             if (dataInputStream == null) {
-                CompoundTag compoundTag = null;
-                return compoundTag;
+                NbtCompound nbtCompound = null;
+                return nbtCompound;
             }
-            CompoundTag compoundTag = NbtIo.read(dataInputStream);
-            return compoundTag;
+            NbtCompound nbtCompound = NbtIo.read(dataInputStream);
+            return nbtCompound;
         }
     }
 
-    protected void write(ChunkPos chunkPos, CompoundTag compoundTag) throws IOException {
-        RegionFile regionFile = this.getRegionFile(chunkPos);
-        try (DataOutputStream dataOutputStream = regionFile.getChunkOutputStream(chunkPos);){
-            NbtIo.write(compoundTag, (DataOutput)dataOutputStream);
+    protected void write(ChunkPos pos, NbtCompound nbt) throws IOException {
+        RegionFile regionFile = this.getRegionFile(pos);
+        try (DataOutputStream dataOutputStream = regionFile.getChunkOutputStream(pos);){
+            NbtIo.write(nbt, (DataOutput)dataOutputStream);
         }
     }
 
     @Override
     public void close() throws IOException {
+        ThrowableDeliverer<IOException> throwableDeliverer = new ThrowableDeliverer<IOException>();
         for (RegionFile regionFile : this.cachedRegionFiles.values()) {
-            regionFile.close();
+            try {
+                regionFile.close();
+            }
+            catch (IOException iOException) {
+                throwableDeliverer.add(iOException);
+            }
+        }
+        throwableDeliverer.deliver();
+    }
+
+    public void method_26982() throws IOException {
+        for (RegionFile regionFile : this.cachedRegionFiles.values()) {
+            regionFile.method_26981();
         }
     }
 }

@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class WorldTimeUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -22,10 +22,10 @@ implements Packet<ClientPlayPacketListener> {
     public WorldTimeUpdateS2CPacket() {
     }
 
-    public WorldTimeUpdateS2CPacket(long time, long timeOfDay, boolean bl) {
+    public WorldTimeUpdateS2CPacket(long time, long timeOfDay, boolean doDaylightCycle) {
         this.time = time;
         this.timeOfDay = timeOfDay;
-        if (!bl) {
+        if (!doDaylightCycle) {
             this.timeOfDay = -this.timeOfDay;
             if (this.timeOfDay == 0L) {
                 this.timeOfDay = -1L;

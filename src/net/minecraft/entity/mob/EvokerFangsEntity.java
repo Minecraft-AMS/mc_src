@@ -16,7 +16,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
@@ -28,9 +28,9 @@ import org.jetbrains.annotations.Nullable;
 public class EvokerFangsEntity
 extends Entity {
     private int warmup;
-    private boolean field_7610;
+    private boolean startedAttack;
     private int ticksLeft = 22;
-    private boolean hasAttacked;
+    private boolean playingAnimation;
     private LivingEntity owner;
     private UUID ownerUuid;
 
@@ -38,12 +38,12 @@ extends Entity {
         super(entityType, world);
     }
 
-    public EvokerFangsEntity(World world, double x, double y, double z, float f, int warmup, LivingEntity owner) {
+    public EvokerFangsEntity(World world, double x, double y, double z, float yaw, int warmup, LivingEntity owner) {
         this((EntityType<? extends EvokerFangsEntity>)EntityType.EVOKER_FANGS, world);
         this.warmup = warmup;
         this.setOwner(owner);
-        this.yaw = f * 57.295776f;
-        this.updatePosition(x, y, z);
+        this.yaw = yaw * 57.295776f;
+        this.setPosition(x, y, z);
     }
 
     @Override
@@ -65,18 +65,18 @@ extends Entity {
     }
 
     @Override
-    protected void readCustomDataFromTag(CompoundTag tag) {
-        this.warmup = tag.getInt("Warmup");
-        if (tag.containsUuid("OwnerUUID")) {
-            this.ownerUuid = tag.getUuid("OwnerUUID");
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        this.warmup = nbt.getInt("Warmup");
+        if (nbt.containsUuid("Owner")) {
+            this.ownerUuid = nbt.getUuid("Owner");
         }
     }
 
     @Override
-    protected void writeCustomDataToTag(CompoundTag tag) {
-        tag.putInt("Warmup", this.warmup);
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        nbt.putInt("Warmup", this.warmup);
         if (this.ownerUuid != null) {
-            tag.putUuid("OwnerUUID", this.ownerUuid);
+            nbt.putUuid("Owner", this.ownerUuid);
         }
     }
 
@@ -84,7 +84,7 @@ extends Entity {
     public void tick() {
         super.tick();
         if (this.world.isClient) {
-            if (this.hasAttacked) {
+            if (this.playingAnimation) {
                 --this.ticksLeft;
                 if (this.ticksLeft == 14) {
                     for (int i = 0; i < 12; ++i) {
@@ -105,9 +105,9 @@ extends Entity {
                     this.damage(livingEntity);
                 }
             }
-            if (!this.field_7610) {
+            if (!this.startedAttack) {
                 this.world.sendEntityStatus(this, (byte)4);
-                this.field_7610 = true;
+                this.startedAttack = true;
             }
             if (--this.ticksLeft < 0) {
                 this.remove();
@@ -135,7 +135,7 @@ extends Entity {
     public void handleStatus(byte status) {
         super.handleStatus(status);
         if (status == 4) {
-            this.hasAttacked = true;
+            this.playingAnimation = true;
             if (!this.isSilent()) {
                 this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_EVOKER_FANGS_ATTACK, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.2f + 0.85f, false);
             }
@@ -144,7 +144,7 @@ extends Entity {
 
     @Environment(value=EnvType.CLIENT)
     public float getAnimationProgress(float tickDelta) {
-        if (!this.hasAttacked) {
+        if (!this.playingAnimation) {
             return 0.0f;
         }
         int i = this.ticksLeft - 2;

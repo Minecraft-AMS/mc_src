@@ -54,8 +54,8 @@ extends VillagerResemblingModel<T> {
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
-        super.setAngles(entity, limbAngle, limbDistance, customAngle, headYaw, headPitch);
+    public void setAngles(T entity, float limbAngle, float limbDistance, float animationProgress, float headYaw, float headPitch) {
+        super.setAngles(entity, limbAngle, limbDistance, animationProgress, headYaw, headPitch);
         this.nose.setPivot(0.0f, -2.0f, 0.0f);
         float f = 0.01f * (float)(((Entity)entity).getEntityId() % 10);
         this.nose.pitch = MathHelper.sin((float)((Entity)entity).age * f) * 4.5f * ((float)Math.PI / 180);
@@ -71,8 +71,8 @@ extends VillagerResemblingModel<T> {
         return this.nose;
     }
 
-    public void setLiftingNose(boolean bl) {
-        this.liftingNose = bl;
+    public void setLiftingNose(boolean liftingNose) {
+        this.liftingNose = liftingNose;
     }
 }
 

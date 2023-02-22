@@ -12,8 +12,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerLoginPacketListener;
-import net.minecraft.util.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 public class LoginQueryResponseC2SPacket
@@ -25,9 +25,9 @@ implements Packet<ServerLoginPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public LoginQueryResponseC2SPacket(int i, @Nullable PacketByteBuf packetByteBuf) {
-        this.queryId = i;
-        this.response = packetByteBuf;
+    public LoginQueryResponseC2SPacket(int queryId, @Nullable PacketByteBuf response) {
+        this.queryId = queryId;
+        this.response = response;
     }
 
     @Override

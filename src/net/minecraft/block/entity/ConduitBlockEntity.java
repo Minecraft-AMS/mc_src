@@ -26,8 +26,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtHelper;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
@@ -64,29 +63,29 @@ implements Tickable {
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.targetUuid = tag.contains("target_uuid") ? NbtHelper.toUuid(tag.getCompound("target_uuid")) : null;
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.targetUuid = tag.containsUuid("Target") ? tag.getUuid("Target") : null;
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
         if (this.targetEntity != null) {
-            tag.put("target_uuid", NbtHelper.fromUuid(this.targetEntity.getUuid()));
+            nbt.putUuid("Target", this.targetEntity.getUuid());
         }
-        return tag;
+        return nbt;
     }
 
     @Override
     @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 5, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 5, this.toInitialChunkDataNbt());
     }
 
     @Override
-    public CompoundTag toInitialChunkDataTag() {
-        return this.toTag(new CompoundTag());
+    public NbtCompound toInitialChunkDataNbt() {
+        return this.writeNbt(new NbtCompound());
     }
 
     @Override
@@ -140,7 +139,7 @@ implements Tickable {
                     BlockPos blockPos2 = this.pos.add(i, j, k);
                     BlockState blockState = this.world.getBlockState(blockPos2);
                     for (Block block : ACTIVATING_BLOCKS) {
-                        if (blockState.getBlock() != block) continue;
+                        if (!blockState.isOf(block)) continue;
                         this.activatingBlocks.add(blockPos2);
                     }
                 }
@@ -162,7 +161,7 @@ implements Tickable {
             return;
         }
         for (PlayerEntity playerEntity : list) {
-            if (!this.pos.isWithinDistance(new BlockPos(playerEntity), (double)j) || !playerEntity.isTouchingWaterOrRain()) continue;
+            if (!this.pos.isWithinDistance(playerEntity.getBlockPos(), (double)j) || !playerEntity.isTouchingWaterOrRain()) continue;
             playerEntity.addStatusEffect(new StatusEffectInstance(StatusEffects.CONDUIT_POWER, 260, 0, true, true));
         }
     }
@@ -176,11 +175,11 @@ implements Tickable {
             this.targetEntity = this.findTargetEntity();
             this.targetUuid = null;
         } else if (this.targetEntity == null) {
-            List<LivingEntity> list = this.world.getEntities(LivingEntity.class, this.getAttackZone(), livingEntity -> livingEntity instanceof Monster && livingEntity.isTouchingWaterOrRain());
+            List<LivingEntity> list = this.world.getEntitiesByClass(LivingEntity.class, this.getAttackZone(), livingEntity -> livingEntity instanceof Monster && livingEntity.isTouchingWaterOrRain());
             if (!list.isEmpty()) {
                 this.targetEntity = list.get(this.world.random.nextInt(list.size()));
             }
-        } else if (!this.targetEntity.isAlive() || !this.pos.isWithinDistance(new BlockPos(this.targetEntity), 8.0)) {
+        } else if (!this.targetEntity.isAlive() || !this.pos.isWithinDistance(this.targetEntity.getBlockPos(), 8.0)) {
             this.targetEntity = null;
         }
         if (this.targetEntity != null) {
@@ -213,7 +212,7 @@ implements Tickable {
 
     @Nullable
     private LivingEntity findTargetEntity() {
-        List<LivingEntity> list = this.world.getEntities(LivingEntity.class, this.getAttackZone(), livingEntity -> livingEntity.getUuid().equals(this.targetUuid));
+        List<LivingEntity> list = this.world.getEntitiesByClass(LivingEntity.class, this.getAttackZone(), livingEntity -> livingEntity.getUuid().equals(this.targetUuid));
         if (list.size() == 1) {
             return list.get(0);
         }

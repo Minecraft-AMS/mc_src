@@ -14,14 +14,14 @@ import net.minecraft.client.gui.screen.ConfirmChatLinkScreen;
 import net.minecraft.client.gui.screen.OpenToLanScreen;
 import net.minecraft.client.gui.screen.SaveLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.SettingsScreen;
 import net.minecraft.client.gui.screen.StatsScreen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.advancement.AdvancementsScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
+import net.minecraft.client.gui.screen.option.OptionsScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.realms.RealmsBridge;
+import net.minecraft.client.realms.gui.screen.RealmsBridgeScreen;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 
@@ -31,7 +31,7 @@ extends Screen {
     private final boolean showMenu;
 
     public GameMenuScreen(boolean showMenu) {
-        super(showMenu ? new TranslatableText("menu.game", new Object[0]) : new TranslatableText("menu.paused", new Object[0]));
+        super(showMenu ? new TranslatableText("menu.game") : new TranslatableText("menu.paused"));
         this.showMenu = showMenu;
     }
 
@@ -45,49 +45,49 @@ extends Screen {
     private void initWidgets() {
         int i = -16;
         int j = 98;
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 24 + -16, 204, 20, I18n.translate("menu.returnToGame", new Object[0]), buttonWidget -> {
-            this.minecraft.openScreen(null);
-            this.minecraft.mouse.lockCursor();
+        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 24 + -16, 204, 20, new TranslatableText("menu.returnToGame"), buttonWidget -> {
+            this.client.openScreen(null);
+            this.client.mouse.lockCursor();
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 48 + -16, 98, 20, I18n.translate("gui.advancements", new Object[0]), buttonWidget -> this.minecraft.openScreen(new AdvancementsScreen(this.minecraft.player.networkHandler.getAdvancementHandler()))));
-        this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 48 + -16, 98, 20, I18n.translate("gui.stats", new Object[0]), buttonWidget -> this.minecraft.openScreen(new StatsScreen(this, this.minecraft.player.getStatHandler()))));
+        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.advancements"), buttonWidget -> this.client.openScreen(new AdvancementsScreen(this.client.player.networkHandler.getAdvancementHandler()))));
+        this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.stats"), buttonWidget -> this.client.openScreen(new StatsScreen(this, this.client.player.getStatHandler()))));
         String string = SharedConstants.getGameVersion().isStable() ? "https://aka.ms/javafeedback?ref=game" : "https://aka.ms/snapshotfeedback?ref=game";
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 72 + -16, 98, 20, I18n.translate("menu.sendFeedback", new Object[0]), buttonWidget -> this.minecraft.openScreen(new ConfirmChatLinkScreen(bl -> {
+        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.sendFeedback"), buttonWidget -> this.client.openScreen(new ConfirmChatLinkScreen(bl -> {
             if (bl) {
                 Util.getOperatingSystem().open(string);
             }
-            this.minecraft.openScreen(this);
+            this.client.openScreen(this);
         }, string, true))));
-        this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 72 + -16, 98, 20, I18n.translate("menu.reportBugs", new Object[0]), buttonWidget -> this.minecraft.openScreen(new ConfirmChatLinkScreen(bl -> {
+        this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.reportBugs"), buttonWidget -> this.client.openScreen(new ConfirmChatLinkScreen(bl -> {
             if (bl) {
                 Util.getOperatingSystem().open("https://aka.ms/snapshotbugs?ref=game");
             }
-            this.minecraft.openScreen(this);
+            this.client.openScreen(this);
         }, "https://aka.ms/snapshotbugs?ref=game", true))));
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 96 + -16, 98, 20, I18n.translate("menu.options", new Object[0]), buttonWidget -> this.minecraft.openScreen(new SettingsScreen(this, this.minecraft.options))));
-        ButtonWidget buttonWidget2 = this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, I18n.translate("menu.shareToLan", new Object[0]), buttonWidget -> this.minecraft.openScreen(new OpenToLanScreen(this))));
-        buttonWidget2.active = this.minecraft.isIntegratedServerRunning() && !this.minecraft.getServer().isRemote();
-        ButtonWidget buttonWidget22 = this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 120 + -16, 204, 20, I18n.translate("menu.returnToMenu", new Object[0]), buttonWidget -> {
-            boolean bl = this.minecraft.isInSingleplayer();
-            boolean bl2 = this.minecraft.isConnectedToRealms();
+        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.options"), buttonWidget -> this.client.openScreen(new OptionsScreen(this, this.client.options))));
+        ButtonWidget buttonWidget2 = this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.shareToLan"), buttonWidget -> this.client.openScreen(new OpenToLanScreen(this))));
+        buttonWidget2.active = this.client.isIntegratedServerRunning() && !this.client.getServer().isRemote();
+        ButtonWidget buttonWidget22 = this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 120 + -16, 204, 20, new TranslatableText("menu.returnToMenu"), buttonWidget -> {
+            boolean bl = this.client.isInSingleplayer();
+            boolean bl2 = this.client.isConnectedToRealms();
             buttonWidget.active = false;
-            this.minecraft.world.disconnect();
+            this.client.world.disconnect();
             if (bl) {
-                this.minecraft.disconnect(new SaveLevelScreen(new TranslatableText("menu.savingLevel", new Object[0])));
+                this.client.disconnect(new SaveLevelScreen(new TranslatableText("menu.savingLevel")));
             } else {
-                this.minecraft.disconnect();
+                this.client.disconnect();
             }
             if (bl) {
-                this.minecraft.openScreen(new TitleScreen());
+                this.client.openScreen(new TitleScreen());
             } else if (bl2) {
-                RealmsBridge realmsBridge = new RealmsBridge();
-                realmsBridge.switchToRealms(new TitleScreen());
+                RealmsBridgeScreen realmsBridgeScreen = new RealmsBridgeScreen();
+                realmsBridgeScreen.switchToRealms(new TitleScreen());
             } else {
-                this.minecraft.openScreen(new MultiplayerScreen(new TitleScreen()));
+                this.client.openScreen(new MultiplayerScreen(new TitleScreen()));
             }
         }));
-        if (!this.minecraft.isInSingleplayer()) {
-            buttonWidget22.setMessage(I18n.translate("menu.disconnect", new Object[0]));
+        if (!this.client.isInSingleplayer()) {
+            buttonWidget22.setMessage(new TranslatableText("menu.disconnect"));
         }
     }
 
@@ -97,14 +97,14 @@ extends Screen {
     }
 
     @Override
-    public void render(int mouseX, int mouseY, float delta) {
+    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         if (this.showMenu) {
-            this.renderBackground();
-            this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 40, 0xFFFFFF);
+            this.renderBackground(matrices);
+            GameMenuScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 40, 0xFFFFFF);
         } else {
-            this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 10, 0xFFFFFF);
+            GameMenuScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
         }
-        super.render(mouseX, mouseY, delta);
+        super.render(matrices, mouseX, mouseY, delta);
     }
 }
 

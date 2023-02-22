@@ -16,7 +16,7 @@ import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.client.render.entity.model.ModelWithHat;
 import net.minecraft.client.render.entity.model.ModelWithHead;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.AbstractTraderEntity;
+import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
@@ -83,15 +83,15 @@ ModelWithHat {
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
+    public void setAngles(T entity, float limbAngle, float limbDistance, float animationProgress, float headYaw, float headPitch) {
         boolean bl = false;
-        if (entity instanceof AbstractTraderEntity) {
-            bl = ((AbstractTraderEntity)entity).getHeadRollingTimeLeft() > 0;
+        if (entity instanceof MerchantEntity) {
+            bl = ((MerchantEntity)entity).getHeadRollingTimeLeft() > 0;
         }
         this.head.yaw = headYaw * ((float)Math.PI / 180);
         this.head.pitch = headPitch * ((float)Math.PI / 180);
         if (bl) {
-            this.head.roll = 0.3f * MathHelper.sin(0.45f * customAngle);
+            this.head.roll = 0.3f * MathHelper.sin(0.45f * animationProgress);
             this.head.pitch = 0.4f;
         } else {
             this.head.roll = 0.0f;

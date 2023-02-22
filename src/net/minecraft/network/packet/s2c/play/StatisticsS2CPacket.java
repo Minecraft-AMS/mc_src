@@ -17,10 +17,10 @@ import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatType;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.registry.Registry;
 
 public class StatisticsS2CPacket
@@ -48,9 +48,9 @@ implements Packet<ClientPlayPacketListener> {
         }
     }
 
-    private <T> void readStat(StatType<T> type, PacketByteBuf packetByteBuf) {
-        int i = packetByteBuf.readVarInt();
-        int j = packetByteBuf.readVarInt();
+    private <T> void readStat(StatType<T> type, PacketByteBuf buf) {
+        int i = buf.readVarInt();
+        int j = buf.readVarInt();
         this.stats.put(type.getOrCreateStat(type.getRegistry().get(i)), j);
     }
 

@@ -9,12 +9,13 @@ package net.minecraft.block;
 
 import com.google.common.base.MoreObjects;
 import java.util.Random;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.HorizontalFacingBlock;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.TripwireBlock;
-import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
@@ -31,8 +32,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,13 +47,13 @@ extends Block {
     protected static final VoxelShape EAST_SHAPE = Block.createCuboidShape(10.0, 0.0, 5.0, 16.0, 10.0, 11.0);
     protected static final VoxelShape WEST_SHAPE = Block.createCuboidShape(0.0, 0.0, 5.0, 6.0, 10.0, 11.0);
 
-    public TripwireHookBlock(Block.Settings settings) {
+    public TripwireHookBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(POWERED, false)).with(ATTACHED, false));
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         switch (state.get(FACING)) {
             default: {
                 return WEST_SHAPE;
@@ -73,15 +74,15 @@ extends Block {
         Direction direction = state.get(FACING);
         BlockPos blockPos = pos.offset(direction.getOpposite());
         BlockState blockState = world.getBlockState(blockPos);
-        return direction.getAxis().isHorizontal() && blockState.isSideSolidFullSquare(world, blockPos, direction) && !blockState.emitsRedstonePower();
+        return direction.getAxis().isHorizontal() && blockState.isSideSolidFullSquare(world, blockPos, direction);
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
-        if (facing.getOpposite() == state.get(FACING) && !state.canPlaceAt(world, pos)) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        if (direction.getOpposite() == state.get(FACING) && !state.canPlaceAt(world, pos)) {
             return Blocks.AIR.getDefaultState();
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
     @Override
@@ -116,12 +117,12 @@ extends Block {
         for (int k = 1; k < 42; ++k) {
             blockPos = pos.offset(direction, k);
             BlockState blockState2 = world.getBlockState(blockPos);
-            if (blockState2.getBlock() == Blocks.TRIPWIRE_HOOK) {
+            if (blockState2.isOf(Blocks.TRIPWIRE_HOOK)) {
                 if (blockState2.get(FACING) != direction.getOpposite()) break;
                 j = k;
                 break;
             }
-            if (blockState2.getBlock() == Blocks.TRIPWIRE || k == i) {
+            if (blockState2.isOf(Blocks.TRIPWIRE) || k == i) {
                 if (k == i) {
                     blockState2 = (BlockState)MoreObjects.firstNonNull((Object)blockState, (Object)blockState2);
                 }
@@ -130,7 +131,7 @@ extends Block {
                 bl5 |= bl6 && bl7;
                 blockStates[k] = blockState2;
                 if (k != i) continue;
-                world.getBlockTickScheduler().schedule(pos, this, this.getTickRate(world));
+                world.getBlockTickScheduler().schedule(pos, this, 10);
                 bl4 &= bl6;
                 continue;
             }
@@ -186,8 +187,8 @@ extends Block {
     }
 
     @Override
-    public void onBlockRemoved(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (moved || state.getBlock() == newState.getBlock()) {
+    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (moved || state.isOf(newState.getBlock())) {
             return;
         }
         boolean bl = state.get(ATTACHED);
@@ -199,20 +200,20 @@ extends Block {
             world.updateNeighborsAlways(pos, this);
             world.updateNeighborsAlways(pos.offset(state.get(FACING).getOpposite()), this);
         }
-        super.onBlockRemoved(state, world, pos, newState, moved);
+        super.onStateReplaced(state, world, pos, newState, moved);
     }
 
     @Override
-    public int getWeakRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
+    public int getWeakRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
         return state.get(POWERED) != false ? 15 : 0;
     }
 
     @Override
-    public int getStrongRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
+    public int getStrongRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
         if (!state.get(POWERED).booleanValue()) {
             return 0;
         }
-        if (state.get(FACING) == facing) {
+        if (state.get(FACING) == direction) {
             return 15;
         }
         return 0;

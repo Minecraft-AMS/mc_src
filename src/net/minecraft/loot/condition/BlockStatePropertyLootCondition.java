@@ -19,12 +19,15 @@ import java.util.Set;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.predicate.StatePredicate;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 import net.minecraft.util.registry.Registry;
 
 public class BlockStatePropertyLootCondition
@@ -32,9 +35,14 @@ implements LootCondition {
     private final Block block;
     private final StatePredicate properties;
 
-    private BlockStatePropertyLootCondition(Block block, StatePredicate statePredicate) {
+    private BlockStatePropertyLootCondition(Block block, StatePredicate properties) {
         this.block = block;
-        this.properties = statePredicate;
+        this.properties = properties;
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.BLOCK_STATE_PROPERTY;
     }
 
     @Override
@@ -57,12 +65,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<BlockStatePropertyLootCondition> {
-        protected Factory() {
-            super(new Identifier("block_state_property"), BlockStatePropertyLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<BlockStatePropertyLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, BlockStatePropertyLootCondition blockStatePropertyLootCondition, JsonSerializationContext jsonSerializationContext) {
             jsonObject.addProperty("block", Registry.BLOCK.getId(blockStatePropertyLootCondition.block).toString());
@@ -72,7 +76,7 @@ implements LootCondition {
         @Override
         public BlockStatePropertyLootCondition fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
             Identifier identifier = new Identifier(JsonHelper.getString(jsonObject, "block"));
-            Block block = (Block)Registry.BLOCK.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Can't find block " + identifier));
+            Block block = Registry.BLOCK.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Can't find block " + identifier));
             StatePredicate statePredicate = StatePredicate.fromJson(jsonObject.get("properties"));
             statePredicate.check(block.getStateManager(), string -> {
                 throw new JsonSyntaxException("Block " + block + " has no property " + string);
@@ -81,7 +85,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }
@@ -95,7 +99,7 @@ implements LootCondition {
             this.block = block;
         }
 
-        public Builder method_22584(StatePredicate.Builder builder) {
+        public Builder properties(StatePredicate.Builder builder) {
             this.propertyValues = builder.build();
             return this;
         }

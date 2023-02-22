@@ -29,21 +29,21 @@ extends BanEntry<String> {
         return new LiteralText((String)this.getKey());
     }
 
-    public BannedIpEntry(JsonObject jsonObject) {
-        super(BannedIpEntry.getIpFromJson(jsonObject), jsonObject);
+    public BannedIpEntry(JsonObject json) {
+        super(BannedIpEntry.getIp(json), json);
     }
 
-    private static String getIpFromJson(JsonObject json) {
+    private static String getIp(JsonObject json) {
         return json.has("ip") ? json.get("ip").getAsString() : null;
     }
 
     @Override
-    protected void serialize(JsonObject jsonObject) {
+    protected void fromJson(JsonObject json) {
         if (this.getKey() == null) {
             return;
         }
-        jsonObject.addProperty("ip", (String)this.getKey());
-        super.serialize(jsonObject);
+        json.addProperty("ip", (String)this.getKey());
+        super.fromJson(json);
     }
 }
 

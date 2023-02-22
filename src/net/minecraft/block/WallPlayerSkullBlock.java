@@ -7,7 +7,7 @@
 package net.minecraft.block;
 
 import java.util.List;
-import net.minecraft.block.Block;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SkullBlock;
@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class WallPlayerSkullBlock
 extends WallSkullBlock {
-    protected WallPlayerSkullBlock(Block.Settings settings) {
+    protected WallPlayerSkullBlock(AbstractBlock.Settings settings) {
         super(SkullBlock.Type.PLAYER, settings);
     }
 

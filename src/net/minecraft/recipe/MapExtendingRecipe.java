@@ -12,8 +12,8 @@ import net.minecraft.item.map.MapState;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.world.World;
 
 public class MapExtendingRecipe
@@ -28,8 +28,8 @@ extends ShapedRecipe {
             return false;
         }
         ItemStack itemStack = ItemStack.EMPTY;
-        for (int i = 0; i < craftingInventory.getInvSize() && itemStack.isEmpty(); ++i) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size() && itemStack.isEmpty(); ++i) {
+            ItemStack itemStack2 = craftingInventory.getStack(i);
             if (itemStack2.getItem() != Items.FILLED_MAP) continue;
             itemStack = itemStack2;
         }
@@ -59,8 +59,8 @@ extends ShapedRecipe {
     @Override
     public ItemStack craft(CraftingInventory craftingInventory) {
         ItemStack itemStack = ItemStack.EMPTY;
-        for (int i = 0; i < craftingInventory.getInvSize() && itemStack.isEmpty(); ++i) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size() && itemStack.isEmpty(); ++i) {
+            ItemStack itemStack2 = craftingInventory.getStack(i);
             if (itemStack2.getItem() != Items.FILLED_MAP) continue;
             itemStack = itemStack2;
         }

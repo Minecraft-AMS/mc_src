@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class UpdateSelectedSlotC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -22,8 +22,8 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public UpdateSelectedSlotC2SPacket(int i) {
-        this.selectedSlot = i;
+    public UpdateSelectedSlotC2SPacket(int selectedSlot) {
+        this.selectedSlot = selectedSlot;
     }
 
     @Override

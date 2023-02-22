@@ -1,8 +1,12 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -10,10 +14,12 @@ import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.JukeboxBlockEntity;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.MusicDiscItem;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
@@ -22,16 +28,27 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
+import org.jetbrains.annotations.Nullable;
 
 public class JukeboxBlock
 extends BlockWithEntity {
     public static final BooleanProperty HAS_RECORD = Properties.HAS_RECORD;
 
-    protected JukeboxBlock(Block.Settings settings) {
+    protected JukeboxBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(HAS_RECORD, false));
+    }
+
+    @Override
+    public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
+        NbtCompound nbtCompound2;
+        super.onPlaced(world, pos, state, placer, itemStack);
+        NbtCompound nbtCompound = itemStack.getOrCreateTag();
+        if (nbtCompound.contains("BlockEntityTag") && (nbtCompound2 = nbtCompound.getCompound("BlockEntityTag")).contains("RecordItem")) {
+            world.setBlockState(pos, (BlockState)state.with(HAS_RECORD, true), 2);
+        }
     }
 
     @Override
@@ -40,12 +57,12 @@ extends BlockWithEntity {
             this.removeRecord(world, pos);
             state = (BlockState)state.with(HAS_RECORD, false);
             world.setBlockState(pos, state, 2);
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         return ActionResult.PASS;
     }
 
-    public void setRecord(IWorld world, BlockPos pos, BlockState state, ItemStack stack) {
+    public void setRecord(WorldAccess world, BlockPos pos, BlockState state, ItemStack stack) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (!(blockEntity instanceof JukeboxBlockEntity)) {
             return;
@@ -67,7 +84,7 @@ extends BlockWithEntity {
         if (itemStack.isEmpty()) {
             return;
         }
-        world.playLevelEvent(1010, pos, 0);
+        world.syncWorldEvent(1010, pos, 0);
         jukeboxBlockEntity.clear();
         float f = 0.7f;
         double d = (double)(world.random.nextFloat() * 0.7f) + (double)0.15f;
@@ -80,16 +97,16 @@ extends BlockWithEntity {
     }
 
     @Override
-    public void onBlockRemoved(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (state.getBlock() == newState.getBlock()) {
+    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (state.isOf(newState.getBlock())) {
             return;
         }
         this.removeRecord(world, pos);
-        super.onBlockRemoved(state, world, pos, newState, moved);
+        super.onStateReplaced(state, world, pos, newState, moved);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new JukeboxBlockEntity();
     }
 

@@ -3,48 +3,50 @@
  */
 package net.minecraft.world.level.storage;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.level.storage.AlphaChunkDataArray;
 
 public class AlphaChunkIo {
-    public static AlphaChunk readAlphaChunk(CompoundTag tag) {
-        int i = tag.getInt("xPos");
-        int j = tag.getInt("zPos");
+    public static AlphaChunk readAlphaChunk(NbtCompound nbt) {
+        int i = nbt.getInt("xPos");
+        int j = nbt.getInt("zPos");
         AlphaChunk alphaChunk = new AlphaChunk(i, j);
-        alphaChunk.blocks = tag.getByteArray("Blocks");
-        alphaChunk.data = new AlphaChunkDataArray(tag.getByteArray("Data"), 7);
-        alphaChunk.skyLight = new AlphaChunkDataArray(tag.getByteArray("SkyLight"), 7);
-        alphaChunk.blockLight = new AlphaChunkDataArray(tag.getByteArray("BlockLight"), 7);
-        alphaChunk.heightMap = tag.getByteArray("HeightMap");
-        alphaChunk.terrainPopulated = tag.getBoolean("TerrainPopulated");
-        alphaChunk.entities = tag.getList("Entities", 10);
-        alphaChunk.blockEntities = tag.getList("TileEntities", 10);
-        alphaChunk.blockTicks = tag.getList("TileTicks", 10);
+        alphaChunk.blocks = nbt.getByteArray("Blocks");
+        alphaChunk.data = new AlphaChunkDataArray(nbt.getByteArray("Data"), 7);
+        alphaChunk.skyLight = new AlphaChunkDataArray(nbt.getByteArray("SkyLight"), 7);
+        alphaChunk.blockLight = new AlphaChunkDataArray(nbt.getByteArray("BlockLight"), 7);
+        alphaChunk.heightMap = nbt.getByteArray("HeightMap");
+        alphaChunk.terrainPopulated = nbt.getBoolean("TerrainPopulated");
+        alphaChunk.entities = nbt.getList("Entities", 10);
+        alphaChunk.blockEntities = nbt.getList("TileEntities", 10);
+        alphaChunk.blockTicks = nbt.getList("TileTicks", 10);
         try {
-            alphaChunk.lastUpdate = tag.getLong("LastUpdate");
+            alphaChunk.lastUpdate = nbt.getLong("LastUpdate");
         }
         catch (ClassCastException classCastException) {
-            alphaChunk.lastUpdate = tag.getInt("LastUpdate");
+            alphaChunk.lastUpdate = nbt.getInt("LastUpdate");
         }
         return alphaChunk;
     }
 
-    public static void convertAlphaChunk(AlphaChunk alphaChunk, CompoundTag tag, BiomeSource biomeSource) {
-        tag.putInt("xPos", alphaChunk.x);
-        tag.putInt("zPos", alphaChunk.z);
-        tag.putLong("LastUpdate", alphaChunk.lastUpdate);
+    public static void convertAlphaChunk(DynamicRegistryManager.Impl impl, AlphaChunk alphaChunk, NbtCompound nbt, BiomeSource biomeSource) {
+        nbt.putInt("xPos", alphaChunk.x);
+        nbt.putInt("zPos", alphaChunk.z);
+        nbt.putLong("LastUpdate", alphaChunk.lastUpdate);
         int[] is = new int[alphaChunk.heightMap.length];
         for (int i = 0; i < alphaChunk.heightMap.length; ++i) {
             is[i] = alphaChunk.heightMap[i];
         }
-        tag.putIntArray("HeightMap", is);
-        tag.putBoolean("TerrainPopulated", alphaChunk.terrainPopulated);
-        ListTag listTag = new ListTag();
+        nbt.putIntArray("HeightMap", is);
+        nbt.putBoolean("TerrainPopulated", alphaChunk.terrainPopulated);
+        NbtList nbtList = new NbtList();
         for (int j = 0; j < 8; ++j) {
             int o;
             boolean bl = true;
@@ -76,22 +78,22 @@ public class AlphaChunkIo {
                     }
                 }
             }
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putByte("Y", (byte)(j & 0xFF));
-            compoundTag.putByteArray("Blocks", bs);
-            compoundTag.putByteArray("Data", chunkNibbleArray.asByteArray());
-            compoundTag.putByteArray("SkyLight", chunkNibbleArray2.asByteArray());
-            compoundTag.putByteArray("BlockLight", chunkNibbleArray3.asByteArray());
-            listTag.add(compoundTag);
+            NbtCompound nbtCompound = new NbtCompound();
+            nbtCompound.putByte("Y", (byte)(j & 0xFF));
+            nbtCompound.putByteArray("Blocks", bs);
+            nbtCompound.putByteArray("Data", chunkNibbleArray.asByteArray());
+            nbtCompound.putByteArray("SkyLight", chunkNibbleArray2.asByteArray());
+            nbtCompound.putByteArray("BlockLight", chunkNibbleArray3.asByteArray());
+            nbtList.add(nbtCompound);
         }
-        tag.put("Sections", listTag);
-        tag.putIntArray("Biomes", new BiomeArray(new ChunkPos(alphaChunk.x, alphaChunk.z), biomeSource).toIntArray());
-        tag.put("Entities", alphaChunk.entities);
-        tag.put("TileEntities", alphaChunk.blockEntities);
+        nbt.put("Sections", nbtList);
+        nbt.putIntArray("Biomes", new BiomeArray(impl.get(Registry.BIOME_KEY), new ChunkPos(alphaChunk.x, alphaChunk.z), biomeSource).toIntArray());
+        nbt.put("Entities", alphaChunk.entities);
+        nbt.put("TileEntities", alphaChunk.blockEntities);
         if (alphaChunk.blockTicks != null) {
-            tag.put("TileTicks", alphaChunk.blockTicks);
+            nbt.put("TileTicks", alphaChunk.blockTicks);
         }
-        tag.putBoolean("convertedFromAlphaFormat", true);
+        nbt.putBoolean("convertedFromAlphaFormat", true);
     }
 
     public static class AlphaChunk {
@@ -102,9 +104,9 @@ public class AlphaChunkIo {
         public AlphaChunkDataArray skyLight;
         public AlphaChunkDataArray data;
         public byte[] blocks;
-        public ListTag entities;
-        public ListTag blockEntities;
-        public ListTag blockTicks;
+        public NbtList entities;
+        public NbtList blockEntities;
+        public NbtList blockTicks;
         public final int x;
         public final int z;
 

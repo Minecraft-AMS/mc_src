@@ -16,7 +16,7 @@ import com.google.gson.JsonSyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.network.PacketByteBuf;
 
 public class CriterionProgress {
     private static final SimpleDateFormat FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
@@ -42,10 +42,10 @@ public class CriterionProgress {
         return "CriterionProgress{obtained=" + (this.obtained == null ? "false" : this.obtained) + '}';
     }
 
-    public void toPacket(PacketByteBuf packetByteBuf) {
-        packetByteBuf.writeBoolean(this.obtained != null);
+    public void toPacket(PacketByteBuf buf) {
+        buf.writeBoolean(this.obtained != null);
         if (this.obtained != null) {
-            packetByteBuf.writeDate(this.obtained);
+            buf.writeDate(this.obtained);
         }
     }
 
@@ -56,10 +56,10 @@ public class CriterionProgress {
         return JsonNull.INSTANCE;
     }
 
-    public static CriterionProgress fromPacket(PacketByteBuf packetByteBuf) {
+    public static CriterionProgress fromPacket(PacketByteBuf buf) {
         CriterionProgress criterionProgress = new CriterionProgress();
-        if (packetByteBuf.readBoolean()) {
-            criterionProgress.obtained = packetByteBuf.readDate();
+        if (buf.readBoolean()) {
+            criterionProgress.obtained = buf.readDate();
         }
         return criterionProgress;
     }

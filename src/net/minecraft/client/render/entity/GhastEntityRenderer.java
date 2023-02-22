@@ -19,8 +19,8 @@ import net.minecraft.util.Identifier;
 @Environment(value=EnvType.CLIENT)
 public class GhastEntityRenderer
 extends MobEntityRenderer<GhastEntity, GhastEntityModel<GhastEntity>> {
-    private static final Identifier SKIN = new Identifier("textures/entity/ghast/ghast.png");
-    private static final Identifier ANGRY_SKIN = new Identifier("textures/entity/ghast/ghast_shooting.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/ghast/ghast.png");
+    private static final Identifier ANGRY_TEXTURE = new Identifier("textures/entity/ghast/ghast_shooting.png");
 
     public GhastEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new GhastEntityModel(), 1.5f);
@@ -29,9 +29,9 @@ extends MobEntityRenderer<GhastEntity, GhastEntityModel<GhastEntity>> {
     @Override
     public Identifier getTexture(GhastEntity ghastEntity) {
         if (ghastEntity.isShooting()) {
-            return ANGRY_SKIN;
+            return ANGRY_TEXTURE;
         }
-        return SKIN;
+        return TEXTURE;
     }
 
     @Override

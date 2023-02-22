@@ -29,8 +29,8 @@ extends DataFix {
     public TypeRewriteRule makeRule() {
         Type type = this.getInputSchema().getType(TypeReferences.BLOCK_NAME);
         Type type2 = this.getOutputSchema().getType(TypeReferences.BLOCK_NAME);
-        Type type3 = DSL.named((String)TypeReferences.BLOCK_NAME.typeName(), (Type)DSL.or((Type)DSL.intType(), (Type)DSL.namespacedString()));
-        Type type4 = DSL.named((String)TypeReferences.BLOCK_NAME.typeName(), (Type)DSL.namespacedString());
+        Type type3 = DSL.named((String)TypeReferences.BLOCK_NAME.typeName(), (Type)DSL.or((Type)DSL.intType(), IdentifierNormalizingSchema.getIdentifierType()));
+        Type type4 = DSL.named((String)TypeReferences.BLOCK_NAME.typeName(), IdentifierNormalizingSchema.getIdentifierType());
         if (!Objects.equals(type, type3) || !Objects.equals(type2, type4)) {
             throw new IllegalStateException("Expected and actual types don't match.");
         }

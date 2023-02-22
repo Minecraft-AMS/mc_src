@@ -2,46 +2,45 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public abstract class FlowerFeature<U extends FeatureConfig>
 extends Feature<U> {
-    public FlowerFeature(Function<Dynamic<?>, ? extends U> function) {
-        super(function);
+    public FlowerFeature(Codec<U> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean generate(IWorld world, ChunkGenerator<? extends ChunkGeneratorConfig> generator, Random random, BlockPos pos, U config) {
-        BlockState blockState = this.getFlowerToPlace(random, pos, config);
+    public boolean generate(StructureWorldAccess world, ChunkGenerator chunkGenerator, Random random, BlockPos pos, U config) {
+        BlockState blockState = this.getFlowerState(random, pos, config);
         int i = 0;
-        for (int j = 0; j < this.method_23370(config); ++j) {
-            BlockPos blockPos = this.method_23371(random, pos, config);
-            if (!world.isAir(blockPos) || blockPos.getY() >= 255 || !blockState.canPlaceAt(world, blockPos) || !this.method_23369(world, blockPos, config)) continue;
+        for (int j = 0; j < this.getFlowerAmount(config); ++j) {
+            BlockPos blockPos = this.getPos(random, pos, config);
+            if (!world.isAir(blockPos) || blockPos.getY() >= 255 || !blockState.canPlaceAt(world, blockPos) || !this.isPosValid(world, blockPos, config)) continue;
             world.setBlockState(blockPos, blockState, 2);
             ++i;
         }
         return i > 0;
     }
 
-    public abstract boolean method_23369(IWorld var1, BlockPos var2, U var3);
+    public abstract boolean isPosValid(WorldAccess var1, BlockPos var2, U var3);
 
-    public abstract int method_23370(U var1);
+    public abstract int getFlowerAmount(U var1);
 
-    public abstract BlockPos method_23371(Random var1, BlockPos var2, U var3);
+    public abstract BlockPos getPos(Random var1, BlockPos var2, U var3);
 
-    public abstract BlockState getFlowerToPlace(Random var1, BlockPos var2, U var3);
+    public abstract BlockState getFlowerState(Random var1, BlockPos var2, U var3);
 }
 

@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.stream.Stream;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.FollowGroupLeaderGoal;
 import net.minecraft.entity.passive.FishEntity;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.IWorld;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,8 +24,8 @@ extends FishEntity {
     private SchoolingFishEntity leader;
     private int groupSize = 1;
 
-    public SchoolingFishEntity(EntityType<? extends SchoolingFishEntity> type, World world) {
-        super((EntityType<? extends FishEntity>)type, world);
+    public SchoolingFishEntity(EntityType<? extends SchoolingFishEntity> entityType, World world) {
+        super((EntityType<? extends FishEntity>)entityType, world);
     }
 
     @Override
@@ -104,21 +104,21 @@ extends FishEntity {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        super.initialize(world, difficulty, spawnType, entityData, entityTag);
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
+        super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         if (entityData == null) {
-            entityData = new Data(this);
+            entityData = new FishData(this);
         } else {
-            this.joinGroupOf(((Data)entityData).leader);
+            this.joinGroupOf(((FishData)entityData).leader);
         }
         return entityData;
     }
 
-    public static class Data
+    public static class FishData
     implements EntityData {
         public final SchoolingFishEntity leader;
 
-        public Data(SchoolingFishEntity leader) {
+        public FishData(SchoolingFishEntity leader) {
             this.leader = leader;
         }
     }

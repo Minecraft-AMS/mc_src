@@ -33,13 +33,13 @@ extends Task<VillagerEntity> {
 
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, VillagerEntity villagerEntity) {
-        return !serverWorld.isNearOccupiedPointOfInterest(new BlockPos(villagerEntity));
+        return !serverWorld.isNearOccupiedPointOfInterest(villagerEntity.getBlockPos());
     }
 
     @Override
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         PointOfInterestStorage pointOfInterestStorage = serverWorld.getPointOfInterestStorage();
-        int i = pointOfInterestStorage.getDistanceFromNearestOccupied(ChunkSectionPos.from(new BlockPos(villagerEntity)));
+        int i = pointOfInterestStorage.getDistanceFromNearestOccupied(ChunkSectionPos.from(villagerEntity.getBlockPos()));
         Vec3d vec3d = null;
         for (int j = 0; j < 5; ++j) {
             Vec3d vec3d2 = TargetFinder.findGroundTarget(villagerEntity, 15, 7, blockPos -> -serverWorld.getOccupiedPointOfInterestDistance(ChunkSectionPos.from(blockPos)));
@@ -53,7 +53,7 @@ extends Task<VillagerEntity> {
             vec3d = vec3d2;
         }
         if (vec3d != null) {
-            villagerEntity.getBrain().putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, this.speed, this.completionRange));
+            villagerEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, this.speed, this.completionRange));
         }
     }
 }

@@ -18,15 +18,20 @@ import net.minecraft.sound.SoundEvent;
 public abstract class MovingSoundInstance
 extends AbstractSoundInstance
 implements TickableSoundInstance {
-    protected boolean done;
+    private boolean done;
 
-    protected MovingSoundInstance(SoundEvent sound, SoundCategory soundCategory) {
-        super(sound, soundCategory);
+    protected MovingSoundInstance(SoundEvent soundEvent, SoundCategory soundCategory) {
+        super(soundEvent, soundCategory);
     }
 
     @Override
     public boolean isDone() {
         return this.done;
+    }
+
+    protected final void setDone() {
+        this.done = true;
+        this.repeat = false;
     }
 }
 

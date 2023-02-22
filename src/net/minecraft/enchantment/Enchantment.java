@@ -30,9 +30,8 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class Enchantment {
     private final EquipmentSlot[] slotTypes;
-    private final Weight weight;
-    @Nullable
-    public EnchantmentTarget type;
+    private final Rarity rarity;
+    public final EnchantmentTarget type;
     @Nullable
     protected String translationKey;
 
@@ -42,40 +41,40 @@ public abstract class Enchantment {
         return (Enchantment)Registry.ENCHANTMENT.get(id);
     }
 
-    protected Enchantment(Weight weight, EnchantmentTarget type, EquipmentSlot[] slotTypes) {
-        this.weight = weight;
+    protected Enchantment(Rarity weight, EnchantmentTarget type, EquipmentSlot[] slotTypes) {
+        this.rarity = weight;
         this.type = type;
         this.slotTypes = slotTypes;
     }
 
-    public Map<EquipmentSlot, ItemStack> getEquipment(LivingEntity livingEntity) {
+    public Map<EquipmentSlot, ItemStack> getEquipment(LivingEntity entity) {
         EnumMap map = Maps.newEnumMap(EquipmentSlot.class);
         for (EquipmentSlot equipmentSlot : this.slotTypes) {
-            ItemStack itemStack = livingEntity.getEquippedStack(equipmentSlot);
+            ItemStack itemStack = entity.getEquippedStack(equipmentSlot);
             if (itemStack.isEmpty()) continue;
             map.put(equipmentSlot, itemStack);
         }
         return map;
     }
 
-    public Weight getWeight() {
-        return this.weight;
+    public Rarity getRarity() {
+        return this.rarity;
     }
 
-    public int getMinimumLevel() {
+    public int getMinLevel() {
         return 1;
     }
 
-    public int getMaximumLevel() {
+    public int getMaxLevel() {
         return 1;
     }
 
-    public int getMinimumPower(int level) {
+    public int getMinPower(int level) {
         return 1 + level * 10;
     }
 
-    public int getMaximumPower(int level) {
-        return this.getMinimumPower(level) + 5;
+    public int getMaxPower(int level) {
+        return this.getMinPower(level) + 5;
     }
 
     public int getProtectionAmount(int level, DamageSource source) {
@@ -86,11 +85,11 @@ public abstract class Enchantment {
         return 0.0f;
     }
 
-    public final boolean isDifferent(Enchantment other) {
-        return this.differs(other) && other.differs(this);
+    public final boolean canCombine(Enchantment other) {
+        return this.canAccept(other) && other.canAccept(this);
     }
 
-    protected boolean differs(Enchantment other) {
+    protected boolean canAccept(Enchantment other) {
         return this != other;
     }
 
@@ -106,16 +105,16 @@ public abstract class Enchantment {
     }
 
     public Text getName(int level) {
-        TranslatableText text = new TranslatableText(this.getTranslationKey(), new Object[0]);
+        TranslatableText mutableText = new TranslatableText(this.getTranslationKey());
         if (this.isCursed()) {
-            text.formatted(Formatting.RED);
+            mutableText.formatted(Formatting.RED);
         } else {
-            text.formatted(Formatting.GRAY);
+            mutableText.formatted(Formatting.GRAY);
         }
-        if (level != 1 || this.getMaximumLevel() != 1) {
-            text.append(" ").append(new TranslatableText("enchantment.level." + level, new Object[0]));
+        if (level != 1 || this.getMaxLevel() != 1) {
+            mutableText.append(" ").append(new TranslatableText("enchantment.level." + level));
         }
-        return text;
+        return mutableText;
     }
 
     public boolean isAcceptableItem(ItemStack stack) {
@@ -136,7 +135,15 @@ public abstract class Enchantment {
         return false;
     }
 
-    public static enum Weight {
+    public boolean isAvailableForEnchantedBookOffer() {
+        return true;
+    }
+
+    public boolean isAvailableForRandomSelection() {
+        return true;
+    }
+
+    public static enum Rarity {
         COMMON(10),
         UNCOMMON(5),
         RARE(2),
@@ -144,7 +151,7 @@ public abstract class Enchantment {
 
         private final int weight;
 
-        private Weight(int weight) {
+        private Rarity(int weight) {
             this.weight = weight;
         }
 

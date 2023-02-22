@@ -14,25 +14,24 @@ import net.minecraft.server.ServerConfigEntry;
 
 public class WhitelistEntry
 extends ServerConfigEntry<GameProfile> {
-    public WhitelistEntry(GameProfile gameProfile) {
-        super(gameProfile);
+    public WhitelistEntry(GameProfile profile) {
+        super(profile);
     }
 
-    public WhitelistEntry(JsonObject jsonObject) {
-        super(WhitelistEntry.deserializeProfile(jsonObject), jsonObject);
+    public WhitelistEntry(JsonObject json) {
+        super(WhitelistEntry.profileFromJson(json));
     }
 
     @Override
-    protected void serialize(JsonObject jsonObject) {
+    protected void fromJson(JsonObject json) {
         if (this.getKey() == null) {
             return;
         }
-        jsonObject.addProperty("uuid", ((GameProfile)this.getKey()).getId() == null ? "" : ((GameProfile)this.getKey()).getId().toString());
-        jsonObject.addProperty("name", ((GameProfile)this.getKey()).getName());
-        super.serialize(jsonObject);
+        json.addProperty("uuid", ((GameProfile)this.getKey()).getId() == null ? "" : ((GameProfile)this.getKey()).getId().toString());
+        json.addProperty("name", ((GameProfile)this.getKey()).getName());
     }
 
-    private static GameProfile deserializeProfile(JsonObject json) {
+    private static GameProfile profileFromJson(JsonObject json) {
         UUID uUID;
         if (!json.has("uuid") || !json.has("name")) {
             return null;

@@ -14,12 +14,11 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Vec3f;
 import net.minecraft.world.World;
-import net.minecraft.world.dimension.DimensionType;
 
 @Environment(value=EnvType.CLIENT)
 public class LightmapTextureManager
@@ -27,20 +26,20 @@ implements AutoCloseable {
     private final NativeImageBackedTexture texture;
     private final NativeImage image;
     private final Identifier textureIdentifier;
-    private boolean isDirty;
+    private boolean dirty;
     private float field_21528;
-    private final GameRenderer worldRenderer;
+    private final GameRenderer renderer;
     private final MinecraftClient client;
 
-    public LightmapTextureManager(GameRenderer gameRenderer, MinecraftClient minecraftClient) {
-        this.worldRenderer = gameRenderer;
-        this.client = minecraftClient;
+    public LightmapTextureManager(GameRenderer renderer, MinecraftClient client) {
+        this.renderer = renderer;
+        this.client = client;
         this.texture = new NativeImageBackedTexture(16, 16, false);
         this.textureIdentifier = this.client.getTextureManager().registerDynamicTexture("light_map", this.texture);
         this.image = this.texture.getImage();
         for (int i = 0; i < 16; ++i) {
             for (int j = 0; j < 16; ++j) {
-                this.image.setPixelRgba(j, i, -1);
+                this.image.setPixelColor(j, i, -1);
             }
         }
         this.texture.upload();
@@ -54,7 +53,7 @@ implements AutoCloseable {
     public void tick() {
         this.field_21528 = (float)((double)this.field_21528 + (Math.random() - Math.random()) * Math.random() * Math.random() * 0.1);
         this.field_21528 = (float)((double)this.field_21528 * 0.9);
-        this.isDirty = true;
+        this.dirty = true;
     }
 
     public void disable() {
@@ -82,10 +81,10 @@ implements AutoCloseable {
     }
 
     public void update(float delta) {
-        if (!this.isDirty) {
+        if (!this.dirty) {
             return;
         }
-        this.isDirty = false;
+        this.dirty = false;
         this.client.getProfiler().push("lightTex");
         ClientWorld clientWorld = this.client.world;
         if (clientWorld == null) {
@@ -93,56 +92,56 @@ implements AutoCloseable {
         }
         float f = clientWorld.method_23783(1.0f);
         float g = clientWorld.getLightningTicksLeft() > 0 ? 1.0f : f * 0.95f + 0.05f;
-        float h = this.client.player.method_3140();
+        float h = this.client.player.getUnderwaterVisibility();
         float i = this.client.player.hasStatusEffect(StatusEffects.NIGHT_VISION) ? GameRenderer.getNightVisionStrength(this.client.player, delta) : (h > 0.0f && this.client.player.hasStatusEffect(StatusEffects.CONDUIT_POWER) ? h : 0.0f);
-        Vector3f vector3f = new Vector3f(f, f, 1.0f);
-        vector3f.lerp(new Vector3f(1.0f, 1.0f, 1.0f), 0.35f);
+        Vec3f vec3f = new Vec3f(f, f, 1.0f);
+        vec3f.lerp(new Vec3f(1.0f, 1.0f, 1.0f), 0.35f);
         float j = this.field_21528 + 1.5f;
-        Vector3f vector3f2 = new Vector3f();
+        Vec3f vec3f2 = new Vec3f();
         for (int k = 0; k < 16; ++k) {
             for (int l = 0; l < 16; ++l) {
                 float s;
-                Vector3f vector3f4;
+                Vec3f vec3f4;
                 float r;
                 float n;
                 float m = this.getBrightness(clientWorld, k) * g;
                 float o = n = this.getBrightness(clientWorld, l) * j;
                 float p = n * ((n * 0.6f + 0.4f) * 0.6f + 0.4f);
                 float q = n * (n * n * 0.6f + 0.4f);
-                vector3f2.set(o, p, q);
-                if (clientWorld.dimension.getType() == DimensionType.THE_END) {
-                    vector3f2.lerp(new Vector3f(0.99f, 1.12f, 1.0f), 0.25f);
+                vec3f2.set(o, p, q);
+                if (clientWorld.getSkyProperties().shouldBrightenLighting()) {
+                    vec3f2.lerp(new Vec3f(0.99f, 1.12f, 1.0f), 0.25f);
                 } else {
-                    Vector3f vector3f3 = vector3f.copy();
-                    vector3f3.scale(m);
-                    vector3f2.add(vector3f3);
-                    vector3f2.lerp(new Vector3f(0.75f, 0.75f, 0.75f), 0.04f);
-                    if (this.worldRenderer.getSkyDarkness(delta) > 0.0f) {
-                        r = this.worldRenderer.getSkyDarkness(delta);
-                        vector3f4 = vector3f2.copy();
-                        vector3f4.multiplyComponentwise(0.7f, 0.6f, 0.6f);
-                        vector3f2.lerp(vector3f4, r);
+                    Vec3f vec3f3 = vec3f.copy();
+                    vec3f3.scale(m);
+                    vec3f2.add(vec3f3);
+                    vec3f2.lerp(new Vec3f(0.75f, 0.75f, 0.75f), 0.04f);
+                    if (this.renderer.getSkyDarkness(delta) > 0.0f) {
+                        r = this.renderer.getSkyDarkness(delta);
+                        vec3f4 = vec3f2.copy();
+                        vec3f4.multiplyComponentwise(0.7f, 0.6f, 0.6f);
+                        vec3f2.lerp(vec3f4, r);
                     }
                 }
-                vector3f2.clamp(0.0f, 1.0f);
-                if (i > 0.0f && (s = Math.max(vector3f2.getX(), Math.max(vector3f2.getY(), vector3f2.getZ()))) < 1.0f) {
+                vec3f2.clamp(0.0f, 1.0f);
+                if (i > 0.0f && (s = Math.max(vec3f2.getX(), Math.max(vec3f2.getY(), vec3f2.getZ()))) < 1.0f) {
                     r = 1.0f / s;
-                    vector3f4 = vector3f2.copy();
-                    vector3f4.scale(r);
-                    vector3f2.lerp(vector3f4, i);
+                    vec3f4 = vec3f2.copy();
+                    vec3f4.scale(r);
+                    vec3f2.lerp(vec3f4, i);
                 }
                 s = (float)this.client.options.gamma;
-                Vector3f vector3f5 = vector3f2.copy();
-                vector3f5.modify(this::method_23795);
-                vector3f2.lerp(vector3f5, s);
-                vector3f2.lerp(new Vector3f(0.75f, 0.75f, 0.75f), 0.04f);
-                vector3f2.clamp(0.0f, 1.0f);
-                vector3f2.scale(255.0f);
+                Vec3f vec3f5 = vec3f2.copy();
+                vec3f5.modify(this::method_23795);
+                vec3f2.lerp(vec3f5, s);
+                vec3f2.lerp(new Vec3f(0.75f, 0.75f, 0.75f), 0.04f);
+                vec3f2.clamp(0.0f, 1.0f);
+                vec3f2.scale(255.0f);
                 int t = 255;
-                int u = (int)vector3f2.getX();
-                int v = (int)vector3f2.getY();
-                int w = (int)vector3f2.getZ();
-                this.image.setPixelRgba(l, k, 0xFF000000 | w << 16 | v << 8 | u);
+                int u = (int)vec3f2.getX();
+                int v = (int)vec3f2.getY();
+                int w = (int)vec3f2.getZ();
+                this.image.setPixelColor(l, k, 0xFF000000 | w << 16 | v << 8 | u);
             }
         }
         this.texture.upload();
@@ -155,7 +154,7 @@ implements AutoCloseable {
     }
 
     private float getBrightness(World world, int i) {
-        return world.dimension.getBrightness(i);
+        return world.getDimension().method_28516(i);
     }
 
     public static int pack(int block, int sky) {

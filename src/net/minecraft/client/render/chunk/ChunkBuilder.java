@@ -309,15 +309,15 @@ public class ChunkBuilder {
             this.origin.set(x, y, z);
             this.boundingBox = new Box(x, y, z, x + 16, y + 16, z + 16);
             for (Direction direction : Direction.values()) {
-                this.neighborPositions[direction.ordinal()].set(this.origin).setOffset(direction, 16);
+                this.neighborPositions[direction.ordinal()].set(this.origin).move(direction, 16);
             }
         }
 
         protected double getSquaredCameraDistance() {
             Camera camera = MinecraftClient.getInstance().gameRenderer.getCamera();
-            double d = this.boundingBox.x1 + 8.0 - camera.getPos().x;
-            double e = this.boundingBox.y1 + 8.0 - camera.getPos().y;
-            double f = this.boundingBox.z1 + 8.0 - camera.getPos().z;
+            double d = this.boundingBox.minX + 8.0 - camera.getPos().x;
+            double e = this.boundingBox.minY + 8.0 - camera.getPos().y;
+            double f = this.boundingBox.minZ + 8.0 - camera.getPos().z;
             return d * d + e * e + f * f;
         }
 
@@ -568,7 +568,7 @@ public class ChunkBuilder {
                         BlockEntity blockEntity;
                         BlockState blockState = chunkRendererRegion.getBlockState(blockPos3);
                         Block block = blockState.getBlock();
-                        if (blockState.isFullOpaque(chunkRendererRegion, blockPos3)) {
+                        if (blockState.isOpaqueFullCube(chunkRendererRegion, blockPos3)) {
                             chunkOcclusionDataBuilder.markClosed(blockPos3);
                         }
                         if (block.hasBlockEntity() && (blockEntity = chunkRendererRegion.getBlockEntity(blockPos3, WorldChunk.CreationType.CHECK)) != null) {

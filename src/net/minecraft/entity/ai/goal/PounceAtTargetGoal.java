@@ -15,8 +15,8 @@ extends Goal {
     private LivingEntity target;
     private final float velocity;
 
-    public PounceAtTargetGoal(MobEntity rmob, float velocity) {
-        this.mob = rmob;
+    public PounceAtTargetGoal(MobEntity mob, float velocity) {
+        this.mob = mob;
         this.velocity = velocity;
         this.setControls(EnumSet.of(Goal.Control.JUMP, Goal.Control.MOVE));
     }
@@ -34,7 +34,7 @@ extends Goal {
         if (d < 4.0 || d > 16.0) {
             return false;
         }
-        if (!this.mob.onGround) {
+        if (!this.mob.isOnGround()) {
             return false;
         }
         return this.mob.getRandom().nextInt(5) == 0;
@@ -42,7 +42,7 @@ extends Goal {
 
     @Override
     public boolean shouldContinue() {
-        return !this.mob.onGround;
+        return !this.mob.isOnGround();
     }
 
     @Override

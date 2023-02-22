@@ -48,11 +48,11 @@ import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 public class EntitySelectorReader {
-    public static final SimpleCommandExceptionType INVALID_ENTITY_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.invalid", new Object[0]));
+    public static final SimpleCommandExceptionType INVALID_ENTITY_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.invalid"));
     public static final DynamicCommandExceptionType UNKNOWN_SELECTOR_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.entity.selector.unknown", object));
-    public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.not_allowed", new Object[0]));
-    public static final SimpleCommandExceptionType MISSING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.missing", new Object[0]));
-    public static final SimpleCommandExceptionType UNTERMINATED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.options.unterminated", new Object[0]));
+    public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.not_allowed"));
+    public static final SimpleCommandExceptionType MISSING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.missing"));
+    public static final SimpleCommandExceptionType UNTERMINATED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.options.unterminated"));
     public static final DynamicCommandExceptionType VALUELESS_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.entity.options.valueless", object));
     public static final BiConsumer<Vec3d, List<? extends Entity>> ARBITRARY = (vec3d, list) -> {};
     public static final BiConsumer<Vec3d, List<? extends Entity>> NEAREST = (vec3d, list) -> list.sort((entity, entity2) -> Doubles.compare((double)entity.squaredDistanceTo((Vec3d)vec3d), (double)entity2.squaredDistanceTo((Vec3d)vec3d)));
@@ -157,11 +157,11 @@ public class EntitySelectorReader {
         }
     }
 
-    private Predicate<Entity> rotationPredicate(FloatRangeArgument floatRangeArgument, ToDoubleFunction<Entity> toDoubleFunction) {
-        double d = MathHelper.wrapDegrees(floatRangeArgument.getMin() == null ? 0.0f : floatRangeArgument.getMin().floatValue());
-        double e = MathHelper.wrapDegrees(floatRangeArgument.getMax() == null ? 359.0f : floatRangeArgument.getMax().floatValue());
+    private Predicate<Entity> rotationPredicate(FloatRangeArgument angleRange, ToDoubleFunction<Entity> entityToAngle) {
+        double d = MathHelper.wrapDegrees(angleRange.getMin() == null ? 0.0f : angleRange.getMin().floatValue());
+        double e = MathHelper.wrapDegrees(angleRange.getMax() == null ? 359.0f : angleRange.getMax().floatValue());
         return entity -> {
-            double f = MathHelper.wrapDegrees(toDoubleFunction.applyAsDouble((Entity)entity));
+            double f = MathHelper.wrapDegrees(entityToAngle.applyAsDouble((Entity)entity));
             if (d > e) {
                 return f >= d || f <= e;
             }
@@ -321,16 +321,16 @@ public class EntitySelectorReader {
         return this.pitchRange;
     }
 
-    public void setPitchRange(FloatRangeArgument floatRangeArgument) {
-        this.pitchRange = floatRangeArgument;
+    public void setPitchRange(FloatRangeArgument pitchRange) {
+        this.pitchRange = pitchRange;
     }
 
     public FloatRangeArgument getYawRange() {
         return this.yawRange;
     }
 
-    public void setYawRange(FloatRangeArgument floatRangeArgument) {
-        this.yawRange = floatRangeArgument;
+    public void setYawRange(FloatRangeArgument yawRange) {
+        this.yawRange = yawRange;
     }
 
     @Nullable
@@ -416,11 +416,11 @@ public class EntitySelectorReader {
     }
 
     private static void suggestSelector(SuggestionsBuilder builder) {
-        builder.suggest("@p", (Message)new TranslatableText("argument.entity.selector.nearestPlayer", new Object[0]));
-        builder.suggest("@a", (Message)new TranslatableText("argument.entity.selector.allPlayers", new Object[0]));
-        builder.suggest("@r", (Message)new TranslatableText("argument.entity.selector.randomPlayer", new Object[0]));
-        builder.suggest("@s", (Message)new TranslatableText("argument.entity.selector.self", new Object[0]));
-        builder.suggest("@e", (Message)new TranslatableText("argument.entity.selector.allEntities", new Object[0]));
+        builder.suggest("@p", (Message)new TranslatableText("argument.entity.selector.nearestPlayer"));
+        builder.suggest("@a", (Message)new TranslatableText("argument.entity.selector.allPlayers"));
+        builder.suggest("@r", (Message)new TranslatableText("argument.entity.selector.randomPlayer"));
+        builder.suggest("@s", (Message)new TranslatableText("argument.entity.selector.self"));
+        builder.suggest("@e", (Message)new TranslatableText("argument.entity.selector.allEntities"));
     }
 
     private CompletableFuture<Suggestions> suggestSelector(SuggestionsBuilder builder, Consumer<SuggestionsBuilder> consumer) {
@@ -470,8 +470,8 @@ public class EntitySelectorReader {
         return this.senderOnly;
     }
 
-    public void setSuggestionProvider(BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> biFunction) {
-        this.suggestionProvider = biFunction;
+    public void setSuggestionProvider(BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> suggestionProvider) {
+        this.suggestionProvider = suggestionProvider;
     }
 
     public CompletableFuture<Suggestions> listSuggestions(SuggestionsBuilder builder, Consumer<SuggestionsBuilder> consumer) {
@@ -490,8 +490,8 @@ public class EntitySelectorReader {
         return this.excludesName;
     }
 
-    public void setExcludesName(boolean bl) {
-        this.excludesName = bl;
+    public void setExcludesName(boolean excludesName) {
+        this.excludesName = excludesName;
     }
 
     public boolean hasLimit() {

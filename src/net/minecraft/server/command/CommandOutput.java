@@ -3,17 +3,18 @@
  */
 package net.minecraft.server.command;
 
+import java.util.UUID;
 import net.minecraft.text.Text;
 
 public interface CommandOutput {
     public static final CommandOutput DUMMY = new CommandOutput(){
 
         @Override
-        public void sendMessage(Text message) {
+        public void sendSystemMessage(Text message, UUID sender) {
         }
 
         @Override
-        public boolean sendCommandFeedback() {
+        public boolean shouldReceiveFeedback() {
             return false;
         }
 
@@ -28,9 +29,9 @@ public interface CommandOutput {
         }
     };
 
-    public void sendMessage(Text var1);
+    public void sendSystemMessage(Text var1, UUID var2);
 
-    public boolean sendCommandFeedback();
+    public boolean shouldReceiveFeedback();
 
     public boolean shouldTrackOutput();
 

@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.HashMultimap
+ *  com.google.common.collect.ImmutableMultimap
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
  *  net.fabricmc.api.EnvType
@@ -11,7 +11,7 @@
  */
 package net.minecraft.item;
 
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import java.util.List;
@@ -26,55 +26,49 @@ import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemPropertyGetter;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.Tag;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Arm;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Rarity;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.UseAction;
 import net.minecraft.util.Util;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.RayTraceContext;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class Item
 implements ItemConvertible {
     public static final Map<Block, Item> BLOCK_ITEMS = Maps.newHashMap();
-    private static final ItemPropertyGetter DAMAGED_PROPERTY_GETTER = (stack, world, entity) -> stack.isDamaged() ? 1.0f : 0.0f;
-    private static final ItemPropertyGetter DAMAGE_PROPERTY_GETTER = (stack, world, entity) -> MathHelper.clamp((float)stack.getDamage() / (float)stack.getMaxDamage(), 0.0f, 1.0f);
-    private static final ItemPropertyGetter LEFTHANDED_PROPERTY_GETTER = (stack, world, entity) -> entity == null || entity.getMainArm() == Arm.RIGHT ? 0.0f : 1.0f;
-    private static final ItemPropertyGetter COOLDOWN_PROPERTY_GETTER = (stack, world, entity) -> entity instanceof PlayerEntity ? ((PlayerEntity)entity).getItemCooldownManager().getCooldownProgress(stack.getItem(), 0.0f) : 0.0f;
-    private static final ItemPropertyGetter CUSTOM_DATA_PROPERTY_GETTER = (stack, world, entity) -> stack.hasTag() ? (float)stack.getTag().getInt("CustomModelData") : 0.0f;
-    protected static final UUID ATTACK_DAMAGE_MODIFIER_UUID = UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF");
-    protected static final UUID ATTACK_SPEED_MODIFIER_UUID = UUID.fromString("FA233E1C-4180-4865-B01B-BCCE9785ACA3");
+    protected static final UUID ATTACK_DAMAGE_MODIFIER_ID = UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF");
+    protected static final UUID ATTACK_SPEED_MODIFIER_ID = UUID.fromString("FA233E1C-4180-4865-B01B-BCCE9785ACA3");
     protected static final Random RANDOM = new Random();
-    private final Map<Identifier, ItemPropertyGetter> propertyGetters = Maps.newHashMap();
     protected final ItemGroup group;
     private final Rarity rarity;
     private final int maxCount;
     private final int maxDamage;
+    private final boolean fireproof;
     private final Item recipeRemainder;
     @Nullable
     private String translationKey;
@@ -95,36 +89,19 @@ implements ItemConvertible {
     }
 
     public Item(Settings settings) {
-        this.addPropertyGetter(new Identifier("lefthanded"), LEFTHANDED_PROPERTY_GETTER);
-        this.addPropertyGetter(new Identifier("cooldown"), COOLDOWN_PROPERTY_GETTER);
-        this.addPropertyGetter(new Identifier("custom_model_data"), CUSTOM_DATA_PROPERTY_GETTER);
         this.group = settings.group;
         this.rarity = settings.rarity;
         this.recipeRemainder = settings.recipeRemainder;
         this.maxDamage = settings.maxDamage;
         this.maxCount = settings.maxCount;
         this.foodComponent = settings.foodComponent;
-        if (this.maxDamage > 0) {
-            this.addPropertyGetter(new Identifier("damaged"), DAMAGED_PROPERTY_GETTER);
-            this.addPropertyGetter(new Identifier("damage"), DAMAGE_PROPERTY_GETTER);
-        }
+        this.fireproof = settings.fireproof;
     }
 
     public void usageTick(World world, LivingEntity user, ItemStack stack, int remainingUseTicks) {
     }
 
-    @Nullable
-    @Environment(value=EnvType.CLIENT)
-    public ItemPropertyGetter getPropertyGetter(Identifier id) {
-        return this.propertyGetters.get(id);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean hasPropertyGetters() {
-        return !this.propertyGetters.isEmpty();
-    }
-
-    public boolean postProcessTag(CompoundTag tag) {
+    public boolean postProcessNbt(NbtCompound nbt) {
         return false;
     }
 
@@ -137,15 +114,11 @@ implements ItemConvertible {
         return this;
     }
 
-    public final void addPropertyGetter(Identifier id, ItemPropertyGetter property) {
-        this.propertyGetters.put(id, property);
-    }
-
     public ActionResult useOnBlock(ItemUsageContext context) {
         return ActionResult.PASS;
     }
 
-    public float getMiningSpeed(ItemStack stack, BlockState state) {
+    public float getMiningSpeedMultiplier(ItemStack stack, BlockState state) {
         return 1.0f;
     }
 
@@ -188,17 +161,17 @@ implements ItemConvertible {
         return false;
     }
 
-    public boolean isEffectiveOn(BlockState state) {
+    public boolean isSuitableFor(BlockState state) {
         return false;
     }
 
-    public boolean useOnEntity(ItemStack stack, PlayerEntity user, LivingEntity entity, Hand hand) {
-        return false;
+    public ActionResult useOnEntity(ItemStack stack, PlayerEntity user, LivingEntity entity, Hand hand) {
+        return ActionResult.PASS;
     }
 
     @Environment(value=EnvType.CLIENT)
     public Text getName() {
-        return new TranslatableText(this.getTranslationKey(), new Object[0]);
+        return new TranslatableText(this.getTranslationKey());
     }
 
     public String toString() {
@@ -262,10 +235,10 @@ implements ItemConvertible {
     }
 
     public Text getName(ItemStack stack) {
-        return new TranslatableText(this.getTranslationKey(stack), new Object[0]);
+        return new TranslatableText(this.getTranslationKey(stack));
     }
 
-    public boolean hasEnchantmentGlint(ItemStack stack) {
+    public boolean hasGlint(ItemStack stack) {
         return stack.hasEnchantments();
     }
 
@@ -289,7 +262,7 @@ implements ItemConvertible {
         return this.getMaxCount() == 1 && this.isDamageable();
     }
 
-    protected static HitResult rayTrace(World world, PlayerEntity player, RayTraceContext.FluidHandling fluidHandling) {
+    protected static BlockHitResult raycast(World world, PlayerEntity player, RaycastContext.FluidHandling fluidHandling) {
         float f = player.pitch;
         float g = player.yaw;
         Vec3d vec3d = player.getCameraPosVec(1.0f);
@@ -302,7 +275,7 @@ implements ItemConvertible {
         float n = h * j;
         double d = 5.0;
         Vec3d vec3d2 = vec3d.add((double)l * 5.0, (double)m * 5.0, (double)n * 5.0);
-        return world.rayTrace(new RayTraceContext(vec3d, vec3d2, RayTraceContext.ShapeType.OUTLINE, fluidHandling, player));
+        return world.raycast(new RaycastContext(vec3d, vec3d2, RaycastContext.ShapeType.OUTLINE, fluidHandling, player));
     }
 
     public int getEnchantability() {
@@ -329,16 +302,15 @@ implements ItemConvertible {
         return false;
     }
 
-    public Multimap<String, EntityAttributeModifier> getModifiers(EquipmentSlot slot) {
-        return HashMultimap.create();
+    public Multimap<EntityAttribute, EntityAttributeModifier> getAttributeModifiers(EquipmentSlot slot) {
+        return ImmutableMultimap.of();
     }
 
     public boolean isUsedOnRelease(ItemStack stack) {
         return stack.getItem() == Items.CROSSBOW;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public ItemStack getStackForRender() {
+    public ItemStack getDefaultStack() {
         return new ItemStack(this);
     }
 
@@ -363,6 +335,14 @@ implements ItemConvertible {
         return SoundEvents.ENTITY_GENERIC_EAT;
     }
 
+    public boolean isFireproof() {
+        return this.fireproof;
+    }
+
+    public boolean damage(DamageSource source) {
+        return !this.fireproof || !source.isFire();
+    }
+
     public static class Settings {
         private int maxCount = 64;
         private int maxDamage;
@@ -370,6 +350,7 @@ implements ItemConvertible {
         private ItemGroup group;
         private Rarity rarity = Rarity.COMMON;
         private FoodComponent foodComponent;
+        private boolean fireproof;
 
         public Settings food(FoodComponent foodComponent) {
             this.foodComponent = foodComponent;
@@ -406,6 +387,11 @@ implements ItemConvertible {
 
         public Settings rarity(Rarity rarity) {
             this.rarity = rarity;
+            return this;
+        }
+
+        public Settings fireproof() {
+            this.fireproof = true;
             return this;
         }
     }

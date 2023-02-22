@@ -24,9 +24,10 @@ import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.function.ConditionalLootFunction;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 
 public class FillPlayerHeadLootFunction
@@ -39,6 +40,11 @@ extends ConditionalLootFunction {
     }
 
     @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.FILL_PLAYER_HEAD;
+    }
+
+    @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
         return ImmutableSet.of(this.entity.getParameter());
     }
@@ -48,17 +54,13 @@ extends ConditionalLootFunction {
         Entity entity;
         if (stack.getItem() == Items.PLAYER_HEAD && (entity = context.get(this.entity.getParameter())) instanceof PlayerEntity) {
             GameProfile gameProfile = ((PlayerEntity)entity).getGameProfile();
-            stack.getOrCreateTag().put("SkullOwner", NbtHelper.fromGameProfile(new CompoundTag(), gameProfile));
+            stack.getOrCreateTag().put("SkullOwner", NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
         }
         return stack;
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<FillPlayerHeadLootFunction> {
-        public Factory() {
-            super(new Identifier("fill_player_head"), FillPlayerHeadLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<FillPlayerHeadLootFunction> {
         @Override
         public void toJson(JsonObject jsonObject, FillPlayerHeadLootFunction fillPlayerHeadLootFunction, JsonSerializationContext jsonSerializationContext) {
             super.toJson(jsonObject, fillPlayerHeadLootFunction, jsonSerializationContext);

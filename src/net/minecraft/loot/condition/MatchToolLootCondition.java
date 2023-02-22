@@ -16,11 +16,13 @@ import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.predicate.item.ItemPredicate;
-import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonSerializer;
 
 public class MatchToolLootCondition
 implements LootCondition {
@@ -28,6 +30,11 @@ implements LootCondition {
 
     public MatchToolLootCondition(ItemPredicate predicate) {
         this.predicate = predicate;
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.MATCH_TOOL;
     }
 
     @Override
@@ -50,12 +57,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<MatchToolLootCondition> {
-        protected Factory() {
-            super(new Identifier("match_tool"), MatchToolLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<MatchToolLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, MatchToolLootCondition matchToolLootCondition, JsonSerializationContext jsonSerializationContext) {
             jsonObject.add("predicate", matchToolLootCondition.predicate.toJson());
@@ -68,7 +71,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

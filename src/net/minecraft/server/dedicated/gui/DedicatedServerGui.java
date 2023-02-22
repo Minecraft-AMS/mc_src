@@ -37,7 +37,7 @@ import javax.swing.text.Document;
 import net.minecraft.server.dedicated.MinecraftDedicatedServer;
 import net.minecraft.server.dedicated.gui.PlayerListGui;
 import net.minecraft.server.dedicated.gui.PlayerStatsGui;
-import net.minecraft.util.UncaughtExceptionLogger;
+import net.minecraft.util.logging.UncaughtExceptionLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,7 +50,7 @@ extends JComponent {
     private final Collection<Runnable> stopTasks = Lists.newArrayList();
     private final AtomicBoolean stopped = new AtomicBoolean();
 
-    public static DedicatedServerGui create(final MinecraftDedicatedServer minecraftDedicatedServer) {
+    public static DedicatedServerGui create(final MinecraftDedicatedServer server) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         }
@@ -58,7 +58,7 @@ extends JComponent {
             // empty catch block
         }
         final JFrame jFrame = new JFrame("Minecraft server");
-        final DedicatedServerGui dedicatedServerGui = new DedicatedServerGui(minecraftDedicatedServer);
+        final DedicatedServerGui dedicatedServerGui = new DedicatedServerGui(server);
         jFrame.setDefaultCloseOperation(2);
         jFrame.add(dedicatedServerGui);
         jFrame.pack();
@@ -70,7 +70,7 @@ extends JComponent {
             public void windowClosing(WindowEvent windowEvent) {
                 if (!dedicatedServerGui.stopped.getAndSet(true)) {
                     jFrame.setTitle("Minecraft server - shutting down!");
-                    minecraftDedicatedServer.stop(true);
+                    server.stop(true);
                     dedicatedServerGui.runStopTasks();
                 }
             }

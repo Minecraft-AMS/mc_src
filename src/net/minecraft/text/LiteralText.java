@@ -4,10 +4,12 @@
 package net.minecraft.text;
 
 import net.minecraft.text.BaseText;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 
 public class LiteralText
 extends BaseText {
+    public static final Text EMPTY = new LiteralText("");
     private final String string;
 
     public LiteralText(String string) {
@@ -29,13 +31,13 @@ extends BaseText {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object object) {
+        if (this == object) {
             return true;
         }
-        if (o instanceof LiteralText) {
-            LiteralText literalText = (LiteralText)o;
-            return this.string.equals(literalText.getRawString()) && super.equals(o);
+        if (object instanceof LiteralText) {
+            LiteralText literalText = (LiteralText)object;
+            return this.string.equals(literalText.getRawString()) && super.equals(object);
         }
         return false;
     }
@@ -46,7 +48,12 @@ extends BaseText {
     }
 
     @Override
-    public /* synthetic */ Text copy() {
+    public /* synthetic */ BaseText copy() {
+        return this.copy();
+    }
+
+    @Override
+    public /* synthetic */ MutableText copy() {
         return this.copy();
     }
 }

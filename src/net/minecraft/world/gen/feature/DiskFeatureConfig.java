@@ -2,46 +2,35 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Map;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import net.minecraft.world.gen.UniformIntDistribution;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class DiskFeatureConfig
 implements FeatureConfig {
+    public static final Codec<DiskFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BlockState.CODEC.fieldOf("state").forGetter(diskFeatureConfig -> diskFeatureConfig.state), (App)UniformIntDistribution.createValidatedCodec(0, 4, 4).fieldOf("radius").forGetter(diskFeatureConfig -> diskFeatureConfig.radius), (App)Codec.intRange((int)0, (int)4).fieldOf("half_height").forGetter(diskFeatureConfig -> diskFeatureConfig.halfHeight), (App)BlockState.CODEC.listOf().fieldOf("targets").forGetter(diskFeatureConfig -> diskFeatureConfig.targets)).apply((Applicative)instance, DiskFeatureConfig::new));
     public final BlockState state;
-    public final int radius;
-    public final int ySize;
+    public final UniformIntDistribution radius;
+    public final int halfHeight;
     public final List<BlockState> targets;
 
-    public DiskFeatureConfig(BlockState state, int radius, int ySize, List<BlockState> targets) {
+    public DiskFeatureConfig(BlockState state, UniformIntDistribution radius, int halfHeight, List<BlockState> targets) {
         this.state = state;
         this.radius = radius;
-        this.ySize = ySize;
+        this.halfHeight = halfHeight;
         this.targets = targets;
-    }
-
-    @Override
-    public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        return new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString("state"), (Object)BlockState.serialize(ops, this.state).getValue(), (Object)ops.createString("radius"), (Object)ops.createInt(this.radius), (Object)ops.createString("y_size"), (Object)ops.createInt(this.ySize), (Object)ops.createString("targets"), (Object)ops.createList(this.targets.stream().map(blockState -> BlockState.serialize(ops, blockState).getValue())))));
-    }
-
-    public static <T> DiskFeatureConfig deserialize(Dynamic<T> dynamic) {
-        BlockState blockState = dynamic.get("state").map(BlockState::deserialize).orElse(Blocks.AIR.getDefaultState());
-        int i = dynamic.get("radius").asInt(0);
-        int j = dynamic.get("y_size").asInt(0);
-        List list = dynamic.get("targets").asList(BlockState::deserialize);
-        return new DiskFeatureConfig(blockState, i, j, list);
     }
 }
 

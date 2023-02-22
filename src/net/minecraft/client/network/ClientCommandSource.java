@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
@@ -27,14 +28,17 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.command.CommandSource;
 import net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket;
-import net.minecraft.server.command.CommandSource;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientCommandSource
@@ -84,7 +88,7 @@ implements CommandSource {
     @Override
     public boolean hasPermissionLevel(int level) {
         ClientPlayerEntity clientPlayerEntity = this.client.player;
-        return clientPlayerEntity != null ? clientPlayerEntity.allowsPermissionLevel(level) : level == 0;
+        return clientPlayerEntity != null ? clientPlayerEntity.hasPermissionLevel(level) : level == 0;
     }
 
     @Override
@@ -124,6 +128,16 @@ implements CommandSource {
         }
         Vec3d vec3d = hitResult.getPos();
         return Collections.singleton(new CommandSource.RelativePosition(ClientCommandSource.format(vec3d.x), ClientCommandSource.format(vec3d.y), ClientCommandSource.format(vec3d.z)));
+    }
+
+    @Override
+    public Set<RegistryKey<World>> getWorldKeys() {
+        return this.networkHandler.getWorldKeys();
+    }
+
+    @Override
+    public DynamicRegistryManager getRegistryManager() {
+        return this.networkHandler.getRegistryManager();
     }
 
     public void onCommandSuggestions(int completionId, Suggestions suggestions) {

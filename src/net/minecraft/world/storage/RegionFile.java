@@ -2,12 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.storage;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -45,14 +47,15 @@ implements AutoCloseable {
     private final ByteBuffer header = ByteBuffer.allocateDirect(8192);
     private final IntBuffer sectorData;
     private final IntBuffer saveTimes;
-    private final SectorMap sectors = new SectorMap();
+    @VisibleForTesting
+    protected final SectorMap sectors = new SectorMap();
 
-    public RegionFile(File file, File directory) throws IOException {
-        this(file.toPath(), directory.toPath(), ChunkStreamVersion.DEFLATE);
+    public RegionFile(File file, File directory, boolean dsync) throws IOException {
+        this(file.toPath(), directory.toPath(), ChunkStreamVersion.DEFLATE, dsync);
     }
 
-    public RegionFile(Path file, Path directory, ChunkStreamVersion chunkStreamVersion) throws IOException {
-        this.outputChunkStreamVersion = chunkStreamVersion;
+    public RegionFile(Path file, Path directory, ChunkStreamVersion outputChunkStreamVersion, boolean dsync) throws IOException {
+        this.outputChunkStreamVersion = outputChunkStreamVersion;
         if (!Files.isDirectory(directory, new LinkOption[0])) {
             throw new IllegalArgumentException("Expected directory, got " + directory.toAbsolutePath());
         }
@@ -61,7 +64,7 @@ implements AutoCloseable {
         this.sectorData.limit(1024);
         this.header.position(4096);
         this.saveTimes = this.header.asIntBuffer();
-        this.channel = FileChannel.open(file, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        this.channel = dsync ? FileChannel.open(file, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE, StandardOpenOption.DSYNC) : FileChannel.open(file, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
         this.sectors.allocate(0, 2);
         this.header.position(0);
         int i = this.channel.read(this.header, 0L);
@@ -69,12 +72,28 @@ implements AutoCloseable {
             if (i != 8192) {
                 LOGGER.warn("Region file {} has truncated header: {}", (Object)file, (Object)i);
             }
+            long l = Files.size(file);
             for (int j = 0; j < 1024; ++j) {
                 int k = this.sectorData.get(j);
                 if (k == 0) continue;
-                int l = RegionFile.getOffset(k);
-                int m = RegionFile.getSize(k);
-                this.sectors.allocate(l, m);
+                int m = RegionFile.getOffset(k);
+                int n = RegionFile.getSize(k);
+                if (m < 2) {
+                    LOGGER.warn("Region file {} has invalid sector at index: {}; sector {} overlaps with header", (Object)file, (Object)j, (Object)m);
+                    this.sectorData.put(j, 0);
+                    continue;
+                }
+                if (n == 0) {
+                    LOGGER.warn("Region file {} has an invalid sector at index: {}; size has to be > 0", (Object)file, (Object)j);
+                    this.sectorData.put(j, 0);
+                    continue;
+                }
+                if ((long)m * 4096L > l) {
+                    LOGGER.warn("Region file {} has an invalid sector at index: {}; sector {} is out of bounds", (Object)file, (Object)j, (Object)m);
+                    this.sectorData.put(j, 0);
+                    continue;
+                }
+                this.sectors.allocate(m, n);
             }
         }
     }
@@ -165,7 +184,7 @@ implements AutoCloseable {
     }
 
     private static int getOffset(int sectorData) {
-        return sectorData >> 8;
+        return sectorData >> 8 & 0xFFFFFF;
     }
 
     private static int getSectorCount(int byteCount) {
@@ -216,6 +235,10 @@ implements AutoCloseable {
 
     public DataOutputStream getChunkOutputStream(ChunkPos pos) throws IOException {
         return new DataOutputStream(new BufferedOutputStream(this.outputChunkStreamVersion.wrap(new ChunkBuffer(pos))));
+    }
+
+    public void method_26981() throws IOException {
+        this.channel.force(true);
     }
 
     protected synchronized void writeChunk(ChunkPos pos, ByteBuffer byteBuffer) throws IOException {
@@ -284,9 +307,6 @@ implements AutoCloseable {
         return pos.getRegionRelativeX() + pos.getRegionRelativeZ() * 32;
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     @Override
     public void close() throws IOException {
         try {
@@ -294,15 +314,10 @@ implements AutoCloseable {
         }
         finally {
             try {
-                this.writeHeader();
+                this.channel.force(true);
             }
             finally {
-                try {
-                    this.channel.force(true);
-                }
-                finally {
-                    this.channel.close();
-                }
+                this.channel.close();
             }
         }
     }

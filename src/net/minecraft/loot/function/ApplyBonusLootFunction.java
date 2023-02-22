@@ -30,6 +30,8 @@ import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.function.ConditionalLootFunction;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.registry.Registry;
@@ -44,6 +46,11 @@ extends ConditionalLootFunction {
         super(conditions);
         this.enchantment = enchantment;
         this.formula = formula;
+    }
+
+    @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.APPLY_BONUS;
     }
 
     @Override
@@ -84,12 +91,8 @@ extends ConditionalLootFunction {
         FACTORIES.put(UniformBonusCount.ID, UniformBonusCount::fromJson);
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<ApplyBonusLootFunction> {
-        public Factory() {
-            super(new Identifier("apply_bonus"), ApplyBonusLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<ApplyBonusLootFunction> {
         @Override
         public void toJson(JsonObject jsonObject, ApplyBonusLootFunction applyBonusLootFunction, JsonSerializationContext jsonSerializationContext) {
             super.toJson(jsonObject, applyBonusLootFunction, jsonSerializationContext);

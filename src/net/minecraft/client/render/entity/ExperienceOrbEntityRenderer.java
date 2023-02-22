@@ -15,29 +15,30 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.util.math.Matrix3f;
-import net.minecraft.client.util.math.Matrix4f;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Matrix3f;
+import net.minecraft.util.math.Matrix4f;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class ExperienceOrbEntityRenderer
 extends EntityRenderer<ExperienceOrbEntity> {
-    private static final Identifier SKIN = new Identifier("textures/entity/experience_orb.png");
-    private static final RenderLayer TEXTURE_LAYER = RenderLayer.getEntityTranslucent(SKIN);
+    private static final Identifier TEXTURE = new Identifier("textures/entity/experience_orb.png");
+    private static final RenderLayer LAYER = RenderLayer.getItemEntityTranslucentCull(TEXTURE);
 
     public ExperienceOrbEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher);
-        this.shadowSize = 0.15f;
-        this.shadowDarkness = 0.75f;
+        this.shadowRadius = 0.15f;
+        this.shadowOpacity = 0.75f;
     }
 
     @Override
-    protected int getBlockLight(ExperienceOrbEntity experienceOrbEntity, float f) {
-        return MathHelper.clamp(super.getBlockLight(experienceOrbEntity, f) + 7, 0, 15);
+    protected int getBlockLight(ExperienceOrbEntity experienceOrbEntity, BlockPos blockPos) {
+        return MathHelper.clamp(super.getBlockLight(experienceOrbEntity, blockPos) + 7, 0, 15);
     }
 
     @Override
@@ -57,11 +58,11 @@ extends EntityRenderer<ExperienceOrbEntity> {
         int t = 255;
         int u = (int)((MathHelper.sin(r + 4.1887903f) + 1.0f) * 0.1f * 255.0f);
         matrixStack.translate(0.0, 0.1f, 0.0);
-        matrixStack.multiply(this.renderManager.getRotation());
-        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
+        matrixStack.multiply(this.dispatcher.getRotation());
+        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
         float v = 0.3f;
         matrixStack.scale(0.3f, 0.3f, 0.3f);
-        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(TEXTURE_LAYER);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(LAYER);
         MatrixStack.Entry entry = matrixStack.peek();
         Matrix4f matrix4f = entry.getModel();
         Matrix3f matrix3f = entry.getNormal();
@@ -79,7 +80,7 @@ extends EntityRenderer<ExperienceOrbEntity> {
 
     @Override
     public Identifier getTexture(ExperienceOrbEntity experienceOrbEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 }
 

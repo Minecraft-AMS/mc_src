@@ -16,13 +16,14 @@ import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.entity.Entity;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.predicate.entity.EntityPredicate;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.JsonSerializer;
 import net.minecraft.util.math.Vec3d;
 
 public class EntityPropertiesLootCondition
@@ -36,15 +37,20 @@ implements LootCondition {
     }
 
     @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.ENTITY_PROPERTIES;
+    }
+
+    @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
-        return ImmutableSet.of(LootContextParameters.POSITION, this.entity.getParameter());
+        return ImmutableSet.of(LootContextParameters.ORIGIN, this.entity.getParameter());
     }
 
     @Override
     public boolean test(LootContext lootContext) {
         Entity entity = lootContext.get(this.entity.getParameter());
-        BlockPos blockPos = lootContext.get(LootContextParameters.POSITION);
-        return this.predicate.test(lootContext.getWorld(), blockPos != null ? new Vec3d(blockPos) : null, entity);
+        Vec3d vec3d = lootContext.get(LootContextParameters.ORIGIN);
+        return this.predicate.test(lootContext.getWorld(), vec3d, entity);
     }
 
     public static LootCondition.Builder create(LootContext.EntityTarget entity) {
@@ -55,20 +61,20 @@ implements LootCondition {
         return () -> new EntityPropertiesLootCondition(predicateBuilder.build(), entity);
     }
 
+    public static LootCondition.Builder builder(LootContext.EntityTarget entity, EntityPredicate predicate) {
+        return () -> new EntityPropertiesLootCondition(predicate, entity);
+    }
+
     @Override
     public /* synthetic */ boolean test(Object context) {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<EntityPropertiesLootCondition> {
-        protected Factory() {
-            super(new Identifier("entity_properties"), EntityPropertiesLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<EntityPropertiesLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, EntityPropertiesLootCondition entityPropertiesLootCondition, JsonSerializationContext jsonSerializationContext) {
-            jsonObject.add("predicate", entityPropertiesLootCondition.predicate.serialize());
+            jsonObject.add("predicate", entityPropertiesLootCondition.predicate.toJson());
             jsonObject.add("entity", jsonSerializationContext.serialize((Object)entityPropertiesLootCondition.entity));
         }
 
@@ -79,7 +85,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

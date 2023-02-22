@@ -2,57 +2,55 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.TallSeagrassBlock;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.gen.ProbabilityConfig;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.SeagrassFeatureConfig;
 
 public class SeagrassFeature
-extends Feature<SeagrassFeatureConfig> {
-    public SeagrassFeature(Function<Dynamic<?>, ? extends SeagrassFeatureConfig> configFactory) {
-        super(configFactory);
+extends Feature<ProbabilityConfig> {
+    public SeagrassFeature(Codec<ProbabilityConfig> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean generate(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, BlockPos blockPos, SeagrassFeatureConfig seagrassFeatureConfig) {
-        int i = 0;
-        for (int j = 0; j < seagrassFeatureConfig.count; ++j) {
+    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, ProbabilityConfig probabilityConfig) {
+        boolean bl = false;
+        int i = random.nextInt(8) - random.nextInt(8);
+        int j = random.nextInt(8) - random.nextInt(8);
+        int k = structureWorldAccess.getTopY(Heightmap.Type.OCEAN_FLOOR, blockPos.getX() + i, blockPos.getZ() + j);
+        BlockPos blockPos2 = new BlockPos(blockPos.getX() + i, k, blockPos.getZ() + j);
+        if (structureWorldAccess.getBlockState(blockPos2).isOf(Blocks.WATER)) {
             BlockState blockState;
-            int k = random.nextInt(8) - random.nextInt(8);
-            int l = random.nextInt(8) - random.nextInt(8);
-            int m = iWorld.getTopY(Heightmap.Type.OCEAN_FLOOR, blockPos.getX() + k, blockPos.getZ() + l);
-            BlockPos blockPos2 = new BlockPos(blockPos.getX() + k, m, blockPos.getZ() + l);
-            if (iWorld.getBlockState(blockPos2).getBlock() != Blocks.WATER) continue;
-            boolean bl = random.nextDouble() < seagrassFeatureConfig.tallSeagrassProbability;
-            BlockState blockState2 = blockState = bl ? Blocks.TALL_SEAGRASS.getDefaultState() : Blocks.SEAGRASS.getDefaultState();
-            if (!blockState.canPlaceAt(iWorld, blockPos2)) continue;
-            if (bl) {
-                BlockState blockState22 = (BlockState)blockState.with(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER);
-                BlockPos blockPos3 = blockPos2.up();
-                if (iWorld.getBlockState(blockPos3).getBlock() == Blocks.WATER) {
-                    iWorld.setBlockState(blockPos2, blockState, 2);
-                    iWorld.setBlockState(blockPos3, blockState22, 2);
+            boolean bl2 = random.nextDouble() < (double)probabilityConfig.probability;
+            BlockState blockState2 = blockState = bl2 ? Blocks.TALL_SEAGRASS.getDefaultState() : Blocks.SEAGRASS.getDefaultState();
+            if (blockState.canPlaceAt(structureWorldAccess, blockPos2)) {
+                if (bl2) {
+                    BlockState blockState22 = (BlockState)blockState.with(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER);
+                    BlockPos blockPos3 = blockPos2.up();
+                    if (structureWorldAccess.getBlockState(blockPos3).isOf(Blocks.WATER)) {
+                        structureWorldAccess.setBlockState(blockPos2, blockState, 2);
+                        structureWorldAccess.setBlockState(blockPos3, blockState22, 2);
+                    }
+                } else {
+                    structureWorldAccess.setBlockState(blockPos2, blockState, 2);
                 }
-            } else {
-                iWorld.setBlockState(blockPos2, blockState, 2);
+                bl = true;
             }
-            ++i;
         }
-        return i > 0;
+        return bl;
     }
 }
 

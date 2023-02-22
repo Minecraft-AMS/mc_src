@@ -25,8 +25,8 @@ public class Framebuffer {
     public int viewportHeight;
     public final boolean useDepthAttachment;
     public int fbo;
-    public int colorAttachment;
-    public int depthAttachment;
+    private int colorAttachment;
+    private int depthAttachment;
     public final float[] clearColor;
     public int texFilter;
 
@@ -67,11 +67,11 @@ public class Framebuffer {
         this.endRead();
         this.endWrite();
         if (this.depthAttachment > -1) {
-            GlStateManager.deleteRenderbuffers(this.depthAttachment);
+            TextureUtil.deleteId(this.depthAttachment);
             this.depthAttachment = -1;
         }
         if (this.colorAttachment > -1) {
-            TextureUtil.releaseTextureId(this.colorAttachment);
+            TextureUtil.deleteId(this.colorAttachment);
             this.colorAttachment = -1;
         }
         if (this.fbo > -1) {
@@ -81,6 +81,26 @@ public class Framebuffer {
         }
     }
 
+    public void copyDepthFrom(Framebuffer framebuffer) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        if (GlStateManager.supportsGl30()) {
+            GlStateManager.bindFramebuffer(36008, framebuffer.fbo);
+            GlStateManager.bindFramebuffer(36009, this.fbo);
+            GlStateManager.blitFramebuffer(0, 0, framebuffer.textureWidth, framebuffer.textureHeight, 0, 0, this.textureWidth, this.textureHeight, 256, 9728);
+        } else {
+            GlStateManager.bindFramebuffer(FramebufferInfo.FRAME_BUFFER, this.fbo);
+            int i = GlStateManager.getFramebufferDepthAttachment();
+            if (i != 0) {
+                int j = GlStateManager.getActiveBoundTexture();
+                GlStateManager.bindTexture(i);
+                GlStateManager.bindFramebuffer(FramebufferInfo.FRAME_BUFFER, framebuffer.fbo);
+                GlStateManager.copyTexSubImage2d(3553, 0, 0, 0, 0, 0, Math.min(this.textureWidth, framebuffer.textureWidth), Math.min(this.textureHeight, framebuffer.textureHeight));
+                GlStateManager.bindTexture(j);
+            }
+        }
+        GlStateManager.bindFramebuffer(FramebufferInfo.FRAME_BUFFER, 0);
+    }
+
     public void initFbo(int width, int height, boolean getError) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         this.viewportWidth = width;
@@ -88,9 +108,16 @@ public class Framebuffer {
         this.textureWidth = width;
         this.textureHeight = height;
         this.fbo = GlStateManager.genFramebuffers();
-        this.colorAttachment = TextureUtil.generateTextureId();
+        this.colorAttachment = TextureUtil.generateId();
         if (this.useDepthAttachment) {
-            this.depthAttachment = GlStateManager.genRenderbuffers();
+            this.depthAttachment = TextureUtil.generateId();
+            GlStateManager.bindTexture(this.depthAttachment);
+            GlStateManager.texParameter(3553, 10241, 9728);
+            GlStateManager.texParameter(3553, 10240, 9728);
+            GlStateManager.texParameter(3553, 10242, 10496);
+            GlStateManager.texParameter(3553, 10243, 10496);
+            GlStateManager.texParameter(3553, 34892, 0);
+            GlStateManager.texImage2D(3553, 0, 6402, this.textureWidth, this.textureHeight, 0, 6402, 5126, null);
         }
         this.setTexFilter(9728);
         GlStateManager.bindTexture(this.colorAttachment);
@@ -98,9 +125,7 @@ public class Framebuffer {
         GlStateManager.bindFramebuffer(FramebufferInfo.FRAME_BUFFER, this.fbo);
         GlStateManager.framebufferTexture2D(FramebufferInfo.FRAME_BUFFER, FramebufferInfo.COLOR_ATTACHMENT, 3553, this.colorAttachment, 0);
         if (this.useDepthAttachment) {
-            GlStateManager.bindRenderbuffer(FramebufferInfo.RENDER_BUFFER, this.depthAttachment);
-            GlStateManager.renderbufferStorage(FramebufferInfo.RENDER_BUFFER, 33190, this.textureWidth, this.textureHeight);
-            GlStateManager.framebufferRenderbuffer(FramebufferInfo.FRAME_BUFFER, FramebufferInfo.DEPTH_ATTACHMENT, FramebufferInfo.RENDER_BUFFER, this.depthAttachment);
+            GlStateManager.framebufferTexture2D(FramebufferInfo.FRAME_BUFFER, FramebufferInfo.DEPTH_ATTACHMENT, 3553, this.depthAttachment, 0);
         }
         this.checkFramebufferStatus();
         this.clear(getError);
@@ -242,6 +267,14 @@ public class Framebuffer {
         }
         GlStateManager.clear(i, getError);
         this.endWrite();
+    }
+
+    public int getColorAttachment() {
+        return this.colorAttachment;
+    }
+
+    public int getDepthAttachment() {
+        return this.depthAttachment;
     }
 }
 

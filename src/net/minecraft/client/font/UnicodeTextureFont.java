@@ -4,6 +4,8 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.google.gson.JsonObject
+ *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
+ *  it.unimi.dsi.fastutil.ints.IntSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
@@ -14,6 +16,8 @@ package net.minecraft.client.font;
 
 import com.google.common.collect.Maps;
 import com.google.gson.JsonObject;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
@@ -46,15 +50,15 @@ implements Font {
         this.sizes = sizes;
         this.template = template;
         for (int i = 0; i < 256; ++i) {
-            char c = (char)(i * 256);
-            Identifier identifier = this.getImageId(c);
+            int j = i * 256;
+            Identifier identifier = this.getImageId(j);
             try (Resource resource = this.resourceManager.getResource(identifier);
-                 NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, resource.getInputStream());){
+                 NativeImage nativeImage = NativeImage.read(NativeImage.Format.ABGR, resource.getInputStream());){
                 if (nativeImage.getWidth() == 256 && nativeImage.getHeight() == 256) {
-                    for (int j = 0; j < 256; ++j) {
-                        byte b = sizes[c + j];
+                    for (int k = 0; k < 256; ++k) {
+                        byte b = sizes[j + k];
                         if (b == 0 || UnicodeTextureFont.getStart(b) <= UnicodeTextureFont.getEnd(b)) continue;
-                        sizes[c + j] = 0;
+                        sizes[j + k] = 0;
                     }
                     continue;
                 }
@@ -62,7 +66,7 @@ implements Font {
             catch (IOException iOException) {
                 // empty catch block
             }
-            Arrays.fill(sizes, (int)c, c + 256, (byte)0);
+            Arrays.fill(sizes, j, j + 256, (byte)0);
         }
     }
 
@@ -71,21 +75,34 @@ implements Font {
         this.images.values().forEach(NativeImage::close);
     }
 
-    private Identifier getImageId(char character) {
-        Identifier identifier = new Identifier(String.format(this.template, String.format("%02x", character / 256)));
+    private Identifier getImageId(int codePoint) {
+        Identifier identifier = new Identifier(String.format(this.template, String.format("%02x", codePoint / 256)));
         return new Identifier(identifier.getNamespace(), "textures/" + identifier.getPath());
     }
 
     @Override
     @Nullable
-    public RenderableGlyph getGlyph(char character) {
+    public RenderableGlyph getGlyph(int codePoint) {
         NativeImage nativeImage;
-        byte b = this.sizes[character];
-        if (b != 0 && (nativeImage = this.images.computeIfAbsent(this.getImageId(character), this::getGlyphImage)) != null) {
+        if (codePoint < 0 || codePoint > 65535) {
+            return null;
+        }
+        byte b = this.sizes[codePoint];
+        if (b != 0 && (nativeImage = this.images.computeIfAbsent(this.getImageId(codePoint), this::getGlyphImage)) != null) {
             int i = UnicodeTextureFont.getStart(b);
-            return new UnicodeTextureGlyph(character % 16 * 16 + i, (character & 0xFF) / 16 * 16, UnicodeTextureFont.getEnd(b) - i, 16, nativeImage);
+            return new UnicodeTextureGlyph(codePoint % 16 * 16 + i, (codePoint & 0xFF) / 16 * 16, UnicodeTextureFont.getEnd(b) - i, 16, nativeImage);
         }
         return null;
+    }
+
+    @Override
+    public IntSet getProvidedGlyphs() {
+        IntOpenHashSet intSet = new IntOpenHashSet();
+        for (int i = 0; i < 65535; ++i) {
+            if (this.sizes[i] == 0) continue;
+            intSet.add(i);
+        }
+        return intSet;
     }
 
     /*
@@ -96,7 +113,7 @@ implements Font {
     @Nullable
     private NativeImage getGlyphImage(Identifier glyphId) {
         try (Resource resource = this.resourceManager.getResource(glyphId);){
-            NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, resource.getInputStream());
+            NativeImage nativeImage = NativeImage.read(NativeImage.Format.ABGR, resource.getInputStream());
             return nativeImage;
         }
         catch (IOException iOException) {

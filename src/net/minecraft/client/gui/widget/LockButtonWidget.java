@@ -12,7 +12,9 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class LockButtonWidget
@@ -20,12 +22,12 @@ extends ButtonWidget {
     private boolean locked;
 
     public LockButtonWidget(int x, int y, ButtonWidget.PressAction action) {
-        super(x, y, 20, 20, I18n.translate("narrator.button.difficulty_lock", new Object[0]), action);
+        super(x, y, 20, 20, new TranslatableText("narrator.button.difficulty_lock"), action);
     }
 
     @Override
-    protected String getNarrationMessage() {
-        return super.getNarrationMessage() + ". " + (this.isLocked() ? I18n.translate("narrator.button.difficulty_lock.locked", new Object[0]) : I18n.translate("narrator.button.difficulty_lock.unlocked", new Object[0]));
+    protected MutableText getNarrationMessage() {
+        return super.getNarrationMessage().append(". ").append(this.isLocked() ? new TranslatableText("narrator.button.difficulty_lock.locked") : new TranslatableText("narrator.button.difficulty_lock.unlocked"));
     }
 
     public boolean isLocked() {
@@ -37,11 +39,11 @@ extends ButtonWidget {
     }
 
     @Override
-    public void renderButton(int mouseX, int mouseY, float delta) {
-        MinecraftClient.getInstance().getTextureManager().bindTexture(ButtonWidget.WIDGETS_LOCATION);
+    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        MinecraftClient.getInstance().getTextureManager().bindTexture(ButtonWidget.WIDGETS_TEXTURE);
         RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         IconLocation iconLocation = !this.active ? (this.locked ? IconLocation.LOCKED_DISABLED : IconLocation.UNLOCKED_DISABLED) : (this.isHovered() ? (this.locked ? IconLocation.LOCKED_HOVER : IconLocation.UNLOCKED_HOVER) : (this.locked ? IconLocation.LOCKED : IconLocation.UNLOCKED));
-        this.blit(this.x, this.y, iconLocation.getU(), iconLocation.getV(), this.width, this.height);
+        this.drawTexture(matrices, this.x, this.y, iconLocation.getU(), iconLocation.getV(), this.width, this.height);
     }
 
     @Environment(value=EnvType.CLIENT)

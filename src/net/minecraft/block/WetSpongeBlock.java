@@ -10,6 +10,7 @@ package net.minecraft.block;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -22,15 +23,15 @@ import net.minecraft.world.World;
 
 public class WetSpongeBlock
 extends Block {
-    protected WetSpongeBlock(Block.Settings settings) {
+    protected WetSpongeBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
-        if (world.getDimension().doesWaterVaporize()) {
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        if (world.getDimension().isUltrawarm()) {
             world.setBlockState(pos, Blocks.SPONGE.getDefaultState(), 3);
-            world.playLevelEvent(2009, pos, 0);
+            world.syncWorldEvent(2009, pos, 0);
             world.playSound(null, pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 1.0f, (1.0f + world.getRandom().nextFloat() * 0.2f) * 0.7f);
         }
     }

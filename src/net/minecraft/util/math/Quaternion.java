@@ -9,32 +9,32 @@ package net.minecraft.util.math;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3f;
 
 public final class Quaternion {
     public static final Quaternion IDENTITY = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
-    private float b;
-    private float c;
-    private float d;
-    private float a;
+    private float x;
+    private float y;
+    private float z;
+    private float w;
 
-    public Quaternion(float b, float c, float d, float a) {
-        this.b = b;
-        this.c = c;
-        this.d = d;
-        this.a = a;
+    public Quaternion(float x, float y, float z, float w) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
     }
 
-    public Quaternion(Vector3f axis, float rotationAngle, boolean degrees) {
+    public Quaternion(Vec3f axis, float rotationAngle, boolean degrees) {
         if (degrees) {
             rotationAngle *= (float)Math.PI / 180;
         }
         float f = Quaternion.sin(rotationAngle / 2.0f);
-        this.b = axis.getX() * f;
-        this.c = axis.getY() * f;
-        this.d = axis.getZ() * f;
-        this.a = Quaternion.cos(rotationAngle / 2.0f);
+        this.x = axis.getX() * f;
+        this.y = axis.getY() * f;
+        this.z = axis.getZ() * f;
+        this.w = Quaternion.cos(rotationAngle / 2.0f);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -50,17 +50,17 @@ public final class Quaternion {
         float i = Quaternion.cos(0.5f * y);
         float j = Quaternion.sin(0.5f * z);
         float k = Quaternion.cos(0.5f * z);
-        this.b = f * i * k + g * h * j;
-        this.c = g * h * k - f * i * j;
-        this.d = f * h * k + g * i * j;
-        this.a = g * i * k - f * h * j;
+        this.x = f * i * k + g * h * j;
+        this.y = g * h * k - f * i * j;
+        this.z = f * h * k + g * i * j;
+        this.w = g * i * k - f * h * j;
     }
 
     public Quaternion(Quaternion other) {
-        this.b = other.b;
-        this.c = other.c;
-        this.d = other.d;
-        this.a = other.a;
+        this.x = other.x;
+        this.y = other.y;
+        this.z = other.z;
+        this.w = other.w;
     }
 
     public boolean equals(Object o) {
@@ -71,86 +71,86 @@ public final class Quaternion {
             return false;
         }
         Quaternion quaternion = (Quaternion)o;
-        if (Float.compare(quaternion.b, this.b) != 0) {
+        if (Float.compare(quaternion.x, this.x) != 0) {
             return false;
         }
-        if (Float.compare(quaternion.c, this.c) != 0) {
+        if (Float.compare(quaternion.y, this.y) != 0) {
             return false;
         }
-        if (Float.compare(quaternion.d, this.d) != 0) {
+        if (Float.compare(quaternion.z, this.z) != 0) {
             return false;
         }
-        return Float.compare(quaternion.a, this.a) == 0;
+        return Float.compare(quaternion.w, this.w) == 0;
     }
 
     public int hashCode() {
-        int i = Float.floatToIntBits(this.b);
-        i = 31 * i + Float.floatToIntBits(this.c);
-        i = 31 * i + Float.floatToIntBits(this.d);
-        i = 31 * i + Float.floatToIntBits(this.a);
+        int i = Float.floatToIntBits(this.x);
+        i = 31 * i + Float.floatToIntBits(this.y);
+        i = 31 * i + Float.floatToIntBits(this.z);
+        i = 31 * i + Float.floatToIntBits(this.w);
         return i;
     }
 
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Quaternion[").append(this.getA()).append(" + ");
-        stringBuilder.append(this.getB()).append("i + ");
-        stringBuilder.append(this.getC()).append("j + ");
-        stringBuilder.append(this.getD()).append("k]");
+        stringBuilder.append("Quaternion[").append(this.getW()).append(" + ");
+        stringBuilder.append(this.getX()).append("i + ");
+        stringBuilder.append(this.getY()).append("j + ");
+        stringBuilder.append(this.getZ()).append("k]");
         return stringBuilder.toString();
     }
 
-    public float getB() {
-        return this.b;
+    public float getX() {
+        return this.x;
     }
 
-    public float getC() {
-        return this.c;
+    public float getY() {
+        return this.y;
     }
 
-    public float getD() {
-        return this.d;
+    public float getZ() {
+        return this.z;
     }
 
-    public float getA() {
-        return this.a;
+    public float getW() {
+        return this.w;
     }
 
     public void hamiltonProduct(Quaternion other) {
-        float f = this.getB();
-        float g = this.getC();
-        float h = this.getD();
-        float i = this.getA();
-        float j = other.getB();
-        float k = other.getC();
-        float l = other.getD();
-        float m = other.getA();
-        this.b = i * j + f * m + g * l - h * k;
-        this.c = i * k - f * l + g * m + h * j;
-        this.d = i * l + f * k - g * j + h * m;
-        this.a = i * m - f * j - g * k - h * l;
+        float f = this.getX();
+        float g = this.getY();
+        float h = this.getZ();
+        float i = this.getW();
+        float j = other.getX();
+        float k = other.getY();
+        float l = other.getZ();
+        float m = other.getW();
+        this.x = i * j + f * m + g * l - h * k;
+        this.y = i * k - f * l + g * m + h * j;
+        this.z = i * l + f * k - g * j + h * m;
+        this.w = i * m - f * j - g * k - h * l;
     }
 
     @Environment(value=EnvType.CLIENT)
     public void scale(float scale) {
-        this.b *= scale;
-        this.c *= scale;
-        this.d *= scale;
-        this.a *= scale;
+        this.x *= scale;
+        this.y *= scale;
+        this.z *= scale;
+        this.w *= scale;
     }
 
     public void conjugate() {
-        this.b = -this.b;
-        this.c = -this.c;
-        this.d = -this.d;
+        this.x = -this.x;
+        this.y = -this.y;
+        this.z = -this.z;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public void set(float a, float b, float c, float d) {
-        this.b = a;
-        this.c = b;
-        this.d = c;
-        this.a = d;
+    public void set(float x, float y, float z, float w) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
     }
 
     private static float cos(float value) {
@@ -163,18 +163,18 @@ public final class Quaternion {
 
     @Environment(value=EnvType.CLIENT)
     public void normalize() {
-        float f = this.getB() * this.getB() + this.getC() * this.getC() + this.getD() * this.getD() + this.getA() * this.getA();
+        float f = this.getX() * this.getX() + this.getY() * this.getY() + this.getZ() * this.getZ() + this.getW() * this.getW();
         if (f > 1.0E-6f) {
             float g = MathHelper.fastInverseSqrt(f);
-            this.b *= g;
-            this.c *= g;
-            this.d *= g;
-            this.a *= g;
+            this.x *= g;
+            this.y *= g;
+            this.z *= g;
+            this.w *= g;
         } else {
-            this.b = 0.0f;
-            this.c = 0.0f;
-            this.d = 0.0f;
-            this.a = 0.0f;
+            this.x = 0.0f;
+            this.y = 0.0f;
+            this.z = 0.0f;
+            this.w = 0.0f;
         }
     }
 

@@ -7,6 +7,7 @@
  *  com.google.common.collect.Maps
  *  com.google.gson.Gson
  *  com.google.gson.GsonBuilder
+ *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSyntaxException
@@ -21,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
@@ -42,10 +44,10 @@ import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.resource.JsonDataLoader;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
@@ -64,13 +66,13 @@ extends JsonDataLoader {
     }
 
     @Override
-    protected void apply(Map<Identifier, JsonObject> map, ResourceManager resourceManager, Profiler profiler) {
+    protected void apply(Map<Identifier, JsonElement> map, ResourceManager resourceManager, Profiler profiler) {
         this.errored = false;
         HashMap map2 = Maps.newHashMap();
-        for (Map.Entry<Identifier, JsonObject> entry2 : map.entrySet()) {
+        for (Map.Entry<Identifier, JsonElement> entry2 : map.entrySet()) {
             Identifier identifier = entry2.getKey();
             try {
-                Recipe<?> recipe = RecipeManager.deserialize(identifier, entry2.getValue());
+                Recipe<?> recipe = RecipeManager.deserialize(identifier, JsonHelper.asObject(entry2.getValue(), "top element"));
                 map2.computeIfAbsent(recipe.getType(), recipeType -> ImmutableMap.builder()).put((Object)identifier, recipe);
             }
             catch (JsonParseException | IllegalArgumentException runtimeException) {
@@ -85,6 +87,10 @@ extends JsonDataLoader {
         return this.getAllOfType(type).values().stream().flatMap(recipe -> Util.stream(type.get(recipe, world, inventory))).findFirst();
     }
 
+    public <C extends Inventory, T extends Recipe<C>> List<T> listAllOfType(RecipeType<T> recipeType) {
+        return this.getAllOfType(recipeType).values().stream().map(recipe -> recipe).collect(Collectors.toList());
+    }
+
     public <C extends Inventory, T extends Recipe<C>> List<T> getAllMatches(RecipeType<T> type, C inventory, World world) {
         return this.getAllOfType(type).values().stream().flatMap(recipe -> Util.stream(type.get(recipe, world, inventory))).sorted(Comparator.comparing(recipe -> recipe.getOutput().getTranslationKey())).collect(Collectors.toList());
     }
@@ -96,11 +102,11 @@ extends JsonDataLoader {
     public <C extends Inventory, T extends Recipe<C>> DefaultedList<ItemStack> getRemainingStacks(RecipeType<T> recipeType, C inventory, World world) {
         Optional<T> optional = this.getFirstMatch(recipeType, inventory, world);
         if (optional.isPresent()) {
-            return ((Recipe)optional.get()).getRemainingStacks(inventory);
+            return ((Recipe)optional.get()).getRemainder(inventory);
         }
-        DefaultedList<ItemStack> defaultedList = DefaultedList.ofSize(inventory.getInvSize(), ItemStack.EMPTY);
+        DefaultedList<ItemStack> defaultedList = DefaultedList.ofSize(inventory.size(), ItemStack.EMPTY);
         for (int i = 0; i < defaultedList.size(); ++i) {
-            defaultedList.set(i, inventory.getInvStack(i));
+            defaultedList.set(i, inventory.getStack(i));
         }
         return defaultedList;
     }

@@ -10,7 +10,7 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ItemStackParticleEffect;
@@ -20,8 +20,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
@@ -33,7 +33,7 @@ extends MoveToTargetPosGoal {
     private final MobEntity stepAndDestroyMob;
     private int counter;
 
-    public StepAndDestroyBlockGoal(Block targetBlock, MobEntityWithAi mob, double speed, int maxYDifference) {
+    public StepAndDestroyBlockGoal(Block targetBlock, PathAwareEntity mob, double speed, int maxYDifference) {
         super(mob, speed, 24, maxYDifference);
         this.targetBlock = targetBlock;
         this.stepAndDestroyMob = mob;
@@ -41,7 +41,7 @@ extends MoveToTargetPosGoal {
 
     @Override
     public boolean canStart() {
-        if (!this.stepAndDestroyMob.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING)) {
+        if (!this.stepAndDestroyMob.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
             return false;
         }
         if (this.cooldown > 0) {
@@ -75,7 +75,7 @@ extends MoveToTargetPosGoal {
         this.counter = 0;
     }
 
-    public void tickStepping(IWorld world, BlockPos pos) {
+    public void tickStepping(WorldAccess world, BlockPos pos) {
     }
 
     public void onDestroyBlock(World world, BlockPos pos) {
@@ -85,7 +85,7 @@ extends MoveToTargetPosGoal {
     public void tick() {
         super.tick();
         World world = this.stepAndDestroyMob.world;
-        BlockPos blockPos = new BlockPos(this.stepAndDestroyMob);
+        BlockPos blockPos = this.stepAndDestroyMob.getBlockPos();
         BlockPos blockPos2 = this.tweakToProperPos(blockPos, world);
         Random random = this.stepAndDestroyMob.getRandom();
         if (this.hasReached() && blockPos2 != null) {
@@ -123,13 +123,13 @@ extends MoveToTargetPosGoal {
     }
 
     @Nullable
-    private BlockPos tweakToProperPos(BlockPos pos, BlockView view) {
+    private BlockPos tweakToProperPos(BlockPos pos, BlockView world) {
         BlockPos[] blockPoss;
-        if (view.getBlockState(pos).getBlock() == this.targetBlock) {
+        if (world.getBlockState(pos).isOf(this.targetBlock)) {
             return pos;
         }
         for (BlockPos blockPos : blockPoss = new BlockPos[]{pos.down(), pos.west(), pos.east(), pos.north(), pos.south(), pos.down().down()}) {
-            if (view.getBlockState(blockPos).getBlock() != this.targetBlock) continue;
+            if (!world.getBlockState(blockPos).isOf(this.targetBlock)) continue;
             return blockPos;
         }
         return null;
@@ -139,7 +139,7 @@ extends MoveToTargetPosGoal {
     protected boolean isTargetPos(WorldView world, BlockPos pos) {
         Chunk chunk = world.getChunk(pos.getX() >> 4, pos.getZ() >> 4, ChunkStatus.FULL, false);
         if (chunk != null) {
-            return chunk.getBlockState(pos).getBlock() == this.targetBlock && chunk.getBlockState(pos.up()).isAir() && chunk.getBlockState(pos.up(2)).isAir();
+            return chunk.getBlockState(pos).isOf(this.targetBlock) && chunk.getBlockState(pos.up()).isAir() && chunk.getBlockState(pos.up(2)).isAir();
         }
         return false;
     }

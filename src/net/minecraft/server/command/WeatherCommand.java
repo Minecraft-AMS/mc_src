@@ -23,32 +23,20 @@ public class WeatherCommand {
     }
 
     private static int executeClear(ServerCommandSource source, int duration) {
-        source.getWorld().getLevelProperties().setClearWeatherTime(duration);
-        source.getWorld().getLevelProperties().setRainTime(0);
-        source.getWorld().getLevelProperties().setThunderTime(0);
-        source.getWorld().getLevelProperties().setRaining(false);
-        source.getWorld().getLevelProperties().setThundering(false);
-        source.sendFeedback(new TranslatableText("commands.weather.set.clear", new Object[0]), true);
+        source.getWorld().setWeather(duration, 0, false, false);
+        source.sendFeedback(new TranslatableText("commands.weather.set.clear"), true);
         return duration;
     }
 
     private static int executeRain(ServerCommandSource source, int duration) {
-        source.getWorld().getLevelProperties().setClearWeatherTime(0);
-        source.getWorld().getLevelProperties().setRainTime(duration);
-        source.getWorld().getLevelProperties().setThunderTime(duration);
-        source.getWorld().getLevelProperties().setRaining(true);
-        source.getWorld().getLevelProperties().setThundering(false);
-        source.sendFeedback(new TranslatableText("commands.weather.set.rain", new Object[0]), true);
+        source.getWorld().setWeather(0, duration, true, false);
+        source.sendFeedback(new TranslatableText("commands.weather.set.rain"), true);
         return duration;
     }
 
     private static int executeThunder(ServerCommandSource source, int duration) {
-        source.getWorld().getLevelProperties().setClearWeatherTime(0);
-        source.getWorld().getLevelProperties().setRainTime(duration);
-        source.getWorld().getLevelProperties().setThunderTime(duration);
-        source.getWorld().getLevelProperties().setRaining(true);
-        source.getWorld().getLevelProperties().setThundering(true);
-        source.sendFeedback(new TranslatableText("commands.weather.set.thunder", new Object[0]), true);
+        source.getWorld().setWeather(0, duration, true, true);
+        source.sendFeedback(new TranslatableText("commands.weather.set.thunder"), true);
         return duration;
     }
 }

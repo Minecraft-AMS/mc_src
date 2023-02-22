@@ -10,9 +10,9 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParseException
  *  com.mojang.datafixers.DSL
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.Typed
  *  com.mojang.datafixers.schemas.Schema
+ *  com.mojang.serialization.Dynamic
  *  org.apache.commons.lang3.StringUtils
  */
 package net.minecraft.datafixer.fix;
@@ -25,13 +25,14 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.mojang.datafixers.DSL;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
+import com.mojang.serialization.Dynamic;
 import java.lang.reflect.Type;
 import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.datafixer.fix.ChoiceFix;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.lang3.StringUtils;
@@ -40,22 +41,22 @@ public class BlockEntitySignTextStrictJsonFix
 extends ChoiceFix {
     public static final Gson GSON = new GsonBuilder().registerTypeAdapter(Text.class, (Object)new JsonDeserializer<Text>(){
 
-        public Text deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+        public MutableText deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             if (jsonElement.isJsonPrimitive()) {
                 return new LiteralText(jsonElement.getAsString());
             }
             if (jsonElement.isJsonArray()) {
                 JsonArray jsonArray = jsonElement.getAsJsonArray();
-                Text text = null;
+                MutableText mutableText = null;
                 for (JsonElement jsonElement2 : jsonArray) {
-                    Text text2 = this.deserialize(jsonElement2, jsonElement2.getClass(), jsonDeserializationContext);
-                    if (text == null) {
-                        text = text2;
+                    MutableText mutableText2 = this.deserialize(jsonElement2, jsonElement2.getClass(), jsonDeserializationContext);
+                    if (mutableText == null) {
+                        mutableText = mutableText2;
                         continue;
                     }
-                    text.append(text2);
+                    mutableText.append(mutableText2);
                 }
-                return text;
+                return mutableText;
             }
             throw new JsonParseException("Don't know how to turn " + jsonElement + " into a Component");
         }
@@ -69,16 +70,16 @@ extends ChoiceFix {
         super(outputSchema, changesType, "BlockEntitySignTextStrictJsonFix", TypeReferences.BLOCK_ENTITY, "Sign");
     }
 
-    private Dynamic<?> fix(Dynamic<?> tag, String lineName) {
-        String string = tag.get(lineName).asString("");
+    private Dynamic<?> fix(Dynamic<?> dynamic, String lineName) {
+        String string = dynamic.get(lineName).asString("");
         Text text = null;
         if ("null".equals(string) || StringUtils.isEmpty((CharSequence)string)) {
-            text = new LiteralText("");
+            text = LiteralText.EMPTY;
         } else if (string.charAt(0) == '\"' && string.charAt(string.length() - 1) == '\"' || string.charAt(0) == '{' && string.charAt(string.length() - 1) == '}') {
             try {
                 text = JsonHelper.deserialize(GSON, string, Text.class, true);
                 if (text == null) {
-                    text = new LiteralText("");
+                    text = LiteralText.EMPTY;
                 }
             }
             catch (JsonParseException jsonParseException) {
@@ -106,12 +107,12 @@ extends ChoiceFix {
         } else {
             text = new LiteralText(string);
         }
-        return tag.set(lineName, tag.createString(Text.Serializer.toJson(text)));
+        return dynamic.set(lineName, dynamic.createString(Text.Serializer.toJson(text)));
     }
 
     @Override
-    protected Typed<?> transform(Typed<?> typed) {
-        return typed.update(DSL.remainderFinder(), dynamic -> {
+    protected Typed<?> transform(Typed<?> inputType) {
+        return inputType.update(DSL.remainderFinder(), dynamic -> {
             dynamic = this.fix((Dynamic<?>)dynamic, "Text1");
             dynamic = this.fix((Dynamic<?>)dynamic, "Text2");
             dynamic = this.fix((Dynamic<?>)dynamic, "Text3");

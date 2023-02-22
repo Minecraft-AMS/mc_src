@@ -63,17 +63,17 @@ import net.minecraft.network.DecoderHandler;
 import net.minecraft.network.LegacyQueryHandler;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.PacketEncoder;
+import net.minecraft.network.RateLimitedConnection;
 import net.minecraft.network.SizePrepender;
 import net.minecraft.network.SplitterHandler;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.IntegratedServerHandshakeNetworkHandler;
+import net.minecraft.server.network.LocalServerHandshakeNetworkHandler;
 import net.minecraft.server.network.ServerHandshakeNetworkHandler;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Lazy;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
-import net.minecraft.util.crash.CrashReportSection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -119,7 +119,8 @@ public class ServerNetworkIo {
                         // empty catch block
                     }
                     channel.pipeline().addLast("timeout", (ChannelHandler)new ReadTimeoutHandler(30)).addLast("legacy_query", (ChannelHandler)new LegacyQueryHandler(ServerNetworkIo.this)).addLast("splitter", (ChannelHandler)new SplitterHandler()).addLast("decoder", (ChannelHandler)new DecoderHandler(NetworkSide.SERVERBOUND)).addLast("prepender", (ChannelHandler)new SizePrepender()).addLast("encoder", (ChannelHandler)new PacketEncoder(NetworkSide.CLIENTBOUND));
-                    ClientConnection clientConnection = new ClientConnection(NetworkSide.SERVERBOUND);
+                    int i = ServerNetworkIo.this.server.getRateLimit();
+                    ClientConnection clientConnection = i > 0 ? new RateLimitedConnection(i) : new ClientConnection(NetworkSide.SERVERBOUND);
                     ServerNetworkIo.this.connections.add(clientConnection);
                     channel.pipeline().addLast("packet_handler", (ChannelHandler)clientConnection);
                     clientConnection.setPacketListener(new ServerHandshakeNetworkHandler(ServerNetworkIo.this.server, clientConnection));
@@ -140,7 +141,7 @@ public class ServerNetworkIo {
 
                 protected void initChannel(Channel channel) throws Exception {
                     ClientConnection clientConnection = new ClientConnection(NetworkSide.SERVERBOUND);
-                    clientConnection.setPacketListener(new IntegratedServerHandshakeNetworkHandler(ServerNetworkIo.this.server, clientConnection));
+                    clientConnection.setPacketListener(new LocalServerHandshakeNetworkHandler(ServerNetworkIo.this.server, clientConnection));
                     ServerNetworkIo.this.connections.add(clientConnection);
                     channel.pipeline().addLast("packet_handler", (ChannelHandler)clientConnection);
                 }
@@ -178,10 +179,7 @@ public class ServerNetworkIo {
                     }
                     catch (Exception exception) {
                         if (clientConnection.isLocal()) {
-                            CrashReport crashReport = CrashReport.create(exception, "Ticking memory connection");
-                            CrashReportSection crashReportSection = crashReport.addElement("Ticking connection");
-                            crashReportSection.add("Connection", () -> clientConnection.toString());
-                            throw new CrashException(crashReport);
+                            throw new CrashException(CrashReport.create(exception, "Ticking memory connection"));
                         }
                         LOGGER.warn("Failed to handle packet for {}", (Object)clientConnection.getAddress(), (Object)exception);
                         LiteralText text = new LiteralText("Internal server error");

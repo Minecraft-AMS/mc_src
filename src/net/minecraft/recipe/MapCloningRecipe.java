@@ -27,8 +27,8 @@ extends SpecialCraftingRecipe {
     public boolean matches(CraftingInventory craftingInventory, World world) {
         int i = 0;
         ItemStack itemStack = ItemStack.EMPTY;
-        for (int j = 0; j < craftingInventory.getInvSize(); ++j) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(j);
+        for (int j = 0; j < craftingInventory.size(); ++j) {
+            ItemStack itemStack2 = craftingInventory.getStack(j);
             if (itemStack2.isEmpty()) continue;
             if (itemStack2.getItem() == Items.FILLED_MAP) {
                 if (!itemStack.isEmpty()) {
@@ -50,8 +50,8 @@ extends SpecialCraftingRecipe {
     public ItemStack craft(CraftingInventory craftingInventory) {
         int i = 0;
         ItemStack itemStack = ItemStack.EMPTY;
-        for (int j = 0; j < craftingInventory.getInvSize(); ++j) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(j);
+        for (int j = 0; j < craftingInventory.size(); ++j) {
+            ItemStack itemStack2 = craftingInventory.getStack(j);
             if (itemStack2.isEmpty()) continue;
             if (itemStack2.getItem() == Items.FILLED_MAP) {
                 if (!itemStack.isEmpty()) {

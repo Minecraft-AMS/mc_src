@@ -4,17 +4,17 @@
  * Could not load the following classes:
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.schemas.Schema
+ *  com.mojang.serialization.Dynamic
  */
 package net.minecraft.datafixer.fix;
 
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
+import com.mojang.serialization.Dynamic;
 import java.util.function.Function;
 import net.minecraft.datafixer.TypeReferences;
 
@@ -23,8 +23,8 @@ extends DataFix {
     private final String name;
     private final Function<String, String> renamer;
 
-    public AdvancementRenameFix(Schema schema, boolean bl, String name, Function<String, String> renamer) {
-        super(schema, bl);
+    public AdvancementRenameFix(Schema outputSchema, boolean changesType, String name, Function<String, String> renamer) {
+        super(outputSchema, changesType);
         this.name = name;
         this.renamer = renamer;
     }

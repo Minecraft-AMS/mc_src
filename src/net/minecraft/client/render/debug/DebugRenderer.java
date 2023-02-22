@@ -36,16 +36,17 @@ import net.minecraft.client.render.debug.RaidCenterDebugRenderer;
 import net.minecraft.client.render.debug.SkyLightDebugRenderer;
 import net.minecraft.client.render.debug.StructureDebugRenderer;
 import net.minecraft.client.render.debug.VillageDebugRenderer;
+import net.minecraft.client.render.debug.VillageSectionsDebugRenderer;
 import net.minecraft.client.render.debug.WaterDebugRenderer;
 import net.minecraft.client.render.debug.WorldGenAttemptDebugRenderer;
-import net.minecraft.client.util.math.Matrix4f;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Rotation3;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.ProjectileUtil;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.math.AffineTransformation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,6 +65,7 @@ public class DebugRenderer {
     public final Renderer blockOutlineDebugRenderer;
     public final Renderer chunkLoadingDebugRenderer;
     public final VillageDebugRenderer villageDebugRenderer;
+    public final VillageSectionsDebugRenderer villageSectionsDebugRenderer;
     public final BeeDebugRenderer beeDebugRenderer;
     public final RaidCenterDebugRenderer raidCenterDebugRenderer;
     public final GoalSelectorDebugRenderer goalSelectorDebugRenderer;
@@ -83,6 +85,7 @@ public class DebugRenderer {
         this.blockOutlineDebugRenderer = new BlockOutlineDebugRenderer(client);
         this.chunkLoadingDebugRenderer = new ChunkLoadingDebugRenderer(client);
         this.villageDebugRenderer = new VillageDebugRenderer(client);
+        this.villageSectionsDebugRenderer = new VillageSectionsDebugRenderer();
         this.beeDebugRenderer = new BeeDebugRenderer(client);
         this.raidCenterDebugRenderer = new RaidCenterDebugRenderer(client);
         this.goalSelectorDebugRenderer = new GoalSelectorDebugRenderer(client);
@@ -103,6 +106,7 @@ public class DebugRenderer {
         this.blockOutlineDebugRenderer.clear();
         this.chunkLoadingDebugRenderer.clear();
         this.villageDebugRenderer.clear();
+        this.villageSectionsDebugRenderer.clear();
         this.beeDebugRenderer.clear();
         this.raidCenterDebugRenderer.clear();
         this.goalSelectorDebugRenderer.clear();
@@ -131,7 +135,7 @@ public class DebugRenderer {
             return Optional.empty();
         }
         Vec3d vec3d = entity2.getCameraPosVec(1.0f);
-        EntityHitResult entityHitResult = ProjectileUtil.rayTrace(entity2, vec3d, vec3d3 = vec3d.add(vec3d2 = entity2.getRotationVec(1.0f).multiply(maxDistance)), box = entity2.getBoundingBox().stretch(vec3d2).expand(1.0), predicate = entity -> !entity.isSpectator() && entity.collides(), i = maxDistance * maxDistance);
+        EntityHitResult entityHitResult = ProjectileUtil.raycast(entity2, vec3d, vec3d3 = vec3d.add(vec3d2 = entity2.getRotationVec(1.0f).multiply(maxDistance)), box = entity2.getBoundingBox().stretch(vec3d2).expand(1.0), predicate = entity -> !entity.isSpectator() && entity.collides(), i = maxDistance * maxDistance);
         if (entityHitResult == null) {
             return Optional.empty();
         }
@@ -162,7 +166,7 @@ public class DebugRenderer {
     }
 
     public static void drawBox(Box box, float red, float green, float blue, float alpha) {
-        DebugRenderer.drawBox(box.x1, box.y1, box.z1, box.x2, box.y2, box.z2, red, green, blue, alpha);
+        DebugRenderer.drawBox(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, red, green, blue, alpha);
     }
 
     public static void drawBox(double minX, double minY, double minZ, double maxX, double maxY, double maxZ, float red, float green, float blue, float alpha) {
@@ -188,7 +192,7 @@ public class DebugRenderer {
     public static void drawString(String string, double x, double y, double z, int color, float size, boolean center, float offset, boolean visibleThroughObjects) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         Camera camera = minecraftClient.gameRenderer.getCamera();
-        if (!camera.isReady() || minecraftClient.getEntityRenderManager().gameOptions == null) {
+        if (!camera.isReady() || minecraftClient.getEntityRenderDispatcher().gameOptions == null) {
             return;
         }
         TextRenderer textRenderer = minecraftClient.textRenderer;
@@ -208,10 +212,10 @@ public class DebugRenderer {
         }
         RenderSystem.depthMask(true);
         RenderSystem.scalef(-1.0f, 1.0f, 1.0f);
-        float g = center ? (float)(-textRenderer.getStringWidth(string)) / 2.0f : 0.0f;
+        float g = center ? (float)(-textRenderer.getWidth(string)) / 2.0f : 0.0f;
         RenderSystem.enableAlphaTest();
         VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-        textRenderer.draw(string, g -= offset / size, 0.0f, color, false, Rotation3.identity().getMatrix(), immediate, visibleThroughObjects, 0, 0xF000F0);
+        textRenderer.draw(string, g -= offset / size, 0.0f, color, false, AffineTransformation.identity().getMatrix(), (VertexConsumerProvider)immediate, visibleThroughObjects, 0, 0xF000F0);
         immediate.draw();
         RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableDepthTest();

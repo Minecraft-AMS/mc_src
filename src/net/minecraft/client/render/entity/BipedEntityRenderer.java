@@ -21,18 +21,22 @@ import net.minecraft.util.Identifier;
 @Environment(value=EnvType.CLIENT)
 public class BipedEntityRenderer<T extends MobEntity, M extends BipedEntityModel<T>>
 extends MobEntityRenderer<T, M> {
-    private static final Identifier SKIN = new Identifier("textures/entity/steve.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/steve.png");
 
-    public BipedEntityRenderer(EntityRenderDispatcher renderManager, M model, float f) {
-        super(renderManager, model, f);
-        this.addFeature(new HeadFeatureRenderer(this));
+    public BipedEntityRenderer(EntityRenderDispatcher dispatcher, M model, float f) {
+        this(dispatcher, model, f, 1.0f, 1.0f, 1.0f);
+    }
+
+    public BipedEntityRenderer(EntityRenderDispatcher entityRenderDispatcher, M bipedEntityModel, float f, float g, float h, float i) {
+        super(entityRenderDispatcher, bipedEntityModel, f);
+        this.addFeature(new HeadFeatureRenderer(this, g, h, i));
         this.addFeature(new ElytraFeatureRenderer(this));
         this.addFeature(new HeldItemFeatureRenderer(this));
     }
 
     @Override
     public Identifier getTexture(T mobEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 }
 

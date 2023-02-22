@@ -11,6 +11,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
+import net.minecraft.client.render.entity.model.CrossbowPosing;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
@@ -77,19 +78,16 @@ extends BipedEntityModel<T> {
             this.leftArm.pitch = -1.5707964f;
             this.rightArm.pitch -= k * 1.2f - l * 0.4f;
             this.leftArm.pitch -= k * 1.2f - l * 0.4f;
-            this.rightArm.roll += MathHelper.cos(h * 0.09f) * 0.05f + 0.05f;
-            this.leftArm.roll -= MathHelper.cos(h * 0.09f) * 0.05f + 0.05f;
-            this.rightArm.pitch += MathHelper.sin(h * 0.067f) * 0.05f;
-            this.leftArm.pitch -= MathHelper.sin(h * 0.067f) * 0.05f;
+            CrossbowPosing.method_29350(this.rightArm, this.leftArm, h);
         }
     }
 
     @Override
-    public void setArmAngle(Arm arm, MatrixStack matrixStack) {
+    public void setArmAngle(Arm arm, MatrixStack matrices) {
         float f = arm == Arm.RIGHT ? 1.0f : -1.0f;
         ModelPart modelPart = this.getArm(arm);
         modelPart.pivotX += f;
-        modelPart.rotate(matrixStack);
+        modelPart.rotate(matrices);
         modelPart.pivotX -= f;
     }
 }

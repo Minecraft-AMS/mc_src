@@ -3,14 +3,15 @@
  */
 package net.minecraft.block;
 
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityContext;
+import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BannerItem;
 import net.minecraft.item.BlockItem;
@@ -28,8 +29,8 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.BooleanBiFunction;
 import net.minecraft.util.Hand;
+import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -41,22 +42,22 @@ import net.minecraft.world.World;
 public class CauldronBlock
 extends Block {
     public static final IntProperty LEVEL = Properties.LEVEL_3;
-    private static final VoxelShape RAY_TRACE_SHAPE = CauldronBlock.createCuboidShape(2.0, 4.0, 2.0, 14.0, 16.0, 14.0);
-    protected static final VoxelShape OUTLINE_SHAPE = VoxelShapes.combineAndSimplify(VoxelShapes.fullCube(), VoxelShapes.union(CauldronBlock.createCuboidShape(0.0, 0.0, 4.0, 16.0, 3.0, 12.0), CauldronBlock.createCuboidShape(4.0, 0.0, 0.0, 12.0, 3.0, 16.0), CauldronBlock.createCuboidShape(2.0, 0.0, 2.0, 14.0, 3.0, 14.0), RAY_TRACE_SHAPE), BooleanBiFunction.ONLY_FIRST);
+    private static final VoxelShape RAYCAST_SHAPE = CauldronBlock.createCuboidShape(2.0, 4.0, 2.0, 14.0, 16.0, 14.0);
+    protected static final VoxelShape OUTLINE_SHAPE = VoxelShapes.combineAndSimplify(VoxelShapes.fullCube(), VoxelShapes.union(CauldronBlock.createCuboidShape(0.0, 0.0, 4.0, 16.0, 3.0, 12.0), CauldronBlock.createCuboidShape(4.0, 0.0, 0.0, 12.0, 3.0, 16.0), CauldronBlock.createCuboidShape(2.0, 0.0, 2.0, 14.0, 3.0, 14.0), RAYCAST_SHAPE), BooleanBiFunction.ONLY_FIRST);
 
-    public CauldronBlock(Block.Settings settings) {
+    public CauldronBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(LEVEL, 0));
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return OUTLINE_SHAPE;
     }
 
     @Override
-    public VoxelShape getRayTraceShape(BlockState state, BlockView view, BlockPos pos) {
-        return RAY_TRACE_SHAPE;
+    public VoxelShape getRaycastShape(BlockState state, BlockView world, BlockPos pos) {
+        return RAYCAST_SHAPE;
     }
 
     @Override
@@ -87,7 +88,7 @@ extends Block {
                 this.setLevel(world, pos, state, 3);
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0f, 1.0f);
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         if (item == Items.BUCKET) {
             if (i == 3 && !world.isClient) {
@@ -103,7 +104,7 @@ extends Block {
                 this.setLevel(world, pos, state, 0);
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0f, 1.0f);
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         if (item == Items.GLASS_BOTTLE) {
             if (i > 0 && !world.isClient) {
@@ -116,13 +117,13 @@ extends Block {
                     } else if (!player.inventory.insertStack(itemStack2)) {
                         player.dropItem(itemStack2, false);
                     } else if (player instanceof ServerPlayerEntity) {
-                        ((ServerPlayerEntity)player).openContainer(player.playerContainer);
+                        ((ServerPlayerEntity)player).refreshScreenHandler(player.playerScreenHandler);
                     }
                 }
                 world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 this.setLevel(world, pos, state, i - 1);
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         if (item == Items.POTION && PotionUtil.getPotion(itemStack) == Potions.WATER) {
             if (i < 3 && !world.isClient) {
@@ -131,13 +132,13 @@ extends Block {
                     player.incrementStat(Stats.USE_CAULDRON);
                     player.setStackInHand(hand, itemStack2);
                     if (player instanceof ServerPlayerEntity) {
-                        ((ServerPlayerEntity)player).openContainer(player.playerContainer);
+                        ((ServerPlayerEntity)player).refreshScreenHandler(player.playerScreenHandler);
                     }
                 }
                 world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 this.setLevel(world, pos, state, i + 1);
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         if (i > 0 && item instanceof DyeableItem && (dyeableItem = (DyeableItem)((Object)item)).hasColor(itemStack) && !world.isClient) {
             dyeableItem.removeColor(itemStack);
@@ -160,10 +161,10 @@ extends Block {
                 } else if (!player.inventory.insertStack(itemStack2)) {
                     player.dropItem(itemStack2, false);
                 } else if (player instanceof ServerPlayerEntity) {
-                    ((ServerPlayerEntity)player).openContainer(player.playerContainer);
+                    ((ServerPlayerEntity)player).refreshScreenHandler(player.playerScreenHandler);
                 }
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         if (i > 0 && item instanceof BlockItem) {
             Block block = ((BlockItem)item).getBlock();
@@ -184,7 +185,7 @@ extends Block {
 
     public void setLevel(World world, BlockPos pos, BlockState state, int level) {
         world.setBlockState(pos, (BlockState)state.with(LEVEL, MathHelper.clamp(level, 0, 3)), 2);
-        world.updateHorizontalAdjacent(pos, this);
+        world.updateComparators(pos, this);
     }
 
     @Override
@@ -218,7 +219,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
+    public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
         return false;
     }
 }

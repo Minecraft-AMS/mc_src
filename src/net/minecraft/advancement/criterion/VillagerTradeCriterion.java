@@ -2,20 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonDeserializationContext
- *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  */
 package net.minecraft.advancement.criterion;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.CriterionConditions;
-import net.minecraft.entity.passive.AbstractTraderEntity;
+import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.context.LootContext;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateSerializer;
 import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.predicate.item.ItemPredicate;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -31,48 +29,49 @@ extends AbstractCriterion<Conditions> {
     }
 
     @Override
-    public Conditions conditionsFromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
-        EntityPredicate entityPredicate = EntityPredicate.fromJson(jsonObject.get("villager"));
+    public Conditions conditionsFromJson(JsonObject jsonObject, EntityPredicate.Extended extended, AdvancementEntityPredicateDeserializer advancementEntityPredicateDeserializer) {
+        EntityPredicate.Extended extended2 = EntityPredicate.Extended.getInJson(jsonObject, "villager", advancementEntityPredicateDeserializer);
         ItemPredicate itemPredicate = ItemPredicate.fromJson(jsonObject.get("item"));
-        return new Conditions(entityPredicate, itemPredicate);
+        return new Conditions(extended, extended2, itemPredicate);
     }
 
-    public void handle(ServerPlayerEntity player, AbstractTraderEntity trader, ItemStack stack) {
-        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(player, trader, stack));
+    public void handle(ServerPlayerEntity player, MerchantEntity merchant, ItemStack stack) {
+        LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, merchant);
+        this.test(player, conditions -> conditions.matches(lootContext, stack));
     }
 
     @Override
-    public /* synthetic */ CriterionConditions conditionsFromJson(JsonObject obj, JsonDeserializationContext context) {
-        return this.conditionsFromJson(obj, context);
+    public /* synthetic */ AbstractCriterionConditions conditionsFromJson(JsonObject obj, EntityPredicate.Extended playerPredicate, AdvancementEntityPredicateDeserializer predicateDeserializer) {
+        return this.conditionsFromJson(obj, playerPredicate, predicateDeserializer);
     }
 
     public static class Conditions
     extends AbstractCriterionConditions {
-        private final EntityPredicate villager;
+        private final EntityPredicate.Extended villager;
         private final ItemPredicate item;
 
-        public Conditions(EntityPredicate entity, ItemPredicate item) {
-            super(ID);
-            this.villager = entity;
+        public Conditions(EntityPredicate.Extended player, EntityPredicate.Extended villager, ItemPredicate item) {
+            super(ID, player);
+            this.villager = villager;
             this.item = item;
         }
 
         public static Conditions any() {
-            return new Conditions(EntityPredicate.ANY, ItemPredicate.ANY);
+            return new Conditions(EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.EMPTY, ItemPredicate.ANY);
         }
 
-        public boolean matches(ServerPlayerEntity player, AbstractTraderEntity trader, ItemStack stack) {
-            if (!this.villager.test(player, trader)) {
+        public boolean matches(LootContext merchantContext, ItemStack stack) {
+            if (!this.villager.test(merchantContext)) {
                 return false;
             }
             return this.item.test(stack);
         }
 
         @Override
-        public JsonElement toJson() {
-            JsonObject jsonObject = new JsonObject();
+        public JsonObject toJson(AdvancementEntityPredicateSerializer predicateSerializer) {
+            JsonObject jsonObject = super.toJson(predicateSerializer);
             jsonObject.add("item", this.item.toJson());
-            jsonObject.add("villager", this.villager.serialize());
+            jsonObject.add("villager", this.villager.toJson(predicateSerializer));
             return jsonObject;
         }
     }

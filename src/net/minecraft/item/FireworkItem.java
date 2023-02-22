@@ -17,14 +17,14 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.FireworkEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.item.FireworkChargeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -50,11 +50,11 @@ extends Item {
             ItemStack itemStack = context.getStack();
             Vec3d vec3d = context.getHitPos();
             Direction direction = context.getSide();
-            FireworkEntity fireworkEntity = new FireworkEntity(world, vec3d.x + (double)direction.getOffsetX() * 0.15, vec3d.y + (double)direction.getOffsetY() * 0.15, vec3d.z + (double)direction.getOffsetZ() * 0.15, itemStack);
-            world.spawnEntity(fireworkEntity);
+            FireworkRocketEntity fireworkRocketEntity = new FireworkRocketEntity(world, context.getPlayer(), vec3d.x + (double)direction.getOffsetX() * 0.15, vec3d.y + (double)direction.getOffsetY() * 0.15, vec3d.z + (double)direction.getOffsetZ() * 0.15, itemStack);
+            world.spawnEntity(fireworkRocketEntity);
             itemStack.decrement(1);
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.success(world.isClient);
     }
 
     @Override
@@ -62,12 +62,12 @@ extends Item {
         if (user.isFallFlying()) {
             ItemStack itemStack = user.getStackInHand(hand);
             if (!world.isClient) {
-                world.spawnEntity(new FireworkEntity(world, itemStack, user));
+                world.spawnEntity(new FireworkRocketEntity(world, itemStack, user));
                 if (!user.abilities.creativeMode) {
                     itemStack.decrement(1);
                 }
             }
-            return TypedActionResult.success(user.getStackInHand(hand));
+            return TypedActionResult.success(user.getStackInHand(hand), world.isClient());
         }
         return TypedActionResult.pass(user.getStackInHand(hand));
     }
@@ -75,19 +75,19 @@ extends Item {
     @Override
     @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
-        ListTag listTag;
-        CompoundTag compoundTag = stack.getSubTag("Fireworks");
-        if (compoundTag == null) {
+        NbtList nbtList;
+        NbtCompound nbtCompound = stack.getSubTag("Fireworks");
+        if (nbtCompound == null) {
             return;
         }
-        if (compoundTag.contains("Flight", 99)) {
-            tooltip.add(new TranslatableText("item.minecraft.firework_rocket.flight", new Object[0]).append(" ").append(String.valueOf(compoundTag.getByte("Flight"))).formatted(Formatting.GRAY));
+        if (nbtCompound.contains("Flight", 99)) {
+            tooltip.add(new TranslatableText("item.minecraft.firework_rocket.flight").append(" ").append(String.valueOf(nbtCompound.getByte("Flight"))).formatted(Formatting.GRAY));
         }
-        if (!(listTag = compoundTag.getList("Explosions", 10)).isEmpty()) {
-            for (int i = 0; i < listTag.size(); ++i) {
-                CompoundTag compoundTag2 = listTag.getCompound(i);
+        if (!(nbtList = nbtCompound.getList("Explosions", 10)).isEmpty()) {
+            for (int i = 0; i < nbtList.size(); ++i) {
+                NbtCompound nbtCompound2 = nbtList.getCompound(i);
                 ArrayList list = Lists.newArrayList();
-                FireworkChargeItem.appendFireworkTooltip(compoundTag2, list);
+                FireworkChargeItem.appendFireworkTooltip(nbtCompound2, list);
                 if (list.isEmpty()) continue;
                 for (int j = 1; j < list.size(); ++j) {
                     list.set(j, new LiteralText("  ").append((Text)list.get(j)).formatted(Formatting.GRAY));

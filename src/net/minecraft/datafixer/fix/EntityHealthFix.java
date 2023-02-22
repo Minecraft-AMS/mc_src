@@ -5,18 +5,18 @@
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.schemas.Schema
+ *  com.mojang.serialization.Dynamic
  */
 package net.minecraft.datafixer.fix;
 
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
+import com.mojang.serialization.Dynamic;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.datafixer.TypeReferences;
@@ -29,19 +29,19 @@ extends DataFix {
         super(outputSchema, changesType);
     }
 
-    public Dynamic<?> fixHealth(Dynamic<?> tag) {
+    public Dynamic<?> fixHealth(Dynamic<?> dynamic) {
         float f;
-        Optional optional = tag.get("HealF").asNumber();
-        Optional optional2 = tag.get("Health").asNumber();
+        Optional optional = dynamic.get("HealF").asNumber().result();
+        Optional optional2 = dynamic.get("Health").asNumber().result();
         if (optional.isPresent()) {
             f = ((Number)optional.get()).floatValue();
-            tag = tag.remove("HealF");
+            dynamic = dynamic.remove("HealF");
         } else if (optional2.isPresent()) {
             f = ((Number)optional2.get()).floatValue();
         } else {
-            return tag;
+            return dynamic;
         }
-        return tag.set("Health", tag.createFloat(f));
+        return dynamic.set("Health", dynamic.createFloat(f));
     }
 
     public TypeRewriteRule makeRule() {

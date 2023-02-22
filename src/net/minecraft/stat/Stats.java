@@ -40,6 +40,7 @@ public class Stats {
     public static final Identifier HORSE_ONE_CM = Stats.register("horse_one_cm", StatFormatter.DISTANCE);
     public static final Identifier AVIATE_ONE_CM = Stats.register("aviate_one_cm", StatFormatter.DISTANCE);
     public static final Identifier SWIM_ONE_CM = Stats.register("swim_one_cm", StatFormatter.DISTANCE);
+    public static final Identifier STRIDER_ONE_CM = Stats.register("strider_one_cm", StatFormatter.DISTANCE);
     public static final Identifier JUMP = Stats.register("jump", StatFormatter.DEFAULT);
     public static final Identifier DROP = Stats.register("drop", StatFormatter.DEFAULT);
     public static final Identifier DAMAGE_DEALT = Stats.register("damage_dealt", StatFormatter.DIVIDE_BY_TEN);
@@ -92,16 +93,18 @@ public class Stats {
     public static final Identifier RAID_WIN = Stats.register("raid_win", StatFormatter.DEFAULT);
     public static final Identifier INTERACT_WITH_ANVIL = Stats.register("interact_with_anvil", StatFormatter.DEFAULT);
     public static final Identifier INTERACT_WITH_GRINDSTONE = Stats.register("interact_with_grindstone", StatFormatter.DEFAULT);
+    public static final Identifier TARGET_HIT = Stats.register("target_hit", StatFormatter.DEFAULT);
+    public static final Identifier INTERACT_WITH_SMITHING_TABLE = Stats.register("interact_with_smithing_table", StatFormatter.DEFAULT);
 
-    private static Identifier register(String string, StatFormatter statFormatter) {
-        Identifier identifier = new Identifier(string);
-        Registry.register(Registry.CUSTOM_STAT, string, identifier);
-        CUSTOM.getOrCreateStat(identifier, statFormatter);
+    private static Identifier register(String id, StatFormatter formatter) {
+        Identifier identifier = new Identifier(id);
+        Registry.register(Registry.CUSTOM_STAT, id, identifier);
+        CUSTOM.getOrCreateStat(identifier, formatter);
         return identifier;
     }
 
-    private static <T> StatType<T> registerType(String string, Registry<T> registry) {
-        return Registry.register(Registry.STAT_TYPE, string, new StatType<T>(registry));
+    private static <T> StatType<T> registerType(String id, Registry<T> registry) {
+        return Registry.register(Registry.STAT_TYPE, id, new StatType<T>(registry));
     }
 }
 

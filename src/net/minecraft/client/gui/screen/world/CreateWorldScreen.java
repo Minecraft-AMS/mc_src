@@ -2,94 +2,159 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonElement
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
- *  com.mojang.datafixers.types.JsonOps
+ *  com.google.common.collect.ImmutableList
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.lang3.StringUtils
+ *  org.apache.commons.lang3.mutable.MutableObject
+ *  org.apache.logging.log4j.LogManager
+ *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.screen.world;
 
-import com.google.gson.JsonElement;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import com.mojang.datafixers.types.JsonOps;
-import java.util.Random;
+import com.google.common.collect.ImmutableList;
+import com.mojang.datafixers.util.Pair;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileVisitOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
+import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.CustomizeBuffetLevelScreen;
-import net.minecraft.client.gui.screen.CustomizeFlatLevelScreen;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.screen.ConfirmScreen;
+import net.minecraft.client.gui.screen.SaveLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ScreenTexts;
+import net.minecraft.client.gui.screen.pack.PackScreen;
+import net.minecraft.client.gui.screen.world.EditGameRulesScreen;
+import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.datafixer.NbtOps;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.client.toast.SystemToast;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.world.GeneratorType;
+import net.minecraft.resource.DataPackSettings;
+import net.minecraft.resource.FileResourcePackProvider;
+import net.minecraft.resource.ResourcePackManager;
+import net.minecraft.resource.ResourcePackSource;
+import net.minecraft.resource.ServerResourceManager;
+import net.minecraft.resource.VanillaDataPackProvider;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.FileNameUtil;
+import net.minecraft.util.Util;
+import net.minecraft.util.WorldSavePath;
+import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
-import net.minecraft.world.level.LevelGeneratorType;
+import net.minecraft.world.GameRules;
+import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.level.LevelInfo;
-import net.minecraft.world.level.LevelProperties;
-import org.apache.commons.lang3.StringUtils;
+import net.minecraft.world.level.storage.LevelStorage;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class CreateWorldScreen
 extends Screen {
+    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Text GAME_MODE_TEXT = new TranslatableText("selectWorld.gameMode");
+    private static final Text ENTER_SEED_TEXT = new TranslatableText("selectWorld.enterSeed");
+    private static final Text SEED_INFO_TEXT = new TranslatableText("selectWorld.seedInfo");
+    private static final Text ENTER_NAME_TEXT = new TranslatableText("selectWorld.enterName");
+    private static final Text RESULT_FOLDER_TEXT = new TranslatableText("selectWorld.resultFolder");
+    private static final Text ALLOW_COMMANDS_INFO_TEXT = new TranslatableText("selectWorld.allowCommands.info");
     private final Screen parent;
     private TextFieldWidget levelNameField;
-    private TextFieldWidget seedField;
     private String saveDirectoryName;
     private Mode currentMode = Mode.SURVIVAL;
     @Nullable
     private Mode lastMode;
-    private boolean structures = true;
+    private Difficulty field_24289 = Difficulty.NORMAL;
+    private Difficulty field_24290 = Difficulty.NORMAL;
     private boolean cheatsEnabled;
     private boolean tweakedCheats;
-    private boolean bonusChest;
-    private boolean hardcore;
-    private boolean creatingLevel;
+    public boolean hardcore;
+    protected DataPackSettings dataPackSettings;
+    @Nullable
+    private Path dataPackTempDir;
+    @Nullable
+    private ResourcePackManager packManager;
     private boolean moreOptionsOpen;
     private ButtonWidget createLevelButton;
     private ButtonWidget gameModeSwitchButton;
+    private ButtonWidget difficultyButton;
     private ButtonWidget moreOptionsButton;
-    private ButtonWidget generateStructuresButton;
-    private ButtonWidget generateBonusChestButton;
-    private ButtonWidget mapTypeSwitchButton;
+    private ButtonWidget gameRulesButton;
+    private ButtonWidget dataPacksButton;
     private ButtonWidget enableCheatsButton;
-    private ButtonWidget customizeTypeButton;
-    private String firstGameModeDescriptionLine;
-    private String secondGameModeDescriptionLine;
-    private String seed;
+    private Text firstGameModeDescriptionLine;
+    private Text secondGameModeDescriptionLine;
     private String levelName;
-    private int generatorType;
-    public CompoundTag generatorOptionsTag = new CompoundTag();
+    private GameRules gameRules = new GameRules();
+    public final MoreOptionsDialog moreOptionsDialog;
 
-    public CreateWorldScreen(Screen parent) {
-        super(new TranslatableText("selectWorld.create", new Object[0]));
+    public CreateWorldScreen(@Nullable Screen parent, LevelInfo levelInfo, GeneratorOptions generatorOptions, @Nullable Path dataPackTempDir, DataPackSettings dataPackSettings, DynamicRegistryManager.Impl registryManager) {
+        this(parent, dataPackSettings, new MoreOptionsDialog(registryManager, generatorOptions, GeneratorType.method_29078(generatorOptions), OptionalLong.of(generatorOptions.getSeed())));
+        this.levelName = levelInfo.getLevelName();
+        this.cheatsEnabled = levelInfo.areCommandsAllowed();
+        this.tweakedCheats = true;
+        this.field_24290 = this.field_24289 = levelInfo.getDifficulty();
+        this.gameRules.setAllValues(levelInfo.getGameRules(), null);
+        if (levelInfo.isHardcore()) {
+            this.currentMode = Mode.HARDCORE;
+        } else if (levelInfo.getGameMode().isSurvivalLike()) {
+            this.currentMode = Mode.SURVIVAL;
+        } else if (levelInfo.getGameMode().isCreative()) {
+            this.currentMode = Mode.CREATIVE;
+        }
+        this.dataPackTempDir = dataPackTempDir;
+    }
+
+    public static CreateWorldScreen create(@Nullable Screen parent) {
+        DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
+        return new CreateWorldScreen(parent, DataPackSettings.SAFE_MODE, new MoreOptionsDialog(impl, GeneratorOptions.getDefaultOptions(impl.get(Registry.DIMENSION_TYPE_KEY), impl.get(Registry.BIOME_KEY), impl.get(Registry.NOISE_SETTINGS_WORLDGEN)), Optional.of(GeneratorType.DEFAULT), OptionalLong.empty()));
+    }
+
+    private CreateWorldScreen(@Nullable Screen parent, DataPackSettings dataPackSettings, MoreOptionsDialog moreOptionsDialog) {
+        super(new TranslatableText("selectWorld.create"));
         this.parent = parent;
-        this.seed = "";
         this.levelName = I18n.translate("selectWorld.newWorld", new Object[0]);
+        this.dataPackSettings = dataPackSettings;
+        this.moreOptionsDialog = moreOptionsDialog;
     }
 
     @Override
     public void tick() {
         this.levelNameField.tick();
-        this.seedField.tick();
+        this.moreOptionsDialog.tick();
     }
 
     @Override
     protected void init() {
-        this.minecraft.keyboard.enableRepeatEvents(true);
-        this.levelNameField = new TextFieldWidget(this.font, this.width / 2 - 100, 60, 200, 20, I18n.translate("selectWorld.enterName", new Object[0])){
+        this.client.keyboard.setRepeatEvents(true);
+        this.levelNameField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 60, 200, 20, (Text)new TranslatableText("selectWorld.enterName")){
 
             @Override
-            protected String getNarrationMessage() {
-                return super.getNarrationMessage() + ". " + I18n.translate("selectWorld.resultFolder", new Object[0]) + " " + CreateWorldScreen.this.saveDirectoryName;
+            protected MutableText getNarrationMessage() {
+                return super.getNarrationMessage().append(". ").append(new TranslatableText("selectWorld.resultFolder")).append(" ").append(CreateWorldScreen.this.saveDirectoryName);
             }
         };
         this.levelNameField.setText(this.levelName);
@@ -99,7 +164,9 @@ extends Screen {
             this.updateSaveFolderName();
         });
         this.children.add(this.levelNameField);
-        this.gameModeSwitchButton = this.addButton(new ButtonWidget(this.width / 2 - 75, 115, 150, 20, I18n.translate("selectWorld.gameMode", new Object[0]), buttonWidget -> {
+        int i = this.width / 2 - 155;
+        int j = this.width / 2 + 5;
+        this.gameModeSwitchButton = this.addButton(new ButtonWidget(i, 100, 150, 20, LiteralText.EMPTY, buttonWidget -> {
             switch (this.currentMode) {
                 case SURVIVAL: {
                     this.tweakDefaultsTo(Mode.HARDCORE);
@@ -117,117 +184,62 @@ extends Screen {
         }){
 
             @Override
-            public String getMessage() {
-                return I18n.translate("selectWorld.gameMode", new Object[0]) + ": " + I18n.translate("selectWorld.gameMode." + CreateWorldScreen.this.currentMode.translationSuffix, new Object[0]);
+            public Text getMessage() {
+                return new TranslatableText("options.generic_value", GAME_MODE_TEXT, new TranslatableText("selectWorld.gameMode." + CreateWorldScreen.this.currentMode.translationSuffix));
             }
 
             @Override
-            protected String getNarrationMessage() {
-                return super.getNarrationMessage() + ". " + CreateWorldScreen.this.firstGameModeDescriptionLine + " " + CreateWorldScreen.this.secondGameModeDescriptionLine;
+            protected MutableText getNarrationMessage() {
+                return super.getNarrationMessage().append(". ").append(CreateWorldScreen.this.firstGameModeDescriptionLine).append(" ").append(CreateWorldScreen.this.secondGameModeDescriptionLine);
             }
         });
-        this.seedField = new TextFieldWidget(this.font, this.width / 2 - 100, 60, 200, 20, I18n.translate("selectWorld.enterSeed", new Object[0]));
-        this.seedField.setText(this.seed);
-        this.seedField.setChangedListener(string -> {
-            this.seed = this.seedField.getText();
-        });
-        this.children.add(this.seedField);
-        this.generateStructuresButton = this.addButton(new ButtonWidget(this.width / 2 - 155, 100, 150, 20, I18n.translate("selectWorld.mapFeatures", new Object[0]), buttonWidget -> {
-            this.structures = !this.structures;
-            buttonWidget.queueNarration(250);
+        this.difficultyButton = this.addButton(new ButtonWidget(j, 100, 150, 20, new TranslatableText("options.difficulty"), button -> {
+            this.field_24290 = this.field_24289 = this.field_24289.cycle();
+            button.queueNarration(250);
         }){
 
             @Override
-            public String getMessage() {
-                return I18n.translate("selectWorld.mapFeatures", new Object[0]) + ' ' + I18n.translate(CreateWorldScreen.this.structures ? "options.on" : "options.off", new Object[0]);
-            }
-
-            @Override
-            protected String getNarrationMessage() {
-                return super.getNarrationMessage() + ". " + I18n.translate("selectWorld.mapFeatures.info", new Object[0]);
+            public Text getMessage() {
+                return new TranslatableText("options.difficulty").append(": ").append(CreateWorldScreen.this.field_24290.getTranslatableName());
             }
         });
-        this.generateStructuresButton.visible = false;
-        this.mapTypeSwitchButton = this.addButton(new ButtonWidget(this.width / 2 + 5, 100, 150, 20, I18n.translate("selectWorld.mapType", new Object[0]), buttonWidget -> {
-            ++this.generatorType;
-            if (this.generatorType >= LevelGeneratorType.TYPES.length) {
-                this.generatorType = 0;
-            }
-            while (!this.isGeneratorTypeValid()) {
-                ++this.generatorType;
-                if (this.generatorType < LevelGeneratorType.TYPES.length) continue;
-                this.generatorType = 0;
-            }
-            this.generatorOptionsTag = new CompoundTag();
-            this.setMoreOptionsOpen(this.moreOptionsOpen);
-            buttonWidget.queueNarration(250);
-        }){
-
-            @Override
-            public String getMessage() {
-                return I18n.translate("selectWorld.mapType", new Object[0]) + ' ' + I18n.translate(LevelGeneratorType.TYPES[CreateWorldScreen.this.generatorType].getTranslationKey(), new Object[0]);
-            }
-
-            @Override
-            protected String getNarrationMessage() {
-                LevelGeneratorType levelGeneratorType = LevelGeneratorType.TYPES[CreateWorldScreen.this.generatorType];
-                if (levelGeneratorType.hasInfo()) {
-                    return super.getNarrationMessage() + ". " + I18n.translate(levelGeneratorType.getInfoTranslationKey(), new Object[0]);
-                }
-                return super.getNarrationMessage();
-            }
-        });
-        this.mapTypeSwitchButton.visible = false;
-        this.customizeTypeButton = this.addButton(new ButtonWidget(this.width / 2 + 5, 120, 150, 20, I18n.translate("selectWorld.customizeType", new Object[0]), buttonWidget -> {
-            if (LevelGeneratorType.TYPES[this.generatorType] == LevelGeneratorType.FLAT) {
-                this.minecraft.openScreen(new CustomizeFlatLevelScreen(this, this.generatorOptionsTag));
-            }
-            if (LevelGeneratorType.TYPES[this.generatorType] == LevelGeneratorType.BUFFET) {
-                this.minecraft.openScreen(new CustomizeBuffetLevelScreen(this, this.generatorOptionsTag));
-            }
-        }));
-        this.customizeTypeButton.visible = false;
-        this.enableCheatsButton = this.addButton(new ButtonWidget(this.width / 2 - 155, 151, 150, 20, I18n.translate("selectWorld.allowCommands", new Object[0]), buttonWidget -> {
+        this.enableCheatsButton = this.addButton(new ButtonWidget(i, 151, 150, 20, new TranslatableText("selectWorld.allowCommands"), button -> {
             this.tweakedCheats = true;
             this.cheatsEnabled = !this.cheatsEnabled;
-            buttonWidget.queueNarration(250);
+            button.queueNarration(250);
         }){
 
             @Override
-            public String getMessage() {
-                return I18n.translate("selectWorld.allowCommands", new Object[0]) + ' ' + I18n.translate(CreateWorldScreen.this.cheatsEnabled && !CreateWorldScreen.this.hardcore ? "options.on" : "options.off", new Object[0]);
+            public Text getMessage() {
+                return ScreenTexts.composeToggleText(super.getMessage(), CreateWorldScreen.this.cheatsEnabled && !CreateWorldScreen.this.hardcore);
             }
 
             @Override
-            protected String getNarrationMessage() {
-                return super.getNarrationMessage() + ". " + I18n.translate("selectWorld.allowCommands.info", new Object[0]);
+            protected MutableText getNarrationMessage() {
+                return super.getNarrationMessage().append(". ").append(new TranslatableText("selectWorld.allowCommands.info"));
             }
         });
-        this.enableCheatsButton.visible = false;
-        this.generateBonusChestButton = this.addButton(new ButtonWidget(this.width / 2 + 5, 151, 150, 20, I18n.translate("selectWorld.bonusItems", new Object[0]), buttonWidget -> {
-            this.bonusChest = !this.bonusChest;
-            buttonWidget.queueNarration(250);
-        }){
-
-            @Override
-            public String getMessage() {
-                return I18n.translate("selectWorld.bonusItems", new Object[0]) + ' ' + I18n.translate(CreateWorldScreen.this.bonusChest && !CreateWorldScreen.this.hardcore ? "options.on" : "options.off", new Object[0]);
-            }
-        });
-        this.generateBonusChestButton.visible = false;
-        this.moreOptionsButton = this.addButton(new ButtonWidget(this.width / 2 - 75, 187, 150, 20, I18n.translate("selectWorld.moreWorldOptions", new Object[0]), buttonWidget -> this.toggleMoreOptions()));
-        this.createLevelButton = this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 28, 150, 20, I18n.translate("selectWorld.create", new Object[0]), buttonWidget -> this.createLevel()));
+        this.dataPacksButton = this.addButton(new ButtonWidget(j, 151, 150, 20, new TranslatableText("selectWorld.dataPacks"), button -> this.method_29694()));
+        this.gameRulesButton = this.addButton(new ButtonWidget(i, 185, 150, 20, new TranslatableText("selectWorld.gameRules"), button -> this.client.openScreen(new EditGameRulesScreen(this.gameRules.copy(), optional -> {
+            this.client.openScreen(this);
+            optional.ifPresent(gameRules -> {
+                this.gameRules = gameRules;
+            });
+        }))));
+        this.moreOptionsDialog.init(this, this.client, this.textRenderer);
+        this.moreOptionsButton = this.addButton(new ButtonWidget(j, 185, 150, 20, new TranslatableText("selectWorld.moreWorldOptions"), buttonWidget -> this.toggleMoreOptions()));
+        this.createLevelButton = this.addButton(new ButtonWidget(i, this.height - 28, 150, 20, new TranslatableText("selectWorld.create"), buttonWidget -> this.createLevel()));
         this.createLevelButton.active = !this.levelName.isEmpty();
-        this.addButton(new ButtonWidget(this.width / 2 + 5, this.height - 28, 150, 20, I18n.translate("gui.cancel", new Object[0]), buttonWidget -> this.minecraft.openScreen(this.parent)));
-        this.setMoreOptionsOpen(this.moreOptionsOpen);
+        this.addButton(new ButtonWidget(j, this.height - 28, 150, 20, ScreenTexts.CANCEL, buttonWidget -> this.onCloseScreen()));
+        this.setMoreOptionsOpen();
         this.setInitialFocus(this.levelNameField);
         this.tweakDefaultsTo(this.currentMode);
         this.updateSaveFolderName();
     }
 
     private void updateSettingsLabels() {
-        this.firstGameModeDescriptionLine = I18n.translate("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line1", new Object[0]);
-        this.secondGameModeDescriptionLine = I18n.translate("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line2", new Object[0]);
+        this.firstGameModeDescriptionLine = new TranslatableText("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line1");
+        this.secondGameModeDescriptionLine = new TranslatableText("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line2");
     }
 
     private void updateSaveFolderName() {
@@ -236,12 +248,12 @@ extends Screen {
             this.saveDirectoryName = "World";
         }
         try {
-            this.saveDirectoryName = FileNameUtil.getNextUniqueName(this.minecraft.getLevelStorage().getSavesDirectory(), this.saveDirectoryName, "");
+            this.saveDirectoryName = FileNameUtil.getNextUniqueName(this.client.getLevelStorage().getSavesDirectory(), this.saveDirectoryName, "");
         }
         catch (Exception exception) {
             this.saveDirectoryName = "World";
             try {
-                this.saveDirectoryName = FileNameUtil.getNextUniqueName(this.minecraft.getLevelStorage().getSavesDirectory(), this.saveDirectoryName, "");
+                this.saveDirectoryName = FileNameUtil.getNextUniqueName(this.client.getLevelStorage().getSavesDirectory(), this.saveDirectoryName, "");
             }
             catch (Exception exception2) {
                 throw new RuntimeException("Could not create save folder", exception2);
@@ -251,48 +263,25 @@ extends Screen {
 
     @Override
     public void removed() {
-        this.minecraft.keyboard.enableRepeatEvents(false);
+        this.client.keyboard.setRepeatEvents(false);
     }
 
     private void createLevel() {
-        this.minecraft.openScreen(null);
-        if (this.creatingLevel) {
+        LevelInfo levelInfo;
+        this.client.method_29970(new SaveLevelScreen(new TranslatableText("createWorld.preparing")));
+        if (!this.copyTempDirDataPacks()) {
             return;
         }
-        this.creatingLevel = true;
-        long l = new Random().nextLong();
-        String string = this.seedField.getText();
-        if (!StringUtils.isEmpty((CharSequence)string)) {
-            try {
-                long m = Long.parseLong(string);
-                if (m != 0L) {
-                    l = m;
-                }
-            }
-            catch (NumberFormatException numberFormatException) {
-                l = string.hashCode();
-            }
+        this.clearTempResources();
+        GeneratorOptions generatorOptions = this.moreOptionsDialog.getGeneratorOptions(this.hardcore);
+        if (generatorOptions.isDebugWorld()) {
+            GameRules gameRules = new GameRules();
+            gameRules.get(GameRules.DO_DAYLIGHT_CYCLE).set(false, null);
+            levelInfo = new LevelInfo(this.levelNameField.getText().trim(), GameMode.SPECTATOR, false, Difficulty.PEACEFUL, true, gameRules, DataPackSettings.SAFE_MODE);
+        } else {
+            levelInfo = new LevelInfo(this.levelNameField.getText().trim(), this.currentMode.defaultGameMode, this.hardcore, this.field_24290, this.cheatsEnabled && !this.hardcore, this.gameRules, this.dataPackSettings);
         }
-        LevelInfo levelInfo = new LevelInfo(l, this.currentMode.defaultGameMode, this.structures, this.hardcore, LevelGeneratorType.TYPES[this.generatorType]);
-        levelInfo.setGeneratorOptions((JsonElement)Dynamic.convert((DynamicOps)NbtOps.INSTANCE, (DynamicOps)JsonOps.INSTANCE, (Object)this.generatorOptionsTag));
-        if (this.bonusChest && !this.hardcore) {
-            levelInfo.setBonusChest();
-        }
-        if (this.cheatsEnabled && !this.hardcore) {
-            levelInfo.enableCommands();
-        }
-        this.minecraft.startIntegratedServer(this.saveDirectoryName, this.levelNameField.getText().trim(), levelInfo);
-    }
-
-    private boolean isGeneratorTypeValid() {
-        LevelGeneratorType levelGeneratorType = LevelGeneratorType.TYPES[this.generatorType];
-        if (levelGeneratorType == null || !levelGeneratorType.isVisible()) {
-            return false;
-        }
-        if (levelGeneratorType == LevelGeneratorType.DEBUG_ALL_BLOCK_STATES) {
-            return CreateWorldScreen.hasShiftDown();
-        }
-        return true;
+        this.client.createWorld(this.saveDirectoryName, levelInfo, this.moreOptionsDialog.getRegistryManager(), generatorOptions);
     }
 
     private void toggleMoreOptions() {
@@ -306,47 +295,52 @@ extends Screen {
         if (mode == Mode.HARDCORE) {
             this.hardcore = true;
             this.enableCheatsButton.active = false;
-            this.generateBonusChestButton.active = false;
+            this.moreOptionsDialog.bonusItemsButton.active = false;
+            this.field_24290 = Difficulty.HARD;
+            this.difficultyButton.active = false;
         } else {
             this.hardcore = false;
             this.enableCheatsButton.active = true;
-            this.generateBonusChestButton.active = true;
+            this.moreOptionsDialog.bonusItemsButton.active = true;
+            this.field_24290 = this.field_24289;
+            this.difficultyButton.active = true;
         }
         this.currentMode = mode;
         this.updateSettingsLabels();
     }
 
+    public void setMoreOptionsOpen() {
+        this.setMoreOptionsOpen(this.moreOptionsOpen);
+    }
+
     private void setMoreOptionsOpen(boolean moreOptionsOpen) {
         this.moreOptionsOpen = moreOptionsOpen;
         this.gameModeSwitchButton.visible = !this.moreOptionsOpen;
-        this.mapTypeSwitchButton.visible = this.moreOptionsOpen;
-        if (LevelGeneratorType.TYPES[this.generatorType] == LevelGeneratorType.DEBUG_ALL_BLOCK_STATES) {
+        boolean bl = this.difficultyButton.visible = !this.moreOptionsOpen;
+        if (this.moreOptionsDialog.isDebugWorld()) {
+            this.dataPacksButton.visible = false;
             this.gameModeSwitchButton.active = false;
             if (this.lastMode == null) {
                 this.lastMode = this.currentMode;
             }
             this.tweakDefaultsTo(Mode.DEBUG);
-            this.generateStructuresButton.visible = false;
-            this.generateBonusChestButton.visible = false;
             this.enableCheatsButton.visible = false;
-            this.customizeTypeButton.visible = false;
         } else {
             this.gameModeSwitchButton.active = true;
             if (this.lastMode != null) {
                 this.tweakDefaultsTo(this.lastMode);
             }
-            this.generateStructuresButton.visible = this.moreOptionsOpen && LevelGeneratorType.TYPES[this.generatorType] != LevelGeneratorType.CUSTOMIZED;
-            this.generateBonusChestButton.visible = this.moreOptionsOpen;
-            this.enableCheatsButton.visible = this.moreOptionsOpen;
-            this.customizeTypeButton.visible = this.moreOptionsOpen && LevelGeneratorType.TYPES[this.generatorType].isCustomizable();
+            this.enableCheatsButton.visible = !this.moreOptionsOpen;
+            this.dataPacksButton.visible = !this.moreOptionsOpen;
         }
-        this.seedField.setVisible(this.moreOptionsOpen);
+        this.moreOptionsDialog.setVisible(this.moreOptionsOpen);
         this.levelNameField.setVisible(!this.moreOptionsOpen);
         if (this.moreOptionsOpen) {
-            this.moreOptionsButton.setMessage(I18n.translate("gui.done", new Object[0]));
+            this.moreOptionsButton.setMessage(ScreenTexts.DONE);
         } else {
-            this.moreOptionsButton.setMessage(I18n.translate("selectWorld.moreWorldOptions", new Object[0]));
+            this.moreOptionsButton.setMessage(new TranslatableText("selectWorld.moreWorldOptions"));
         }
+        this.gameRulesButton.visible = !this.moreOptionsOpen;
     }
 
     @Override
@@ -366,51 +360,205 @@ extends Screen {
         if (this.moreOptionsOpen) {
             this.setMoreOptionsOpen(false);
         } else {
-            this.minecraft.openScreen(this.parent);
+            this.onCloseScreen();
         }
+    }
+
+    public void onCloseScreen() {
+        this.client.openScreen(this.parent);
+        this.clearTempResources();
+    }
+
+    private void clearTempResources() {
+        if (this.packManager != null) {
+            this.packManager.close();
+        }
+        this.clearDataPackTempDir();
     }
 
     @Override
-    public void render(int mouseX, int mouseY, float delta) {
-        this.renderBackground();
-        this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 20, -1);
+    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        this.renderBackground(matrices);
+        CreateWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, -1);
         if (this.moreOptionsOpen) {
-            this.drawString(this.font, I18n.translate("selectWorld.enterSeed", new Object[0]), this.width / 2 - 100, 47, -6250336);
-            this.drawString(this.font, I18n.translate("selectWorld.seedInfo", new Object[0]), this.width / 2 - 100, 85, -6250336);
-            if (this.generateStructuresButton.visible) {
-                this.drawString(this.font, I18n.translate("selectWorld.mapFeatures.info", new Object[0]), this.width / 2 - 150, 122, -6250336);
-            }
-            if (this.enableCheatsButton.visible) {
-                this.drawString(this.font, I18n.translate("selectWorld.allowCommands.info", new Object[0]), this.width / 2 - 150, 172, -6250336);
-            }
-            this.seedField.render(mouseX, mouseY, delta);
-            if (LevelGeneratorType.TYPES[this.generatorType].hasInfo()) {
-                this.font.drawTrimmed(I18n.translate(LevelGeneratorType.TYPES[this.generatorType].getInfoTranslationKey(), new Object[0]), this.mapTypeSwitchButton.x + 2, this.mapTypeSwitchButton.y + 22, this.mapTypeSwitchButton.getWidth(), 0xA0A0A0);
-            }
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, ENTER_SEED_TEXT, this.width / 2 - 100, 47, -6250336);
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, SEED_INFO_TEXT, this.width / 2 - 100, 85, -6250336);
+            this.moreOptionsDialog.render(matrices, mouseX, mouseY, delta);
         } else {
-            this.drawString(this.font, I18n.translate("selectWorld.enterName", new Object[0]), this.width / 2 - 100, 47, -6250336);
-            this.drawString(this.font, I18n.translate("selectWorld.resultFolder", new Object[0]) + " " + this.saveDirectoryName, this.width / 2 - 100, 85, -6250336);
-            this.levelNameField.render(mouseX, mouseY, delta);
-            this.drawCenteredString(this.font, this.firstGameModeDescriptionLine, this.width / 2, 137, -6250336);
-            this.drawCenteredString(this.font, this.secondGameModeDescriptionLine, this.width / 2, 149, -6250336);
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, ENTER_NAME_TEXT, this.width / 2 - 100, 47, -6250336);
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, new LiteralText("").append(RESULT_FOLDER_TEXT).append(" ").append(this.saveDirectoryName), this.width / 2 - 100, 85, -6250336);
+            this.levelNameField.render(matrices, mouseX, mouseY, delta);
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, this.firstGameModeDescriptionLine, this.width / 2 - 150, 122, -6250336);
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, this.secondGameModeDescriptionLine, this.width / 2 - 150, 134, -6250336);
+            if (this.enableCheatsButton.visible) {
+                CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, ALLOW_COMMANDS_INFO_TEXT, this.width / 2 - 150, 172, -6250336);
+            }
         }
-        super.render(mouseX, mouseY, delta);
+        super.render(matrices, mouseX, mouseY, delta);
     }
 
-    public void recreateLevel(LevelProperties levelProperties) {
-        this.levelName = levelProperties.getLevelName();
-        this.seed = Long.toString(levelProperties.getSeed());
-        LevelGeneratorType levelGeneratorType = levelProperties.getGeneratorType() == LevelGeneratorType.CUSTOMIZED ? LevelGeneratorType.DEFAULT : levelProperties.getGeneratorType();
-        this.generatorType = levelGeneratorType.getId();
-        this.generatorOptionsTag = levelProperties.getGeneratorOptions();
-        this.structures = levelProperties.hasStructures();
-        this.cheatsEnabled = levelProperties.areCommandsAllowed();
-        if (levelProperties.isHardcore()) {
-            this.currentMode = Mode.HARDCORE;
-        } else if (levelProperties.getGameMode().isSurvivalLike()) {
-            this.currentMode = Mode.SURVIVAL;
-        } else if (levelProperties.getGameMode().isCreative()) {
-            this.currentMode = Mode.CREATIVE;
+    @Override
+    protected <T extends Element> T addChild(T child) {
+        return super.addChild(child);
+    }
+
+    @Override
+    protected <T extends ClickableWidget> T addButton(T button) {
+        return super.addButton(button);
+    }
+
+    @Nullable
+    protected Path getDataPackTempDir() {
+        if (this.dataPackTempDir == null) {
+            try {
+                this.dataPackTempDir = Files.createTempDirectory("mcworld-", new FileAttribute[0]);
+            }
+            catch (IOException iOException) {
+                LOGGER.warn("Failed to create temporary dir", (Throwable)iOException);
+                SystemToast.addPackCopyFailure(this.client, this.saveDirectoryName);
+                this.onCloseScreen();
+            }
+        }
+        return this.dataPackTempDir;
+    }
+
+    private void method_29694() {
+        Pair<File, ResourcePackManager> pair = this.method_30296();
+        if (pair != null) {
+            this.client.openScreen(new PackScreen(this, (ResourcePackManager)pair.getSecond(), this::method_29682, (File)pair.getFirst(), new TranslatableText("dataPack.title")));
+        }
+    }
+
+    private void method_29682(ResourcePackManager resourcePackManager) {
+        ImmutableList list = ImmutableList.copyOf(resourcePackManager.getEnabledNames());
+        List list2 = (List)resourcePackManager.getNames().stream().filter(arg_0 -> CreateWorldScreen.method_29983((List)list, arg_0)).collect(ImmutableList.toImmutableList());
+        DataPackSettings dataPackSettings = new DataPackSettings((List<String>)list, list2);
+        if (list.equals(this.dataPackSettings.getEnabled())) {
+            this.dataPackSettings = dataPackSettings;
+            return;
+        }
+        this.client.send(() -> this.client.openScreen(new SaveLevelScreen(new TranslatableText("dataPack.validation.working"))));
+        ServerResourceManager.reload(resourcePackManager.createResourcePacks(), CommandManager.RegistrationEnvironment.INTEGRATED, 2, Util.getMainWorkerExecutor(), this.client).handle((serverResourceManager, throwable) -> {
+            if (throwable != null) {
+                LOGGER.warn("Failed to validate datapack", throwable);
+                this.client.send(() -> this.client.openScreen(new ConfirmScreen(bl -> {
+                    if (bl) {
+                        this.method_29694();
+                    } else {
+                        this.dataPackSettings = DataPackSettings.SAFE_MODE;
+                        this.client.openScreen(this);
+                    }
+                }, new TranslatableText("dataPack.validation.failed"), LiteralText.EMPTY, new TranslatableText("dataPack.validation.back"), new TranslatableText("dataPack.validation.reset"))));
+            } else {
+                this.client.send(() -> {
+                    this.dataPackSettings = dataPackSettings;
+                    this.moreOptionsDialog.loadDatapacks((ServerResourceManager)serverResourceManager);
+                    serverResourceManager.close();
+                    this.client.openScreen(this);
+                });
+            }
+            return null;
+        });
+    }
+
+    private void clearDataPackTempDir() {
+        if (this.dataPackTempDir != null) {
+            try (Stream<Path> stream = Files.walk(this.dataPackTempDir, new FileVisitOption[0]);){
+                stream.sorted(Comparator.reverseOrder()).forEach(path -> {
+                    try {
+                        Files.delete(path);
+                    }
+                    catch (IOException iOException) {
+                        LOGGER.warn("Failed to remove temporary file {}", path, (Object)iOException);
+                    }
+                });
+            }
+            catch (IOException iOException) {
+                LOGGER.warn("Failed to list temporary dir {}", (Object)this.dataPackTempDir);
+            }
+            this.dataPackTempDir = null;
+        }
+    }
+
+    private static void copyDataPack(Path srcFolder, Path destFolder, Path dataPackFile) {
+        try {
+            Util.relativeCopy(srcFolder, destFolder, dataPackFile);
+        }
+        catch (IOException iOException) {
+            LOGGER.warn("Failed to copy datapack file from {} to {}", (Object)dataPackFile, (Object)destFolder);
+            throw new WorldCreationException(iOException);
+        }
+    }
+
+    private boolean copyTempDirDataPacks() {
+        if (this.dataPackTempDir != null) {
+            try (LevelStorage.Session session = this.client.getLevelStorage().createSession(this.saveDirectoryName);
+                 Stream<Path> stream = Files.walk(this.dataPackTempDir, new FileVisitOption[0]);){
+                Path path3 = session.getDirectory(WorldSavePath.DATAPACKS);
+                Files.createDirectories(path3, new FileAttribute[0]);
+                stream.filter(path -> !path.equals(this.dataPackTempDir)).forEach(path2 -> CreateWorldScreen.copyDataPack(this.dataPackTempDir, path3, path2));
+            }
+            catch (IOException | WorldCreationException exception) {
+                LOGGER.warn("Failed to copy datapacks to world {}", (Object)this.saveDirectoryName, (Object)exception);
+                SystemToast.addPackCopyFailure(this.client, this.saveDirectoryName);
+                this.onCloseScreen();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Nullable
+    public static Path method_29685(Path path, MinecraftClient minecraftClient) {
+        MutableObject mutableObject = new MutableObject();
+        try (Stream<Path> stream = Files.walk(path, new FileVisitOption[0]);){
+            stream.filter(path2 -> !path2.equals(path)).forEach(path2 -> {
+                Path path3 = (Path)mutableObject.getValue();
+                if (path3 == null) {
+                    try {
+                        path3 = Files.createTempDirectory("mcworld-", new FileAttribute[0]);
+                    }
+                    catch (IOException iOException) {
+                        LOGGER.warn("Failed to create temporary dir");
+                        throw new WorldCreationException(iOException);
+                    }
+                    mutableObject.setValue((Object)path3);
+                }
+                CreateWorldScreen.copyDataPack(path, path3, path2);
+            });
+        }
+        catch (IOException | WorldCreationException exception) {
+            LOGGER.warn("Failed to copy datapacks from world {}", (Object)path, (Object)exception);
+            SystemToast.addPackCopyFailure(minecraftClient, path.toString());
+            return null;
+        }
+        return (Path)mutableObject.getValue();
+    }
+
+    @Nullable
+    private Pair<File, ResourcePackManager> method_30296() {
+        Path path = this.getDataPackTempDir();
+        if (path != null) {
+            File file = path.toFile();
+            if (this.packManager == null) {
+                this.packManager = new ResourcePackManager(new VanillaDataPackProvider(), new FileResourcePackProvider(file, ResourcePackSource.field_25347));
+                this.packManager.scanPacks();
+            }
+            this.packManager.setEnabledProfiles(this.dataPackSettings.getEnabled());
+            return Pair.of((Object)file, (Object)this.packManager);
+        }
+        return null;
+    }
+
+    private static /* synthetic */ boolean method_29983(List list, String string) {
+        return !list.contains(string);
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class WorldCreationException
+    extends RuntimeException {
+        public WorldCreationException(Throwable throwable) {
+            super(throwable);
         }
     }
 

@@ -20,12 +20,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.WritableBookItem;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.text.TranslatableText;
@@ -44,18 +45,18 @@ extends Item {
         super(settings);
     }
 
-    public static boolean isValid(@Nullable CompoundTag tag) {
-        if (!WritableBookItem.isValid(tag)) {
+    public static boolean isValid(@Nullable NbtCompound nbt) {
+        if (!WritableBookItem.isValid(nbt)) {
             return false;
         }
-        if (!tag.contains("title", 8)) {
+        if (!nbt.contains("title", 8)) {
             return false;
         }
-        String string = tag.getString("title");
+        String string = nbt.getString("title");
         if (string.length() > 32) {
             return false;
         }
-        return tag.contains("author", 8);
+        return nbt.contains("author", 8);
     }
 
     public static int getGeneration(ItemStack stack) {
@@ -63,15 +64,15 @@ extends Item {
     }
 
     public static int getPageCount(ItemStack stack) {
-        CompoundTag compoundTag = stack.getTag();
-        return compoundTag != null ? compoundTag.getList("pages", 8).size() : 0;
+        NbtCompound nbtCompound = stack.getTag();
+        return nbtCompound != null ? nbtCompound.getList("pages", 8).size() : 0;
     }
 
     @Override
     public Text getName(ItemStack stack) {
-        CompoundTag compoundTag;
+        NbtCompound nbtCompound;
         String string;
-        if (stack.hasTag() && !ChatUtil.isEmpty(string = (compoundTag = stack.getTag()).getString("title"))) {
+        if (stack.hasTag() && !ChatUtil.isEmpty(string = (nbtCompound = stack.getTag()).getString("title"))) {
             return new LiteralText(string);
         }
         return super.getName(stack);
@@ -81,12 +82,12 @@ extends Item {
     @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         if (stack.hasTag()) {
-            CompoundTag compoundTag = stack.getTag();
-            String string = compoundTag.getString("author");
+            NbtCompound nbtCompound = stack.getTag();
+            String string = nbtCompound.getString("author");
             if (!ChatUtil.isEmpty(string)) {
                 tooltip.add(new TranslatableText("book.byAuthor", string).formatted(Formatting.GRAY));
             }
-            tooltip.add(new TranslatableText("book.generation." + compoundTag.getInt("generation"), new Object[0]).formatted(Formatting.GRAY));
+            tooltip.add(new TranslatableText("book.generation." + nbtCompound.getInt("generation")).formatted(Formatting.GRAY));
         }
     }
 
@@ -95,8 +96,8 @@ extends Item {
         BlockPos blockPos;
         World world = context.getWorld();
         BlockState blockState = world.getBlockState(blockPos = context.getBlockPos());
-        if (blockState.getBlock() == Blocks.LECTERN) {
-            return LecternBlock.putBookIfAbsent(world, blockPos, blockState, context.getStack()) ? ActionResult.SUCCESS : ActionResult.PASS;
+        if (blockState.isOf(Blocks.LECTERN)) {
+            return LecternBlock.putBookIfAbsent(world, blockPos, blockState, context.getStack()) ? ActionResult.success(world.isClient) : ActionResult.PASS;
         }
         return ActionResult.PASS;
     }
@@ -104,24 +105,24 @@ extends Item {
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack itemStack = user.getStackInHand(hand);
-        user.openEditBookScreen(itemStack, hand);
+        user.useBook(itemStack, hand);
         user.incrementStat(Stats.USED.getOrCreateStat(this));
-        return TypedActionResult.success(itemStack);
+        return TypedActionResult.success(itemStack, world.isClient());
     }
 
     public static boolean resolve(ItemStack book, @Nullable ServerCommandSource commandSource, @Nullable PlayerEntity player) {
-        CompoundTag compoundTag = book.getTag();
-        if (compoundTag == null || compoundTag.getBoolean("resolved")) {
+        NbtCompound nbtCompound = book.getTag();
+        if (nbtCompound == null || nbtCompound.getBoolean("resolved")) {
             return false;
         }
-        compoundTag.putBoolean("resolved", true);
-        if (!WrittenBookItem.isValid(compoundTag)) {
+        nbtCompound.putBoolean("resolved", true);
+        if (!WrittenBookItem.isValid(nbtCompound)) {
             return false;
         }
-        ListTag listTag = compoundTag.getList("pages", 8);
-        for (int i = 0; i < listTag.size(); ++i) {
-            Text text;
-            String string = listTag.getString(i);
+        NbtList nbtList = nbtCompound.getList("pages", 8);
+        for (int i = 0; i < nbtList.size(); ++i) {
+            MutableText text;
+            String string = nbtList.getString(i);
             try {
                 text = Text.Serializer.fromLenientJson(string);
                 text = Texts.parse(commandSource, text, player, 0);
@@ -129,14 +130,14 @@ extends Item {
             catch (Exception exception) {
                 text = new LiteralText(string);
             }
-            listTag.set(i, StringTag.of(Text.Serializer.toJson(text)));
+            nbtList.set(i, NbtString.of(Text.Serializer.toJson(text)));
         }
-        compoundTag.put("pages", listTag);
+        nbtCompound.put("pages", nbtList);
         return true;
     }
 
     @Override
-    public boolean hasEnchantmentGlint(ItemStack stack) {
+    public boolean hasGlint(ItemStack stack) {
         return true;
     }
 }

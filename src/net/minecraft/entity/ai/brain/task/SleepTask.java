@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableMap
  */
 package net.minecraft.entity.ai.brain.task;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.block.BedBlock;
 import net.minecraft.block.BlockState;
@@ -24,8 +20,7 @@ import net.minecraft.entity.ai.brain.task.OpenDoorsTask;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
-import net.minecraft.util.GlobalPos;
-import net.minecraft.util.Timestamp;
+import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
 
 public class SleepTask
@@ -38,20 +33,21 @@ extends Task<LivingEntity> {
 
     @Override
     protected boolean shouldRun(ServerWorld world, LivingEntity entity) {
+        long l;
         if (entity.hasVehicle()) {
             return false;
         }
         Brain<?> brain = entity.getBrain();
         GlobalPos globalPos = brain.getOptionalMemory(MemoryModuleType.HOME).get();
-        if (!Objects.equals(world.getDimension().getType(), globalPos.getDimension())) {
+        if (world.getRegistryKey() != globalPos.getDimension()) {
             return false;
         }
-        Optional<Timestamp> optional = brain.getOptionalMemory(MemoryModuleType.LAST_WOKEN);
-        if (optional.isPresent() && world.getTime() - optional.get().getTime() < 100L) {
+        Optional<Long> optional = brain.getOptionalMemory(MemoryModuleType.LAST_WOKEN);
+        if (optional.isPresent() && (l = world.getTime() - optional.get()) > 0L && l < 100L) {
             return false;
         }
         BlockState blockState = world.getBlockState(globalPos.getPos());
-        return globalPos.getPos().isWithinDistance(entity.getPos(), 2.0) && blockState.getBlock().matches(BlockTags.BEDS) && blockState.get(BedBlock.OCCUPIED) == false;
+        return globalPos.getPos().isWithinDistance(entity.getPos(), 2.0) && blockState.getBlock().isIn(BlockTags.BEDS) && blockState.get(BedBlock.OCCUPIED) == false;
     }
 
     @Override
@@ -67,7 +63,7 @@ extends Task<LivingEntity> {
     @Override
     protected void run(ServerWorld world, LivingEntity entity, long time) {
         if (time > this.startTime) {
-            entity.getBrain().getOptionalMemory(MemoryModuleType.OPENED_DOORS).ifPresent(set -> OpenDoorsTask.closeOpenedDoors(world, (List<BlockPos>)ImmutableList.of(), 0, entity, entity.getBrain()));
+            OpenDoorsTask.method_30760(world, entity, null, null);
             entity.sleep(entity.getBrain().getOptionalMemory(MemoryModuleType.HOME).get().getPos());
         }
     }

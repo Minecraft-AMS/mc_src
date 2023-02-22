@@ -25,7 +25,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.render.model.json.ModelItemPropertyOverrideList;
+import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.util.Util;
@@ -39,10 +39,10 @@ implements BakedModel {
     private final List<Pair<Predicate<BlockState>, BakedModel>> components;
     protected final boolean ambientOcclusion;
     protected final boolean depthGui;
-    protected final boolean field_21863;
+    protected final boolean sideLit;
     protected final Sprite sprite;
     protected final ModelTransformation transformations;
-    protected final ModelItemPropertyOverrideList itemPropertyOverrides;
+    protected final ModelOverrideList itemPropertyOverrides;
     private final Map<BlockState, BitSet> stateCache = new Object2ObjectOpenCustomHashMap(Util.identityHashStrategy());
 
     public MultipartBakedModel(List<Pair<Predicate<BlockState>, BakedModel>> components) {
@@ -50,10 +50,10 @@ implements BakedModel {
         BakedModel bakedModel = (BakedModel)components.iterator().next().getRight();
         this.ambientOcclusion = bakedModel.useAmbientOcclusion();
         this.depthGui = bakedModel.hasDepth();
-        this.field_21863 = bakedModel.isSideLit();
+        this.sideLit = bakedModel.isSideLit();
         this.sprite = bakedModel.getSprite();
         this.transformations = bakedModel.getTransformation();
-        this.itemPropertyOverrides = bakedModel.getItemPropertyOverrides();
+        this.itemPropertyOverrides = bakedModel.getOverrides();
     }
 
     @Override
@@ -92,7 +92,7 @@ implements BakedModel {
 
     @Override
     public boolean isSideLit() {
-        return this.field_21863;
+        return this.sideLit;
     }
 
     @Override
@@ -111,7 +111,7 @@ implements BakedModel {
     }
 
     @Override
-    public ModelItemPropertyOverrideList getItemPropertyOverrides() {
+    public ModelOverrideList getOverrides() {
         return this.itemPropertyOverrides;
     }
 

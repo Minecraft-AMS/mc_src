@@ -14,21 +14,24 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.MobSpawnerBlockEntity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -37,8 +40,9 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.MobSpawnerLogic;
-import net.minecraft.world.RayTraceContext;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,42 +65,41 @@ extends Item {
     public ActionResult useOnBlock(ItemUsageContext context) {
         BlockEntity blockEntity;
         World world = context.getWorld();
-        if (world.isClient) {
+        if (!(world instanceof ServerWorld)) {
             return ActionResult.SUCCESS;
         }
         ItemStack itemStack = context.getStack();
         BlockPos blockPos = context.getBlockPos();
         Direction direction = context.getSide();
         BlockState blockState = world.getBlockState(blockPos);
-        Block block = blockState.getBlock();
-        if (block == Blocks.SPAWNER && (blockEntity = world.getBlockEntity(blockPos)) instanceof MobSpawnerBlockEntity) {
+        if (blockState.isOf(Blocks.SPAWNER) && (blockEntity = world.getBlockEntity(blockPos)) instanceof MobSpawnerBlockEntity) {
             MobSpawnerLogic mobSpawnerLogic = ((MobSpawnerBlockEntity)blockEntity).getLogic();
             EntityType<?> entityType = this.getEntityType(itemStack.getTag());
             mobSpawnerLogic.setEntityId(entityType);
             blockEntity.markDirty();
             world.updateListeners(blockPos, blockState, blockState, 3);
             itemStack.decrement(1);
-            return ActionResult.SUCCESS;
+            return ActionResult.CONSUME;
         }
         BlockPos blockPos2 = blockState.getCollisionShape(world, blockPos).isEmpty() ? blockPos : blockPos.offset(direction);
         EntityType<?> entityType2 = this.getEntityType(itemStack.getTag());
-        if (entityType2.spawnFromItemStack(world, itemStack, context.getPlayer(), blockPos2, SpawnType.SPAWN_EGG, true, !Objects.equals(blockPos, blockPos2) && direction == Direction.UP) != null) {
+        if (entityType2.spawnFromItemStack((ServerWorld)world, itemStack, context.getPlayer(), blockPos2, SpawnReason.SPAWN_EGG, true, !Objects.equals(blockPos, blockPos2) && direction == Direction.UP) != null) {
             itemStack.decrement(1);
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.CONSUME;
     }
 
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack itemStack = user.getStackInHand(hand);
-        HitResult hitResult = SpawnEggItem.rayTrace(world, user, RayTraceContext.FluidHandling.SOURCE_ONLY);
-        if (hitResult.getType() != HitResult.Type.BLOCK) {
+        BlockHitResult hitResult = SpawnEggItem.raycast(world, user, RaycastContext.FluidHandling.SOURCE_ONLY);
+        if (((HitResult)hitResult).getType() != HitResult.Type.BLOCK) {
             return TypedActionResult.pass(itemStack);
         }
-        if (world.isClient) {
+        if (!(world instanceof ServerWorld)) {
             return TypedActionResult.success(itemStack);
         }
-        BlockHitResult blockHitResult = (BlockHitResult)hitResult;
+        BlockHitResult blockHitResult = hitResult;
         BlockPos blockPos = blockHitResult.getBlockPos();
         if (!(world.getBlockState(blockPos).getBlock() instanceof FluidBlock)) {
             return TypedActionResult.pass(itemStack);
@@ -105,18 +108,18 @@ extends Item {
             return TypedActionResult.fail(itemStack);
         }
         EntityType<?> entityType = this.getEntityType(itemStack.getTag());
-        if (entityType.spawnFromItemStack(world, itemStack, user, blockPos, SpawnType.SPAWN_EGG, false, false) == null) {
+        if (entityType.spawnFromItemStack((ServerWorld)world, itemStack, user, blockPos, SpawnReason.SPAWN_EGG, false, false) == null) {
             return TypedActionResult.pass(itemStack);
         }
         if (!user.abilities.creativeMode) {
             itemStack.decrement(1);
         }
         user.incrementStat(Stats.USED.getOrCreateStat(this));
-        return TypedActionResult.success(itemStack);
+        return TypedActionResult.consume(itemStack);
     }
 
-    public boolean isOfSameEntityType(@Nullable CompoundTag tag, EntityType<?> type) {
-        return Objects.equals(this.getEntityType(tag), type);
+    public boolean isOfSameEntityType(@Nullable NbtCompound nbt, EntityType<?> type) {
+        return Objects.equals(this.getEntityType(nbt), type);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -134,12 +137,35 @@ extends Item {
         return Iterables.unmodifiableIterable(SPAWN_EGGS.values());
     }
 
-    public EntityType<?> getEntityType(@Nullable CompoundTag tag) {
-        CompoundTag compoundTag;
-        if (tag != null && tag.contains("EntityTag", 10) && (compoundTag = tag.getCompound("EntityTag")).contains("id", 8)) {
-            return EntityType.get(compoundTag.getString("id")).orElse(this.type);
+    public EntityType<?> getEntityType(@Nullable NbtCompound nbt) {
+        NbtCompound nbtCompound;
+        if (nbt != null && nbt.contains("EntityTag", 10) && (nbtCompound = nbt.getCompound("EntityTag")).contains("id", 8)) {
+            return EntityType.get(nbtCompound.getString("id")).orElse(this.type);
         }
         return this.type;
+    }
+
+    public Optional<MobEntity> spawnBaby(PlayerEntity user, MobEntity entity, EntityType<? extends MobEntity> entityType, ServerWorld world, Vec3d pos, ItemStack stack) {
+        if (!this.isOfSameEntityType(stack.getTag(), entityType)) {
+            return Optional.empty();
+        }
+        MobEntity mobEntity = entity instanceof PassiveEntity ? ((PassiveEntity)entity).createChild(world, (PassiveEntity)entity) : entityType.create(world);
+        if (mobEntity == null) {
+            return Optional.empty();
+        }
+        mobEntity.setBaby(true);
+        if (!mobEntity.isBaby()) {
+            return Optional.empty();
+        }
+        mobEntity.refreshPositionAndAngles(pos.getX(), pos.getY(), pos.getZ(), 0.0f, 0.0f);
+        world.spawnEntityAndPassengers(mobEntity);
+        if (stack.hasCustomName()) {
+            mobEntity.setCustomName(stack.getName());
+        }
+        if (!user.abilities.creativeMode) {
+            stack.decrement(1);
+        }
+        return Optional.of(mobEntity);
     }
 }
 

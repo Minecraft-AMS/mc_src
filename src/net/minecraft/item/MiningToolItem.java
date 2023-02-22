@@ -2,42 +2,51 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMultimap
+ *  com.google.common.collect.ImmutableMultimap$Builder
  *  com.google.common.collect.Multimap
  */
 package net.minecraft.item;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import java.util.Set;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ToolItem;
 import net.minecraft.item.ToolMaterial;
+import net.minecraft.item.Vanishable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 public class MiningToolItem
-extends ToolItem {
+extends ToolItem
+implements Vanishable {
     private final Set<Block> effectiveBlocks;
     protected final float miningSpeed;
-    protected final float attackDamage;
-    protected final float attackSpeed;
+    private final float attackDamage;
+    private final Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers;
 
     protected MiningToolItem(float attackDamage, float attackSpeed, ToolMaterial material, Set<Block> effectiveBlocks, Item.Settings settings) {
         super(material, settings);
         this.effectiveBlocks = effectiveBlocks;
-        this.miningSpeed = material.getMiningSpeed();
+        this.miningSpeed = material.getMiningSpeedMultiplier();
         this.attackDamage = attackDamage + material.getAttackDamage();
-        this.attackSpeed = attackSpeed;
+        ImmutableMultimap.Builder builder = ImmutableMultimap.builder();
+        builder.put((Object)EntityAttributes.GENERIC_ATTACK_DAMAGE, (Object)new EntityAttributeModifier(ATTACK_DAMAGE_MODIFIER_ID, "Tool modifier", (double)this.attackDamage, EntityAttributeModifier.Operation.ADDITION));
+        builder.put((Object)EntityAttributes.GENERIC_ATTACK_SPEED, (Object)new EntityAttributeModifier(ATTACK_SPEED_MODIFIER_ID, "Tool modifier", (double)attackSpeed, EntityAttributeModifier.Operation.ADDITION));
+        this.attributeModifiers = builder.build();
     }
 
     @Override
-    public float getMiningSpeed(ItemStack stack, BlockState state) {
+    public float getMiningSpeedMultiplier(ItemStack stack, BlockState state) {
         return this.effectiveBlocks.contains(state.getBlock()) ? this.miningSpeed : 1.0f;
     }
 
@@ -56,13 +65,15 @@ extends ToolItem {
     }
 
     @Override
-    public Multimap<String, EntityAttributeModifier> getModifiers(EquipmentSlot slot) {
-        Multimap<String, EntityAttributeModifier> multimap = super.getModifiers(slot);
+    public Multimap<EntityAttribute, EntityAttributeModifier> getAttributeModifiers(EquipmentSlot slot) {
         if (slot == EquipmentSlot.MAINHAND) {
-            multimap.put((Object)EntityAttributes.ATTACK_DAMAGE.getId(), (Object)new EntityAttributeModifier(ATTACK_DAMAGE_MODIFIER_UUID, "Tool modifier", (double)this.attackDamage, EntityAttributeModifier.Operation.ADDITION));
-            multimap.put((Object)EntityAttributes.ATTACK_SPEED.getId(), (Object)new EntityAttributeModifier(ATTACK_SPEED_MODIFIER_UUID, "Tool modifier", (double)this.attackSpeed, EntityAttributeModifier.Operation.ADDITION));
+            return this.attributeModifiers;
         }
-        return multimap;
+        return super.getAttributeModifiers(slot);
+    }
+
+    public float getAttackDamage() {
+        return this.attackDamage;
     }
 }
 

@@ -5,7 +5,6 @@
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.BufferUtils
  *  org.lwjgl.PointerBuffer
  *  org.lwjgl.stb.STBVorbis
@@ -28,7 +27,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.AudioStream;
 import net.minecraft.util.math.MathHelper;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.stb.STBVorbis;
@@ -181,15 +179,13 @@ implements AudioStream {
     }
 
     @Override
-    @Nullable
-    public ByteBuffer method_19720(int i) throws IOException {
-        ChannelList channelList = new ChannelList(i + 8192);
-        while (this.readOggFile(channelList) && channelList.field_18913 < i) {
+    public ByteBuffer getBuffer(int size) throws IOException {
+        ChannelList channelList = new ChannelList(size + 8192);
+        while (this.readOggFile(channelList) && channelList.currentBufferSize < size) {
         }
         return channelList.getBuffer();
     }
 
-    @Override
     public ByteBuffer getBuffer() throws IOException {
         ChannelList channelList = new ChannelList(16384);
         while (this.readOggFile(channelList)) {
@@ -201,11 +197,11 @@ implements AudioStream {
     static class ChannelList {
         private final List<ByteBuffer> buffers = Lists.newArrayList();
         private final int size;
-        private int field_18913;
+        private int currentBufferSize;
         private ByteBuffer buffer;
 
-        public ChannelList(int i) {
-            this.size = i + 1 & 0xFFFFFFFE;
+        public ChannelList(int size) {
+            this.size = size + 1 & 0xFFFFFFFE;
             this.init();
         }
 
@@ -221,7 +217,7 @@ implements AudioStream {
             }
             int i = MathHelper.clamp((int)(f * 32767.5f - 0.5f), Short.MIN_VALUE, Short.MAX_VALUE);
             this.buffer.putShort((short)i);
-            this.field_18913 += 2;
+            this.currentBufferSize += 2;
         }
 
         public ByteBuffer getBuffer() {
@@ -229,7 +225,7 @@ implements AudioStream {
             if (this.buffers.isEmpty()) {
                 return this.buffer;
             }
-            ByteBuffer byteBuffer = BufferUtils.createByteBuffer((int)this.field_18913);
+            ByteBuffer byteBuffer = BufferUtils.createByteBuffer((int)this.currentBufferSize);
             this.buffers.forEach(byteBuffer::put);
             byteBuffer.put(this.buffer);
             byteBuffer.flip();

@@ -14,20 +14,20 @@ import java.util.Collection;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.PacketByteBuf;
 
 public class TeamS2CPacket
 implements Packet<ClientPlayPacketListener> {
     private String teamName = "";
-    private Text displayName = new LiteralText("");
-    private Text prefix = new LiteralText("");
-    private Text suffix = new LiteralText("");
+    private Text displayName = LiteralText.EMPTY;
+    private Text prefix = LiteralText.EMPTY;
+    private Text suffix = LiteralText.EMPTY;
     private String nameTagVisibilityRule;
     private String collisionRule;
     private Formatting color;
@@ -63,18 +63,18 @@ implements Packet<ClientPlayPacketListener> {
         }
     }
 
-    public TeamS2CPacket(Team team, Collection<String> playerList, int i) {
+    public TeamS2CPacket(Team team, Collection<String> playerList, int mode) {
         this.nameTagVisibilityRule = AbstractTeam.VisibilityRule.ALWAYS.name;
         this.collisionRule = AbstractTeam.CollisionRule.ALWAYS.name;
         this.color = Formatting.RESET;
         this.playerList = Lists.newArrayList();
-        if (i != 3 && i != 4) {
+        if (mode != 3 && mode != 4) {
             throw new IllegalArgumentException("Method must be join or leave for player constructor");
         }
         if (playerList == null || playerList.isEmpty()) {
             throw new IllegalArgumentException("Players cannot be null/empty");
         }
-        this.mode = i;
+        this.mode = mode;
         this.teamName = team.getName();
         this.playerList.addAll(playerList);
     }

@@ -19,7 +19,7 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.ExperienceOrbSpawnS2CPacket;
 import net.minecraft.sound.SoundEvents;
@@ -40,7 +40,7 @@ extends Entity {
 
     public ExperienceOrbEntity(World world, double x, double y, double z, int amount) {
         this((EntityType<? extends ExperienceOrbEntity>)EntityType.EXPERIENCE_ORB, world);
-        this.updatePosition(x, y, z);
+        this.setPosition(x, y, z);
         this.yaw = (float)(this.random.nextDouble() * 360.0);
         this.setVelocity((this.random.nextDouble() * (double)0.2f - (double)0.1f) * 2.0, this.random.nextDouble() * 0.2 * 2.0, (this.random.nextDouble() * (double)0.2f - (double)0.1f) * 2.0);
         this.amount = amount;
@@ -70,17 +70,17 @@ extends Entity {
         this.prevX = this.getX();
         this.prevY = this.getY();
         this.prevZ = this.getZ();
-        if (this.isInFluid(FluidTags.WATER)) {
+        if (this.isSubmergedIn(FluidTags.WATER)) {
             this.applyWaterMovement();
         } else if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.03, 0.0));
         }
-        if (this.world.getFluidState(new BlockPos(this)).matches(FluidTags.LAVA)) {
+        if (this.world.getFluidState(this.getBlockPos()).isIn(FluidTags.LAVA)) {
             this.setVelocity((this.random.nextFloat() - this.random.nextFloat()) * 0.2f, 0.2f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
             this.playSound(SoundEvents.ENTITY_GENERIC_BURN, 0.4f, 2.0f + this.random.nextFloat() * 0.4f);
         }
-        if (!this.world.doesNotCollide(this.getBoundingBox())) {
-            this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().y1 + this.getBoundingBox().y2) / 2.0, this.getZ());
+        if (!this.world.isSpaceEmpty(this.getBoundingBox())) {
+            this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().minY + this.getBoundingBox().maxY) / 2.0, this.getZ());
         }
         double d = 8.0;
         if (this.lastTargetUpdateTick < this.renderTicks - 20 + this.getEntityId() % 100) {
@@ -122,11 +122,6 @@ extends Entity {
     }
 
     @Override
-    protected void burn(int time) {
-        this.damage(DamageSource.IN_FIRE, time);
-    }
-
-    @Override
     public boolean damage(DamageSource source, float amount) {
         if (this.isInvulnerableTo(source)) {
             return false;
@@ -140,17 +135,17 @@ extends Entity {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        tag.putShort("Health", (short)this.health);
-        tag.putShort("Age", (short)this.orbAge);
-        tag.putShort("Value", (short)this.amount);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        nbt.putShort("Health", (short)this.health);
+        nbt.putShort("Age", (short)this.orbAge);
+        nbt.putShort("Value", (short)this.amount);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        this.health = tag.getShort("Health");
-        this.orbAge = tag.getShort("Age");
-        this.amount = tag.getShort("Value");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        this.health = nbt.getShort("Health");
+        this.orbAge = nbt.getShort("Age");
+        this.amount = nbt.getShort("Value");
     }
 
     @Override
@@ -162,7 +157,7 @@ extends Entity {
             ItemStack itemStack;
             player.experiencePickUpDelay = 2;
             player.sendPickup(this, 1);
-            Map.Entry<EquipmentSlot, ItemStack> entry = EnchantmentHelper.getRandomEnchantedEquipment(Enchantments.MENDING, player);
+            Map.Entry<EquipmentSlot, ItemStack> entry = EnchantmentHelper.chooseEquipmentWith(Enchantments.MENDING, player, ItemStack::isDamaged);
             if (entry != null && !(itemStack = entry.getValue()).isEmpty() && itemStack.isDamaged()) {
                 int i = Math.min(this.getMendingRepairAmount(this.amount), itemStack.getDamage());
                 this.amount -= this.getMendingRepairCost(i);

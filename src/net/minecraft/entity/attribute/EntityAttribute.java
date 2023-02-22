@@ -1,23 +1,37 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.attribute;
 
-import org.jetbrains.annotations.Nullable;
+public class EntityAttribute {
+    private final double fallback;
+    private boolean tracked;
+    private final String translationKey;
 
-public interface EntityAttribute {
-    public String getId();
+    protected EntityAttribute(String translationKey, double fallback) {
+        this.fallback = fallback;
+        this.translationKey = translationKey;
+    }
 
-    public double clamp(double var1);
+    public double getDefaultValue() {
+        return this.fallback;
+    }
 
-    public double getDefaultValue();
+    public boolean isTracked() {
+        return this.tracked;
+    }
 
-    public boolean isTracked();
+    public EntityAttribute setTracked(boolean tracked) {
+        this.tracked = tracked;
+        return this;
+    }
 
-    @Nullable
-    public EntityAttribute getParent();
+    public double clamp(double value) {
+        return value;
+    }
+
+    public String getTranslationKey() {
+        return this.translationKey;
+    }
 }
 

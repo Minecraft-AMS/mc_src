@@ -12,17 +12,19 @@ import net.minecraft.network.packet.s2c.login.LoginDisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
 import net.minecraft.server.network.ServerQueryNetworkHandler;
+import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 
 public class ServerHandshakeNetworkHandler
 implements ServerHandshakePacketListener {
+    private static final Text IGNORING_STATUS_REQUEST_MESSAGE = new LiteralText("Ignoring status request");
     private final MinecraftServer server;
     private final ClientConnection connection;
 
-    public ServerHandshakeNetworkHandler(MinecraftServer minecraftServer, ClientConnection clientConnection) {
-        this.server = minecraftServer;
-        this.connection = clientConnection;
+    public ServerHandshakeNetworkHandler(MinecraftServer server, ClientConnection connection) {
+        this.server = server;
+        this.connection = connection;
     }
 
     @Override
@@ -30,14 +32,8 @@ implements ServerHandshakePacketListener {
         switch (packet.getIntendedState()) {
             case LOGIN: {
                 this.connection.setState(NetworkState.LOGIN);
-                if (packet.getProtocolVersion() > SharedConstants.getGameVersion().getProtocolVersion()) {
-                    TranslatableText text = new TranslatableText("multiplayer.disconnect.outdated_server", SharedConstants.getGameVersion().getName());
-                    this.connection.send(new LoginDisconnectS2CPacket(text));
-                    this.connection.disconnect(text);
-                    break;
-                }
-                if (packet.getProtocolVersion() < SharedConstants.getGameVersion().getProtocolVersion()) {
-                    TranslatableText text = new TranslatableText("multiplayer.disconnect.outdated_client", SharedConstants.getGameVersion().getName());
+                if (packet.getProtocolVersion() != SharedConstants.getGameVersion().getProtocolVersion()) {
+                    TranslatableText text = packet.getProtocolVersion() < 754 ? new TranslatableText("multiplayer.disconnect.outdated_client", SharedConstants.getGameVersion().getName()) : new TranslatableText("multiplayer.disconnect.incompatible", SharedConstants.getGameVersion().getName());
                     this.connection.send(new LoginDisconnectS2CPacket(text));
                     this.connection.disconnect(text);
                     break;
@@ -46,8 +42,12 @@ implements ServerHandshakePacketListener {
                 break;
             }
             case STATUS: {
-                this.connection.setState(NetworkState.STATUS);
-                this.connection.setPacketListener(new ServerQueryNetworkHandler(this.server, this.connection));
+                if (this.server.acceptsStatusQuery()) {
+                    this.connection.setState(NetworkState.STATUS);
+                    this.connection.setPacketListener(new ServerQueryNetworkHandler(this.server, this.connection));
+                    break;
+                }
+                this.connection.disconnect(IGNORING_STATUS_REQUEST_MESSAGE);
                 break;
             }
             default: {

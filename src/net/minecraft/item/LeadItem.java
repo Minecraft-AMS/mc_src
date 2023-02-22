@@ -5,7 +5,7 @@ package net.minecraft.item;
 
 import java.util.List;
 import net.minecraft.block.Block;
-import net.minecraft.entity.decoration.LeadKnotEntity;
+import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -27,30 +27,30 @@ extends Item {
         BlockPos blockPos;
         World world = context.getWorld();
         Block block = world.getBlockState(blockPos = context.getBlockPos()).getBlock();
-        if (block.matches(BlockTags.FENCES)) {
+        if (block.isIn(BlockTags.FENCES)) {
             PlayerEntity playerEntity = context.getPlayer();
             if (!world.isClient && playerEntity != null) {
                 LeadItem.attachHeldMobsToBlock(playerEntity, world, blockPos);
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         return ActionResult.PASS;
     }
 
-    public static ActionResult attachHeldMobsToBlock(PlayerEntity playerEntity, World world, BlockPos blockPos) {
-        LeadKnotEntity leadKnotEntity = null;
+    public static ActionResult attachHeldMobsToBlock(PlayerEntity player, World world, BlockPos pos) {
+        LeashKnotEntity leashKnotEntity = null;
         boolean bl = false;
         double d = 7.0;
-        int i = blockPos.getX();
-        int j = blockPos.getY();
-        int k = blockPos.getZ();
+        int i = pos.getX();
+        int j = pos.getY();
+        int k = pos.getZ();
         List<MobEntity> list = world.getNonSpectatingEntities(MobEntity.class, new Box((double)i - 7.0, (double)j - 7.0, (double)k - 7.0, (double)i + 7.0, (double)j + 7.0, (double)k + 7.0));
         for (MobEntity mobEntity : list) {
-            if (mobEntity.getHoldingEntity() != playerEntity) continue;
-            if (leadKnotEntity == null) {
-                leadKnotEntity = LeadKnotEntity.getOrCreate(world, blockPos);
+            if (mobEntity.getHoldingEntity() != player) continue;
+            if (leashKnotEntity == null) {
+                leashKnotEntity = LeashKnotEntity.getOrCreate(world, pos);
             }
-            mobEntity.attachLeash(leadKnotEntity, true);
+            mobEntity.attachLeash(leashKnotEntity, true);
             bl = true;
         }
         return bl ? ActionResult.SUCCESS : ActionResult.PASS;

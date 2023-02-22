@@ -14,10 +14,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import net.minecraft.loot.UniformLootTableRange;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 import org.jetbrains.annotations.Nullable;
 
 public class TimeCheckLootCondition
@@ -32,6 +34,11 @@ implements LootCondition {
     }
 
     @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.TIME_CHECK;
+    }
+
+    @Override
     public boolean test(LootContext lootContext) {
         ServerWorld serverWorld = lootContext.getWorld();
         long l = serverWorld.getTimeOfDay();
@@ -42,16 +49,12 @@ implements LootCondition {
     }
 
     @Override
-    public /* synthetic */ boolean test(Object object) {
-        return this.test((LootContext)object);
+    public /* synthetic */ boolean test(Object context) {
+        return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<TimeCheckLootCondition> {
-        public Factory() {
-            super(new Identifier("time_check"), TimeCheckLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<TimeCheckLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, TimeCheckLootCondition timeCheckLootCondition, JsonSerializationContext jsonSerializationContext) {
             jsonObject.addProperty("period", (Number)timeCheckLootCondition.period);
@@ -66,7 +69,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

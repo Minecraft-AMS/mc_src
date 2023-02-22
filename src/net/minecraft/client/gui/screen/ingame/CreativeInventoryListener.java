@@ -10,14 +10,14 @@ package net.minecraft.client.gui.screen.ingame;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.container.Container;
-import net.minecraft.container.ContainerListener;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerListener;
+import net.minecraft.util.collection.DefaultedList;
 
 @Environment(value=EnvType.CLIENT)
 public class CreativeInventoryListener
-implements ContainerListener {
+implements ScreenHandlerListener {
     private final MinecraftClient client;
 
     public CreativeInventoryListener(MinecraftClient client) {
@@ -25,16 +25,16 @@ implements ContainerListener {
     }
 
     @Override
-    public void onContainerRegistered(Container container, DefaultedList<ItemStack> defaultedList) {
+    public void onHandlerRegistered(ScreenHandler handler, DefaultedList<ItemStack> stacks) {
     }
 
     @Override
-    public void onContainerSlotUpdate(Container container, int slotId, ItemStack itemStack) {
-        this.client.interactionManager.clickCreativeStack(itemStack, slotId);
+    public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack) {
+        this.client.interactionManager.clickCreativeStack(stack, slotId);
     }
 
     @Override
-    public void onContainerPropertyUpdate(Container container, int propertyId, int i) {
+    public void onPropertyUpdate(ScreenHandler handler, int property, int value) {
     }
 }
 

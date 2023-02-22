@@ -17,7 +17,6 @@ import com.google.common.collect.Sets;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +85,7 @@ implements DebugRenderer.Renderer {
     }
 
     private void removeInvalidBees() {
-        this.bees.entrySet().removeIf(entry -> this.client.world.getEntityById(((Bee)entry.getValue()).id) == null);
+        this.bees.entrySet().removeIf(entry -> this.client.world.getEntityById(((Bee)entry.getValue()).entityId) == null);
     }
 
     private void removeOutdatedHives() {
@@ -122,20 +121,13 @@ implements DebugRenderer.Renderer {
 
     private Map<BlockPos, Set<UUID>> getBlacklistingBees() {
         HashMap map = Maps.newHashMap();
-        this.bees.values().forEach(bee -> bee.blacklistedHives.forEach(blockPos -> BeeDebugRenderer.addToMap(map, bee, blockPos)));
+        this.bees.values().forEach(bee -> bee.blacklist.forEach(blockPos2 -> map.computeIfAbsent(blockPos2, blockPos -> Sets.newHashSet()).add(bee.getUuid())));
         return map;
     }
 
     private void drawFlowers() {
         HashMap map = Maps.newHashMap();
-        this.bees.values().stream().filter(Bee::hasFlower).forEach(bee -> {
-            Set set = (Set)map.get(bee.flowerPos);
-            if (set == null) {
-                set = Sets.newHashSet();
-                map.put(bee.flowerPos, set);
-            }
-            set.add(bee.getUuid());
-        });
+        this.bees.values().stream().filter(Bee::hasFlower).forEach(bee -> map.computeIfAbsent(bee.flower, blockPos -> Sets.newHashSet()).add(bee.getUuid()));
         map.entrySet().forEach(entry -> {
             BlockPos blockPos = (BlockPos)entry.getKey();
             Set set = (Set)entry.getValue();
@@ -156,15 +148,6 @@ implements DebugRenderer.Renderer {
             return "" + bees.size() + " bees";
         }
         return bees.stream().map(NameGenerator::name).collect(Collectors.toSet()).toString();
-    }
-
-    private static void addToMap(Map<BlockPos, Set<UUID>> map, Bee arg, BlockPos pos) {
-        HashSet set = map.get(pos);
-        if (set == null) {
-            set = Sets.newHashSet();
-            map.put(pos, set);
-        }
-        set.add(arg.getUuid());
     }
 
     private static void drawHive(BlockPos pos) {
@@ -199,7 +182,7 @@ implements DebugRenderer.Renderer {
             BeeDebugRenderer.drawString("In: " + hive.beeCount + " bees", hive, i++, -256);
         }
         BeeDebugRenderer.drawString("Honey: " + hive.honeyLevel, hive, i++, -23296);
-        BeeDebugRenderer.drawString(hive.field_21544 + (hive.sedated ? " (sedated)" : ""), hive, i++, -1);
+        BeeDebugRenderer.drawString(hive.label + (hive.sedated ? " (sedated)" : ""), hive, i++, -1);
     }
 
     private void drawPath(Bee bee) {
@@ -211,26 +194,26 @@ implements DebugRenderer.Renderer {
     private void drawBee(Bee bee) {
         boolean bl = this.isTargeted(bee);
         int i = 0;
-        BeeDebugRenderer.drawString(bee.pos, i++, bee.toString(), -1, 0.03f);
-        if (bee.hivePos == null) {
-            BeeDebugRenderer.drawString(bee.pos, i++, "No hive", -98404, 0.02f);
+        BeeDebugRenderer.drawString(bee.position, i++, bee.toString(), -1, 0.03f);
+        if (bee.hive == null) {
+            BeeDebugRenderer.drawString(bee.position, i++, "No hive", -98404, 0.02f);
         } else {
-            BeeDebugRenderer.drawString(bee.pos, i++, "Hive: " + this.getPositionString(bee, bee.hivePos), -256, 0.02f);
+            BeeDebugRenderer.drawString(bee.position, i++, "Hive: " + this.getPositionString(bee, bee.hive), -256, 0.02f);
         }
-        if (bee.flowerPos == null) {
-            BeeDebugRenderer.drawString(bee.pos, i++, "No flower", -98404, 0.02f);
+        if (bee.flower == null) {
+            BeeDebugRenderer.drawString(bee.position, i++, "No flower", -98404, 0.02f);
         } else {
-            BeeDebugRenderer.drawString(bee.pos, i++, "Flower: " + this.getPositionString(bee, bee.flowerPos), -256, 0.02f);
+            BeeDebugRenderer.drawString(bee.position, i++, "Flower: " + this.getPositionString(bee, bee.flower), -256, 0.02f);
         }
-        for (String string : bee.field_21542) {
-            BeeDebugRenderer.drawString(bee.pos, i++, string, -16711936, 0.02f);
+        for (String string : bee.labels) {
+            BeeDebugRenderer.drawString(bee.position, i++, string, -16711936, 0.02f);
         }
         if (bl) {
             this.drawPath(bee);
         }
-        if (bee.travellingTicks > 0) {
-            int j = bee.travellingTicks < 600 ? -3355444 : -23296;
-            BeeDebugRenderer.drawString(bee.pos, i++, "Travelling: " + bee.travellingTicks + " ticks", j, 0.02f);
+        if (bee.travelTicks > 0) {
+            int j = bee.travelTicks < 600 ? -3355444 : -23296;
+            BeeDebugRenderer.drawString(bee.position, i++, "Travelling: " + bee.travelTicks + " ticks", j, 0.02f);
         }
     }
 
@@ -264,7 +247,7 @@ implements DebugRenderer.Renderer {
     }
 
     private String getPositionString(Bee bee, BlockPos pos) {
-        float f = MathHelper.sqrt(pos.getSquaredDistance(bee.pos.getX(), bee.pos.getY(), bee.pos.getZ(), true));
+        float f = MathHelper.sqrt(pos.getSquaredDistance(bee.position.getX(), bee.position.getY(), bee.position.getZ(), true));
         double d = (double)Math.round(f * 10.0f) / 10.0;
         return pos.toShortString() + " (dist " + d + ")";
     }
@@ -275,25 +258,20 @@ implements DebugRenderer.Renderer {
 
     private boolean isInRange(Bee bee) {
         ClientPlayerEntity playerEntity = this.client.player;
-        BlockPos blockPos = new BlockPos(playerEntity.getX(), bee.pos.getY(), playerEntity.getZ());
-        BlockPos blockPos2 = new BlockPos(bee.pos);
+        BlockPos blockPos = new BlockPos(playerEntity.getX(), bee.position.getY(), playerEntity.getZ());
+        BlockPos blockPos2 = new BlockPos(bee.position);
         return blockPos.isWithinDistance(blockPos2, 30.0);
     }
 
     private Collection<UUID> getBeesForHive(BlockPos hivePos) {
-        return this.bees.values().stream().filter(bee -> bee.isHive(hivePos)).map(Bee::getUuid).collect(Collectors.toSet());
+        return this.bees.values().stream().filter(bee -> bee.isHiveAt(hivePos)).map(Bee::getUuid).collect(Collectors.toSet());
     }
 
     private Map<BlockPos, List<String>> getBeesByHive() {
         HashMap map = Maps.newHashMap();
         for (Bee bee : this.bees.values()) {
-            if (bee.hivePos == null || this.hives.containsKey(bee.hivePos)) continue;
-            List list = (List)map.get(bee.hivePos);
-            if (list == null) {
-                list = Lists.newArrayList();
-                map.put(bee.hivePos, list);
-            }
-            list.add(bee.getName());
+            if (bee.hive == null || this.hives.containsKey(bee.hive)) continue;
+            map.computeIfAbsent(bee.hive, blockPos -> Lists.newArrayList()).add(bee.getName());
         }
         return map;
     }
@@ -307,30 +285,30 @@ implements DebugRenderer.Renderer {
     @Environment(value=EnvType.CLIENT)
     public static class Bee {
         public final UUID uuid;
-        public final int id;
-        public final Position pos;
+        public final int entityId;
+        public final Position position;
         @Nullable
         public final Path path;
         @Nullable
-        public final BlockPos hivePos;
+        public final BlockPos hive;
         @Nullable
-        public final BlockPos flowerPos;
-        public final int travellingTicks;
-        public final List<String> field_21542 = Lists.newArrayList();
-        public final Set<BlockPos> blacklistedHives = Sets.newHashSet();
+        public final BlockPos flower;
+        public final int travelTicks;
+        public final List<String> labels = Lists.newArrayList();
+        public final Set<BlockPos> blacklist = Sets.newHashSet();
 
-        public Bee(UUID uuid, int id, Position pos, Path path, BlockPos hivePos, BlockPos flowerPos, int travellingTicks) {
+        public Bee(UUID uuid, int entityId, Position position, Path path, BlockPos hive, BlockPos flower, int travelTicks) {
             this.uuid = uuid;
-            this.id = id;
-            this.pos = pos;
+            this.entityId = entityId;
+            this.position = position;
             this.path = path;
-            this.hivePos = hivePos;
-            this.flowerPos = flowerPos;
-            this.travellingTicks = travellingTicks;
+            this.hive = hive;
+            this.flower = flower;
+            this.travelTicks = travelTicks;
         }
 
-        public boolean isHive(BlockPos pos) {
-            return this.hivePos != null && this.hivePos.equals(pos);
+        public boolean isHiveAt(BlockPos pos) {
+            return this.hive != null && this.hive.equals(pos);
         }
 
         public UUID getUuid() {
@@ -346,22 +324,22 @@ implements DebugRenderer.Renderer {
         }
 
         public boolean hasFlower() {
-            return this.flowerPos != null;
+            return this.flower != null;
         }
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class Hive {
         public final BlockPos pos;
-        public final String field_21544;
+        public final String label;
         public final int beeCount;
         public final int honeyLevel;
         public final boolean sedated;
         public final long time;
 
-        public Hive(BlockPos pos, String string, int beeCount, int honeyLevel, boolean sedated, long time) {
+        public Hive(BlockPos pos, String label, int beeCount, int honeyLevel, boolean sedated, long time) {
             this.pos = pos;
-            this.field_21544 = string;
+            this.label = label;
             this.beeCount = beeCount;
             this.honeyLevel = honeyLevel;
             this.sedated = sedated;

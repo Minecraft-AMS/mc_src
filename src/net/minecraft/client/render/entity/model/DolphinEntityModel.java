@@ -21,7 +21,7 @@ public class DolphinEntityModel<T extends Entity>
 extends CompositeEntityModel<T> {
     private final ModelPart body;
     private final ModelPart tail;
-    private final ModelPart flukes;
+    private final ModelPart tailFin;
 
     public DolphinEntityModel() {
         this.textureWidth = 64;
@@ -53,11 +53,11 @@ extends CompositeEntityModel<T> {
         this.tail.setPivot(0.0f, -2.5f, 11.0f);
         this.tail.pitch = -0.10471976f;
         this.body.addChild(this.tail);
-        this.flukes = new ModelPart(this, 19, 20);
-        this.flukes.addCuboid(-5.0f, -0.5f, 0.0f, 10.0f, 1.0f, 6.0f);
-        this.flukes.setPivot(0.0f, 0.0f, 9.0f);
-        this.flukes.pitch = 0.0f;
-        this.tail.addChild(this.flukes);
+        this.tailFin = new ModelPart(this, 19, 20);
+        this.tailFin.addCuboid(-5.0f, -0.5f, 0.0f, 10.0f, 1.0f, 6.0f);
+        this.tailFin.setPivot(0.0f, 0.0f, 9.0f);
+        this.tailFin.pitch = 0.0f;
+        this.tail.addChild(this.tailFin);
         ModelPart modelPart4 = new ModelPart(this, 0, 0);
         modelPart4.addCuboid(-4.0f, -3.0f, -3.0f, 8.0f, 7.0f, 6.0f);
         modelPart4.setPivot(0.0f, -4.0f, -3.0f);
@@ -73,13 +73,13 @@ extends CompositeEntityModel<T> {
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
+    public void setAngles(T entity, float limbAngle, float limbDistance, float animationProgress, float headYaw, float headPitch) {
         this.body.pitch = headPitch * ((float)Math.PI / 180);
         this.body.yaw = headYaw * ((float)Math.PI / 180);
         if (Entity.squaredHorizontalLength(((Entity)entity).getVelocity()) > 1.0E-7) {
-            this.body.pitch += -0.05f + -0.05f * MathHelper.cos(customAngle * 0.3f);
-            this.tail.pitch = -0.1f * MathHelper.cos(customAngle * 0.3f);
-            this.flukes.pitch = -0.2f * MathHelper.cos(customAngle * 0.3f);
+            this.body.pitch += -0.05f + -0.05f * MathHelper.cos(animationProgress * 0.3f);
+            this.tail.pitch = -0.1f * MathHelper.cos(animationProgress * 0.3f);
+            this.tailFin.pitch = -0.2f * MathHelper.cos(animationProgress * 0.3f);
         }
     }
 }

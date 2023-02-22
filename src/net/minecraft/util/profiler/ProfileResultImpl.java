@@ -8,6 +8,7 @@
  *  it.unimi.dsi.fastutil.objects.Object2LongMap
  *  it.unimi.dsi.fastutil.objects.Object2LongMaps
  *  org.apache.commons.io.IOUtils
+ *  org.apache.commons.lang3.ObjectUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
@@ -38,6 +39,7 @@ import net.minecraft.util.profiler.ProfileLocationInfo;
 import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.ProfilerTiming;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -223,7 +225,7 @@ implements ProfileResult {
 
     private void appendTiming(int level, String name, StringBuilder sb) {
         List<ProfilerTiming> list = this.getTimings(name);
-        Object2LongMap<String> object2LongMap = this.locationInfos.get(name).getCounts();
+        Object2LongMap<String> object2LongMap = ((ProfileLocationInfo)ObjectUtils.firstNonNull((Object[])new ProfileLocationInfo[]{this.locationInfos.get(name), EMPTY_INFO})).getCounts();
         object2LongMap.forEach((string, long_) -> ProfileResultImpl.indent(sb, level).append('#').append((String)string).append(' ').append(long_).append('/').append(long_ / (long)this.tickDuration).append('\n'));
         if (list.size() < 3) {
             return;

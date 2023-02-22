@@ -2,30 +2,32 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.serialization.DataResult
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.BedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
-import net.minecraft.datafixer.NbtOps;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityInteraction;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -37,23 +39,26 @@ import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.village.TraderOfferList;
+import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.VillagerData;
 import net.minecraft.village.VillagerDataContainer;
 import net.minecraft.village.VillagerProfession;
 import net.minecraft.village.VillagerType;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class ZombieVillagerEntity
@@ -63,8 +68,8 @@ implements VillagerDataContainer {
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
     private int conversionTimer;
     private UUID converter;
-    private Tag field_20299;
-    private CompoundTag offerData;
+    private NbtElement gossipData;
+    private NbtCompound offerData;
     private int xp;
 
     public ZombieVillagerEntity(EntityType<? extends ZombieVillagerEntity> entityType, World world) {
@@ -80,39 +85,40 @@ implements VillagerDataContainer {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.put("VillagerData", this.getVillagerData().serialize(NbtOps.INSTANCE));
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
         if (this.offerData != null) {
-            tag.put("Offers", this.offerData);
+            nbt.put("Offers", this.offerData);
         }
-        if (this.field_20299 != null) {
-            tag.put("Gossips", this.field_20299);
+        if (this.gossipData != null) {
+            nbt.put("Gossips", this.gossipData);
         }
-        tag.putInt("ConversionTime", this.isConverting() ? this.conversionTimer : -1);
+        nbt.putInt("ConversionTime", this.isConverting() ? this.conversionTimer : -1);
         if (this.converter != null) {
-            tag.putUuid("ConversionPlayer", this.converter);
+            nbt.putUuid("ConversionPlayer", this.converter);
         }
-        tag.putInt("Xp", this.xp);
+        nbt.putInt("Xp", this.xp);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        if (tag.contains("VillagerData", 10)) {
-            this.setVillagerData(new VillagerData(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)tag.get("VillagerData"))));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("VillagerData", 10)) {
+            DataResult dataResult = VillagerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("VillagerData")));
+            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(this::setVillagerData);
         }
-        if (tag.contains("Offers", 10)) {
-            this.offerData = tag.getCompound("Offers");
+        if (nbt.contains("Offers", 10)) {
+            this.offerData = nbt.getCompound("Offers");
         }
-        if (tag.contains("Gossips", 10)) {
-            this.field_20299 = tag.getList("Gossips", 10);
+        if (nbt.contains("Gossips", 10)) {
+            this.gossipData = nbt.getList("Gossips", 10);
         }
-        if (tag.contains("ConversionTime", 99) && tag.getInt("ConversionTime") > -1) {
-            this.setConverting(tag.containsUuid("ConversionPlayer") ? tag.getUuid("ConversionPlayer") : null, tag.getInt("ConversionTime"));
+        if (nbt.contains("ConversionTime", 99) && nbt.getInt("ConversionTime") > -1) {
+            this.setConverting(nbt.containsUuid("ConversionPlayer") ? nbt.getUuid("ConversionPlayer") : null, nbt.getInt("ConversionTime"));
         }
-        if (tag.contains("Xp", 3)) {
-            this.xp = tag.getInt("Xp");
+        if (nbt.contains("Xp", 3)) {
+            this.xp = nbt.getInt("Xp");
         }
     }
 
@@ -129,17 +135,19 @@ implements VillagerDataContainer {
     }
 
     @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.GOLDEN_APPLE && this.hasStatusEffect(StatusEffects.WEAKNESS)) {
-            if (!player.abilities.creativeMode) {
-                itemStack.decrement(1);
+        if (itemStack.getItem() == Items.GOLDEN_APPLE) {
+            if (this.hasStatusEffect(StatusEffects.WEAKNESS)) {
+                if (!player.abilities.creativeMode) {
+                    itemStack.decrement(1);
+                }
+                if (!this.world.isClient) {
+                    this.setConverting(player.getUuid(), this.random.nextInt(2401) + 3600);
+                }
+                return ActionResult.SUCCESS;
             }
-            if (!this.world.isClient) {
-                this.setConverting(player.getUuid(), this.random.nextInt(2401) + 3600);
-                player.swingHand(hand, true);
-            }
-            return true;
+            return ActionResult.CONSUME;
         }
         return super.interactMob(player, hand);
     }
@@ -151,7 +159,7 @@ implements VillagerDataContainer {
 
     @Override
     public boolean canImmediatelyDespawn(double distanceSquared) {
-        return !this.isConverting();
+        return !this.isConverting() && this.xp == 0;
     }
 
     public boolean isConverting() {
@@ -181,7 +189,7 @@ implements VillagerDataContainer {
 
     private void finishConversion(ServerWorld world) {
         PlayerEntity playerEntity;
-        VillagerEntity villagerEntity = EntityType.VILLAGER.create(world);
+        VillagerEntity villagerEntity = this.method_29243(EntityType.VILLAGER, false);
         for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             ItemStack itemStack = this.getEquippedStack(equipmentSlot);
             if (itemStack.isEmpty()) continue;
@@ -193,36 +201,23 @@ implements VillagerDataContainer {
             if (!(d > 1.0)) continue;
             this.dropStack(itemStack);
         }
-        villagerEntity.copyPositionAndRotation(this);
         villagerEntity.setVillagerData(this.getVillagerData());
-        if (this.field_20299 != null) {
-            villagerEntity.method_21650(this.field_20299);
+        if (this.gossipData != null) {
+            villagerEntity.readGossipDataNbt(this.gossipData);
         }
         if (this.offerData != null) {
-            villagerEntity.setOffers(new TraderOfferList(this.offerData));
+            villagerEntity.setOffers(new TradeOfferList(this.offerData));
         }
         villagerEntity.setExperience(this.xp);
-        villagerEntity.initialize(world, world.getLocalDifficulty(new BlockPos(villagerEntity)), SpawnType.CONVERSION, null, null);
-        if (this.isBaby()) {
-            villagerEntity.setBreedingAge(-24000);
-        }
-        this.remove();
-        villagerEntity.setAiDisabled(this.isAiDisabled());
-        if (this.hasCustomName()) {
-            villagerEntity.setCustomName(this.getCustomName());
-            villagerEntity.setCustomNameVisible(this.isCustomNameVisible());
-        }
-        if (this.isPersistent()) {
-            villagerEntity.setPersistent();
-        }
-        villagerEntity.setInvulnerable(this.isInvulnerable());
-        world.spawnEntity(villagerEntity);
+        villagerEntity.initialize(world, world.getLocalDifficulty(villagerEntity.getBlockPos()), SpawnReason.CONVERSION, null, null);
         if (this.converter != null && (playerEntity = world.getPlayerByUuid(this.converter)) instanceof ServerPlayerEntity) {
-            Criterions.CURED_ZOMBIE_VILLAGER.trigger((ServerPlayerEntity)playerEntity, this, villagerEntity);
+            Criteria.CURED_ZOMBIE_VILLAGER.trigger((ServerPlayerEntity)playerEntity, this, villagerEntity);
             world.handleInteraction(EntityInteraction.ZOMBIE_VILLAGER_CURED, playerEntity, villagerEntity);
         }
         villagerEntity.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 0));
-        world.playLevelEvent(null, 1027, new BlockPos(this), 0);
+        if (!this.isSilent()) {
+            world.syncWorldEvent(null, 1027, this.getBlockPos(), 0);
+        }
     }
 
     private int getConversionRate() {
@@ -279,19 +274,19 @@ implements VillagerDataContainer {
         return ItemStack.EMPTY;
     }
 
-    public void setOfferData(CompoundTag offerTag) {
+    public void setOfferData(NbtCompound offerTag) {
         this.offerData = offerTag;
     }
 
-    public void method_21649(Tag tag) {
-        this.field_20299 = tag;
+    public void setGossipData(NbtElement gossipTag) {
+        this.gossipData = gossipTag;
     }
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiome(new BlockPos(this)))));
-        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
+        this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiomeKey(this.getBlockPos()))));
+        return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     public void setVillagerData(VillagerData data) {

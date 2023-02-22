@@ -17,7 +17,7 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.PlayerModelPart;
-import net.minecraft.client.render.entity.feature.ArmorBipedFeatureRenderer;
+import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
 import net.minecraft.client.render.entity.feature.CapeFeatureRenderer;
 import net.minecraft.client.render.entity.feature.Deadmau5FeatureRenderer;
 import net.minecraft.client.render.entity.feature.ElytraFeatureRenderer;
@@ -30,7 +30,6 @@ import net.minecraft.client.render.entity.feature.TridentRiptideFeatureRenderer;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -38,12 +37,15 @@ import net.minecraft.item.Items;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
+import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.UseAction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class PlayerEntityRenderer
@@ -52,9 +54,9 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         this(entityRenderDispatcher, false);
     }
 
-    public PlayerEntityRenderer(EntityRenderDispatcher entityRenderDispatcher, boolean bl) {
-        super(entityRenderDispatcher, new PlayerEntityModel(0.0f, bl), 0.5f);
-        this.addFeature(new ArmorBipedFeatureRenderer(this, new BipedEntityModel(0.5f), new BipedEntityModel(1.0f)));
+    public PlayerEntityRenderer(EntityRenderDispatcher dispatcher, boolean bl) {
+        super(dispatcher, new PlayerEntityModel(0.0f, bl), 0.5f);
+        this.addFeature(new ArmorFeatureRenderer(this, new BipedEntityModel(0.5f), new BipedEntityModel(1.0f)));
         this.addFeature(new HeldItemFeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>>(this));
         this.addFeature(new StuckArrowsFeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>>(this));
         this.addFeature(new Deadmau5FeatureRenderer(this));
@@ -80,26 +82,27 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         return super.getPositionOffset(abstractClientPlayerEntity, f);
     }
 
-    private void setModelPose(AbstractClientPlayerEntity abstractClientPlayerEntity) {
+    private void setModelPose(AbstractClientPlayerEntity player) {
         PlayerEntityModel playerEntityModel = (PlayerEntityModel)this.getModel();
-        if (abstractClientPlayerEntity.isSpectator()) {
+        if (player.isSpectator()) {
             playerEntityModel.setVisible(false);
             playerEntityModel.head.visible = true;
-            playerEntityModel.helmet.visible = true;
+            playerEntityModel.hat.visible = true;
         } else {
-            ItemStack itemStack = abstractClientPlayerEntity.getMainHandStack();
-            ItemStack itemStack2 = abstractClientPlayerEntity.getOffHandStack();
             playerEntityModel.setVisible(true);
-            playerEntityModel.helmet.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.HAT);
-            playerEntityModel.jacket.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.JACKET);
-            playerEntityModel.leftPantLeg.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.LEFT_PANTS_LEG);
-            playerEntityModel.rightPantLeg.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.RIGHT_PANTS_LEG);
-            playerEntityModel.leftSleeve.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.LEFT_SLEEVE);
-            playerEntityModel.rightSleeve.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.RIGHT_SLEEVE);
-            playerEntityModel.isSneaking = abstractClientPlayerEntity.isInSneakingPose();
-            BipedEntityModel.ArmPose armPose = this.getArmPose(abstractClientPlayerEntity, itemStack, itemStack2, Hand.MAIN_HAND);
-            BipedEntityModel.ArmPose armPose2 = this.getArmPose(abstractClientPlayerEntity, itemStack, itemStack2, Hand.OFF_HAND);
-            if (abstractClientPlayerEntity.getMainArm() == Arm.RIGHT) {
+            playerEntityModel.hat.visible = player.isPartVisible(PlayerModelPart.HAT);
+            playerEntityModel.jacket.visible = player.isPartVisible(PlayerModelPart.JACKET);
+            playerEntityModel.leftPants.visible = player.isPartVisible(PlayerModelPart.LEFT_PANTS_LEG);
+            playerEntityModel.rightPants.visible = player.isPartVisible(PlayerModelPart.RIGHT_PANTS_LEG);
+            playerEntityModel.leftSleeve.visible = player.isPartVisible(PlayerModelPart.LEFT_SLEEVE);
+            playerEntityModel.rightSleeve.visible = player.isPartVisible(PlayerModelPart.RIGHT_SLEEVE);
+            playerEntityModel.sneaking = player.isInSneakingPose();
+            BipedEntityModel.ArmPose armPose = PlayerEntityRenderer.getArmPose(player, Hand.MAIN_HAND);
+            BipedEntityModel.ArmPose armPose2 = PlayerEntityRenderer.getArmPose(player, Hand.OFF_HAND);
+            if (armPose.method_30156()) {
+                BipedEntityModel.ArmPose armPose3 = armPose2 = player.getOffHandStack().isEmpty() ? BipedEntityModel.ArmPose.EMPTY : BipedEntityModel.ArmPose.ITEM;
+            }
+            if (player.getMainArm() == Arm.RIGHT) {
                 playerEntityModel.rightArmPose = armPose;
                 playerEntityModel.leftArmPose = armPose2;
             } else {
@@ -109,37 +112,29 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         }
     }
 
-    private BipedEntityModel.ArmPose getArmPose(AbstractClientPlayerEntity abstractClientPlayerEntity, ItemStack itemStack, ItemStack itemStack2, Hand hand) {
-        ItemStack itemStack3;
-        BipedEntityModel.ArmPose armPose = BipedEntityModel.ArmPose.EMPTY;
-        ItemStack itemStack4 = itemStack3 = hand == Hand.MAIN_HAND ? itemStack : itemStack2;
-        if (!itemStack3.isEmpty()) {
-            armPose = BipedEntityModel.ArmPose.ITEM;
-            if (abstractClientPlayerEntity.getItemUseTimeLeft() > 0) {
-                UseAction useAction = itemStack3.getUseAction();
-                if (useAction == UseAction.BLOCK) {
-                    armPose = BipedEntityModel.ArmPose.BLOCK;
-                } else if (useAction == UseAction.BOW) {
-                    armPose = BipedEntityModel.ArmPose.BOW_AND_ARROW;
-                } else if (useAction == UseAction.SPEAR) {
-                    armPose = BipedEntityModel.ArmPose.THROW_SPEAR;
-                } else if (useAction == UseAction.CROSSBOW && hand == abstractClientPlayerEntity.getActiveHand()) {
-                    armPose = BipedEntityModel.ArmPose.CROSSBOW_CHARGE;
-                }
-            } else {
-                boolean bl = itemStack.getItem() == Items.CROSSBOW;
-                boolean bl2 = CrossbowItem.isCharged(itemStack);
-                boolean bl3 = itemStack2.getItem() == Items.CROSSBOW;
-                boolean bl4 = CrossbowItem.isCharged(itemStack2);
-                if (bl && bl2) {
-                    armPose = BipedEntityModel.ArmPose.CROSSBOW_HOLD;
-                }
-                if (bl3 && bl4 && itemStack.getItem().getUseAction(itemStack) == UseAction.NONE) {
-                    armPose = BipedEntityModel.ArmPose.CROSSBOW_HOLD;
-                }
-            }
+    private static BipedEntityModel.ArmPose getArmPose(AbstractClientPlayerEntity player, Hand hand) {
+        ItemStack itemStack = player.getStackInHand(hand);
+        if (itemStack.isEmpty()) {
+            return BipedEntityModel.ArmPose.EMPTY;
         }
-        return armPose;
+        if (player.getActiveHand() == hand && player.getItemUseTimeLeft() > 0) {
+            UseAction useAction = itemStack.getUseAction();
+            if (useAction == UseAction.BLOCK) {
+                return BipedEntityModel.ArmPose.BLOCK;
+            }
+            if (useAction == UseAction.BOW) {
+                return BipedEntityModel.ArmPose.BOW_AND_ARROW;
+            }
+            if (useAction == UseAction.SPEAR) {
+                return BipedEntityModel.ArmPose.THROW_SPEAR;
+            }
+            if (useAction == UseAction.CROSSBOW && hand == player.getActiveHand()) {
+                return BipedEntityModel.ArmPose.CROSSBOW_CHARGE;
+            }
+        } else if (!player.handSwinging && itemStack.getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack)) {
+            return BipedEntityModel.ArmPose.CROSSBOW_HOLD;
+        }
+        return BipedEntityModel.ArmPose.ITEM;
     }
 
     @Override
@@ -154,18 +149,18 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
     }
 
     @Override
-    protected void renderLabelIfPresent(AbstractClientPlayerEntity abstractClientPlayerEntity, String string, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+    protected void renderLabelIfPresent(AbstractClientPlayerEntity abstractClientPlayerEntity, Text text, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         Scoreboard scoreboard;
         ScoreboardObjective scoreboardObjective;
-        double d = this.renderManager.getSquaredDistanceToCamera(abstractClientPlayerEntity);
+        double d = this.dispatcher.getSquaredDistanceToCamera(abstractClientPlayerEntity);
         matrixStack.push();
         if (d < 100.0 && (scoreboardObjective = (scoreboard = abstractClientPlayerEntity.getScoreboard()).getObjectiveForSlot(2)) != null) {
             ScoreboardPlayerScore scoreboardPlayerScore = scoreboard.getPlayerScore(abstractClientPlayerEntity.getEntityName(), scoreboardObjective);
-            super.renderLabelIfPresent(abstractClientPlayerEntity, scoreboardPlayerScore.getScore() + " " + scoreboardObjective.getDisplayName().asFormattedString(), matrixStack, vertexConsumerProvider, i);
+            super.renderLabelIfPresent(abstractClientPlayerEntity, new LiteralText(Integer.toString(scoreboardPlayerScore.getScore())).append(" ").append(scoreboardObjective.getDisplayName()), matrixStack, vertexConsumerProvider, i);
             this.getFontRenderer().getClass();
             matrixStack.translate(0.0, 9.0f * 1.15f * 0.025f, 0.0);
         }
-        super.renderLabelIfPresent(abstractClientPlayerEntity, string, matrixStack, vertexConsumerProvider, i);
+        super.renderLabelIfPresent(abstractClientPlayerEntity, text, matrixStack, vertexConsumerProvider, i);
         matrixStack.pop();
     }
 
@@ -181,8 +176,8 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         PlayerEntityModel playerEntityModel = (PlayerEntityModel)this.getModel();
         this.setModelPose(player);
         playerEntityModel.handSwingProgress = 0.0f;
-        playerEntityModel.isSneaking = false;
-        playerEntityModel.field_3396 = 0.0f;
+        playerEntityModel.sneaking = false;
+        playerEntityModel.leaningPitch = 0.0f;
         playerEntityModel.setAngles(player, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
         arm.pitch = 0.0f;
         arm.render(matrices, vertexConsumers.getBuffer(RenderLayer.getEntitySolid(player.getSkinTexture())), light, OverlayTexture.DEFAULT_UV);
@@ -198,33 +193,28 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
             float j = (float)abstractClientPlayerEntity.getRoll() + h;
             float k = MathHelper.clamp(j * j / 100.0f, 0.0f, 1.0f);
             if (!abstractClientPlayerEntity.isUsingRiptide()) {
-                matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(k * (-90.0f - abstractClientPlayerEntity.pitch)));
+                matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(k * (-90.0f - abstractClientPlayerEntity.pitch)));
             }
             Vec3d vec3d = abstractClientPlayerEntity.getRotationVec(h);
             Vec3d vec3d2 = abstractClientPlayerEntity.getVelocity();
             double d = Entity.squaredHorizontalLength(vec3d2);
             double e = Entity.squaredHorizontalLength(vec3d);
             if (d > 0.0 && e > 0.0) {
-                double l = (vec3d2.x * vec3d.x + vec3d2.z * vec3d.z) / (Math.sqrt(d) * Math.sqrt(e));
+                double l = (vec3d2.x * vec3d.x + vec3d2.z * vec3d.z) / Math.sqrt(d * e);
                 double m = vec3d2.x * vec3d.z - vec3d2.z * vec3d.x;
-                matrixStack.multiply(Vector3f.POSITIVE_Y.getRadialQuaternion((float)(Math.signum(m) * Math.acos(l))));
+                matrixStack.multiply(Vec3f.POSITIVE_Y.getRadialQuaternion((float)(Math.signum(m) * Math.acos(l))));
             }
         } else if (i > 0.0f) {
             super.setupTransforms(abstractClientPlayerEntity, matrixStack, f, g, h);
             float j = abstractClientPlayerEntity.isTouchingWater() ? -90.0f - abstractClientPlayerEntity.pitch : -90.0f;
             float k = MathHelper.lerp(i, 0.0f, j);
-            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(k));
+            matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(k));
             if (abstractClientPlayerEntity.isInSwimmingPose()) {
                 matrixStack.translate(0.0, -1.0, 0.3f);
             }
         } else {
             super.setupTransforms(abstractClientPlayerEntity, matrixStack, f, g, h);
         }
-    }
-
-    @Override
-    public /* synthetic */ Vec3d getPositionOffset(Entity entity, float tickDelta) {
-        return this.getPositionOffset((AbstractClientPlayerEntity)entity, tickDelta);
     }
 }
 

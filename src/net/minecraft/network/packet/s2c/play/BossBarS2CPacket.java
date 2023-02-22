@@ -13,9 +13,9 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.text.Text;
-import net.minecraft.util.PacketByteBuf;
 
 public class BossBarS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -38,10 +38,10 @@ implements Packet<ClientPlayPacketListener> {
         this.name = bossBar.getName();
         this.percent = bossBar.getPercent();
         this.color = bossBar.getColor();
-        this.overlay = bossBar.getOverlay();
-        this.darkenSky = bossBar.getDarkenSky();
+        this.overlay = bossBar.getStyle();
+        this.darkenSky = bossBar.shouldDarkenSky();
         this.dragonMusic = bossBar.hasDragonMusic();
-        this.thickenFog = bossBar.getThickenFog();
+        this.thickenFog = bossBar.shouldThickenFog();
     }
 
     @Override

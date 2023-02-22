@@ -20,8 +20,8 @@ import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.PacketEncoderException;
-import net.minecraft.util.PacketByteBuf;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
@@ -30,21 +30,21 @@ import org.apache.logging.log4j.MarkerManager;
 public class PacketEncoder
 extends MessageToByteEncoder<Packet<?>> {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Marker MARKER = MarkerManager.getMarker((String)"PACKET_SENT", (Marker)ClientConnection.MARKER_NETWORK_PACKETS);
+    private static final Marker MARKER = MarkerManager.getMarker((String)"PACKET_SENT", (Marker)ClientConnection.NETWORK_PACKETS_MARKER);
     private final NetworkSide side;
 
-    public PacketEncoder(NetworkSide networkSide) {
-        this.side = networkSide;
+    public PacketEncoder(NetworkSide side) {
+        this.side = side;
     }
 
     protected void encode(ChannelHandlerContext channelHandlerContext, Packet<?> packet, ByteBuf byteBuf) throws Exception {
-        NetworkState networkState = (NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.ATTR_KEY_PROTOCOL).get());
+        NetworkState networkState = (NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get());
         if (networkState == null) {
             throw new RuntimeException("ConnectionProtocol unknown: " + packet);
         }
         Integer integer = networkState.getPacketId(this.side, packet);
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(MARKER, "OUT: [{}:{}] {}", channelHandlerContext.channel().attr(ClientConnection.ATTR_KEY_PROTOCOL).get(), (Object)integer, (Object)packet.getClass().getName());
+            LOGGER.debug(MARKER, "OUT: [{}:{}] {}", channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), (Object)integer, (Object)packet.getClass().getName());
         }
         if (integer == null) {
             throw new IOException("Can't serialize unregistered packet");
@@ -63,8 +63,8 @@ extends MessageToByteEncoder<Packet<?>> {
         }
     }
 
-    protected /* synthetic */ void encode(ChannelHandlerContext channelHandlerContext, Object object, ByteBuf byteBuf) throws Exception {
-        this.encode(channelHandlerContext, (Packet)object, byteBuf);
+    protected /* synthetic */ void encode(ChannelHandlerContext ctx, Object packet, ByteBuf out) throws Exception {
+        this.encode(ctx, (Packet)packet, out);
     }
 }
 

@@ -10,7 +10,7 @@ import java.util.EnumSet;
 import java.util.Random;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -18,14 +18,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class EscapeSunlightGoal
 extends Goal {
-    protected final MobEntityWithAi mob;
+    protected final PathAwareEntity mob;
     private double targetX;
     private double targetY;
     private double targetZ;
     private final double speed;
     private final World world;
 
-    public EscapeSunlightGoal(MobEntityWithAi mob, double speed) {
+    public EscapeSunlightGoal(PathAwareEntity mob, double speed) {
         this.mob = mob;
         this.speed = speed;
         this.world = mob.world;
@@ -43,7 +43,7 @@ extends Goal {
         if (!this.mob.isOnFire()) {
             return false;
         }
-        if (!this.world.isSkyVisible(new BlockPos(this.mob))) {
+        if (!this.world.isSkyVisible(this.mob.getBlockPos())) {
             return false;
         }
         if (!this.mob.getEquippedStack(EquipmentSlot.HEAD).isEmpty()) {
@@ -76,11 +76,11 @@ extends Goal {
     @Nullable
     protected Vec3d locateShadedPos() {
         Random random = this.mob.getRandom();
-        BlockPos blockPos = new BlockPos(this.mob);
+        BlockPos blockPos = this.mob.getBlockPos();
         for (int i = 0; i < 10; ++i) {
             BlockPos blockPos2 = blockPos.add(random.nextInt(20) - 10, random.nextInt(6) - 3, random.nextInt(20) - 10);
             if (this.world.isSkyVisible(blockPos2) || !(this.mob.getPathfindingFavor(blockPos2) < 0.0f)) continue;
-            return new Vec3d(blockPos2);
+            return Vec3d.ofBottomCenter(blockPos2);
         }
         return null;
     }

@@ -5,8 +5,11 @@
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.DataResult
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  it.unimi.dsi.fastutil.objects.Object2IntMap$Entry
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
@@ -17,8 +20,11 @@ package net.minecraft.village;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -28,7 +34,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -36,6 +41,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import net.minecraft.village.VillageGossipType;
 
 public class VillagerGossips {
@@ -103,12 +109,12 @@ public class VillagerGossips {
         }
     }
 
-    public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        return new Dynamic(ops, ops.createList(this.entries().map(gossipEntry -> gossipEntry.serialize(ops)).map(Dynamic::getValue)));
+    public <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
+        return new Dynamic(dynamicOps, dynamicOps.createList(this.entries().map(gossipEntry -> gossipEntry.serialize(dynamicOps)).map(Dynamic::getValue)));
     }
 
     public void deserialize(Dynamic<?> dynamic) {
-        dynamic.asStream().map(GossipEntry::deserialize).flatMap(Util::stream).forEach(gossipEntry -> this.getReputationFor(gossipEntry.target).associatedGossip.put((Object)gossipEntry.type, gossipEntry.value));
+        dynamic.asStream().map(GossipEntry::deserialize).flatMap(dataResult -> Util.stream(dataResult.result())).forEach(gossipEntry -> this.getReputationFor(gossipEntry.target).associatedGossip.put((Object)gossipEntry.type, gossipEntry.value));
     }
 
     private static int max(int left, int right) {
@@ -171,10 +177,10 @@ public class VillagerGossips {
         public final VillageGossipType type;
         public final int value;
 
-        public GossipEntry(UUID target, VillageGossipType type, int value) {
-            this.target = target;
-            this.type = type;
-            this.value = value;
+        public GossipEntry(UUID uUID, VillageGossipType villageGossipType, int i) {
+            this.target = uUID;
+            this.type = villageGossipType;
+            this.value = i;
         }
 
         public int getValue() {
@@ -185,12 +191,12 @@ public class VillagerGossips {
             return "GossipEntry{target=" + this.target + ", type=" + (Object)((Object)this.type) + ", value=" + this.value + '}';
         }
 
-        public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-            return Util.writeUuid("Target", this.target, new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString("Type"), (Object)ops.createString(this.type.key), (Object)ops.createString("Value"), (Object)ops.createInt(this.value)))));
+        public <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
+            return new Dynamic(dynamicOps, dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString("Target"), DynamicSerializableUuid.CODEC.encodeStart(dynamicOps, (Object)this.target).result().orElseThrow(RuntimeException::new), (Object)dynamicOps.createString("Type"), (Object)dynamicOps.createString(this.type.key), (Object)dynamicOps.createString("Value"), (Object)dynamicOps.createInt(this.value))));
         }
 
-        public static Optional<GossipEntry> deserialize(Dynamic<?> dynamic) {
-            return dynamic.get("Type").asString().map(VillageGossipType::byKey).flatMap(villageGossipType -> Util.readUuid("Target", dynamic).flatMap(uUID -> dynamic.get("Value").asNumber().map(number -> new GossipEntry((UUID)uUID, (VillageGossipType)((Object)villageGossipType), number.intValue()))));
+        public static DataResult<GossipEntry> deserialize(Dynamic<?> dynamic) {
+            return DataResult.unbox((App)DataResult.instance().group((App)dynamic.get("Target").read(DynamicSerializableUuid.CODEC), (App)dynamic.get("Type").asString().map(VillageGossipType::byKey), (App)dynamic.get("Value").asNumber().map(Number::intValue)).apply((Applicative)DataResult.instance(), GossipEntry::new));
         }
     }
 }

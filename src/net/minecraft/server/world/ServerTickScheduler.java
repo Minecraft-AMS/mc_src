@@ -22,9 +22,8 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -43,7 +42,6 @@ public class ServerTickScheduler<T>
 implements TickScheduler<T> {
     protected final Predicate<T> invalidObjPredicate;
     private final Function<T, Identifier> idToName;
-    private final Function<Identifier, T> nameToId;
     private final Set<ScheduledTick<T>> scheduledTickActions = Sets.newHashSet();
     private final TreeSet<ScheduledTick<T>> scheduledTickActionsInOrder = Sets.newTreeSet(ScheduledTick.getComparator());
     private final ServerWorld world;
@@ -51,10 +49,9 @@ implements TickScheduler<T> {
     private final List<ScheduledTick<T>> consumedTickActions = Lists.newArrayList();
     private final Consumer<ScheduledTick<T>> tickConsumer;
 
-    public ServerTickScheduler(ServerWorld world, Predicate<T> invalidObjPredicate, Function<T, Identifier> idToName, Function<Identifier, T> nameToId, Consumer<ScheduledTick<T>> tickConsumer) {
+    public ServerTickScheduler(ServerWorld world, Predicate<T> invalidObjPredicate, Function<T, Identifier> idToName, Consumer<ScheduledTick<T>> tickConsumer) {
         this.invalidObjPredicate = invalidObjPredicate;
         this.idToName = idToName;
-        this.nameToId = nameToId;
         this.world = world;
         this.tickConsumer = tickConsumer;
     }
@@ -107,15 +104,10 @@ implements TickScheduler<T> {
         return this.currentTickActions.contains(new ScheduledTick<T>(pos, object));
     }
 
-    @Override
-    public void scheduleAll(Stream<ScheduledTick<T>> stream) {
-        stream.forEach(this::addScheduledTick);
-    }
-
-    public List<ScheduledTick<T>> getScheduledTicksInChunk(ChunkPos chunkPos, boolean updateState, boolean getStaleTicks) {
-        int i = (chunkPos.x << 4) - 2;
+    public List<ScheduledTick<T>> getScheduledTicksInChunk(ChunkPos pos, boolean updateState, boolean getStaleTicks) {
+        int i = (pos.x << 4) - 2;
         int j = i + 16 + 2;
-        int k = (chunkPos.z << 4) - 2;
+        int k = (pos.z << 4) - 2;
         int l = k + 16 + 2;
         return this.getScheduledTicks(new BlockBox(i, 0, k, j, 256, l), updateState, getStaleTicks);
     }
@@ -160,24 +152,24 @@ implements TickScheduler<T> {
         }
     }
 
-    public ListTag toTag(ChunkPos chunkPos) {
+    public NbtList toNbt(ChunkPos chunkPos) {
         List<ScheduledTick<T>> list = this.getScheduledTicksInChunk(chunkPos, false, true);
         return ServerTickScheduler.serializeScheduledTicks(this.idToName, list, this.world.getTime());
     }
 
-    public static <T> ListTag serializeScheduledTicks(Function<T, Identifier> identifierProvider, Iterable<ScheduledTick<T>> scheduledTicks, long time) {
-        ListTag listTag = new ListTag();
+    private static <T> NbtList serializeScheduledTicks(Function<T, Identifier> identifierProvider, Iterable<ScheduledTick<T>> scheduledTicks, long time) {
+        NbtList nbtList = new NbtList();
         for (ScheduledTick<T> scheduledTick : scheduledTicks) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("i", identifierProvider.apply(scheduledTick.getObject()).toString());
-            compoundTag.putInt("x", scheduledTick.pos.getX());
-            compoundTag.putInt("y", scheduledTick.pos.getY());
-            compoundTag.putInt("z", scheduledTick.pos.getZ());
-            compoundTag.putInt("t", (int)(scheduledTick.time - time));
-            compoundTag.putInt("p", scheduledTick.priority.getIndex());
-            listTag.add(compoundTag);
+            NbtCompound nbtCompound = new NbtCompound();
+            nbtCompound.putString("i", identifierProvider.apply(scheduledTick.getObject()).toString());
+            nbtCompound.putInt("x", scheduledTick.pos.getX());
+            nbtCompound.putInt("y", scheduledTick.pos.getY());
+            nbtCompound.putInt("z", scheduledTick.pos.getZ());
+            nbtCompound.putInt("t", (int)(scheduledTick.time - time));
+            nbtCompound.putInt("p", scheduledTick.priority.getIndex());
+            nbtList.add(nbtCompound);
         }
-        return listTag;
+        return nbtList;
     }
 
     @Override
@@ -192,14 +184,14 @@ implements TickScheduler<T> {
         }
     }
 
-    private void addScheduledTick(ScheduledTick<T> scheduledTick) {
-        if (!this.scheduledTickActions.contains(scheduledTick)) {
-            this.scheduledTickActions.add(scheduledTick);
-            this.scheduledTickActionsInOrder.add(scheduledTick);
+    private void addScheduledTick(ScheduledTick<T> tick) {
+        if (!this.scheduledTickActions.contains(tick)) {
+            this.scheduledTickActions.add(tick);
+            this.scheduledTickActionsInOrder.add(tick);
         }
     }
 
-    public int method_20825() {
+    public int getTicks() {
         return this.scheduledTickActions.size();
     }
 }

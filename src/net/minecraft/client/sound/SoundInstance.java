@@ -38,16 +38,20 @@ public interface SoundInstance {
 
     public float getPitch();
 
-    public float getX();
+    public double getX();
 
-    public float getY();
+    public double getY();
 
-    public float getZ();
+    public double getZ();
 
     public AttenuationType getAttenuationType();
 
     default public boolean shouldAlwaysPlay() {
         return false;
+    }
+
+    default public boolean canPlay() {
+        return true;
     }
 
     @Environment(value=EnvType.CLIENT)

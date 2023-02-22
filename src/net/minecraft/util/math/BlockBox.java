@@ -3,15 +3,11 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.MoreObjects
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.math;
 
 import com.google.common.base.MoreObjects;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.minecraft.nbt.IntArrayTag;
+import net.minecraft.nbt.NbtIntArray;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3i;
@@ -40,6 +36,10 @@ public class BlockBox {
 
     public static BlockBox empty() {
         return new BlockBox(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
+    }
+
+    public static BlockBox infinite() {
+        return new BlockBox(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
     }
 
     public static BlockBox rotated(int x, int y, int z, int offsetX, int offsetY, int offsetZ, int sizeX, int sizeY, int sizeZ, Direction facing) {
@@ -118,7 +118,7 @@ public class BlockBox {
         this.maxZ = Math.max(this.maxZ, region.maxZ);
     }
 
-    public void offset(int dx, int dy, int dz) {
+    public void move(int dx, int dy, int dz) {
         this.minX += dx;
         this.minY += dy;
         this.minZ += dz;
@@ -127,8 +127,12 @@ public class BlockBox {
         this.maxZ += dz;
     }
 
-    public BlockBox translated(int x, int y, int z) {
+    public BlockBox offset(int x, int y, int z) {
         return new BlockBox(this.minX + x, this.minY + y, this.minZ + z, this.maxX + x, this.maxY + y, this.maxZ + z);
+    }
+
+    public void move(Vec3i vec3i) {
+        this.move(vec3i.getX(), vec3i.getY(), vec3i.getZ());
     }
 
     public boolean contains(Vec3i vec) {
@@ -151,8 +155,7 @@ public class BlockBox {
         return this.maxZ - this.minZ + 1;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public Vec3i method_22874() {
+    public Vec3i getCenter() {
         return new BlockPos(this.minX + (this.maxX - this.minX + 1) / 2, this.minY + (this.maxY - this.minY + 1) / 2, this.minZ + (this.maxZ - this.minZ + 1) / 2);
     }
 
@@ -160,8 +163,8 @@ public class BlockBox {
         return MoreObjects.toStringHelper((Object)this).add("x0", this.minX).add("y0", this.minY).add("z0", this.minZ).add("x1", this.maxX).add("y1", this.maxY).add("z1", this.maxZ).toString();
     }
 
-    public IntArrayTag toNbt() {
-        return new IntArrayTag(new int[]{this.minX, this.minY, this.minZ, this.maxX, this.maxY, this.maxZ});
+    public NbtIntArray toNbt() {
+        return new NbtIntArray(new int[]{this.minX, this.minY, this.minZ, this.maxX, this.maxY, this.maxZ});
     }
 }
 

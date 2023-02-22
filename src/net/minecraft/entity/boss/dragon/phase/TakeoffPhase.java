@@ -20,10 +20,10 @@ public class TakeoffPhase
 extends AbstractPhase {
     private boolean field_7056;
     private Path field_7054;
-    private Vec3d field_7055;
+    private Vec3d pathTarget;
 
-    public TakeoffPhase(EnderDragonEntity dragon) {
-        super(dragon);
+    public TakeoffPhase(EnderDragonEntity enderDragonEntity) {
+        super(enderDragonEntity);
     }
 
     @Override
@@ -43,13 +43,13 @@ extends AbstractPhase {
     public void beginPhase() {
         this.field_7056 = true;
         this.field_7054 = null;
-        this.field_7055 = null;
+        this.pathTarget = null;
     }
 
     private void method_6858() {
-        int i = this.dragon.method_6818();
-        Vec3d vec3d = this.dragon.method_6834(1.0f);
-        int j = this.dragon.method_6822(-vec3d.x * 40.0, 105.0, -vec3d.z * 40.0);
+        int i = this.dragon.getNearestPathNodeIndex();
+        Vec3d vec3d = this.dragon.getRotationVectorFromPhase(1.0f);
+        int j = this.dragon.getNearestPathNodeIndex(-vec3d.x * 40.0, 105.0, -vec3d.z * 40.0);
         if (this.dragon.getFight() == null || this.dragon.getFight().getAliveEndCrystals() <= 0) {
             j -= 12;
             j &= 7;
@@ -57,7 +57,7 @@ extends AbstractPhase {
         } else if ((j %= 12) < 0) {
             j += 12;
         }
-        this.field_7054 = this.dragon.method_6833(i, j, null);
+        this.field_7054 = this.dragon.findPath(i, j, null);
         this.method_6859();
     }
 
@@ -66,19 +66,19 @@ extends AbstractPhase {
             this.field_7054.next();
             if (!this.field_7054.isFinished()) {
                 double d;
-                Vec3d vec3d = this.field_7054.getCurrentPosition();
+                BlockPos vec3i = this.field_7054.method_31032();
                 this.field_7054.next();
-                while ((d = vec3d.y + (double)(this.dragon.getRandom().nextFloat() * 20.0f)) < vec3d.y) {
+                while ((d = (double)((float)vec3i.getY() + this.dragon.getRandom().nextFloat() * 20.0f)) < (double)vec3i.getY()) {
                 }
-                this.field_7055 = new Vec3d(vec3d.x, d, vec3d.z);
+                this.pathTarget = new Vec3d(vec3i.getX(), d, vec3i.getZ());
             }
         }
     }
 
     @Override
     @Nullable
-    public Vec3d getTarget() {
-        return this.field_7055;
+    public Vec3d getPathTarget() {
+        return this.pathTarget;
     }
 
     public PhaseType<TakeoffPhase> getType() {

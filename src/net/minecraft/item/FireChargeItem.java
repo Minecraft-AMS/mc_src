@@ -3,10 +3,9 @@
  */
 package net.minecraft.item;
 
+import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.CampfireBlock;
-import net.minecraft.block.FireBlock;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.sound.SoundCategory;
@@ -27,20 +26,18 @@ extends Item {
         BlockPos blockPos = context.getBlockPos();
         BlockState blockState = world.getBlockState(blockPos);
         boolean bl = false;
-        if (blockState.getBlock() == Blocks.CAMPFIRE) {
-            if (!blockState.get(CampfireBlock.LIT).booleanValue() && !blockState.get(CampfireBlock.WATERLOGGED).booleanValue()) {
-                this.playUseSound(world, blockPos);
-                world.setBlockState(blockPos, (BlockState)blockState.with(CampfireBlock.LIT, true));
-                bl = true;
-            }
-        } else if (world.getBlockState(blockPos = blockPos.offset(context.getSide())).isAir()) {
+        if (CampfireBlock.method_30035(blockState)) {
             this.playUseSound(world, blockPos);
-            world.setBlockState(blockPos, ((FireBlock)Blocks.FIRE).getStateForPosition(world, blockPos));
+            world.setBlockState(blockPos, (BlockState)blockState.with(CampfireBlock.LIT, true));
+            bl = true;
+        } else if (AbstractFireBlock.method_30032(world, blockPos = blockPos.offset(context.getSide()), context.getPlayerFacing())) {
+            this.playUseSound(world, blockPos);
+            world.setBlockState(blockPos, AbstractFireBlock.getState(world, blockPos));
             bl = true;
         }
         if (bl) {
             context.getStack().decrement(1);
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         return ActionResult.FAIL;
     }

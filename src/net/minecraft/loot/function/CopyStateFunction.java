@@ -30,7 +30,9 @@ import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.loot.function.LootFunction;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.Identifier;
@@ -49,6 +51,11 @@ extends ConditionalLootFunction {
     }
 
     @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.COPY_STATE;
+    }
+
+    @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
         return ImmutableSet.of(LootContextParameters.BLOCK_STATE);
     }
@@ -57,15 +64,15 @@ extends ConditionalLootFunction {
     protected ItemStack process(ItemStack stack, LootContext context) {
         BlockState blockState = context.get(LootContextParameters.BLOCK_STATE);
         if (blockState != null) {
-            CompoundTag compoundTag2;
-            CompoundTag compoundTag = stack.getOrCreateTag();
-            if (compoundTag.contains("BlockStateTag", 10)) {
-                compoundTag2 = compoundTag.getCompound("BlockStateTag");
+            NbtCompound nbtCompound2;
+            NbtCompound nbtCompound = stack.getOrCreateTag();
+            if (nbtCompound.contains("BlockStateTag", 10)) {
+                nbtCompound2 = nbtCompound.getCompound("BlockStateTag");
             } else {
-                compoundTag2 = new CompoundTag();
-                compoundTag.put("BlockStateTag", compoundTag2);
+                nbtCompound2 = new NbtCompound();
+                nbtCompound.put("BlockStateTag", nbtCompound2);
             }
-            this.properties.stream().filter(blockState::contains).forEach(property -> compoundTag2.putString(property.getName(), CopyStateFunction.method_21893(blockState, property)));
+            this.properties.stream().filter(blockState::contains).forEach(property -> nbtCompound2.putString(property.getName(), CopyStateFunction.method_21893(blockState, property)));
         }
         return stack;
     }
@@ -79,12 +86,8 @@ extends ConditionalLootFunction {
         return property.name(comparable);
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<CopyStateFunction> {
-        public Factory() {
-            super(new Identifier("copy_state"), CopyStateFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<CopyStateFunction> {
         @Override
         public void toJson(JsonObject jsonObject, CopyStateFunction copyStateFunction, JsonSerializationContext jsonSerializationContext) {
             super.toJson(jsonObject, copyStateFunction, jsonSerializationContext);
@@ -97,7 +100,7 @@ extends ConditionalLootFunction {
         @Override
         public CopyStateFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
             Identifier identifier = new Identifier(JsonHelper.getString(jsonObject, "block"));
-            Block block = (Block)Registry.BLOCK.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Can't find block " + identifier));
+            Block block = Registry.BLOCK.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Can't find block " + identifier));
             StateManager<Block, BlockState> stateManager = block.getStateManager();
             HashSet set = Sets.newHashSet();
             JsonArray jsonArray = JsonHelper.getArray(jsonObject, "properties", null);

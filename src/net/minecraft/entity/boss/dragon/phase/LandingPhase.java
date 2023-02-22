@@ -20,19 +20,19 @@ import org.jetbrains.annotations.Nullable;
 
 public class LandingPhase
 extends AbstractPhase {
-    private Vec3d field_7046;
+    private Vec3d target;
 
-    public LandingPhase(EnderDragonEntity dragon) {
-        super(dragon);
+    public LandingPhase(EnderDragonEntity enderDragonEntity) {
+        super(enderDragonEntity);
     }
 
     @Override
     public void clientTick() {
-        Vec3d vec3d = this.dragon.method_6834(1.0f).normalize();
+        Vec3d vec3d = this.dragon.getRotationVectorFromPhase(1.0f).normalize();
         vec3d.rotateY(-0.7853982f);
-        double d = this.dragon.partHead.getX();
-        double e = this.dragon.partHead.getBodyY(0.5);
-        double f = this.dragon.partHead.getZ();
+        double d = this.dragon.head.getX();
+        double e = this.dragon.head.getBodyY(0.5);
+        double f = this.dragon.head.getZ();
         for (int i = 0; i < 8; ++i) {
             Random random = this.dragon.getRandom();
             double g = d + random.nextGaussian() / 2.0;
@@ -46,17 +46,17 @@ extends AbstractPhase {
 
     @Override
     public void serverTick() {
-        if (this.field_7046 == null) {
-            this.field_7046 = new Vec3d(this.dragon.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN));
+        if (this.target == null) {
+            this.target = Vec3d.ofBottomCenter(this.dragon.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN));
         }
-        if (this.field_7046.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ()) < 1.0) {
+        if (this.target.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ()) < 1.0) {
             this.dragon.getPhaseManager().create(PhaseType.SITTING_FLAMING).method_6857();
             this.dragon.getPhaseManager().setPhase(PhaseType.SITTING_SCANNING);
         }
     }
 
     @Override
-    public float method_6846() {
+    public float getMaxYAcceleration() {
         return 1.5f;
     }
 
@@ -69,13 +69,13 @@ extends AbstractPhase {
 
     @Override
     public void beginPhase() {
-        this.field_7046 = null;
+        this.target = null;
     }
 
     @Override
     @Nullable
-    public Vec3d getTarget() {
-        return this.field_7046;
+    public Vec3d getPathTarget() {
+        return this.target;
     }
 
     public PhaseType<LandingPhase> getType() {

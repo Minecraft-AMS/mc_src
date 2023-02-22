@@ -17,7 +17,9 @@ import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.function.ConditionalLootFunction;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 
@@ -33,40 +35,41 @@ extends ConditionalLootFunction {
     }
 
     @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.SET_LOOT_TABLE;
+    }
+
+    @Override
     public ItemStack process(ItemStack stack, LootContext context) {
         if (stack.isEmpty()) {
             return stack;
         }
-        CompoundTag compoundTag = new CompoundTag();
-        compoundTag.putString("LootTable", this.id.toString());
+        NbtCompound nbtCompound = new NbtCompound();
+        nbtCompound.putString("LootTable", this.id.toString());
         if (this.seed != 0L) {
-            compoundTag.putLong("LootTableSeed", this.seed);
+            nbtCompound.putLong("LootTableSeed", this.seed);
         }
-        stack.getOrCreateTag().put("BlockEntityTag", compoundTag);
+        stack.getOrCreateTag().put("BlockEntityTag", nbtCompound);
         return stack;
     }
 
     @Override
-    public void check(LootTableReporter reporter) {
-        if (reporter.hasSupplier(this.id)) {
+    public void validate(LootTableReporter reporter) {
+        if (reporter.hasTable(this.id)) {
             reporter.report("Table " + this.id + " is recursively called");
             return;
         }
-        super.check(reporter);
-        LootTable lootTable = reporter.getSupplier(this.id);
+        super.validate(reporter);
+        LootTable lootTable = reporter.getTable(this.id);
         if (lootTable == null) {
             reporter.report("Unknown loot table called " + this.id);
         } else {
-            lootTable.check(reporter.withSupplier("->{" + this.id + "}", this.id));
+            lootTable.validate(reporter.withTable("->{" + this.id + "}", this.id));
         }
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<SetLootTableLootFunction> {
-        protected Factory() {
-            super(new Identifier("set_loot_table"), SetLootTableLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<SetLootTableLootFunction> {
         @Override
         public void toJson(JsonObject jsonObject, SetLootTableLootFunction setLootTableLootFunction, JsonSerializationContext jsonSerializationContext) {
             super.toJson(jsonObject, setLootTableLootFunction, jsonSerializationContext);

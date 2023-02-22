@@ -6,7 +6,7 @@ package net.minecraft.entity.ai.goal;
 import java.util.EnumSet;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
@@ -31,11 +31,11 @@ extends MoveToTargetPosGoal {
     @Override
     public void start() {
         super.start();
-        this.cat.getSitGoal().setEnabledWithOwner(false);
+        this.cat.setInSittingPose(false);
     }
 
     @Override
-    protected int getInterval(MobEntityWithAi mob) {
+    protected int getInterval(PathAwareEntity mob) {
         return 40;
     }
 
@@ -48,7 +48,7 @@ extends MoveToTargetPosGoal {
     @Override
     public void tick() {
         super.tick();
-        this.cat.getSitGoal().setEnabledWithOwner(false);
+        this.cat.setInSittingPose(false);
         if (!this.hasReached()) {
             this.cat.setSleepingWithOwner(false);
         } else if (!this.cat.isSleepingWithOwner()) {
@@ -58,7 +58,7 @@ extends MoveToTargetPosGoal {
 
     @Override
     protected boolean isTargetPos(WorldView world, BlockPos pos) {
-        return world.isAir(pos.up()) && world.getBlockState(pos).getBlock().matches(BlockTags.BEDS);
+        return world.isAir(pos.up()) && world.getBlockState(pos).getBlock().isIn(BlockTags.BEDS);
     }
 }
 

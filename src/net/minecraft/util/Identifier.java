@@ -14,6 +14,8 @@
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.DataResult
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
@@ -33,6 +35,8 @@ import com.mojang.brigadier.Message;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import java.lang.reflect.Type;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -44,7 +48,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class Identifier
 implements Comparable<Identifier> {
-    private static final SimpleCommandExceptionType COMMAND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.id.invalid", new Object[0]));
+    public static final Codec<Identifier> CODEC = Codec.STRING.comapFlatMap(Identifier::method_29186, Identifier::toString).stable();
+    private static final SimpleCommandExceptionType COMMAND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.id.invalid"));
     protected final String namespace;
     protected final String path;
 
@@ -91,6 +96,15 @@ implements Comparable<Identifier> {
             }
         }
         return strings;
+    }
+
+    private static DataResult<Identifier> method_29186(String string) {
+        try {
+            return DataResult.success((Object)new Identifier(string));
+        }
+        catch (InvalidIdentifierException invalidIdentifierException) {
+            return DataResult.error((String)("Not a valid resource location: " + string + " " + invalidIdentifierException.getMessage()));
+        }
     }
 
     public String getPath() {
@@ -149,11 +163,27 @@ implements Comparable<Identifier> {
     }
 
     private static boolean isPathValid(String path) {
-        return path.chars().allMatch(c -> c == 95 || c == 45 || c >= 97 && c <= 122 || c >= 48 && c <= 57 || c == 47 || c == 46);
+        for (int i = 0; i < path.length(); ++i) {
+            if (Identifier.isPathCharacterValid(path.charAt(i))) continue;
+            return false;
+        }
+        return true;
     }
 
     private static boolean isNamespaceValid(String namespace) {
-        return namespace.chars().allMatch(c -> c == 95 || c == 45 || c >= 97 && c <= 122 || c >= 48 && c <= 57 || c == 46);
+        for (int i = 0; i < namespace.length(); ++i) {
+            if (Identifier.isNamespaceCharacterValid(namespace.charAt(i))) continue;
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean isPathCharacterValid(char character) {
+        return character == '_' || character == '-' || character >= 'a' && character <= 'z' || character >= '0' && character <= '9' || character == '/' || character == '.';
+    }
+
+    private static boolean isNamespaceCharacterValid(char character) {
+        return character == '_' || character == '-' || character >= 'a' && character <= 'z' || character >= '0' && character <= '9' || character == '.';
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -178,12 +208,12 @@ implements Comparable<Identifier> {
             return new JsonPrimitive(identifier.toString());
         }
 
-        public /* synthetic */ JsonElement serialize(Object object, Type type, JsonSerializationContext jsonSerializationContext) {
-            return this.serialize((Identifier)object, type, jsonSerializationContext);
+        public /* synthetic */ JsonElement serialize(Object id, Type type, JsonSerializationContext context) {
+            return this.serialize((Identifier)id, type, context);
         }
 
-        public /* synthetic */ Object deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            return this.deserialize(jsonElement, type, jsonDeserializationContext);
+        public /* synthetic */ Object deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
+            return this.deserialize(json, type, context);
         }
     }
 }

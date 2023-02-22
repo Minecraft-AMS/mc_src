@@ -4,12 +4,12 @@
 package net.minecraft.entity.ai.goal;
 
 import java.util.EnumSet;
-import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.ai.pathing.NavigationType;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -18,9 +18,9 @@ import net.minecraft.world.WorldView;
 
 public class BreatheAirGoal
 extends Goal {
-    private final MobEntityWithAi mob;
+    private final PathAwareEntity mob;
 
-    public BreatheAirGoal(MobEntityWithAi mob) {
+    public BreatheAirGoal(PathAwareEntity mob) {
         this.mob = mob;
         this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
     }
@@ -68,7 +68,7 @@ extends Goal {
 
     private boolean isAirPos(WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
-        return (world.getFluidState(pos).isEmpty() || blockState.getBlock() == Blocks.BUBBLE_COLUMN) && blockState.canPlaceAtSide(world, pos, BlockPlacementEnvironment.LAND);
+        return (world.getFluidState(pos).isEmpty() || blockState.isOf(Blocks.BUBBLE_COLUMN)) && blockState.canPathfindThrough(world, pos, NavigationType.LAND);
     }
 }
 

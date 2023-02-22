@@ -11,10 +11,10 @@ import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldAccess;
 
 public class DoubleBlockProperties {
-    public static <S extends BlockEntity> PropertySource<S> toPropertySource(BlockEntityType<S> blockEntityType, Function<BlockState, Type> typeMapper, Function<BlockState, Direction> function, DirectionProperty directionProperty, BlockState state, IWorld world, BlockPos pos, BiPredicate<IWorld, BlockPos> fallbackTester) {
+    public static <S extends BlockEntity> PropertySource<S> toPropertySource(BlockEntityType<S> blockEntityType, Function<BlockState, Type> typeMapper, Function<BlockState, Direction> function, DirectionProperty directionProperty, BlockState state, WorldAccess world, BlockPos pos, BiPredicate<WorldAccess, BlockPos> fallbackTester) {
         Type type2;
         boolean bl2;
         S blockEntity = blockEntityType.get(world, pos);
@@ -32,7 +32,7 @@ public class DoubleBlockProperties {
         }
         BlockPos blockPos = pos.offset(function.apply(state));
         BlockState blockState = world.getBlockState(blockPos);
-        if (blockState.getBlock() == state.getBlock() && (type2 = typeMapper.apply(blockState)) != Type.SINGLE && type != type2 && blockState.get(directionProperty) == state.get(directionProperty)) {
+        if (blockState.isOf(state.getBlock()) && (type2 = typeMapper.apply(blockState)) != Type.SINGLE && type != type2 && blockState.get(directionProperty) == state.get(directionProperty)) {
             if (fallbackTester.test(world, blockPos)) {
                 return PropertyRetriever::getFallback;
             }

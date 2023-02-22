@@ -12,8 +12,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.resource.language.I18n;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
+import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class SleepingChatScreen
@@ -25,7 +25,7 @@ extends ChatScreen {
     @Override
     protected void init() {
         super.init();
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height - 40, 200, 20, I18n.translate("multiplayer.stopSleeping", new Object[0]), buttonWidget -> this.stopSleeping()));
+        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height - 40, 200, 20, new TranslatableText("multiplayer.stopSleeping"), buttonWidget -> this.stopSleeping()));
     }
 
     @Override
@@ -40,18 +40,18 @@ extends ChatScreen {
         } else if (keyCode == 257 || keyCode == 335) {
             String string = this.chatField.getText().trim();
             if (!string.isEmpty()) {
-                this.minecraft.player.sendChatMessage(string);
+                this.sendMessage(string);
             }
             this.chatField.setText("");
-            this.minecraft.inGameHud.getChatHud().resetScroll();
+            this.client.inGameHud.getChatHud().resetScroll();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void stopSleeping() {
-        ClientPlayNetworkHandler clientPlayNetworkHandler = this.minecraft.player.networkHandler;
-        clientPlayNetworkHandler.sendPacket(new ClientCommandC2SPacket(this.minecraft.player, ClientCommandC2SPacket.Mode.STOP_SLEEPING));
+        ClientPlayNetworkHandler clientPlayNetworkHandler = this.client.player.networkHandler;
+        clientPlayNetworkHandler.sendPacket(new ClientCommandC2SPacket(this.client.player, ClientCommandC2SPacket.Mode.STOP_SLEEPING));
     }
 }
 

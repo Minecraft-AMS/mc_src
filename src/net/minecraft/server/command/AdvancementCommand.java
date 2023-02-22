@@ -25,10 +25,10 @@ import java.util.List;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementProgress;
 import net.minecraft.command.CommandException;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.IdentifierArgumentType;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.TranslatableText;
@@ -128,9 +128,9 @@ public class AdvancementCommand {
         private final boolean before;
         private final boolean after;
 
-        private Selection(boolean bl, boolean bl2) {
-            this.before = bl;
-            this.after = bl2;
+        private Selection(boolean before, boolean after) {
+            this.before = before;
+            this.after = after;
         }
     }
 
@@ -138,53 +138,53 @@ public class AdvancementCommand {
         GRANT("grant"){
 
             @Override
-            protected boolean processEach(ServerPlayerEntity serverPlayerEntity, Advancement advancement) {
-                AdvancementProgress advancementProgress = serverPlayerEntity.getAdvancementTracker().getProgress(advancement);
+            protected boolean processEach(ServerPlayerEntity player, Advancement advancement) {
+                AdvancementProgress advancementProgress = player.getAdvancementTracker().getProgress(advancement);
                 if (advancementProgress.isDone()) {
                     return false;
                 }
                 for (String string : advancementProgress.getUnobtainedCriteria()) {
-                    serverPlayerEntity.getAdvancementTracker().grantCriterion(advancement, string);
+                    player.getAdvancementTracker().grantCriterion(advancement, string);
                 }
                 return true;
             }
 
             @Override
-            protected boolean processEachCriterion(ServerPlayerEntity serverPlayerEntity, Advancement advancement, String criterion) {
-                return serverPlayerEntity.getAdvancementTracker().grantCriterion(advancement, criterion);
+            protected boolean processEachCriterion(ServerPlayerEntity player, Advancement advancement, String criterion) {
+                return player.getAdvancementTracker().grantCriterion(advancement, criterion);
             }
         }
         ,
         REVOKE("revoke"){
 
             @Override
-            protected boolean processEach(ServerPlayerEntity serverPlayerEntity, Advancement advancement) {
-                AdvancementProgress advancementProgress = serverPlayerEntity.getAdvancementTracker().getProgress(advancement);
+            protected boolean processEach(ServerPlayerEntity player, Advancement advancement) {
+                AdvancementProgress advancementProgress = player.getAdvancementTracker().getProgress(advancement);
                 if (!advancementProgress.isAnyObtained()) {
                     return false;
                 }
                 for (String string : advancementProgress.getObtainedCriteria()) {
-                    serverPlayerEntity.getAdvancementTracker().revokeCriterion(advancement, string);
+                    player.getAdvancementTracker().revokeCriterion(advancement, string);
                 }
                 return true;
             }
 
             @Override
-            protected boolean processEachCriterion(ServerPlayerEntity serverPlayerEntity, Advancement advancement, String criterion) {
-                return serverPlayerEntity.getAdvancementTracker().revokeCriterion(advancement, criterion);
+            protected boolean processEachCriterion(ServerPlayerEntity player, Advancement advancement, String criterion) {
+                return player.getAdvancementTracker().revokeCriterion(advancement, criterion);
             }
         };
 
         private final String commandPrefix;
 
-        private Operation(String string2) {
-            this.commandPrefix = "commands.advancement." + string2;
+        private Operation(String name) {
+            this.commandPrefix = "commands.advancement." + name;
         }
 
-        public int processAll(ServerPlayerEntity serverPlayerEntity, Iterable<Advancement> iterable) {
+        public int processAll(ServerPlayerEntity player, Iterable<Advancement> advancements) {
             int i = 0;
-            for (Advancement advancement : iterable) {
-                if (!this.processEach(serverPlayerEntity, advancement)) continue;
+            for (Advancement advancement : advancements) {
+                if (!this.processEach(player, advancement)) continue;
                 ++i;
             }
             return i;

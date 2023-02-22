@@ -31,14 +31,14 @@ import net.minecraft.util.registry.Registry;
 public class BlockListProvider
 implements DataProvider {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private final DataGenerator root;
+    private final DataGenerator generator;
 
     public BlockListProvider(DataGenerator dataGenerator) {
-        this.root = dataGenerator;
+        this.generator = dataGenerator;
     }
 
     @Override
-    public void run(DataCache dataCache) throws IOException {
+    public void run(DataCache cache) throws IOException {
         JsonObject jsonObject = new JsonObject();
         for (Block block : Registry.BLOCK) {
             Identifier identifier = Registry.BLOCK.getId(block);
@@ -74,8 +74,8 @@ implements DataProvider {
             jsonObject2.add("states", (JsonElement)jsonArray2);
             jsonObject.add(identifier.toString(), (JsonElement)jsonObject2);
         }
-        Path path = this.root.getOutput().resolve("reports/blocks.json");
-        DataProvider.writeToPath(GSON, dataCache, (JsonElement)jsonObject, path);
+        Path path = this.generator.getOutput().resolve("reports/blocks.json");
+        DataProvider.writeToPath(GSON, cache, (JsonElement)jsonObject, path);
     }
 
     @Override

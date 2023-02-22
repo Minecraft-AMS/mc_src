@@ -3,14 +3,17 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
+ *  com.mojang.serialization.Codec
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
 import com.google.common.collect.Maps;
+import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.util.Map;
@@ -21,13 +24,15 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
-import net.minecraft.util.PackedIntegerArray;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
+import net.minecraft.util.collection.PackedIntegerArray;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
+import org.jetbrains.annotations.Nullable;
 
 public class Heightmap {
-    private static final Predicate<BlockState> ALWAYS_TRUE = blockState -> !blockState.isAir();
+    private static final Predicate<BlockState> NOT_AIR = blockState -> !blockState.isAir();
     private static final Predicate<BlockState> SUFFOCATES = blockState -> blockState.getMaterial().blocksMovement();
     private final PackedIntegerArray storage = new PackedIntegerArray(9, 256);
     private final Predicate<BlockState> blockPredicate;
@@ -43,25 +48,24 @@ public class Heightmap {
         ObjectArrayList objectList = new ObjectArrayList(i);
         ObjectListIterator objectListIterator = objectList.iterator();
         int j = chunk.getHighestNonEmptySectionYOffset() + 16;
-        try (BlockPos.PooledMutable pooledMutable = BlockPos.PooledMutable.get();){
-            for (int k = 0; k < 16; ++k) {
-                block10: for (int l = 0; l < 16; ++l) {
-                    for (Type type : types) {
-                        objectList.add((Object)chunk.getHeightmap(type));
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        for (int k = 0; k < 16; ++k) {
+            block1: for (int l = 0; l < 16; ++l) {
+                for (Type type : types) {
+                    objectList.add((Object)chunk.getHeightmap(type));
+                }
+                for (int m = j - 1; m >= 0; --m) {
+                    mutable.set(k, m, l);
+                    BlockState blockState = chunk.getBlockState(mutable);
+                    if (blockState.isOf(Blocks.AIR)) continue;
+                    while (objectListIterator.hasNext()) {
+                        Heightmap heightmap = (Heightmap)objectListIterator.next();
+                        if (!heightmap.blockPredicate.test(blockState)) continue;
+                        heightmap.set(k, l, m + 1);
+                        objectListIterator.remove();
                     }
-                    for (int m = j - 1; m >= 0; --m) {
-                        pooledMutable.set(k, m, l);
-                        BlockState blockState = chunk.getBlockState(pooledMutable);
-                        if (blockState.getBlock() == Blocks.AIR) continue;
-                        while (objectListIterator.hasNext()) {
-                            Heightmap heightmap = (Heightmap)objectListIterator.next();
-                            if (!heightmap.blockPredicate.test(blockState)) continue;
-                            heightmap.set(k, l, m + 1);
-                            objectListIterator.remove();
-                        }
-                        if (objectList.isEmpty()) continue block10;
-                        objectListIterator.back(i);
-                    }
+                    if (objectList.isEmpty()) continue block1;
+                    objectListIterator.back(i);
                 }
             }
         }
@@ -116,14 +120,15 @@ public class Heightmap {
     }
 
     static /* synthetic */ Predicate method_16683() {
-        return ALWAYS_TRUE;
+        return NOT_AIR;
     }
 
     static /* synthetic */ Predicate method_16681() {
         return SUFFOCATES;
     }
 
-    public static enum Type {
+    public static enum Type implements StringIdentifiable
+    {
         WORLD_SURFACE_WG("WORLD_SURFACE_WG", Purpose.WORLDGEN, Heightmap.method_16683()),
         WORLD_SURFACE("WORLD_SURFACE", Purpose.CLIENT, Heightmap.method_16683()),
         OCEAN_FLOOR_WG("OCEAN_FLOOR_WG", Purpose.WORLDGEN, Heightmap.method_16681()),
@@ -131,6 +136,7 @@ public class Heightmap {
         MOTION_BLOCKING("MOTION_BLOCKING", Purpose.CLIENT, blockState -> blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty()),
         MOTION_BLOCKING_NO_LEAVES("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, blockState -> (blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty()) && !(blockState.getBlock() instanceof LeavesBlock));
 
+        public static final Codec<Type> CODEC;
         private final String name;
         private final Purpose purpose;
         private final Predicate<BlockState> blockPredicate;
@@ -155,6 +161,7 @@ public class Heightmap {
             return this.purpose != Purpose.WORLDGEN;
         }
 
+        @Nullable
         public static Type byName(String name) {
             return BY_NAME.get(name);
         }
@@ -163,7 +170,13 @@ public class Heightmap {
             return this.blockPredicate;
         }
 
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
         static {
+            CODEC = StringIdentifiable.createCodec(Type::values, Type::byName);
             BY_NAME = Util.make(Maps.newHashMap(), hashMap -> {
                 for (Type type : Type.values()) {
                     hashMap.put(type.name, type);

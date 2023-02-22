@@ -2,13 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.serialization.Lifecycle
  *  org.jetbrains.annotations.NotNull
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util.registry;
 
+import com.mojang.serialization.Lifecycle;
+import java.util.Optional;
 import java.util.Random;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.registry.SimpleRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,16 +23,17 @@ extends SimpleRegistry<T> {
     private final Identifier defaultId;
     private T defaultValue;
 
-    public DefaultedRegistry(String defaultId) {
+    public DefaultedRegistry(String defaultId, RegistryKey<? extends Registry<T>> key, Lifecycle lifecycle) {
+        super(key, lifecycle);
         this.defaultId = new Identifier(defaultId);
     }
 
     @Override
-    public <V extends T> V set(int rawId, Identifier id, V entry) {
-        if (this.defaultId.equals(id)) {
+    public <V extends T> V set(int rawId, RegistryKey<T> key, V entry, Lifecycle lifecycle) {
+        if (this.defaultId.equals(key.getValue())) {
             this.defaultValue = entry;
         }
-        return super.set(rawId, id, entry);
+        return super.set(rawId, key, entry, lifecycle);
     }
 
     @Override
@@ -48,6 +54,11 @@ extends SimpleRegistry<T> {
     public T get(@Nullable Identifier id) {
         Object object = super.get(id);
         return object == null ? this.defaultValue : object;
+    }
+
+    @Override
+    public Optional<T> getOrEmpty(@Nullable Identifier id) {
+        return Optional.ofNullable(super.get(id));
     }
 
     @Override

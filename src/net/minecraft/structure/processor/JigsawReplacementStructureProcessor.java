@@ -4,19 +4,17 @@
  * Could not load the following classes:
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.structure.processor;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import net.minecraft.block.Block;
+import com.mojang.serialization.Codec;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.command.arguments.BlockArgumentParser;
+import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.processor.StructureProcessor;
@@ -27,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class JigsawReplacementStructureProcessor
 extends StructureProcessor {
+    public static final Codec<JigsawReplacementStructureProcessor> CODEC = Codec.unit(() -> INSTANCE);
     public static final JigsawReplacementStructureProcessor INSTANCE = new JigsawReplacementStructureProcessor();
 
     private JigsawReplacementStructureProcessor() {
@@ -34,9 +33,9 @@ extends StructureProcessor {
 
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(WorldView worldView, BlockPos pos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData placementData) {
-        Block block = structureBlockInfo2.state.getBlock();
-        if (block != Blocks.JIGSAW) {
+    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos blockPos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData structurePlacementData) {
+        BlockState blockState = structureBlockInfo2.state;
+        if (!blockState.isOf(Blocks.JIGSAW)) {
             return structureBlockInfo2;
         }
         String string = structureBlockInfo2.tag.getString("final_state");
@@ -47,20 +46,15 @@ extends StructureProcessor {
         catch (CommandSyntaxException commandSyntaxException) {
             throw new RuntimeException(commandSyntaxException);
         }
-        if (blockArgumentParser.getBlockState().getBlock() == Blocks.STRUCTURE_VOID) {
+        if (blockArgumentParser.getBlockState().isOf(Blocks.STRUCTURE_VOID)) {
             return null;
         }
         return new Structure.StructureBlockInfo(structureBlockInfo2.pos, blockArgumentParser.getBlockState(), null);
     }
 
     @Override
-    protected StructureProcessorType getType() {
+    protected StructureProcessorType<?> getType() {
         return StructureProcessorType.JIGSAW_REPLACEMENT;
-    }
-
-    @Override
-    protected <T> Dynamic<T> method_16666(DynamicOps<T> dynamicOps) {
-        return new Dynamic(dynamicOps, dynamicOps.emptyMap());
     }
 }
 

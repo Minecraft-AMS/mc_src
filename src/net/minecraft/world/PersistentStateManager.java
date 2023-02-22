@@ -12,18 +12,13 @@ package net.minecraft.world;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PushbackInputStream;
 import java.util.Map;
 import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
-import net.minecraft.datafixer.DataFixTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtHelper;
-import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.world.PersistentState;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -70,8 +65,8 @@ public class PersistentStateManager {
             File file = this.getFile(id);
             if (file.exists()) {
                 PersistentState persistentState = (PersistentState)factory.get();
-                CompoundTag compoundTag = this.readTag(id, SharedConstants.getGameVersion().getWorldVersion());
-                persistentState.fromTag(compoundTag.getCompound("data"));
+                NbtCompound nbtCompound = this.readNbt(id, SharedConstants.getGameVersion().getWorldVersion());
+                persistentState.fromTag(nbtCompound.getCompound("data"));
                 return (T)persistentState;
             }
         }
@@ -85,42 +80,30 @@ public class PersistentStateManager {
         this.loadedStates.put(state.getId(), state);
     }
 
-    public CompoundTag readTag(String id, int dataVersion) throws IOException {
-        File file = this.getFile(id);
-        try (PushbackInputStream pushbackInputStream = new PushbackInputStream(new FileInputStream(file), 2);){
-            Object object;
-            CompoundTag compoundTag;
-            if (this.isCompressed(pushbackInputStream)) {
-                compoundTag = NbtIo.readCompressed(pushbackInputStream);
-            } else {
-                DataInputStream dataInputStream = new DataInputStream(pushbackInputStream);
-                object = null;
-                try {
-                    compoundTag = NbtIo.read(dataInputStream);
-                }
-                catch (Throwable throwable) {
-                    object = throwable;
-                    throw throwable;
-                }
-                finally {
-                    if (dataInputStream != null) {
-                        if (object != null) {
-                            try {
-                                dataInputStream.close();
-                            }
-                            catch (Throwable throwable) {
-                                ((Throwable)object).addSuppressed(throwable);
-                            }
-                        } else {
-                            dataInputStream.close();
-                        }
-                    }
-                }
-            }
-            int i = compoundTag.contains("DataVersion", 99) ? compoundTag.getInt("DataVersion") : 1343;
-            object = NbtHelper.update(this.dataFixer, DataFixTypes.SAVED_DATA, compoundTag, i, dataVersion);
-            return object;
-        }
+    /*
+     * Exception decompiling
+     */
+    public NbtCompound readNbt(String id, int dataVersion) throws IOException {
+        /*
+         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
+         * 
+         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
+         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
+         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
+         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
+         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
+         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
+         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
+         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
+         *     at org.benf.cfr.reader.Main.main(Main.java:54)
+         */
+        throw new IllegalStateException("Decompilation failed");
     }
 
     private boolean isCompressed(PushbackInputStream pushbackInputStream) throws IOException {

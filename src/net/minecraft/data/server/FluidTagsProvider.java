@@ -9,7 +9,6 @@ import net.minecraft.data.server.AbstractTagProvider;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.tag.FluidTags;
-import net.minecraft.tag.TagContainer;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 
@@ -26,18 +25,13 @@ extends AbstractTagProvider<Fluid> {
     }
 
     @Override
-    protected Path getOutput(Identifier identifier) {
-        return this.root.getOutput().resolve("data/" + identifier.getNamespace() + "/tags/fluids/" + identifier.getPath() + ".json");
+    protected Path getOutput(Identifier id) {
+        return this.root.getOutput().resolve("data/" + id.getNamespace() + "/tags/fluids/" + id.getPath() + ".json");
     }
 
     @Override
     public String getName() {
         return "Fluid Tags";
-    }
-
-    @Override
-    protected void setContainer(TagContainer<Fluid> tagContainer) {
-        FluidTags.setContainer(tagContainer);
     }
 }
 

@@ -34,7 +34,6 @@ import com.google.gson.stream.JsonReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
-import java.lang.reflect.Type;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.item.Item;
@@ -121,7 +120,7 @@ public class JsonHelper {
     public static Item asItem(JsonElement element, String name) {
         if (element.isJsonPrimitive()) {
             String string = element.getAsString();
-            return (Item)Registry.ITEM.getOrEmpty(new Identifier(string)).orElseThrow(() -> new JsonSyntaxException("Expected " + name + " to be an item, was unknown string '" + string + "'"));
+            return Registry.ITEM.getOrEmpty(new Identifier(string)).orElseThrow(() -> new JsonSyntaxException("Expected " + name + " to be an item, was unknown string '" + string + "'"));
         }
         throw new JsonSyntaxException("Expected " + name + " to be an item, was " + JsonHelper.getType(element));
     }
@@ -334,11 +333,12 @@ public class JsonHelper {
     }
 
     @Nullable
-    public static <T> T deserialize(Gson gson, Reader reader, Type type, boolean lenient) {
+    @Environment(value=EnvType.CLIENT)
+    public static <T> T deserialize(Gson gson, Reader reader, TypeToken<T> typeToken, boolean lenient) {
         try {
             JsonReader jsonReader = new JsonReader(reader);
             jsonReader.setLenient(lenient);
-            return (T)gson.getAdapter(TypeToken.get((Type)type)).read(jsonReader);
+            return (T)gson.getAdapter(typeToken).read(jsonReader);
         }
         catch (IOException iOException) {
             throw new JsonParseException((Throwable)iOException);
@@ -347,8 +347,8 @@ public class JsonHelper {
 
     @Nullable
     @Environment(value=EnvType.CLIENT)
-    public static <T> T deserialize(Gson gson, String content, Type type, boolean lenient) {
-        return JsonHelper.deserialize(gson, (Reader)new StringReader(content), type, lenient);
+    public static <T> T deserialize(Gson gson, String content, TypeToken<T> typeToken, boolean lenient) {
+        return JsonHelper.deserialize(gson, (Reader)new StringReader(content), typeToken, lenient);
     }
 
     @Nullable
@@ -357,14 +357,15 @@ public class JsonHelper {
     }
 
     @Nullable
-    public static <T> T deserialize(Gson gson, Reader reader, Type type) {
-        return JsonHelper.deserialize(gson, reader, type, false);
+    @Environment(value=EnvType.CLIENT)
+    public static <T> T deserialize(Gson gson, Reader reader, TypeToken<T> typeToken) {
+        return JsonHelper.deserialize(gson, reader, typeToken, false);
     }
 
     @Nullable
     @Environment(value=EnvType.CLIENT)
-    public static <T> T deserialize(Gson gson, String content, Type type) {
-        return JsonHelper.deserialize(gson, content, type, false);
+    public static <T> T deserialize(Gson gson, String content, TypeToken<T> typeToken) {
+        return JsonHelper.deserialize(gson, content, typeToken, false);
     }
 
     @Nullable

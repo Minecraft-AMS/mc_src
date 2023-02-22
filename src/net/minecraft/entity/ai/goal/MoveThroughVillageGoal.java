@@ -12,13 +12,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
+import net.minecraft.block.DoorBlock;
+import net.minecraft.entity.ai.NavigationConditions;
 import net.minecraft.entity.ai.TargetFinder;
-import net.minecraft.entity.ai.goal.DoorInteractGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.pathing.MobNavigation;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.ai.pathing.PathNode;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -27,7 +28,7 @@ import net.minecraft.world.poi.PointOfInterestType;
 
 public class MoveThroughVillageGoal
 extends Goal {
-    protected final MobEntityWithAi mob;
+    protected final PathAwareEntity mob;
     private final double speed;
     private Path targetPath;
     private BlockPos target;
@@ -36,26 +37,29 @@ extends Goal {
     private final int distance;
     private final BooleanSupplier doorPassingThroughGetter;
 
-    public MoveThroughVillageGoal(MobEntityWithAi mob, double speed, boolean requiresNighttime, int distance, BooleanSupplier doorPassingThroughGetter) {
-        this.mob = mob;
+    public MoveThroughVillageGoal(PathAwareEntity entity, double speed, boolean requiresNighttime, int distance, BooleanSupplier doorPassingThroughGetter) {
+        this.mob = entity;
         this.speed = speed;
         this.requiresNighttime = requiresNighttime;
         this.distance = distance;
         this.doorPassingThroughGetter = doorPassingThroughGetter;
         this.setControls(EnumSet.of(Goal.Control.MOVE));
-        if (!(mob.getNavigation() instanceof MobNavigation)) {
+        if (!NavigationConditions.hasMobNavigation(entity)) {
             throw new IllegalArgumentException("Unsupported mob for MoveThroughVillageGoal");
         }
     }
 
     @Override
     public boolean canStart() {
+        if (!NavigationConditions.hasMobNavigation(this.mob)) {
+            return false;
+        }
         this.forgetOldTarget();
         if (this.requiresNighttime && this.mob.world.isDay()) {
             return false;
         }
         ServerWorld serverWorld = (ServerWorld)this.mob.world;
-        BlockPos blockPos = new BlockPos(this.mob);
+        BlockPos blockPos = this.mob.getBlockPos();
         if (!serverWorld.isNearOccupiedPointOfInterest(blockPos, 6)) {
             return false;
         }
@@ -83,7 +87,7 @@ extends Goal {
         this.targetPath = mobNavigation.findPathTo(this.target, 0);
         mobNavigation.setCanPathThroughDoors(bl);
         if (this.targetPath == null) {
-            Vec3d vec3d2 = TargetFinder.findTargetTowards(this.mob, 10, 7, new Vec3d(this.target));
+            Vec3d vec3d2 = TargetFinder.findTargetTowards(this.mob, 10, 7, Vec3d.ofBottomCenter(this.target));
             if (vec3d2 == null) {
                 return false;
             }
@@ -97,7 +101,7 @@ extends Goal {
         for (int i = 0; i < this.targetPath.getLength(); ++i) {
             PathNode pathNode = this.targetPath.getNode(i);
             BlockPos blockPos22 = new BlockPos(pathNode.x, pathNode.y + 1, pathNode.z);
-            if (!DoorInteractGoal.isWoodenDoor(this.mob.world, blockPos22)) continue;
+            if (!DoorBlock.isWoodenDoor(this.mob.world, blockPos22)) continue;
             this.targetPath = this.mob.getNavigation().findPathTo(pathNode.x, pathNode.y, pathNode.z, 0);
             break;
         }

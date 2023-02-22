@@ -42,6 +42,7 @@ import net.minecraft.client.render.entity.model.ShieldEntityModel;
 import net.minecraft.client.render.entity.model.TridentEntityModel;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.render.model.ModelLoader;
+import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.BlockItem;
@@ -49,7 +50,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.ShieldItem;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.util.DyeColor;
 import org.apache.commons.lang3.StringUtils;
@@ -68,7 +69,7 @@ public class BuiltinModelItemRenderer {
     private final ShieldEntityModel modelShield = new ShieldEntityModel();
     private final TridentEntityModel modelTrident = new TridentEntityModel();
 
-    public void render(ItemStack stack, MatrixStack matrix, VertexConsumerProvider vertexConsumerProvider, int light, int overlay) {
+    public void render(ItemStack stack, ModelTransformation.Mode mode, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, int overlay) {
         Item item = stack.getItem();
         if (item instanceof BlockItem) {
             BlockEntity blockEntity;
@@ -76,17 +77,17 @@ public class BuiltinModelItemRenderer {
             if (block instanceof AbstractSkullBlock) {
                 GameProfile gameProfile = null;
                 if (stack.hasTag()) {
-                    CompoundTag compoundTag = stack.getTag();
-                    if (compoundTag.contains("SkullOwner", 10)) {
-                        gameProfile = NbtHelper.toGameProfile(compoundTag.getCompound("SkullOwner"));
-                    } else if (compoundTag.contains("SkullOwner", 8) && !StringUtils.isBlank((CharSequence)compoundTag.getString("SkullOwner"))) {
-                        gameProfile = new GameProfile(null, compoundTag.getString("SkullOwner"));
+                    NbtCompound nbtCompound = stack.getTag();
+                    if (nbtCompound.contains("SkullOwner", 10)) {
+                        gameProfile = NbtHelper.toGameProfile(nbtCompound.getCompound("SkullOwner"));
+                    } else if (nbtCompound.contains("SkullOwner", 8) && !StringUtils.isBlank((CharSequence)nbtCompound.getString("SkullOwner"))) {
+                        gameProfile = new GameProfile(null, nbtCompound.getString("SkullOwner"));
                         gameProfile = SkullBlockEntity.loadProperties(gameProfile);
-                        compoundTag.remove("SkullOwner");
-                        compoundTag.put("SkullOwner", NbtHelper.fromGameProfile(new CompoundTag(), gameProfile));
+                        nbtCompound.remove("SkullOwner");
+                        nbtCompound.put("SkullOwner", NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
                     }
                 }
-                SkullBlockEntityRenderer.render(null, 180.0f, ((AbstractSkullBlock)block).getSkullType(), gameProfile, 0.0f, matrix, vertexConsumerProvider, light);
+                SkullBlockEntityRenderer.render(null, 180.0f, ((AbstractSkullBlock)block).getSkullType(), gameProfile, 0.0f, matrices, vertexConsumers, light);
                 return;
             }
             if (block instanceof AbstractBannerBlock) {
@@ -109,29 +110,29 @@ public class BuiltinModelItemRenderer {
             } else {
                 return;
             }
-            BlockEntityRenderDispatcher.INSTANCE.renderEntity(blockEntity, matrix, vertexConsumerProvider, light, overlay);
+            BlockEntityRenderDispatcher.INSTANCE.renderEntity(blockEntity, matrices, vertexConsumers, light, overlay);
             return;
         }
         if (item == Items.SHIELD) {
             boolean bl = stack.getSubTag("BlockEntityTag") != null;
-            matrix.push();
-            matrix.scale(1.0f, -1.0f, -1.0f);
+            matrices.push();
+            matrices.scale(1.0f, -1.0f, -1.0f);
             SpriteIdentifier spriteIdentifier = bl ? ModelLoader.SHIELD_BASE : ModelLoader.SHIELD_BASE_NO_PATTERN;
-            VertexConsumer vertexConsumer = spriteIdentifier.getSprite().getTextureSpecificVertexConsumer(ItemRenderer.getArmorVertexConsumer(vertexConsumerProvider, this.modelShield.getLayer(spriteIdentifier.getAtlasId()), false, stack.hasEnchantmentGlint()));
-            this.modelShield.method_23775().render(matrix, vertexConsumer, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
+            VertexConsumer vertexConsumer = spriteIdentifier.getSprite().getTextureSpecificVertexConsumer(ItemRenderer.getDirectItemGlintConsumer(vertexConsumers, this.modelShield.getLayer(spriteIdentifier.getAtlasId()), true, stack.hasGlint()));
+            this.modelShield.getHandle().render(matrices, vertexConsumer, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
             if (bl) {
-                List<Pair<BannerPattern, DyeColor>> list = BannerBlockEntity.method_24280(ShieldItem.getColor(stack), BannerBlockEntity.method_24281(stack));
-                BannerBlockEntityRenderer.method_23802(matrix, vertexConsumerProvider, light, overlay, this.modelShield.method_23774(), spriteIdentifier, false, list);
+                List<Pair<BannerPattern, DyeColor>> list = BannerBlockEntity.method_24280(ShieldItem.getColor(stack), BannerBlockEntity.getPatternListTag(stack));
+                BannerBlockEntityRenderer.renderCanvas(matrices, vertexConsumers, light, overlay, this.modelShield.getPlate(), spriteIdentifier, false, list, stack.hasGlint());
             } else {
-                this.modelShield.method_23774().render(matrix, vertexConsumer, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
+                this.modelShield.getPlate().render(matrices, vertexConsumer, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
             }
-            matrix.pop();
+            matrices.pop();
         } else if (item == Items.TRIDENT) {
-            matrix.push();
-            matrix.scale(1.0f, -1.0f, -1.0f);
-            VertexConsumer vertexConsumer2 = ItemRenderer.getArmorVertexConsumer(vertexConsumerProvider, this.modelTrident.getLayer(TridentEntityModel.TEXTURE), false, stack.hasEnchantmentGlint());
-            this.modelTrident.render(matrix, vertexConsumer2, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
-            matrix.pop();
+            matrices.push();
+            matrices.scale(1.0f, -1.0f, -1.0f);
+            VertexConsumer vertexConsumer2 = ItemRenderer.getDirectItemGlintConsumer(vertexConsumers, this.modelTrident.getLayer(TridentEntityModel.TEXTURE), false, stack.hasGlint());
+            this.modelTrident.render(matrices, vertexConsumer2, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
+            matrices.pop();
         }
     }
 }

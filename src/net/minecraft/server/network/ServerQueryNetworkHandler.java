@@ -15,14 +15,14 @@ import net.minecraft.text.TranslatableText;
 
 public class ServerQueryNetworkHandler
 implements ServerQueryPacketListener {
-    private static final Text REQUEST_HANDLED = new TranslatableText("multiplayer.status.request_handled", new Object[0]);
+    private static final Text REQUEST_HANDLED = new TranslatableText("multiplayer.status.request_handled");
     private final MinecraftServer server;
     private final ClientConnection connection;
     private boolean responseSent;
 
-    public ServerQueryNetworkHandler(MinecraftServer minecraftServer, ClientConnection clientConnection) {
-        this.server = minecraftServer;
-        this.connection = clientConnection;
+    public ServerQueryNetworkHandler(MinecraftServer server, ClientConnection connection) {
+        this.server = server;
+        this.connection = connection;
     }
 
     @Override

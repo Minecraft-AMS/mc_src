@@ -18,22 +18,22 @@ import net.minecraft.item.ItemStack;
 
 public class ThornsEnchantment
 extends Enchantment {
-    public ThornsEnchantment(Enchantment.Weight weight, EquipmentSlot ... slotTypes) {
+    public ThornsEnchantment(Enchantment.Rarity weight, EquipmentSlot ... slotTypes) {
         super(weight, EnchantmentTarget.ARMOR_CHEST, slotTypes);
     }
 
     @Override
-    public int getMinimumPower(int level) {
+    public int getMinPower(int level) {
         return 10 + 20 * (level - 1);
     }
 
     @Override
-    public int getMaximumPower(int level) {
-        return super.getMinimumPower(level) + 50;
+    public int getMaxPower(int level) {
+        return super.getMinPower(level) + 50;
     }
 
     @Override
-    public int getMaximumLevel() {
+    public int getMaxLevel() {
         return 3;
     }
 
@@ -48,16 +48,14 @@ extends Enchantment {
     @Override
     public void onUserDamaged(LivingEntity user, Entity attacker, int level) {
         Random random = user.getRandom();
-        Map.Entry<EquipmentSlot, ItemStack> entry = EnchantmentHelper.getRandomEnchantedEquipment(Enchantments.THORNS, user);
+        Map.Entry<EquipmentSlot, ItemStack> entry = EnchantmentHelper.chooseEquipmentWith(Enchantments.THORNS, user);
         if (ThornsEnchantment.shouldDamageAttacker(level, random)) {
             if (attacker != null) {
                 attacker.damage(DamageSource.thorns(user), ThornsEnchantment.getDamageAmount(level, random));
             }
             if (entry != null) {
-                entry.getValue().damage(3, user, livingEntity -> livingEntity.sendEquipmentBreakStatus((EquipmentSlot)((Object)((Object)entry.getKey()))));
+                entry.getValue().damage(2, user, livingEntity -> livingEntity.sendEquipmentBreakStatus((EquipmentSlot)((Object)((Object)entry.getKey()))));
             }
-        } else if (entry != null) {
-            entry.getValue().damage(1, user, livingEntity -> livingEntity.sendEquipmentBreakStatus((EquipmentSlot)((Object)((Object)entry.getKey()))));
         }
     }
 

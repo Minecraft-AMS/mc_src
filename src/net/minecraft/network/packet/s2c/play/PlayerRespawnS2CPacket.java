@@ -11,27 +11,37 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
-import net.minecraft.world.level.LevelGeneratorType;
 
 public class PlayerRespawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private DimensionType dimension;
+    private DimensionType field_25322;
+    private RegistryKey<World> dimension;
     private long sha256Seed;
     private GameMode gameMode;
-    private LevelGeneratorType generatorType;
+    private GameMode previousGameMode;
+    private boolean debugWorld;
+    private boolean flatWorld;
+    private boolean keepPlayerAttributes;
 
     public PlayerRespawnS2CPacket() {
     }
 
-    public PlayerRespawnS2CPacket(DimensionType dimension, long sha256Seed, LevelGeneratorType generatorType, GameMode gameMode) {
+    public PlayerRespawnS2CPacket(DimensionType dimensionType, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, GameMode previousGameMode, boolean debugWorld, boolean flatWorld, boolean keepPlayerAttributes) {
+        this.field_25322 = dimensionType;
         this.dimension = dimension;
         this.sha256Seed = sha256Seed;
         this.gameMode = gameMode;
-        this.generatorType = generatorType;
+        this.previousGameMode = previousGameMode;
+        this.debugWorld = debugWorld;
+        this.flatWorld = flatWorld;
+        this.keepPlayerAttributes = keepPlayerAttributes;
     }
 
     @Override
@@ -41,25 +51,35 @@ implements Packet<ClientPlayPacketListener> {
 
     @Override
     public void read(PacketByteBuf buf) throws IOException {
-        this.dimension = DimensionType.byRawId(buf.readInt());
+        this.field_25322 = buf.decode(DimensionType.REGISTRY_CODEC).get();
+        this.dimension = RegistryKey.of(Registry.WORLD_KEY, buf.readIdentifier());
         this.sha256Seed = buf.readLong();
         this.gameMode = GameMode.byId(buf.readUnsignedByte());
-        this.generatorType = LevelGeneratorType.getTypeFromName(buf.readString(16));
-        if (this.generatorType == null) {
-            this.generatorType = LevelGeneratorType.DEFAULT;
-        }
+        this.previousGameMode = GameMode.byId(buf.readUnsignedByte());
+        this.debugWorld = buf.readBoolean();
+        this.flatWorld = buf.readBoolean();
+        this.keepPlayerAttributes = buf.readBoolean();
     }
 
     @Override
     public void write(PacketByteBuf buf) throws IOException {
-        buf.writeInt(this.dimension.getRawId());
+        buf.encode(DimensionType.REGISTRY_CODEC, () -> this.field_25322);
+        buf.writeIdentifier(this.dimension.getValue());
         buf.writeLong(this.sha256Seed);
         buf.writeByte(this.gameMode.getId());
-        buf.writeString(this.generatorType.getName());
+        buf.writeByte(this.previousGameMode.getId());
+        buf.writeBoolean(this.debugWorld);
+        buf.writeBoolean(this.flatWorld);
+        buf.writeBoolean(this.keepPlayerAttributes);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public DimensionType getDimension() {
+    public DimensionType method_29445() {
+        return this.field_25322;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public RegistryKey<World> getDimension() {
         return this.dimension;
     }
 
@@ -74,8 +94,23 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public LevelGeneratorType getGeneratorType() {
-        return this.generatorType;
+    public GameMode getPreviousGameMode() {
+        return this.previousGameMode;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public boolean isDebugWorld() {
+        return this.debugWorld;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public boolean isFlatWorld() {
+        return this.flatWorld;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public boolean shouldKeepPlayerAttributes() {
+        return this.keepPlayerAttributes;
     }
 }
 

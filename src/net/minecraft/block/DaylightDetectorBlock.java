@@ -3,13 +3,14 @@
  */
 package net.minecraft.block;
 
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.DaylightDetectorBlockEntity;
-import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
@@ -32,13 +33,13 @@ extends BlockWithEntity {
     public static final BooleanProperty INVERTED = Properties.INVERTED;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 6.0, 16.0);
 
-    public DaylightDetectorBlock(Block.Settings settings) {
+    public DaylightDetectorBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(POWER, 0)).with(INVERTED, false));
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return SHAPE;
     }
 
@@ -48,12 +49,12 @@ extends BlockWithEntity {
     }
 
     @Override
-    public int getWeakRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
+    public int getWeakRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
         return state.get(POWER);
     }
 
     public static void updateState(BlockState state, World world, BlockPos pos) {
-        if (!world.dimension.hasSkyLight()) {
+        if (!world.getDimension().hasSkyLight()) {
             return;
         }
         int i = world.getLightLevel(LightType.SKY, pos) - world.getAmbientDarkness();
@@ -74,14 +75,14 @@ extends BlockWithEntity {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (player.canModifyWorld()) {
+        if (player.canModifyBlocks()) {
             if (world.isClient) {
                 return ActionResult.SUCCESS;
             }
             BlockState blockState = (BlockState)state.cycle(INVERTED);
             world.setBlockState(pos, blockState, 4);
             DaylightDetectorBlock.updateState(blockState, world, pos);
-            return ActionResult.SUCCESS;
+            return ActionResult.CONSUME;
         }
         return super.onUse(state, world, pos, player, hand, hit);
     }
@@ -97,7 +98,7 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new DaylightDetectorBlockEntity();
     }
 

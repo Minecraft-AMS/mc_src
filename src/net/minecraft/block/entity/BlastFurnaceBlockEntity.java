@@ -5,11 +5,11 @@ package net.minecraft.block.entity;
 
 import net.minecraft.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.container.BlastFurnaceContainer;
-import net.minecraft.container.Container;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeType;
+import net.minecraft.screen.BlastFurnaceScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 
@@ -21,7 +21,7 @@ extends AbstractFurnaceBlockEntity {
 
     @Override
     protected Text getContainerName() {
-        return new TranslatableText("container.blast_furnace", new Object[0]);
+        return new TranslatableText("container.blast_furnace");
     }
 
     @Override
@@ -30,8 +30,8 @@ extends AbstractFurnaceBlockEntity {
     }
 
     @Override
-    protected Container createContainer(int i, PlayerInventory playerInventory) {
-        return new BlastFurnaceContainer(i, playerInventory, this, this.propertyDelegate);
+    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return new BlastFurnaceScreenHandler(syncId, playerInventory, this, this.propertyDelegate);
     }
 }
 

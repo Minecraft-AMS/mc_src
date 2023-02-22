@@ -2,16 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Predicates
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.widget;
 
-import com.google.common.base.Predicates;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -24,25 +23,30 @@ import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.AbstractButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.Style;
+import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TextFieldWidget
-extends AbstractButtonWidget
+extends ClickableWidget
 implements Drawable,
 Element {
     private final TextRenderer textRenderer;
     private String text = "";
     private int maxLength = 32;
     private int focusedTicks;
-    private boolean focused = true;
+    private boolean drawsBackground = true;
     private boolean focusUnlocked = true;
     private boolean editable = true;
     private boolean selecting;
@@ -53,15 +57,15 @@ Element {
     private int uneditableColor = 0x707070;
     private String suggestion;
     private Consumer<String> changedListener;
-    private Predicate<String> textPredicate = Predicates.alwaysTrue();
-    private BiFunction<String, Integer, String> renderTextProvider = (string, integer) -> string;
+    private Predicate<String> textPredicate = Objects::nonNull;
+    private BiFunction<String, Integer, OrderedText> renderTextProvider = (string, integer) -> OrderedText.styledForwardsVisitedString(string, Style.EMPTY);
 
-    public TextFieldWidget(TextRenderer textRenderer, int x, int y, int width, int height, String message) {
-        this(textRenderer, x, y, width, height, null, message);
+    public TextFieldWidget(TextRenderer textRenderer, int x, int y, int width, int height, Text text) {
+        this(textRenderer, x, y, width, height, null, text);
     }
 
-    public TextFieldWidget(TextRenderer textRenderer, int x, int y, int width, int height, @Nullable TextFieldWidget copyFrom, String message) {
-        super(x, y, width, height, message);
+    public TextFieldWidget(TextRenderer textRenderer, int x, int y, int width, int height, @Nullable TextFieldWidget copyFrom, Text text) {
+        super(x, y, width, height, text);
         this.textRenderer = textRenderer;
         if (copyFrom != null) {
             this.setText(copyFrom.getText());
@@ -72,7 +76,7 @@ Element {
         this.changedListener = changedListener;
     }
 
-    public void setRenderTextProvider(BiFunction<String, Integer, String> renderTextProvider) {
+    public void setRenderTextProvider(BiFunction<String, Integer, OrderedText> renderTextProvider) {
         this.renderTextProvider = renderTextProvider;
     }
 
@@ -81,12 +85,9 @@ Element {
     }
 
     @Override
-    protected String getNarrationMessage() {
-        String string = this.getMessage();
-        if (string.isEmpty()) {
-            return "";
-        }
-        return I18n.translate("gui.narrate.editBox", string, this.text);
+    protected MutableText getNarrationMessage() {
+        Text text = this.getMessage();
+        return new TranslatableText("gui.narrate.editBox", text, this.text);
     }
 
     public void setText(String text) {
@@ -113,30 +114,21 @@ Element {
         this.textPredicate = textPredicate;
     }
 
-    public void write(String text) {
+    public void write(String string) {
+        String string3;
+        String string2;
         int l;
-        String string = "";
-        String string2 = SharedConstants.stripInvalidChars(text);
         int i = this.selectionStart < this.selectionEnd ? this.selectionStart : this.selectionEnd;
         int j = this.selectionStart < this.selectionEnd ? this.selectionEnd : this.selectionStart;
         int k = this.maxLength - this.text.length() - (i - j);
-        if (!this.text.isEmpty()) {
-            string = string + this.text.substring(0, i);
-        }
-        if (k < string2.length()) {
-            string = string + string2.substring(0, k);
+        if (k < (l = (string2 = SharedConstants.stripInvalidChars(string)).length())) {
+            string2 = string2.substring(0, k);
             l = k;
-        } else {
-            string = string + string2;
-            l = string2.length();
         }
-        if (!this.text.isEmpty() && j < this.text.length()) {
-            string = string + this.text.substring(j);
-        }
-        if (!this.textPredicate.test(string)) {
+        if (!this.textPredicate.test(string3 = new StringBuilder(this.text).replace(i, j, string2).toString())) {
             return;
         }
-        this.text = string;
+        this.text = string3;
         this.setSelectionStart(i + l);
         this.setSelectionEnd(this.selectionStart);
         this.onChanged(this.text);
@@ -169,6 +161,7 @@ Element {
     }
 
     public void eraseCharacters(int characterOffset) {
+        int k;
         if (this.text.isEmpty()) {
             return;
         }
@@ -176,24 +169,17 @@ Element {
             this.write("");
             return;
         }
-        boolean bl = characterOffset < 0;
-        int i = bl ? this.selectionStart + characterOffset : this.selectionStart;
-        int j = bl ? this.selectionStart : this.selectionStart + characterOffset;
-        String string = "";
-        if (i >= 0) {
-            string = this.text.substring(0, i);
+        int i = this.getCursorPosWithOffset(characterOffset);
+        int j = Math.min(i, this.selectionStart);
+        if (j == (k = Math.max(i, this.selectionStart))) {
+            return;
         }
-        if (j < this.text.length()) {
-            string = string + this.text.substring(j);
-        }
+        String string = new StringBuilder(this.text).delete(j, k).toString();
         if (!this.textPredicate.test(string)) {
             return;
         }
         this.text = string;
-        if (bl) {
-            this.moveCursor(characterOffset);
-        }
-        this.onChanged(this.text);
+        this.setCursor(j);
     }
 
     public int getWordSkipPosition(int wordOffset) {
@@ -231,7 +217,11 @@ Element {
     }
 
     public void moveCursor(int offset) {
-        this.setCursor(this.selectionStart + offset);
+        this.setCursor(this.getCursorPosWithOffset(offset));
+    }
+
+    private int getCursorPosWithOffset(int offset) {
+        return Util.moveCursor(this.text, this.selectionStart, offset);
     }
 
     public void setCursor(int cursor) {
@@ -332,7 +322,7 @@ Element {
     }
 
     @Override
-    public boolean charTyped(char chr, int keyCode) {
+    public boolean charTyped(char chr, int modifiers) {
         if (!this.isActive()) {
             return false;
         }
@@ -353,11 +343,11 @@ Element {
         }
         boolean bl2 = bl = mouseX >= (double)this.x && mouseX < (double)(this.x + this.width) && mouseY >= (double)this.y && mouseY < (double)(this.y + this.height);
         if (this.focusUnlocked) {
-            this.setSelected(bl);
+            this.setTextFieldFocused(bl);
         }
         if (this.isFocused() && bl && button == 0) {
             int i = MathHelper.floor(mouseX) - this.x;
-            if (this.focused) {
+            if (this.drawsBackground) {
                 i -= 4;
             }
             String string = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), this.getInnerWidth());
@@ -367,34 +357,36 @@ Element {
         return false;
     }
 
-    public void setSelected(boolean selected) {
-        super.setFocused(selected);
+    public void setTextFieldFocused(boolean focused) {
+        super.setFocused(focused);
     }
 
     @Override
-    public void renderButton(int mouseX, int mouseY, float delta) {
+    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        int i;
         if (!this.isVisible()) {
             return;
         }
-        if (this.hasBorder()) {
-            TextFieldWidget.fill(this.x - 1, this.y - 1, this.x + this.width + 1, this.y + this.height + 1, -6250336);
-            TextFieldWidget.fill(this.x, this.y, this.x + this.width, this.y + this.height, -16777216);
+        if (this.drawsBackground()) {
+            i = this.isFocused() ? -1 : -6250336;
+            TextFieldWidget.fill(matrices, this.x - 1, this.y - 1, this.x + this.width + 1, this.y + this.height + 1, i);
+            TextFieldWidget.fill(matrices, this.x, this.y, this.x + this.width, this.y + this.height, -16777216);
         }
-        int i = this.editable ? this.editableColor : this.uneditableColor;
+        i = this.editable ? this.editableColor : this.uneditableColor;
         int j = this.selectionStart - this.firstCharacterIndex;
         int k = this.selectionEnd - this.firstCharacterIndex;
         String string = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), this.getInnerWidth());
         boolean bl = j >= 0 && j <= string.length();
         boolean bl2 = this.isFocused() && this.focusedTicks / 6 % 2 == 0 && bl;
-        int l = this.focused ? this.x + 4 : this.x;
-        int m = this.focused ? this.y + (this.height - 8) / 2 : this.y;
+        int l = this.drawsBackground ? this.x + 4 : this.x;
+        int m = this.drawsBackground ? this.y + (this.height - 8) / 2 : this.y;
         int n = l;
         if (k > string.length()) {
             k = string.length();
         }
         if (!string.isEmpty()) {
             String string2 = bl ? string.substring(0, j) : string;
-            n = this.textRenderer.drawWithShadow(this.renderTextProvider.apply(string2, this.firstCharacterIndex), n, m, i);
+            n = this.textRenderer.drawWithShadow(matrices, this.renderTextProvider.apply(string2, this.firstCharacterIndex), (float)n, (float)m, i);
         }
         boolean bl3 = this.selectionStart < this.text.length() || this.text.length() >= this.getMaxLength();
         int o = n;
@@ -405,20 +397,20 @@ Element {
             --n;
         }
         if (!string.isEmpty() && bl && j < string.length()) {
-            this.textRenderer.drawWithShadow(this.renderTextProvider.apply(string.substring(j), this.selectionStart), n, m, i);
+            this.textRenderer.drawWithShadow(matrices, this.renderTextProvider.apply(string.substring(j), this.selectionStart), (float)n, (float)m, i);
         }
         if (!bl3 && this.suggestion != null) {
-            this.textRenderer.drawWithShadow(this.suggestion, o - 1, m, -8355712);
+            this.textRenderer.drawWithShadow(matrices, this.suggestion, (float)(o - 1), (float)m, -8355712);
         }
         if (bl2) {
             if (bl3) {
-                DrawableHelper.fill(o, m - 1, o + 1, m + 1 + this.textRenderer.fontHeight, -3092272);
+                DrawableHelper.fill(matrices, o, m - 1, o + 1, m + 1 + this.textRenderer.fontHeight, -3092272);
             } else {
-                this.textRenderer.drawWithShadow("_", o, m, i);
+                this.textRenderer.drawWithShadow(matrices, "_", (float)o, (float)m, i);
             }
         }
         if (k != j) {
-            int p = l + this.textRenderer.getStringWidth(string.substring(0, k));
+            int p = l + this.textRenderer.getWidth(string.substring(0, k));
             this.drawSelectionHighlight(o, m - 1, p - 1, m + 1 + this.textRenderer.fontHeight);
         }
     }
@@ -457,10 +449,10 @@ Element {
         RenderSystem.enableTexture();
     }
 
-    public void setMaxLength(int maximumLength) {
-        this.maxLength = maximumLength;
-        if (this.text.length() > maximumLength) {
-            this.text = this.text.substring(0, maximumLength);
+    public void setMaxLength(int maxLength) {
+        this.maxLength = maxLength;
+        if (this.text.length() > maxLength) {
+            this.text = this.text.substring(0, maxLength);
             this.onChanged(this.text);
         }
     }
@@ -473,12 +465,12 @@ Element {
         return this.selectionStart;
     }
 
-    private boolean hasBorder() {
-        return this.focused;
+    private boolean drawsBackground() {
+        return this.drawsBackground;
     }
 
-    public void setHasBorder(boolean hasBorder) {
-        this.focused = hasBorder;
+    public void setDrawsBackground(boolean drawsBackground) {
+        this.drawsBackground = drawsBackground;
     }
 
     public void setEditableColor(int color) {
@@ -490,11 +482,11 @@ Element {
     }
 
     @Override
-    public boolean changeFocus(boolean bl) {
+    public boolean changeFocus(boolean lookForwards) {
         if (!this.visible || !this.editable) {
             return false;
         }
-        return super.changeFocus(bl);
+        return super.changeFocus(lookForwards);
     }
 
     @Override
@@ -503,8 +495,8 @@ Element {
     }
 
     @Override
-    protected void onFocusedChanged(boolean bl) {
-        if (bl) {
+    protected void onFocusedChanged(boolean newFocused) {
+        if (newFocused) {
             this.focusedTicks = 0;
         }
     }
@@ -518,7 +510,7 @@ Element {
     }
 
     public int getInnerWidth() {
-        return this.hasBorder() ? this.width - 8 : this.width;
+        return this.drawsBackground() ? this.width - 8 : this.width;
     }
 
     public void setSelectionEnd(int i) {
@@ -563,7 +555,7 @@ Element {
         if (index > this.text.length()) {
             return this.x;
         }
-        return this.x + this.textRenderer.getStringWidth(this.text.substring(0, index));
+        return this.x + this.textRenderer.getWidth(this.text.substring(0, index));
     }
 
     public void setX(int x) {

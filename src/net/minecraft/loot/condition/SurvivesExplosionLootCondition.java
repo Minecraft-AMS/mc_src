@@ -16,16 +16,23 @@ import com.google.gson.JsonSerializationContext;
 import java.util.Random;
 import java.util.Set;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
-import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonSerializer;
 
 public class SurvivesExplosionLootCondition
 implements LootCondition {
     private static final SurvivesExplosionLootCondition INSTANCE = new SurvivesExplosionLootCondition();
 
     private SurvivesExplosionLootCondition() {
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.SURVIVES_EXPLOSION;
     }
 
     @Override
@@ -53,12 +60,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<SurvivesExplosionLootCondition> {
-        protected Factory() {
-            super(new Identifier("survives_explosion"), SurvivesExplosionLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<SurvivesExplosionLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, SurvivesExplosionLootCondition survivesExplosionLootCondition, JsonSerializationContext jsonSerializationContext) {
         }
@@ -69,7 +72,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

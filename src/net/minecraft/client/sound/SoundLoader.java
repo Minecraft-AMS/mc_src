@@ -19,6 +19,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.AudioStream;
 import net.minecraft.client.sound.OggAudioStream;
+import net.minecraft.client.sound.RepeatingAudioStream;
 import net.minecraft.client.sound.Sound;
 import net.minecraft.client.sound.StaticSound;
 import net.minecraft.resource.Resource;
@@ -72,20 +73,20 @@ public class SoundLoader {
              *     at org.benf.cfr.reader.Main.main(Main.java:54)
              */
             throw new IllegalStateException("Decompilation failed");
-        }, Util.getServerWorkerExecutor()));
+        }, Util.getMainWorkerExecutor()));
     }
 
-    public CompletableFuture<AudioStream> loadStreamed(Identifier id) {
+    public CompletableFuture<AudioStream> loadStreamed(Identifier id, boolean repeatInstantly) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Resource resource = this.resourceManager.getResource(id);
                 InputStream inputStream = resource.getInputStream();
-                return new OggAudioStream(inputStream);
+                return repeatInstantly ? new RepeatingAudioStream(OggAudioStream::new, inputStream) : new OggAudioStream(inputStream);
             }
             catch (IOException iOException) {
                 throw new CompletionException(iOException);
             }
-        }, Util.getServerWorkerExecutor());
+        }, Util.getMainWorkerExecutor());
     }
 
     public void close() {

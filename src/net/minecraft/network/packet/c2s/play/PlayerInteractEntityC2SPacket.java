@@ -13,9 +13,9 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 import net.minecraft.util.Hand;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -26,28 +26,33 @@ implements Packet<ServerPlayPacketListener> {
     private InteractionType type;
     private Vec3d hitPos;
     private Hand hand;
+    private boolean playerSneaking;
 
     public PlayerInteractEntityC2SPacket() {
     }
 
-    public PlayerInteractEntityC2SPacket(Entity entity) {
-        this.entityId = entity.getEntityId();
+    @Environment(value=EnvType.CLIENT)
+    public PlayerInteractEntityC2SPacket(Entity target, boolean playerSneaking) {
+        this.entityId = target.getEntityId();
         this.type = InteractionType.ATTACK;
+        this.playerSneaking = playerSneaking;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public PlayerInteractEntityC2SPacket(Entity entity, Hand hand) {
+    public PlayerInteractEntityC2SPacket(Entity entity, Hand hand, boolean playerSneaking) {
         this.entityId = entity.getEntityId();
         this.type = InteractionType.INTERACT;
         this.hand = hand;
+        this.playerSneaking = playerSneaking;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public PlayerInteractEntityC2SPacket(Entity entity, Hand hand, Vec3d vec3d) {
+    public PlayerInteractEntityC2SPacket(Entity entity, Hand hand, Vec3d hitPos, boolean playerSneaking) {
         this.entityId = entity.getEntityId();
         this.type = InteractionType.INTERACT_AT;
         this.hand = hand;
-        this.hitPos = vec3d;
+        this.hitPos = hitPos;
+        this.playerSneaking = playerSneaking;
     }
 
     @Override
@@ -60,6 +65,7 @@ implements Packet<ServerPlayPacketListener> {
         if (this.type == InteractionType.INTERACT || this.type == InteractionType.INTERACT_AT) {
             this.hand = buf.readEnumConstant(Hand.class);
         }
+        this.playerSneaking = buf.readBoolean();
     }
 
     @Override
@@ -74,6 +80,7 @@ implements Packet<ServerPlayPacketListener> {
         if (this.type == InteractionType.INTERACT || this.type == InteractionType.INTERACT_AT) {
             buf.writeEnumConstant(this.hand);
         }
+        buf.writeBoolean(this.playerSneaking);
     }
 
     @Override
@@ -90,12 +97,17 @@ implements Packet<ServerPlayPacketListener> {
         return this.type;
     }
 
+    @Nullable
     public Hand getHand() {
         return this.hand;
     }
 
     public Vec3d getHitPosition() {
         return this.hitPos;
+    }
+
+    public boolean isPlayerSneaking() {
+        return this.playerSneaking;
     }
 
     public static enum InteractionType {

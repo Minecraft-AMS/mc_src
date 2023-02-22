@@ -24,6 +24,7 @@ import net.minecraft.client.gui.hud.spectator.TeleportSpectatorMenu;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.util.DefaultSkinHelper;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -34,6 +35,8 @@ import net.minecraft.util.math.MathHelper;
 public class TeamTeleportSpectatorMenu
 implements SpectatorMenuCommandGroup,
 SpectatorMenuCommand {
+    private static final Text TEAM_TELEPORT_TEXT = new TranslatableText("spectatorMenu.team_teleport");
+    private static final Text PROMPT_TEXT = new TranslatableText("spectatorMenu.team_teleport.prompt");
     private final List<SpectatorMenuCommand> commands = Lists.newArrayList();
 
     public TeamTeleportSpectatorMenu() {
@@ -50,7 +53,7 @@ SpectatorMenuCommand {
 
     @Override
     public Text getPrompt() {
-        return new TranslatableText("spectatorMenu.team_teleport.prompt", new Object[0]);
+        return PROMPT_TEXT;
     }
 
     @Override
@@ -60,13 +63,13 @@ SpectatorMenuCommand {
 
     @Override
     public Text getName() {
-        return new TranslatableText("spectatorMenu.team_teleport", new Object[0]);
+        return TEAM_TELEPORT_TEXT;
     }
 
     @Override
-    public void renderIcon(float brightness, int alpha) {
-        MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEX);
-        DrawableHelper.blit(0, 0, 16.0f, 0.0f, 16, 16, 256, 256);
+    public void renderIcon(MatrixStack matrices, float f, int i) {
+        MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEXTURE);
+        DrawableHelper.drawTexture(matrices, 0, 0, 16.0f, 0.0f, 16, 16, 256, 256);
     }
 
     @Override
@@ -113,18 +116,18 @@ SpectatorMenuCommand {
         }
 
         @Override
-        public void renderIcon(float brightness, int alpha) {
+        public void renderIcon(MatrixStack matrices, float f, int i) {
             Integer integer = this.team.getColor().getColorValue();
             if (integer != null) {
-                float f = (float)(integer >> 16 & 0xFF) / 255.0f;
-                float g = (float)(integer >> 8 & 0xFF) / 255.0f;
-                float h = (float)(integer & 0xFF) / 255.0f;
-                DrawableHelper.fill(1, 1, 15, 15, MathHelper.packRgb(f * brightness, g * brightness, h * brightness) | alpha << 24);
+                float g = (float)(integer >> 16 & 0xFF) / 255.0f;
+                float h = (float)(integer >> 8 & 0xFF) / 255.0f;
+                float j = (float)(integer & 0xFF) / 255.0f;
+                DrawableHelper.fill(matrices, 1, 1, 15, 15, MathHelper.packRgb(g * f, h * f, j * f) | i << 24);
             }
             MinecraftClient.getInstance().getTextureManager().bindTexture(this.skinId);
-            RenderSystem.color4f(brightness, brightness, brightness, (float)alpha / 255.0f);
-            DrawableHelper.blit(2, 2, 12, 12, 8.0f, 8.0f, 8, 8, 64, 64);
-            DrawableHelper.blit(2, 2, 12, 12, 40.0f, 8.0f, 8, 8, 64, 64);
+            RenderSystem.color4f(f, f, f, (float)i / 255.0f);
+            DrawableHelper.drawTexture(matrices, 2, 2, 12, 12, 8.0f, 8.0f, 8, 8, 64, 64);
+            DrawableHelper.drawTexture(matrices, 2, 2, 12, 12, 40.0f, 8.0f, 8, 8, 64, 64);
         }
 
         @Override

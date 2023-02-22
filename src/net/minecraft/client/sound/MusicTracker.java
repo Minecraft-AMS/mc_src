@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.sound;
 
@@ -13,14 +14,16 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.client.sound.SoundManager;
+import net.minecraft.sound.MusicSound;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class MusicTracker {
     private final Random random = new Random();
     private final MinecraftClient client;
+    @Nullable
     private SoundInstance current;
     private int timeUntilNextSong = 100;
 
@@ -29,26 +32,28 @@ public class MusicTracker {
     }
 
     public void tick() {
-        MusicType musicType = this.client.getMusicType();
+        MusicSound musicSound = this.client.getMusicType();
         if (this.current != null) {
-            if (!musicType.getSound().getId().equals(this.current.getId())) {
+            if (!musicSound.getSound().getId().equals(this.current.getId()) && musicSound.shouldReplaceCurrentMusic()) {
                 this.client.getSoundManager().stop(this.current);
-                this.timeUntilNextSong = MathHelper.nextInt(this.random, 0, musicType.getMinDelay() / 2);
+                this.timeUntilNextSong = MathHelper.nextInt(this.random, 0, musicSound.getMinDelay() / 2);
             }
             if (!this.client.getSoundManager().isPlaying(this.current)) {
                 this.current = null;
-                this.timeUntilNextSong = Math.min(MathHelper.nextInt(this.random, musicType.getMinDelay(), musicType.getMaxDelay()), this.timeUntilNextSong);
+                this.timeUntilNextSong = Math.min(this.timeUntilNextSong, MathHelper.nextInt(this.random, musicSound.getMinDelay(), musicSound.getMaxDelay()));
             }
         }
-        this.timeUntilNextSong = Math.min(this.timeUntilNextSong, musicType.getMaxDelay());
+        this.timeUntilNextSong = Math.min(this.timeUntilNextSong, musicSound.getMaxDelay());
         if (this.current == null && this.timeUntilNextSong-- <= 0) {
-            this.play(musicType);
+            this.play(musicSound);
         }
     }
 
-    public void play(MusicType musicType) {
-        this.current = PositionedSoundInstance.music(musicType.getSound());
-        this.client.getSoundManager().play(this.current);
+    public void play(MusicSound type) {
+        this.current = PositionedSoundInstance.music(type.getSound());
+        if (this.current.getSound() != SoundManager.MISSING_SOUND) {
+            this.client.getSoundManager().play(this.current);
+        }
         this.timeUntilNextSong = Integer.MAX_VALUE;
     }
 
@@ -56,49 +61,15 @@ public class MusicTracker {
         if (this.current != null) {
             this.client.getSoundManager().stop(this.current);
             this.current = null;
-            this.timeUntilNextSong = 0;
         }
+        this.timeUntilNextSong += 100;
     }
 
-    public boolean isPlayingType(MusicType musicType) {
+    public boolean isPlayingType(MusicSound type) {
         if (this.current == null) {
             return false;
         }
-        return musicType.getSound().getId().equals(this.current.getId());
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static enum MusicType {
-        MENU(SoundEvents.MUSIC_MENU, 20, 600),
-        GAME(SoundEvents.MUSIC_GAME, 12000, 24000),
-        CREATIVE(SoundEvents.MUSIC_CREATIVE, 1200, 3600),
-        CREDITS(SoundEvents.MUSIC_CREDITS, 0, 0),
-        NETHER(SoundEvents.MUSIC_NETHER, 1200, 3600),
-        END_BOSS(SoundEvents.MUSIC_DRAGON, 0, 0),
-        END(SoundEvents.MUSIC_END, 6000, 24000),
-        UNDER_WATER(SoundEvents.MUSIC_UNDER_WATER, 12000, 24000);
-
-        private final SoundEvent sound;
-        private final int minDelay;
-        private final int maxDelay;
-
-        private MusicType(SoundEvent soundEvent, int minDelay, int maxDelay) {
-            this.sound = soundEvent;
-            this.minDelay = minDelay;
-            this.maxDelay = maxDelay;
-        }
-
-        public SoundEvent getSound() {
-            return this.sound;
-        }
-
-        public int getMinDelay() {
-            return this.minDelay;
-        }
-
-        public int getMaxDelay() {
-            return this.maxDelay;
-        }
+        return type.getSound().getId().equals(this.current.getId());
     }
 }
 

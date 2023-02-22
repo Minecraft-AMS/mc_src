@@ -2,7 +2,8 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
+ *  com.google.common.collect.Lists
+ *  com.google.common.collect.Queues
  *  com.mojang.brigadier.arguments.ArgumentType
  *  com.mojang.brigadier.builder.ArgumentBuilder
  *  com.mojang.brigadier.builder.LiteralArgumentBuilder
@@ -12,13 +13,18 @@
  *  com.mojang.brigadier.tree.CommandNode
  *  com.mojang.brigadier.tree.LiteralCommandNode
  *  com.mojang.brigadier.tree.RootCommandNode
+ *  it.unimi.dsi.fastutil.objects.Object2IntMap
+ *  it.unimi.dsi.fastutil.objects.Object2IntMap$Entry
+ *  it.unimi.dsi.fastutil.objects.Object2IntMaps
+ *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -28,19 +34,21 @@ import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.brigadier.tree.RootCommandNode;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.command.arguments.ArgumentTypes;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.server.command.CommandSource;
-import net.minecraft.util.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 public class CommandTreeS2CPacket
@@ -57,61 +65,67 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void read(PacketByteBuf buf) throws IOException {
         CommandNodeData[] commandNodeDatas = new CommandNodeData[buf.readVarInt()];
-        ArrayDeque<CommandNodeData> deque = new ArrayDeque<CommandNodeData>(commandNodeDatas.length);
         for (int i = 0; i < commandNodeDatas.length; ++i) {
-            commandNodeDatas[i] = this.readCommandNode(buf);
-            deque.add(commandNodeDatas[i]);
+            commandNodeDatas[i] = CommandTreeS2CPacket.readCommandNode(buf);
         }
-        while (!deque.isEmpty()) {
-            boolean bl = false;
-            Iterator iterator = deque.iterator();
-            while (iterator.hasNext()) {
-                CommandNodeData commandNodeData = (CommandNodeData)iterator.next();
-                if (!commandNodeData.build(commandNodeDatas)) continue;
-                iterator.remove();
-                bl = true;
-            }
-            if (bl) continue;
-            throw new IllegalStateException("Server sent an impossible command tree");
-        }
+        CommandTreeS2CPacket.method_30946(commandNodeDatas);
         this.commandTree = (RootCommandNode)commandNodeDatas[buf.readVarInt()].node;
     }
 
     @Override
     public void write(PacketByteBuf buf) throws IOException {
-        HashMap map = Maps.newHashMap();
-        ArrayDeque<Object> deque = new ArrayDeque<Object>();
-        deque.add(this.commandTree);
-        while (!deque.isEmpty()) {
-            CommandNode commandNode = (CommandNode)deque.pollFirst();
-            if (map.containsKey(commandNode)) continue;
-            int i = map.size();
-            map.put(commandNode, i);
-            deque.addAll(commandNode.getChildren());
-            if (commandNode.getRedirect() == null) continue;
-            deque.add(commandNode.getRedirect());
-        }
-        CommandNode[] commandNodes = new CommandNode[map.size()];
-        for (Map.Entry entry : map.entrySet()) {
-            commandNodes[((Integer)entry.getValue()).intValue()] = (CommandNode)entry.getKey();
-        }
+        Object2IntMap<CommandNode<CommandSource>> object2IntMap = CommandTreeS2CPacket.method_30944(this.commandTree);
+        CommandNode<CommandSource>[] commandNodes = CommandTreeS2CPacket.method_30945(object2IntMap);
         buf.writeVarInt(commandNodes.length);
-        for (CommandNode commandNode2 : commandNodes) {
-            this.writeNode(buf, (CommandNode<CommandSource>)commandNode2, map);
+        for (CommandNode<CommandSource> commandNode : commandNodes) {
+            CommandTreeS2CPacket.writeNode(buf, commandNode, object2IntMap);
         }
-        buf.writeVarInt((Integer)map.get(this.commandTree));
+        buf.writeVarInt(object2IntMap.get(this.commandTree));
     }
 
-    private CommandNodeData readCommandNode(PacketByteBuf buf) {
+    private static void method_30946(CommandNodeData[] commandNodeDatas) {
+        ArrayList list = Lists.newArrayList((Object[])commandNodeDatas);
+        while (!list.isEmpty()) {
+            boolean bl = list.removeIf(commandNodeData -> commandNodeData.build(commandNodeDatas));
+            if (bl) continue;
+            throw new IllegalStateException("Server sent an impossible command tree");
+        }
+    }
+
+    private static Object2IntMap<CommandNode<CommandSource>> method_30944(RootCommandNode<CommandSource> rootCommandNode) {
+        CommandNode commandNode;
+        Object2IntOpenHashMap object2IntMap = new Object2IntOpenHashMap();
+        ArrayDeque queue = Queues.newArrayDeque();
+        queue.add(rootCommandNode);
+        while ((commandNode = (CommandNode)queue.poll()) != null) {
+            if (object2IntMap.containsKey((Object)commandNode)) continue;
+            int i = object2IntMap.size();
+            object2IntMap.put((Object)commandNode, i);
+            queue.addAll(commandNode.getChildren());
+            if (commandNode.getRedirect() == null) continue;
+            queue.add(commandNode.getRedirect());
+        }
+        return object2IntMap;
+    }
+
+    private static CommandNode<CommandSource>[] method_30945(Object2IntMap<CommandNode<CommandSource>> object2IntMap) {
+        CommandNode[] commandNodes = new CommandNode[object2IntMap.size()];
+        for (Object2IntMap.Entry entry : Object2IntMaps.fastIterable(object2IntMap)) {
+            commandNodes[entry.getIntValue()] = (CommandNode)entry.getKey();
+        }
+        return commandNodes;
+    }
+
+    private static CommandNodeData readCommandNode(PacketByteBuf buf) {
         byte b = buf.readByte();
         int[] is = buf.readIntArray();
         int i = (b & 8) != 0 ? buf.readVarInt() : 0;
-        ArgumentBuilder<CommandSource, ?> argumentBuilder = this.readArgumentBuilder(buf, b);
+        ArgumentBuilder<CommandSource, ?> argumentBuilder = CommandTreeS2CPacket.readArgumentBuilder(buf, b);
         return new CommandNodeData(argumentBuilder, b, i, is);
     }
 
     @Nullable
-    private ArgumentBuilder<CommandSource, ?> readArgumentBuilder(PacketByteBuf buf, byte b) {
+    private static ArgumentBuilder<CommandSource, ?> readArgumentBuilder(PacketByteBuf buf, byte b) {
         int i = b & 3;
         if (i == 2) {
             String string = buf.readString(Short.MAX_VALUE);
@@ -131,7 +145,7 @@ implements Packet<ClientPlayPacketListener> {
         return null;
     }
 
-    private void writeNode(PacketByteBuf buf, CommandNode<CommandSource> node, Map<CommandNode<CommandSource>, Integer> map) {
+    private static void writeNode(PacketByteBuf buf, CommandNode<CommandSource> node, Map<CommandNode<CommandSource>, Integer> nodeToIndex) {
         int b = 0;
         if (node.getRedirect() != null) {
             b = (byte)(b | 8);
@@ -154,10 +168,10 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeByte(b);
         buf.writeVarInt(node.getChildren().size());
         for (CommandNode commandNode : node.getChildren()) {
-            buf.writeVarInt(map.get(commandNode));
+            buf.writeVarInt(nodeToIndex.get(commandNode));
         }
         if (node.getRedirect() != null) {
-            buf.writeVarInt(map.get(node.getRedirect()));
+            buf.writeVarInt(nodeToIndex.get(node.getRedirect()));
         }
         if (node instanceof ArgumentCommandNode) {
             ArgumentCommandNode argumentCommandNode = (ArgumentCommandNode)node;
@@ -187,6 +201,7 @@ implements Packet<ClientPlayPacketListener> {
         private final byte flags;
         private final int redirectNodeIndex;
         private final int[] childNodeIndices;
+        @Nullable
         private CommandNode<CommandSource> node;
 
         private CommandNodeData(@Nullable ArgumentBuilder<CommandSource, ?> argumentBuilder, byte flags, int redirectNodeIndex, int[] childNodeIndices) {

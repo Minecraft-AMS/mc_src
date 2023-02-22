@@ -2,12 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  org.apache.logging.log4j.LogManager
+ *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.village;
 
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -17,9 +19,14 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.gen.Spawner;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
-public class ZombieSiegeManager {
+public class ZombieSiegeManager
+implements Spawner {
+    private static final Logger field_26390 = LogManager.getLogger();
     private boolean spawned;
     private State state = State.SIEGE_DONE;
     private int remaining;
@@ -28,6 +35,7 @@ public class ZombieSiegeManager {
     private int startY;
     private int startZ;
 
+    @Override
     public int spawn(ServerWorld world, boolean spawnMonsters, boolean spawnAnimals) {
         if (world.isDay() || !spawnMonsters) {
             this.state = State.SIEGE_DONE;
@@ -89,14 +97,14 @@ public class ZombieSiegeManager {
         }
         try {
             zombieEntity = new ZombieEntity(world);
-            zombieEntity.initialize(world, world.getLocalDifficulty(new BlockPos(zombieEntity)), SpawnType.EVENT, null, null);
+            zombieEntity.initialize(world, world.getLocalDifficulty(zombieEntity.getBlockPos()), SpawnReason.EVENT, null, null);
         }
         catch (Exception exception) {
-            exception.printStackTrace();
+            field_26390.warn("Failed to create zombie for village siege at {}", (Object)vec3d, (Object)exception);
             return;
         }
         zombieEntity.refreshPositionAndAngles(vec3d.x, vec3d.y, vec3d.z, world.random.nextFloat() * 360.0f, 0.0f);
-        world.spawnEntity(zombieEntity);
+        world.spawnEntityAndPassengers(zombieEntity);
     }
 
     @Nullable
@@ -106,8 +114,8 @@ public class ZombieSiegeManager {
             int l;
             int j = pos.getX() + world.random.nextInt(16) - 8;
             BlockPos blockPos = new BlockPos(j, l = world.getTopY(Heightmap.Type.WORLD_SURFACE, j, k = pos.getZ() + world.random.nextInt(16) - 8), k);
-            if (!world.isNearOccupiedPointOfInterest(blockPos) || !HostileEntity.canSpawnInDark(EntityType.ZOMBIE, world, SpawnType.EVENT, blockPos, world.random)) continue;
-            return new Vec3d((double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5);
+            if (!world.isNearOccupiedPointOfInterest(blockPos) || !HostileEntity.canSpawnInDark(EntityType.ZOMBIE, world, SpawnReason.EVENT, blockPos, world.random)) continue;
+            return Vec3d.ofBottomCenter(blockPos);
         }
         return null;
     }

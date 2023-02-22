@@ -3,7 +3,7 @@
  */
 package net.minecraft.block;
 
-import net.minecraft.block.Block;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
@@ -25,7 +25,7 @@ import net.minecraft.world.World;
 public class BeaconBlock
 extends BlockWithEntity
 implements Stainable {
-    public BeaconBlock(Block.Settings settings) {
+    public BeaconBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
@@ -35,7 +35,7 @@ implements Stainable {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new BeaconBlockEntity();
     }
 
@@ -46,15 +46,10 @@ implements Stainable {
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof BeaconBlockEntity) {
-            player.openContainer((BeaconBlockEntity)blockEntity);
+            player.openHandledScreen((BeaconBlockEntity)blockEntity);
             player.incrementStat(Stats.INTERACT_WITH_BEACON);
         }
-        return ActionResult.SUCCESS;
-    }
-
-    @Override
-    public boolean isSimpleFullBlock(BlockState state, BlockView view, BlockPos pos) {
-        return false;
+        return ActionResult.CONSUME;
     }
 
     @Override

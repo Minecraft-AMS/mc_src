@@ -14,14 +14,14 @@ import net.minecraft.client.particle.ParticleFactory;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
 public class DamageParticle
 extends SpriteBillboardParticle {
-    private DamageParticle(World world, double x, double y, double z, double d, double e, double f) {
+    private DamageParticle(ClientWorld world, double x, double y, double z, double d, double e, double f) {
         super(world, x, y, z, 0.0, 0.0, 0.0);
         float g;
         this.velocityX *= (double)0.1f;
@@ -74,17 +74,17 @@ extends SpriteBillboardParticle {
     @Environment(value=EnvType.CLIENT)
     public static class DefaultFactory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_17790;
+        private final SpriteProvider spriteProvider;
 
         public DefaultFactory(SpriteProvider spriteProvider) {
-            this.field_17790 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            DamageParticle damageParticle = new DamageParticle(world, d, e, f, g, h + 1.0, i);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            DamageParticle damageParticle = new DamageParticle(clientWorld, d, e, f, g, h + 1.0, i);
             damageParticle.setMaxAge(20);
-            damageParticle.setSprite(this.field_17790);
+            damageParticle.setSprite(this.spriteProvider);
             return damageParticle;
         }
     }
@@ -92,18 +92,18 @@ extends SpriteBillboardParticle {
     @Environment(value=EnvType.CLIENT)
     public static class EnchantedHitFactory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_17791;
+        private final SpriteProvider spriteProvider;
 
         public EnchantedHitFactory(SpriteProvider spriteProvider) {
-            this.field_17791 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            DamageParticle damageParticle = new DamageParticle(world, d, e, f, g, h, i);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            DamageParticle damageParticle = new DamageParticle(clientWorld, d, e, f, g, h, i);
             damageParticle.colorRed *= 0.3f;
             damageParticle.colorGreen *= 0.8f;
-            damageParticle.setSprite(this.field_17791);
+            damageParticle.setSprite(this.spriteProvider);
             return damageParticle;
         }
     }
@@ -111,16 +111,16 @@ extends SpriteBillboardParticle {
     @Environment(value=EnvType.CLIENT)
     public static class Factory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_18291;
+        private final SpriteProvider spriteProvider;
 
         public Factory(SpriteProvider spriteProvider) {
-            this.field_18291 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            DamageParticle damageParticle = new DamageParticle(world, d, e, f, g, h, i);
-            damageParticle.setSprite(this.field_18291);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            DamageParticle damageParticle = new DamageParticle(clientWorld, d, e, f, g, h, i);
+            damageParticle.setSprite(this.spriteProvider);
             return damageParticle;
         }
     }

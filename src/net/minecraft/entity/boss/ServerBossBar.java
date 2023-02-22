@@ -27,7 +27,7 @@ extends BossBar {
     private boolean visible = true;
 
     public ServerBossBar(Text displayName, BossBar.Color color, BossBar.Style style) {
-        super(MathHelper.randomUUID(), displayName, color, style);
+        super(MathHelper.randomUuid(), displayName, color, style);
     }
 
     @Override
@@ -47,9 +47,9 @@ extends BossBar {
     }
 
     @Override
-    public void setOverlay(BossBar.Style style) {
+    public void setStyle(BossBar.Style style) {
         if (style != this.style) {
-            super.setOverlay(style);
+            super.setStyle(style);
             this.sendPacket(BossBarS2CPacket.Type.UPDATE_STYLE);
         }
     }

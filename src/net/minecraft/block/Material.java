@@ -3,71 +3,71 @@
  */
 package net.minecraft.block;
 
-import net.minecraft.block.MaterialColor;
+import net.minecraft.block.MapColor;
 import net.minecraft.block.piston.PistonBehavior;
 
 public final class Material {
-    public static final Material AIR = Builder.method_15808(new Builder(MaterialColor.AIR).allowsMovement()).notSolid().replaceable().build();
-    public static final Material STRUCTURE_VOID = Builder.method_15808(new Builder(MaterialColor.AIR).allowsMovement()).notSolid().replaceable().build();
-    public static final Material PORTAL = Builder.method_15808(new Builder(MaterialColor.AIR).allowsMovement()).notSolid().blocksPistons().build();
-    public static final Material CARPET = Builder.method_15808(new Builder(MaterialColor.WEB).allowsMovement()).notSolid().burnable().build();
-    public static final Material PLANT = Builder.method_15808(new Builder(MaterialColor.FOLIAGE).allowsMovement()).notSolid().destroyedByPiston().build();
-    public static final Material UNDERWATER_PLANT = Builder.method_15808(new Builder(MaterialColor.WATER).allowsMovement()).notSolid().destroyedByPiston().build();
-    public static final Material REPLACEABLE_PLANT = Builder.method_15808(new Builder(MaterialColor.FOLIAGE).allowsMovement()).notSolid().destroyedByPiston().replaceable().burnable().build();
-    public static final Material REPLACEABLE_UNDERWATER_PLANT = Builder.method_15808(new Builder(MaterialColor.WATER).allowsMovement()).notSolid().destroyedByPiston().replaceable().build();
-    public static final Material WATER = Builder.method_15808(new Builder(MaterialColor.WATER).allowsMovement()).notSolid().destroyedByPiston().replaceable().liquid().build();
-    public static final Material BUBBLE_COLUMN = Builder.method_15808(new Builder(MaterialColor.WATER).allowsMovement()).notSolid().destroyedByPiston().replaceable().liquid().build();
-    public static final Material LAVA = Builder.method_15808(new Builder(MaterialColor.LAVA).allowsMovement()).notSolid().destroyedByPiston().replaceable().liquid().build();
-    public static final Material SNOW_LAYER = Builder.method_15808(new Builder(MaterialColor.WHITE).allowsMovement()).notSolid().destroyedByPiston().replaceable().requiresTool().build();
-    public static final Material FIRE = Builder.method_15808(new Builder(MaterialColor.AIR).allowsMovement()).notSolid().destroyedByPiston().replaceable().build();
-    public static final Material SUPPORTED = Builder.method_15808(new Builder(MaterialColor.AIR).allowsMovement()).notSolid().destroyedByPiston().build();
-    public static final Material COBWEB = Builder.method_15808(new Builder(MaterialColor.WEB).allowsMovement()).destroyedByPiston().requiresTool().build();
-    public static final Material REDSTONE_LAMP = new Builder(MaterialColor.AIR).build();
-    public static final Material ORGANIC_PRODUCT = new Builder(MaterialColor.CLAY).build();
-    public static final Material SOIL = new Builder(MaterialColor.DIRT).build();
-    public static final Material SOLID_ORGANIC = new Builder(MaterialColor.GRASS).build();
-    public static final Material DENSE_ICE = new Builder(MaterialColor.ICE).build();
-    public static final Material AGGREGATE = new Builder(MaterialColor.SAND).build();
-    public static final Material SPONGE = new Builder(MaterialColor.YELLOW).build();
-    public static final Material SHULKER_BOX = new Builder(MaterialColor.PURPLE).build();
-    public static final Material WOOD = new Builder(MaterialColor.WOOD).burnable().build();
-    public static final Material BAMBOO_SAPLING = new Builder(MaterialColor.WOOD).burnable().destroyedByPiston().allowsMovement().build();
-    public static final Material BAMBOO = new Builder(MaterialColor.WOOD).burnable().destroyedByPiston().build();
-    public static final Material WOOL = new Builder(MaterialColor.WEB).burnable().build();
-    public static final Material TNT = Builder.method_15808(new Builder(MaterialColor.LAVA).burnable()).build();
-    public static final Material LEAVES = Builder.method_15808(new Builder(MaterialColor.FOLIAGE).burnable()).destroyedByPiston().build();
-    public static final Material GLASS = Builder.method_15808(new Builder(MaterialColor.AIR)).build();
-    public static final Material ICE = Builder.method_15808(new Builder(MaterialColor.ICE)).build();
-    public static final Material CACTUS = Builder.method_15808(new Builder(MaterialColor.FOLIAGE)).destroyedByPiston().build();
-    public static final Material STONE = new Builder(MaterialColor.STONE).requiresTool().build();
-    public static final Material METAL = new Builder(MaterialColor.IRON).requiresTool().build();
-    public static final Material SNOW_BLOCK = new Builder(MaterialColor.WHITE).requiresTool().build();
-    public static final Material REPAIR_STATION = new Builder(MaterialColor.IRON).requiresTool().blocksPistons().build();
-    public static final Material BARRIER = new Builder(MaterialColor.AIR).requiresTool().blocksPistons().build();
-    public static final Material PISTON = new Builder(MaterialColor.STONE).blocksPistons().build();
-    public static final Material UNUSED_PLANT = new Builder(MaterialColor.FOLIAGE).destroyedByPiston().build();
-    public static final Material GOURD = new Builder(MaterialColor.FOLIAGE).destroyedByPiston().build();
-    public static final Material EGG = new Builder(MaterialColor.FOLIAGE).destroyedByPiston().build();
-    public static final Material CAKE = new Builder(MaterialColor.AIR).destroyedByPiston().build();
-    private final MaterialColor color;
+    public static final Material AIR = Builder.method_15808(new Builder(MapColor.CLEAR).allowsMovement()).notSolid().replaceable().build();
+    public static final Material STRUCTURE_VOID = Builder.method_15808(new Builder(MapColor.CLEAR).allowsMovement()).notSolid().replaceable().build();
+    public static final Material PORTAL = Builder.method_15808(new Builder(MapColor.CLEAR).allowsMovement()).notSolid().blocksPistons().build();
+    public static final Material CARPET = Builder.method_15808(new Builder(MapColor.WHITE_GRAY).allowsMovement()).notSolid().burnable().build();
+    public static final Material PLANT = Builder.method_15808(new Builder(MapColor.DARK_GREEN).allowsMovement()).notSolid().destroyedByPiston().build();
+    public static final Material UNDERWATER_PLANT = Builder.method_15808(new Builder(MapColor.WATER_BLUE).allowsMovement()).notSolid().destroyedByPiston().build();
+    public static final Material REPLACEABLE_PLANT = Builder.method_15808(new Builder(MapColor.DARK_GREEN).allowsMovement()).notSolid().destroyedByPiston().replaceable().burnable().build();
+    public static final Material NETHER_SHOOTS = Builder.method_15808(new Builder(MapColor.DARK_GREEN).allowsMovement()).notSolid().destroyedByPiston().replaceable().build();
+    public static final Material REPLACEABLE_UNDERWATER_PLANT = Builder.method_15808(new Builder(MapColor.WATER_BLUE).allowsMovement()).notSolid().destroyedByPiston().replaceable().build();
+    public static final Material WATER = Builder.method_15808(new Builder(MapColor.WATER_BLUE).allowsMovement()).notSolid().destroyedByPiston().replaceable().liquid().build();
+    public static final Material BUBBLE_COLUMN = Builder.method_15808(new Builder(MapColor.WATER_BLUE).allowsMovement()).notSolid().destroyedByPiston().replaceable().liquid().build();
+    public static final Material LAVA = Builder.method_15808(new Builder(MapColor.BRIGHT_RED).allowsMovement()).notSolid().destroyedByPiston().replaceable().liquid().build();
+    public static final Material SNOW_LAYER = Builder.method_15808(new Builder(MapColor.WHITE).allowsMovement()).notSolid().destroyedByPiston().replaceable().build();
+    public static final Material FIRE = Builder.method_15808(new Builder(MapColor.CLEAR).allowsMovement()).notSolid().destroyedByPiston().replaceable().build();
+    public static final Material DECORATION = Builder.method_15808(new Builder(MapColor.CLEAR).allowsMovement()).notSolid().destroyedByPiston().build();
+    public static final Material COBWEB = Builder.method_15808(new Builder(MapColor.WHITE_GRAY).allowsMovement()).destroyedByPiston().build();
+    public static final Material REDSTONE_LAMP = new Builder(MapColor.CLEAR).build();
+    public static final Material ORGANIC_PRODUCT = new Builder(MapColor.LIGHT_BLUE_GRAY).build();
+    public static final Material SOIL = new Builder(MapColor.DIRT_BROWN).build();
+    public static final Material SOLID_ORGANIC = new Builder(MapColor.PALE_GREEN).build();
+    public static final Material DENSE_ICE = new Builder(MapColor.PALE_PURPLE).build();
+    public static final Material AGGREGATE = new Builder(MapColor.PALE_YELLOW).build();
+    public static final Material SPONGE = new Builder(MapColor.YELLOW).build();
+    public static final Material SHULKER_BOX = new Builder(MapColor.PURPLE).build();
+    public static final Material WOOD = new Builder(MapColor.OAK_TAN).burnable().build();
+    public static final Material NETHER_WOOD = new Builder(MapColor.OAK_TAN).build();
+    public static final Material BAMBOO_SAPLING = new Builder(MapColor.OAK_TAN).burnable().destroyedByPiston().allowsMovement().build();
+    public static final Material BAMBOO = new Builder(MapColor.OAK_TAN).burnable().destroyedByPiston().build();
+    public static final Material WOOL = new Builder(MapColor.WHITE_GRAY).burnable().build();
+    public static final Material TNT = Builder.method_15808(new Builder(MapColor.BRIGHT_RED).burnable()).build();
+    public static final Material LEAVES = Builder.method_15808(new Builder(MapColor.DARK_GREEN).burnable()).destroyedByPiston().build();
+    public static final Material GLASS = Builder.method_15808(new Builder(MapColor.CLEAR)).build();
+    public static final Material ICE = Builder.method_15808(new Builder(MapColor.PALE_PURPLE)).build();
+    public static final Material CACTUS = Builder.method_15808(new Builder(MapColor.DARK_GREEN)).destroyedByPiston().build();
+    public static final Material STONE = new Builder(MapColor.STONE_GRAY).build();
+    public static final Material METAL = new Builder(MapColor.IRON_GRAY).build();
+    public static final Material SNOW_BLOCK = new Builder(MapColor.WHITE).build();
+    public static final Material REPAIR_STATION = new Builder(MapColor.IRON_GRAY).blocksPistons().build();
+    public static final Material BARRIER = new Builder(MapColor.CLEAR).blocksPistons().build();
+    public static final Material PISTON = new Builder(MapColor.STONE_GRAY).blocksPistons().build();
+    public static final Material MOSS_BLOCK = new Builder(MapColor.DARK_GREEN).destroyedByPiston().build();
+    public static final Material GOURD = new Builder(MapColor.DARK_GREEN).destroyedByPiston().build();
+    public static final Material EGG = new Builder(MapColor.DARK_GREEN).destroyedByPiston().build();
+    public static final Material CAKE = new Builder(MapColor.CLEAR).destroyedByPiston().build();
+    private final MapColor color;
     private final PistonBehavior pistonBehavior;
     private final boolean blocksMovement;
     private final boolean burnable;
-    private final boolean breakByHand;
     private final boolean liquid;
     private final boolean blocksLight;
     private final boolean replaceable;
     private final boolean solid;
 
-    public Material(MaterialColor color, boolean liquid, boolean solid, boolean blocksMovement, boolean blocksLight, boolean breakByHand, boolean burnable, boolean replaceable, PistonBehavior pistonBehavior) {
+    public Material(MapColor color, boolean liquid, boolean solid, boolean blocksMovement, boolean blocksLight, boolean breakByHand, boolean burnable, PistonBehavior pistonBehavior) {
         this.color = color;
         this.liquid = liquid;
         this.solid = solid;
         this.blocksMovement = blocksMovement;
         this.blocksLight = blocksLight;
-        this.breakByHand = breakByHand;
-        this.burnable = burnable;
-        this.replaceable = replaceable;
+        this.burnable = breakByHand;
+        this.replaceable = burnable;
         this.pistonBehavior = pistonBehavior;
     }
 
@@ -95,15 +95,11 @@ public final class Material {
         return this.blocksLight;
     }
 
-    public boolean canBreakByHand() {
-        return this.breakByHand;
-    }
-
     public PistonBehavior getPistonBehavior() {
         return this.pistonBehavior;
     }
 
-    public MaterialColor getColor() {
+    public MapColor getColor() {
         return this.color;
     }
 
@@ -111,14 +107,13 @@ public final class Material {
         private PistonBehavior pistonBehavior = PistonBehavior.NORMAL;
         private boolean blocksMovement = true;
         private boolean burnable;
-        private boolean breakByHand = true;
         private boolean liquid;
         private boolean replaceable;
         private boolean solid = true;
-        private final MaterialColor color;
+        private final MapColor color;
         private boolean blocksLight = true;
 
-        public Builder(MaterialColor color) {
+        public Builder(MapColor color) {
             this.color = color;
         }
 
@@ -139,11 +134,6 @@ public final class Material {
 
         private Builder lightPassesThrough() {
             this.blocksLight = false;
-            return this;
-        }
-
-        protected Builder requiresTool() {
-            this.breakByHand = false;
             return this;
         }
 
@@ -168,7 +158,7 @@ public final class Material {
         }
 
         public Material build() {
-            return new Material(this.color, this.liquid, this.solid, this.blocksMovement, this.blocksLight, this.breakByHand, this.burnable, this.replaceable, this.pistonBehavior);
+            return new Material(this.color, this.liquid, this.solid, this.blocksMovement, this.blocksLight, this.burnable, this.replaceable, this.pistonBehavior);
         }
 
         static /* synthetic */ Builder method_15808(Builder builder) {

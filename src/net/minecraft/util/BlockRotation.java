@@ -11,14 +11,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.DirectionTransformation;
 
 public enum BlockRotation {
-    NONE,
-    CLOCKWISE_90,
-    CLOCKWISE_180,
-    COUNTERCLOCKWISE_90;
+    NONE(DirectionTransformation.IDENTITY),
+    CLOCKWISE_90(DirectionTransformation.ROT_90_Y_NEG),
+    CLOCKWISE_180(DirectionTransformation.ROT_180_FACE_XZ),
+    COUNTERCLOCKWISE_90(DirectionTransformation.ROT_90_Y_POS);
 
+    private final DirectionTransformation directionTransformation;
+
+    private BlockRotation(DirectionTransformation directionTransformation) {
+        this.directionTransformation = directionTransformation;
+    }
 
     public BlockRotation rotate(BlockRotation rotation) {
         switch (rotation) {
@@ -74,6 +81,10 @@ public enum BlockRotation {
         return this;
     }
 
+    public DirectionTransformation getDirectionTransformation() {
+        return this.directionTransformation;
+    }
+
     public Direction rotate(Direction direction) {
         if (direction.getAxis() == Direction.Axis.Y) {
             return direction;
@@ -108,8 +119,7 @@ public enum BlockRotation {
     }
 
     public static BlockRotation random(Random random) {
-        BlockRotation[] blockRotations = BlockRotation.values();
-        return blockRotations[random.nextInt(blockRotations.length)];
+        return Util.getRandom(BlockRotation.values(), random);
     }
 
     public static List<BlockRotation> randomRotationOrder(Random random) {

@@ -27,7 +27,8 @@ public class StatHandler {
     }
 
     public void increaseStat(PlayerEntity player, Stat<?> stat, int value) {
-        this.setStat(player, stat, this.getStat(stat) + value);
+        int i = (int)Math.min((long)this.getStat(stat) + (long)value, Integer.MAX_VALUE);
+        this.setStat(player, stat, i);
     }
 
     public void setStat(PlayerEntity player, Stat<?> stat, int value) {

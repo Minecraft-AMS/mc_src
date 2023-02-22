@@ -3,7 +3,7 @@
  */
 package net.minecraft.block;
 
-import net.minecraft.block.Block;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.block.entity.BlockEntity;
@@ -20,12 +20,12 @@ import net.minecraft.world.BlockView;
 
 public class TrappedChestBlock
 extends ChestBlock {
-    public TrappedChestBlock(Block.Settings settings) {
+    public TrappedChestBlock(AbstractBlock.Settings settings) {
         super(settings, () -> BlockEntityType.TRAPPED_CHEST);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new TrappedChestBlockEntity();
     }
 
@@ -40,14 +40,14 @@ extends ChestBlock {
     }
 
     @Override
-    public int getWeakRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
-        return MathHelper.clamp(ChestBlockEntity.getPlayersLookingInChestCount(view, pos), 0, 15);
+    public int getWeakRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
+        return MathHelper.clamp(ChestBlockEntity.getPlayersLookingInChestCount(world, pos), 0, 15);
     }
 
     @Override
-    public int getStrongRedstonePower(BlockState state, BlockView view, BlockPos pos, Direction facing) {
-        if (facing == Direction.UP) {
-            return state.getWeakRedstonePower(view, pos, facing);
+    public int getStrongRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction direction) {
+        if (direction == Direction.UP) {
+            return state.getWeakRedstonePower(world, pos, direction);
         }
         return 0;
     }

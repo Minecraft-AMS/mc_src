@@ -13,10 +13,11 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
@@ -24,6 +25,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
@@ -34,10 +37,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class SignBlockEntity
 extends BlockEntity {
-    public final Text[] text = new Text[]{new LiteralText(""), new LiteralText(""), new LiteralText(""), new LiteralText("")};
+    private final Text[] texts = new Text[]{LiteralText.EMPTY, LiteralText.EMPTY, LiteralText.EMPTY, LiteralText.EMPTY};
     private boolean editable = true;
     private PlayerEntity editor;
-    private final String[] textBeingEdited = new String[4];
+    private final OrderedText[] textsBeingEdited = new OrderedText[4];
     private DyeColor textColor = DyeColor.BLACK;
 
     public SignBlockEntity() {
@@ -45,70 +48,70 @@ extends BlockEntity {
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
         for (int i = 0; i < 4; ++i) {
-            String string = Text.Serializer.toJson(this.text[i]);
-            tag.putString("Text" + (i + 1), string);
+            String string = Text.Serializer.toJson(this.texts[i]);
+            nbt.putString("Text" + (i + 1), string);
         }
-        tag.putString("Color", this.textColor.getName());
-        return tag;
+        nbt.putString("Color", this.textColor.getName());
+        return nbt;
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
+    public void fromTag(BlockState state, NbtCompound tag) {
         this.editable = false;
-        super.fromTag(tag);
+        super.fromTag(state, tag);
         this.textColor = DyeColor.byName(tag.getString("Color"), DyeColor.BLACK);
         for (int i = 0; i < 4; ++i) {
             String string = tag.getString("Text" + (i + 1));
-            Text text = Text.Serializer.fromJson(string.isEmpty() ? "\"\"" : string);
+            MutableText text = Text.Serializer.fromJson(string.isEmpty() ? "\"\"" : string);
             if (this.world instanceof ServerWorld) {
                 try {
-                    this.text[i] = Texts.parse(this.getCommandSource(null), text, null, 0);
+                    this.texts[i] = Texts.parse(this.getCommandSource(null), text, null, 0);
                 }
                 catch (CommandSyntaxException commandSyntaxException) {
-                    this.text[i] = text;
+                    this.texts[i] = text;
                 }
             } else {
-                this.text[i] = text;
+                this.texts[i] = text;
             }
-            this.textBeingEdited[i] = null;
+            this.textsBeingEdited[i] = null;
         }
     }
 
     @Environment(value=EnvType.CLIENT)
     public Text getTextOnRow(int row) {
-        return this.text[row];
+        return this.texts[row];
     }
 
     public void setTextOnRow(int row, Text text) {
-        this.text[row] = text;
-        this.textBeingEdited[row] = null;
+        this.texts[row] = text;
+        this.textsBeingEdited[row] = null;
     }
 
     @Nullable
     @Environment(value=EnvType.CLIENT)
-    public String getTextBeingEditedOnRow(int row, Function<Text, String> function) {
-        if (this.textBeingEdited[row] == null && this.text[row] != null) {
-            this.textBeingEdited[row] = function.apply(this.text[row]);
+    public OrderedText getTextBeingEditedOnRow(int row, Function<Text, OrderedText> function) {
+        if (this.textsBeingEdited[row] == null && this.texts[row] != null) {
+            this.textsBeingEdited[row] = function.apply(this.texts[row]);
         }
-        return this.textBeingEdited[row];
+        return this.textsBeingEdited[row];
     }
 
     @Override
     @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 9, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 9, this.toInitialChunkDataNbt());
     }
 
     @Override
-    public CompoundTag toInitialChunkDataTag() {
-        return this.toTag(new CompoundTag());
+    public NbtCompound toInitialChunkDataNbt() {
+        return this.writeNbt(new NbtCompound());
     }
 
     @Override
-    public boolean shouldNotCopyTagFromItem() {
+    public boolean copyItemDataRequiresOperator() {
         return true;
     }
 
@@ -117,28 +120,28 @@ extends BlockEntity {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public void setEditable(boolean bl) {
-        this.editable = bl;
-        if (!bl) {
+    public void setEditable(boolean editable) {
+        this.editable = editable;
+        if (!editable) {
             this.editor = null;
         }
     }
 
-    public void setEditor(PlayerEntity playerEntity) {
-        this.editor = playerEntity;
+    public void setEditor(PlayerEntity player) {
+        this.editor = player;
     }
 
     public PlayerEntity getEditor() {
         return this.editor;
     }
 
-    public boolean onActivate(PlayerEntity playerEntity) {
-        for (Text text : this.text) {
+    public boolean onActivate(PlayerEntity player) {
+        for (Text text : this.texts) {
             ClickEvent clickEvent;
             Style style;
             Style style2 = style = text == null ? null : text.getStyle();
             if (style == null || style.getClickEvent() == null || (clickEvent = style.getClickEvent()).getAction() != ClickEvent.Action.RUN_COMMAND) continue;
-            playerEntity.getServer().getCommandManager().execute(this.getCommandSource((ServerPlayerEntity)playerEntity), clickEvent.getValue());
+            player.getServer().getCommandManager().execute(this.getCommandSource((ServerPlayerEntity)player), clickEvent.getValue());
         }
         return true;
     }
@@ -146,7 +149,7 @@ extends BlockEntity {
     public ServerCommandSource getCommandSource(@Nullable ServerPlayerEntity player) {
         String string = player == null ? "Sign" : player.getName().getString();
         Text text = player == null ? new LiteralText("Sign") : player.getDisplayName();
-        return new ServerCommandSource(CommandOutput.DUMMY, new Vec3d((double)this.pos.getX() + 0.5, (double)this.pos.getY() + 0.5, (double)this.pos.getZ() + 0.5), Vec2f.ZERO, (ServerWorld)this.world, 2, string, text, this.world.getServer(), player);
+        return new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ofCenter(this.pos), Vec2f.ZERO, (ServerWorld)this.world, 2, string, text, this.world.getServer(), player);
     }
 
     public DyeColor getTextColor() {

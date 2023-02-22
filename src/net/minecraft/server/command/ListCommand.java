@@ -16,6 +16,7 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.text.TranslatableText;
@@ -25,18 +26,18 @@ public class ListCommand {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("list").executes(commandContext -> ListCommand.executeNames((ServerCommandSource)commandContext.getSource()))).then(CommandManager.literal("uuids").executes(commandContext -> ListCommand.executeUuids((ServerCommandSource)commandContext.getSource()))));
     }
 
-    private static int executeNames(ServerCommandSource serverCommandSource) {
-        return ListCommand.execute(serverCommandSource, PlayerEntity::getDisplayName);
+    private static int executeNames(ServerCommandSource source) {
+        return ListCommand.execute(source, PlayerEntity::getDisplayName);
     }
 
-    private static int executeUuids(ServerCommandSource serverCommandSource) {
-        return ListCommand.execute(serverCommandSource, PlayerEntity::getNameAndUuid);
+    private static int executeUuids(ServerCommandSource source) {
+        return ListCommand.execute(source, serverPlayerEntity -> new TranslatableText("commands.list.nameAndId", serverPlayerEntity.getName(), serverPlayerEntity.getGameProfile().getId()));
     }
 
     private static int execute(ServerCommandSource source, Function<ServerPlayerEntity, Text> nameProvider) {
         PlayerManager playerManager = source.getMinecraftServer().getPlayerManager();
         List<ServerPlayerEntity> list = playerManager.getPlayerList();
-        Text text = Texts.join(list, nameProvider);
+        MutableText text = Texts.join(list, nameProvider);
         source.sendFeedback(new TranslatableText("commands.list.players", list.size(), playerManager.getMaxPlayerCount(), text), false);
         return list.size();
     }

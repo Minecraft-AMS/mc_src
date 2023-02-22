@@ -106,7 +106,7 @@ extends Goal {
     }
 
     private void tryTeleport() {
-        BlockPos blockPos = new BlockPos(this.owner);
+        BlockPos blockPos = this.owner.getBlockPos();
         for (int i = 0; i < 10; ++i) {
             int j = this.getRandomInt(-3, 3);
             int k = this.getRandomInt(-1, 1);
@@ -124,13 +124,13 @@ extends Goal {
         if (!this.canTeleportTo(new BlockPos(x, y, z))) {
             return false;
         }
-        this.tameable.refreshPositionAndAngles((float)x + 0.5f, y, (float)z + 0.5f, this.tameable.yaw, this.tameable.pitch);
+        this.tameable.refreshPositionAndAngles((double)x + 0.5, y, (double)z + 0.5, this.tameable.yaw, this.tameable.pitch);
         this.navigation.stop();
         return true;
     }
 
     private boolean canTeleportTo(BlockPos pos) {
-        PathNodeType pathNodeType = LandPathNodeMaker.getPathNodeType(this.world, pos.getX(), pos.getY(), pos.getZ());
+        PathNodeType pathNodeType = LandPathNodeMaker.getLandNodeType(this.world, pos.mutableCopy());
         if (pathNodeType != PathNodeType.WALKABLE) {
             return false;
         }
@@ -138,8 +138,8 @@ extends Goal {
         if (!this.leavesAllowed && blockState.getBlock() instanceof LeavesBlock) {
             return false;
         }
-        BlockPos blockPos = pos.subtract(new BlockPos(this.tameable));
-        return this.world.doesNotCollide(this.tameable, this.tameable.getBoundingBox().offset(blockPos));
+        BlockPos blockPos = pos.subtract(this.tameable.getBlockPos());
+        return this.world.isSpaceEmpty(this.tameable, this.tameable.getBoundingBox().offset(blockPos));
     }
 
     private int getRandomInt(int min, int max) {

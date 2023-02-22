@@ -13,6 +13,7 @@ import net.minecraft.entity.passive.SheepEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
 
@@ -28,16 +29,16 @@ extends Item {
     }
 
     @Override
-    public boolean useOnEntity(ItemStack stack, PlayerEntity user, LivingEntity entity, Hand hand) {
-        if (entity instanceof SheepEntity) {
-            SheepEntity sheepEntity = (SheepEntity)entity;
-            if (sheepEntity.isAlive() && !sheepEntity.isSheared() && sheepEntity.getColor() != this.color) {
+    public ActionResult useOnEntity(ItemStack stack, PlayerEntity user, LivingEntity entity, Hand hand) {
+        SheepEntity sheepEntity;
+        if (entity instanceof SheepEntity && (sheepEntity = (SheepEntity)entity).isAlive() && !sheepEntity.isSheared() && sheepEntity.getColor() != this.color) {
+            if (!user.world.isClient) {
                 sheepEntity.setColor(this.color);
                 stack.decrement(1);
             }
-            return true;
+            return ActionResult.success(user.world.isClient);
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     public DyeColor getColor() {

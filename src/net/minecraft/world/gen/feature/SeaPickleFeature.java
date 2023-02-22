@@ -2,40 +2,40 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SeaPickleBlock;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.gen.CountConfig;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.SeaPickleFeatureConfig;
 
 public class SeaPickleFeature
-extends Feature<SeaPickleFeatureConfig> {
-    public SeaPickleFeature(Function<Dynamic<?>, ? extends SeaPickleFeatureConfig> configFactory) {
-        super(configFactory);
+extends Feature<CountConfig> {
+    public SeaPickleFeature(Codec<CountConfig> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean generate(IWorld iWorld, ChunkGenerator<?> chunkGenerator, Random random, BlockPos blockPos, SeaPickleFeatureConfig seaPickleFeatureConfig) {
+    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, CountConfig countConfig) {
         int i = 0;
-        for (int j = 0; j < seaPickleFeatureConfig.count; ++j) {
-            int k = random.nextInt(8) - random.nextInt(8);
+        int j = countConfig.getCount().getValue(random);
+        for (int k = 0; k < j; ++k) {
             int l = random.nextInt(8) - random.nextInt(8);
-            int m = iWorld.getTopY(Heightmap.Type.OCEAN_FLOOR, blockPos.getX() + k, blockPos.getZ() + l);
-            BlockPos blockPos2 = new BlockPos(blockPos.getX() + k, m, blockPos.getZ() + l);
+            int m = random.nextInt(8) - random.nextInt(8);
+            int n = structureWorldAccess.getTopY(Heightmap.Type.OCEAN_FLOOR, blockPos.getX() + l, blockPos.getZ() + m);
+            BlockPos blockPos2 = new BlockPos(blockPos.getX() + l, n, blockPos.getZ() + m);
             BlockState blockState = (BlockState)Blocks.SEA_PICKLE.getDefaultState().with(SeaPickleBlock.PICKLES, random.nextInt(4) + 1);
-            if (iWorld.getBlockState(blockPos2).getBlock() != Blocks.WATER || !blockState.canPlaceAt(iWorld, blockPos2)) continue;
-            iWorld.setBlockState(blockPos2, blockState, 2);
+            if (!structureWorldAccess.getBlockState(blockPos2).isOf(Blocks.WATER) || !blockState.canPlaceAt(structureWorldAccess, blockPos2)) continue;
+            structureWorldAccess.setBlockState(blockPos2, blockState, 2);
             ++i;
         }
         return i > 0;

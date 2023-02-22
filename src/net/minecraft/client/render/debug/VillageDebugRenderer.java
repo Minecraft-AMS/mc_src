@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Iterables
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
@@ -13,6 +14,7 @@
  */
 package net.minecraft.client.render.debug;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -34,9 +36,9 @@ import net.minecraft.client.render.debug.DebugRenderer;
 import net.minecraft.client.render.debug.NameGenerator;
 import net.minecraft.client.render.debug.PathfindingDebugRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.Vec3i;
 import org.apache.logging.log4j.LogManager;
@@ -49,8 +51,8 @@ implements DebugRenderer.Renderer {
     private static final Logger LOGGER = LogManager.getLogger();
     private final MinecraftClient client;
     private final Map<BlockPos, PointOfInterest> pointsOfInterest = Maps.newHashMap();
-    private final Set<ChunkSectionPos> sections = Sets.newHashSet();
     private final Map<UUID, Brain> brains = Maps.newHashMap();
+    @Nullable
     private UUID targetedEntity;
 
     public VillageDebugRenderer(MinecraftClient minecraftClient) {
@@ -60,17 +62,16 @@ implements DebugRenderer.Renderer {
     @Override
     public void clear() {
         this.pointsOfInterest.clear();
-        this.sections.clear();
         this.brains.clear();
         this.targetedEntity = null;
     }
 
-    public void addPointOfInterest(PointOfInterest pointOfInterest) {
-        this.pointsOfInterest.put(pointOfInterest.pos, pointOfInterest);
+    public void addPointOfInterest(PointOfInterest poi) {
+        this.pointsOfInterest.put(poi.pos, poi);
     }
 
-    public void removePointOfInterest(BlockPos blockPos) {
-        this.pointsOfInterest.remove(blockPos);
+    public void removePointOfInterest(BlockPos pos) {
+        this.pointsOfInterest.remove(pos);
     }
 
     public void setFreeTicketCount(BlockPos pos, int freeTicketCount) {
@@ -80,14 +81,6 @@ implements DebugRenderer.Renderer {
             return;
         }
         pointOfInterest.freeTicketCount = freeTicketCount;
-    }
-
-    public void addSection(ChunkSectionPos pos) {
-        this.sections.add(pos);
-    }
-
-    public void removeSection(ChunkSectionPos pos) {
-        this.sections.remove(pos);
     }
 
     public void addBrain(Brain brain) {
@@ -100,6 +93,7 @@ implements DebugRenderer.Renderer {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableTexture();
+        this.method_24805();
         this.method_23135(cameraX, cameraY, cameraZ);
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
@@ -109,13 +103,15 @@ implements DebugRenderer.Renderer {
         }
     }
 
+    private void method_24805() {
+        this.brains.entrySet().removeIf(entry -> {
+            Entity entity = this.client.world.getEntityById(((Brain)entry.getValue()).field_18924);
+            return entity == null || entity.removed;
+        });
+    }
+
     private void method_23135(double d, double e, double f) {
         BlockPos blockPos = new BlockPos(d, e, f);
-        this.sections.forEach(chunkSectionPos -> {
-            if (blockPos.isWithinDistance(chunkSectionPos.getCenterPos(), 60.0)) {
-                VillageDebugRenderer.drawSection(chunkSectionPos);
-            }
-        });
         this.brains.values().forEach(brain -> {
             if (this.isClose((Brain)brain)) {
                 this.drawBrain((Brain)brain, d, e, f);
@@ -137,14 +133,6 @@ implements DebugRenderer.Renderer {
         });
     }
 
-    private static void drawSection(ChunkSectionPos pos) {
-        float f = 1.0f;
-        BlockPos blockPos = pos.getCenterPos();
-        BlockPos blockPos2 = blockPos.add(-1.0, -1.0, -1.0);
-        BlockPos blockPos3 = blockPos.add(1.0, 1.0, 1.0);
-        DebugRenderer.drawBox(blockPos2, blockPos3, 0.2f, 1.0f, 0.2f, 0.15f);
-    }
-
     private static void drawPointOfInterest(BlockPos pos) {
         float f = 0.05f;
         RenderSystem.enableBlend();
@@ -163,10 +151,18 @@ implements DebugRenderer.Renderer {
 
     private void drawPointOfInterestInfo(PointOfInterest pointOfInterest) {
         int i = 0;
-        if (this.getVillagerNames(pointOfInterest).size() < 4) {
-            VillageDebugRenderer.drawString("" + this.getVillagerNames(pointOfInterest), pointOfInterest, i, -256);
+        Set<String> set = this.getVillagerNames(pointOfInterest);
+        if (set.size() < 4) {
+            VillageDebugRenderer.drawString("Owners: " + set, pointOfInterest, i, -256);
         } else {
-            VillageDebugRenderer.drawString("" + this.getVillagerNames(pointOfInterest).size() + " ticket holders", pointOfInterest, i, -256);
+            VillageDebugRenderer.drawString("" + set.size() + " ticket holders", pointOfInterest, i, -256);
+        }
+        ++i;
+        Set<String> set2 = this.method_29385(pointOfInterest);
+        if (set2.size() < 4) {
+            VillageDebugRenderer.drawString("Candidates: " + set2, pointOfInterest, i, -23296);
+        } else {
+            VillageDebugRenderer.drawString("" + set2.size() + " potential owners", pointOfInterest, i, -23296);
         }
         VillageDebugRenderer.drawString("Free tickets: " + pointOfInterest.freeTicketCount, pointOfInterest, ++i, -256);
         VillageDebugRenderer.drawString(pointOfInterest.field_18932, pointOfInterest, ++i, -1);
@@ -184,7 +180,12 @@ implements DebugRenderer.Renderer {
         VillageDebugRenderer.drawString(brain.pos, i, brain.field_19328, -1, 0.03f);
         ++i;
         if (bl) {
-            VillageDebugRenderer.drawString(brain.pos, i, brain.profession + " " + brain.xp + "xp", -1, 0.02f);
+            VillageDebugRenderer.drawString(brain.pos, i, brain.profession + " " + brain.xp + " xp", -1, 0.02f);
+            ++i;
+        }
+        if (bl) {
+            int j = brain.field_22406 < brain.field_22407 ? -23296 : -1;
+            VillageDebugRenderer.drawString(brain.pos, i, "health: " + String.format("%.1f", Float.valueOf(brain.field_22406)) + " / " + String.format("%.1f", Float.valueOf(brain.field_22407)), j, 0.02f);
             ++i;
         }
         if (bl && !brain.field_19372.equals("")) {
@@ -257,6 +258,10 @@ implements DebugRenderer.Renderer {
         return this.getBrains(pointOfInterest.pos).stream().map(NameGenerator::name).collect(Collectors.toSet());
     }
 
+    private Set<String> method_29385(PointOfInterest pointOfInterest) {
+        return this.method_29386(pointOfInterest.pos).stream().map(NameGenerator::name).collect(Collectors.toSet());
+    }
+
     private boolean isTargeted(Brain brain) {
         return Objects.equals(this.targetedEntity, brain.uuid);
     }
@@ -272,17 +277,16 @@ implements DebugRenderer.Renderer {
         return this.brains.values().stream().filter(brain -> ((Brain)brain).isPointOfInterest(pointOfInterest)).map(Brain::getUuid).collect(Collectors.toSet());
     }
 
+    private Collection<UUID> method_29386(BlockPos blockPos) {
+        return this.brains.values().stream().filter(brain -> ((Brain)brain).method_29388(blockPos)).map(Brain::getUuid).collect(Collectors.toSet());
+    }
+
     private Map<BlockPos, List<String>> getGhostPointsOfInterest() {
         HashMap map = Maps.newHashMap();
         for (Brain brain : this.brains.values()) {
-            for (BlockPos blockPos : brain.pointsOfInterest) {
-                if (this.pointsOfInterest.containsKey(blockPos)) continue;
-                List list = (List)map.get(blockPos);
-                if (list == null) {
-                    list = Lists.newArrayList();
-                    map.put(blockPos, list);
-                }
-                list.add(brain.field_19328);
+            for (BlockPos blockPos2 : Iterables.concat(brain.pointsOfInterest, brain.field_25287)) {
+                if (this.pointsOfInterest.containsKey(blockPos2)) continue;
+                map.computeIfAbsent(blockPos2, blockPos -> Lists.newArrayList()).add(brain.field_19328);
             }
         }
         return map;
@@ -301,6 +305,8 @@ implements DebugRenderer.Renderer {
         public final String field_19328;
         public final String profession;
         public final int xp;
+        public final float field_22406;
+        public final float field_22407;
         public final Position pos;
         public final String field_19372;
         public final Path path;
@@ -310,21 +316,28 @@ implements DebugRenderer.Renderer {
         public final List<String> field_19374 = Lists.newArrayList();
         public final List<String> field_19375 = Lists.newArrayList();
         public final Set<BlockPos> pointsOfInterest = Sets.newHashSet();
+        public final Set<BlockPos> field_25287 = Sets.newHashSet();
 
-        public Brain(UUID uuid, int i, String string, String profession, int xp, Position pos, String string2, @Nullable Path path, boolean wantsGolem) {
-            this.uuid = uuid;
+        public Brain(UUID uUID, int i, String string, String profession, int xp, float f, float g, Position position, String string2, @Nullable Path path, boolean bl) {
+            this.uuid = uUID;
             this.field_18924 = i;
             this.field_19328 = string;
             this.profession = profession;
             this.xp = xp;
-            this.pos = pos;
+            this.field_22406 = f;
+            this.field_22407 = g;
+            this.pos = position;
             this.field_19372 = string2;
             this.path = path;
-            this.wantsGolem = wantsGolem;
+            this.wantsGolem = bl;
         }
 
         private boolean isPointOfInterest(BlockPos blockPos) {
             return this.pointsOfInterest.stream().anyMatch(blockPos::equals);
+        }
+
+        private boolean method_29388(BlockPos blockPos) {
+            return this.field_25287.contains(blockPos);
         }
 
         public UUID getUuid() {

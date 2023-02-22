@@ -21,7 +21,7 @@ import net.minecraft.util.math.MathHelper;
 
 public class VillagerHostilesSensor
 extends Sensor<LivingEntity> {
-    private static final ImmutableMap<EntityType<?>, Float> SQUARED_DISTANCES_FOR_DANGER = ImmutableMap.builder().put(EntityType.DROWNED, (Object)Float.valueOf(8.0f)).put(EntityType.EVOKER, (Object)Float.valueOf(12.0f)).put(EntityType.HUSK, (Object)Float.valueOf(8.0f)).put(EntityType.ILLUSIONER, (Object)Float.valueOf(12.0f)).put(EntityType.PILLAGER, (Object)Float.valueOf(15.0f)).put(EntityType.RAVAGER, (Object)Float.valueOf(12.0f)).put(EntityType.VEX, (Object)Float.valueOf(8.0f)).put(EntityType.VINDICATOR, (Object)Float.valueOf(10.0f)).put(EntityType.ZOMBIE, (Object)Float.valueOf(8.0f)).put(EntityType.ZOMBIE_VILLAGER, (Object)Float.valueOf(8.0f)).build();
+    private static final ImmutableMap<EntityType<?>, Float> SQUARED_DISTANCES_FOR_DANGER = ImmutableMap.builder().put(EntityType.DROWNED, (Object)Float.valueOf(8.0f)).put(EntityType.EVOKER, (Object)Float.valueOf(12.0f)).put(EntityType.HUSK, (Object)Float.valueOf(8.0f)).put(EntityType.ILLUSIONER, (Object)Float.valueOf(12.0f)).put(EntityType.PILLAGER, (Object)Float.valueOf(15.0f)).put(EntityType.RAVAGER, (Object)Float.valueOf(12.0f)).put(EntityType.VEX, (Object)Float.valueOf(8.0f)).put(EntityType.VINDICATOR, (Object)Float.valueOf(10.0f)).put(EntityType.ZOGLIN, (Object)Float.valueOf(10.0f)).put(EntityType.ZOMBIE, (Object)Float.valueOf(8.0f)).put(EntityType.ZOMBIE_VILLAGER, (Object)Float.valueOf(8.0f)).build();
 
     @Override
     public Set<MemoryModuleType<?>> getOutputMemoryModules() {
@@ -30,7 +30,7 @@ extends Sensor<LivingEntity> {
 
     @Override
     protected void sense(ServerWorld world, LivingEntity entity) {
-        entity.getBrain().setMemory(MemoryModuleType.NEAREST_HOSTILE, this.getNearestHostile(entity));
+        entity.getBrain().remember(MemoryModuleType.NEAREST_HOSTILE, this.getNearestHostile(entity));
     }
 
     private Optional<LivingEntity> getNearestHostile(LivingEntity entity) {
@@ -45,9 +45,9 @@ extends Sensor<LivingEntity> {
         return MathHelper.floor(hostile1.squaredDistanceTo(entity) - hostile2.squaredDistanceTo(entity));
     }
 
-    private boolean isCloseEnoughForDanger(LivingEntity entity, LivingEntity hostile) {
-        float f = ((Float)SQUARED_DISTANCES_FOR_DANGER.get(hostile.getType())).floatValue();
-        return hostile.squaredDistanceTo(entity) <= (double)(f * f);
+    private boolean isCloseEnoughForDanger(LivingEntity villager, LivingEntity target) {
+        float f = ((Float)SQUARED_DISTANCES_FOR_DANGER.get(target.getType())).floatValue();
+        return target.squaredDistanceTo(villager) <= (double)(f * f);
     }
 
     private boolean isHostile(LivingEntity entity) {

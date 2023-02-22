@@ -12,16 +12,18 @@ package net.minecraft.world;
 import com.mojang.brigadier.ResultConsumer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.ChatUtil;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
@@ -34,14 +36,15 @@ import org.jetbrains.annotations.Nullable;
 public abstract class CommandBlockExecutor
 implements CommandOutput {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
-    private static final Text field_21515 = new LiteralText("@");
+    private static final Text DEFAULT_NAME = new LiteralText("@");
     private long lastExecution = -1L;
     private boolean updateLastExecution = true;
     private int successCount;
     private boolean trackOutput = true;
+    @Nullable
     private Text lastOutput;
     private String command = "";
-    private Text customName = field_21515;
+    private Text customName = DEFAULT_NAME;
 
     public int getSuccessCount() {
         return this.successCount;
@@ -52,36 +55,36 @@ implements CommandOutput {
     }
 
     public Text getLastOutput() {
-        return this.lastOutput == null ? new LiteralText("") : this.lastOutput;
+        return this.lastOutput == null ? LiteralText.EMPTY : this.lastOutput;
     }
 
-    public CompoundTag serialize(CompoundTag compoundTag) {
-        compoundTag.putString("Command", this.command);
-        compoundTag.putInt("SuccessCount", this.successCount);
-        compoundTag.putString("CustomName", Text.Serializer.toJson(this.customName));
-        compoundTag.putBoolean("TrackOutput", this.trackOutput);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        nbt.putString("Command", this.command);
+        nbt.putInt("SuccessCount", this.successCount);
+        nbt.putString("CustomName", Text.Serializer.toJson(this.customName));
+        nbt.putBoolean("TrackOutput", this.trackOutput);
         if (this.lastOutput != null && this.trackOutput) {
-            compoundTag.putString("LastOutput", Text.Serializer.toJson(this.lastOutput));
+            nbt.putString("LastOutput", Text.Serializer.toJson(this.lastOutput));
         }
-        compoundTag.putBoolean("UpdateLastExecution", this.updateLastExecution);
+        nbt.putBoolean("UpdateLastExecution", this.updateLastExecution);
         if (this.updateLastExecution && this.lastExecution > 0L) {
-            compoundTag.putLong("LastExecution", this.lastExecution);
+            nbt.putLong("LastExecution", this.lastExecution);
         }
-        return compoundTag;
+        return nbt;
     }
 
-    public void deserialize(CompoundTag compoundTag) {
-        this.command = compoundTag.getString("Command");
-        this.successCount = compoundTag.getInt("SuccessCount");
-        if (compoundTag.contains("CustomName", 8)) {
-            this.setCustomName(Text.Serializer.fromJson(compoundTag.getString("CustomName")));
+    public void readNbt(NbtCompound nbt) {
+        this.command = nbt.getString("Command");
+        this.successCount = nbt.getInt("SuccessCount");
+        if (nbt.contains("CustomName", 8)) {
+            this.setCustomName(Text.Serializer.fromJson(nbt.getString("CustomName")));
         }
-        if (compoundTag.contains("TrackOutput", 1)) {
-            this.trackOutput = compoundTag.getBoolean("TrackOutput");
+        if (nbt.contains("TrackOutput", 1)) {
+            this.trackOutput = nbt.getBoolean("TrackOutput");
         }
-        if (compoundTag.contains("LastOutput", 8) && this.trackOutput) {
+        if (nbt.contains("LastOutput", 8) && this.trackOutput) {
             try {
-                this.lastOutput = Text.Serializer.fromJson(compoundTag.getString("LastOutput"));
+                this.lastOutput = Text.Serializer.fromJson(nbt.getString("LastOutput"));
             }
             catch (Throwable throwable) {
                 this.lastOutput = new LiteralText(throwable.getMessage());
@@ -89,14 +92,14 @@ implements CommandOutput {
         } else {
             this.lastOutput = null;
         }
-        if (compoundTag.contains("UpdateLastExecution")) {
-            this.updateLastExecution = compoundTag.getBoolean("UpdateLastExecution");
+        if (nbt.contains("UpdateLastExecution")) {
+            this.updateLastExecution = nbt.getBoolean("UpdateLastExecution");
         }
-        this.lastExecution = this.updateLastExecution && compoundTag.contains("LastExecution") ? compoundTag.getLong("LastExecution") : -1L;
+        this.lastExecution = this.updateLastExecution && nbt.contains("LastExecution") ? nbt.getLong("LastExecution") : -1L;
     }
 
-    public void setCommand(String string) {
-        this.command = string;
+    public void setCommand(String command) {
+        this.command = command;
         this.successCount = 0;
     }
 
@@ -115,7 +118,7 @@ implements CommandOutput {
         }
         this.successCount = 0;
         MinecraftServer minecraftServer = this.getWorld().getServer();
-        if (minecraftServer != null && minecraftServer.hasGameDir() && minecraftServer.areCommandBlocksEnabled() && !ChatUtil.isEmpty(this.command)) {
+        if (minecraftServer.areCommandBlocksEnabled() && !ChatUtil.isEmpty(this.command)) {
             try {
                 this.lastOutput = null;
                 ServerCommandSource serverCommandSource = this.getSource().withConsumer((ResultConsumer<ServerCommandSource>)((ResultConsumer)(commandContext, bl, i) -> {
@@ -141,12 +144,12 @@ implements CommandOutput {
         return this.customName;
     }
 
-    public void setCustomName(@Nullable Text text) {
-        this.customName = text != null ? text : field_21515;
+    public void setCustomName(@Nullable Text name) {
+        this.customName = name != null ? name : DEFAULT_NAME;
     }
 
     @Override
-    public void sendMessage(Text message) {
+    public void sendSystemMessage(Text message, UUID sender) {
         if (this.trackOutput) {
             this.lastOutput = new LiteralText("[" + DATE_FORMAT.format(new Date()) + "] ").append(message);
             this.markDirty();
@@ -161,7 +164,7 @@ implements CommandOutput {
         this.lastOutput = lastOutput;
     }
 
-    public void shouldTrackOutput(boolean trackOutput) {
+    public void setTrackingOutput(boolean trackOutput) {
         this.trackOutput = trackOutput;
     }
 
@@ -170,14 +173,14 @@ implements CommandOutput {
         return this.trackOutput;
     }
 
-    public boolean interact(PlayerEntity player) {
+    public ActionResult interact(PlayerEntity player) {
         if (!player.isCreativeLevelTwoOp()) {
-            return false;
+            return ActionResult.PASS;
         }
         if (player.getEntityWorld().isClient) {
             player.openCommandBlockMinecartScreen(this);
         }
-        return true;
+        return ActionResult.success(player.world.isClient);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -186,7 +189,7 @@ implements CommandOutput {
     public abstract ServerCommandSource getSource();
 
     @Override
-    public boolean sendCommandFeedback() {
+    public boolean shouldReceiveFeedback() {
         return this.getWorld().getGameRules().getBoolean(GameRules.SEND_COMMAND_FEEDBACK) && this.trackOutput;
     }
 

@@ -63,5 +63,9 @@ extends TrackTargetGoal {
         this.mob.setTarget(this.targetEntity);
         super.start();
     }
+
+    public void setTargetEntity(@Nullable LivingEntity targetEntity) {
+        this.targetEntity = targetEntity;
+    }
 }
 

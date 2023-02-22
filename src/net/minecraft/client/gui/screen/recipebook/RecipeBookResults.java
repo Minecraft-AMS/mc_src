@@ -20,6 +20,7 @@ import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeDisplayListener;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.book.RecipeBook;
 import org.jetbrains.annotations.Nullable;
@@ -46,9 +47,9 @@ public class RecipeBookResults {
         }
     }
 
-    public void initialize(MinecraftClient minecraftClient, int parentLeft, int parentTop) {
-        this.client = minecraftClient;
-        this.recipeBook = minecraftClient.player.getRecipeBook();
+    public void initialize(MinecraftClient client, int parentLeft, int parentTop) {
+        this.client = client;
+        this.recipeBook = client.player.getRecipeBook();
         for (int i = 0; i < this.resultButtons.size(); ++i) {
             this.resultButtons.get(i).setPos(parentLeft + 11 + 25 * (i % 5), parentTop + 31 + 25 * (i / 5));
         }
@@ -92,26 +93,26 @@ public class RecipeBookResults {
         this.prevPageButton.visible = this.pageCount > 1 && this.currentPage > 0;
     }
 
-    public void draw(int left, int top, int mouseX, int mouseY, float delta) {
+    public void draw(MatrixStack matrices, int i, int j, int k, int l, float f) {
         if (this.pageCount > 1) {
             String string = this.currentPage + 1 + "/" + this.pageCount;
-            int i = this.client.textRenderer.getStringWidth(string);
-            this.client.textRenderer.draw(string, left - i / 2 + 73, top + 141, -1);
+            int m = this.client.textRenderer.getWidth(string);
+            this.client.textRenderer.draw(matrices, string, (float)(i - m / 2 + 73), (float)(j + 141), -1);
         }
         this.hoveredResultButton = null;
         for (AnimatedResultButton animatedResultButton : this.resultButtons) {
-            animatedResultButton.render(mouseX, mouseY, delta);
+            animatedResultButton.render(matrices, k, l, f);
             if (!animatedResultButton.visible || !animatedResultButton.isHovered()) continue;
             this.hoveredResultButton = animatedResultButton;
         }
-        this.prevPageButton.render(mouseX, mouseY, delta);
-        this.nextPageButton.render(mouseX, mouseY, delta);
-        this.alternatesWidget.render(mouseX, mouseY, delta);
+        this.prevPageButton.render(matrices, k, l, f);
+        this.nextPageButton.render(matrices, k, l, f);
+        this.alternatesWidget.render(matrices, k, l, f);
     }
 
-    public void drawTooltip(int i, int j) {
+    public void drawTooltip(MatrixStack matrices, int i, int j) {
         if (this.client.currentScreen != null && this.hoveredResultButton != null && !this.alternatesWidget.isVisible()) {
-            this.client.currentScreen.renderTooltip(this.hoveredResultButton.getTooltip(this.client.currentScreen), i, j);
+            this.client.currentScreen.renderTooltip(matrices, this.hoveredResultButton.getTooltip(this.client.currentScreen), i, j);
         }
     }
 
@@ -164,9 +165,9 @@ public class RecipeBookResults {
         return false;
     }
 
-    public void onRecipesDisplayed(List<Recipe<?>> list) {
+    public void onRecipesDisplayed(List<Recipe<?>> recipes) {
         for (RecipeDisplayListener recipeDisplayListener : this.recipeDisplayListeners) {
-            recipeDisplayListener.onRecipesDisplayed(list);
+            recipeDisplayListener.onRecipesDisplayed(recipes);
         }
     }
 

@@ -10,6 +10,7 @@ package net.minecraft.block;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractRedstoneGateBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -25,8 +26,8 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 
 public class RepeaterBlock
@@ -34,7 +35,7 @@ extends AbstractRedstoneGateBlock {
     public static final BooleanProperty LOCKED = Properties.LOCKED;
     public static final IntProperty DELAY = Properties.DELAY;
 
-    protected RepeaterBlock(Block.Settings settings) {
+    protected RepeaterBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(DELAY, 1)).with(LOCKED, false)).with(POWERED, false));
     }
@@ -45,7 +46,7 @@ extends AbstractRedstoneGateBlock {
             return ActionResult.PASS;
         }
         world.setBlockState(pos, (BlockState)state.cycle(DELAY), 3);
-        return ActionResult.SUCCESS;
+        return ActionResult.success(world.isClient);
     }
 
     @Override
@@ -60,16 +61,16 @@ extends AbstractRedstoneGateBlock {
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
-        if (!world.isClient() && facing.getAxis() != state.get(FACING).getAxis()) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        if (!world.isClient() && direction.getAxis() != state.get(FACING).getAxis()) {
             return (BlockState)state.with(LOCKED, this.isLocked(world, pos, state));
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
     @Override
-    public boolean isLocked(WorldView worldView, BlockPos pos, BlockState state) {
-        return this.getMaxInputLevelSides(worldView, pos, state) > 0;
+    public boolean isLocked(WorldView world, BlockPos pos, BlockState state) {
+        return this.getMaxInputLevelSides(world, pos, state) > 0;
     }
 
     @Override
@@ -84,16 +85,16 @@ extends AbstractRedstoneGateBlock {
             return;
         }
         Direction direction = state.get(FACING);
-        double d = (double)((float)pos.getX() + 0.5f) + (double)(random.nextFloat() - 0.5f) * 0.2;
-        double e = (double)((float)pos.getY() + 0.4f) + (double)(random.nextFloat() - 0.5f) * 0.2;
-        double f = (double)((float)pos.getZ() + 0.5f) + (double)(random.nextFloat() - 0.5f) * 0.2;
+        double d = (double)pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.2;
+        double e = (double)pos.getY() + 0.4 + (random.nextDouble() - 0.5) * 0.2;
+        double f = (double)pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.2;
         float g = -5.0f;
         if (random.nextBoolean()) {
             g = state.get(DELAY) * 2 - 1;
         }
         double h = (g /= 16.0f) * (float)direction.getOffsetX();
         double i = g * (float)direction.getOffsetZ();
-        world.addParticle(DustParticleEffect.RED, d + h, e, f + i, 0.0, 0.0, 0.0);
+        world.addParticle(DustParticleEffect.DEFAULT, d + h, e, f + i, 0.0, 0.0, 0.0);
     }
 
     @Override

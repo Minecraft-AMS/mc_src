@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class FloatRangeArgument {
     public static final FloatRangeArgument ANY = new FloatRangeArgument(null, null);
-    public static final SimpleCommandExceptionType ONLY_INTS_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.range.ints", new Object[0]));
+    public static final SimpleCommandExceptionType ONLY_INTS_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.range.ints"));
     private final Float min;
     private final Float max;
 
@@ -104,8 +104,8 @@ public class FloatRangeArgument {
     }
 
     @Nullable
-    private static Float mapFloat(@Nullable Float float_, Function<Float, Float> function) {
-        return float_ == null ? null : function.apply(float_);
+    private static Float mapFloat(@Nullable Float value, Function<Float, Float> function) {
+        return value == null ? null : function.apply(value);
     }
 }
 

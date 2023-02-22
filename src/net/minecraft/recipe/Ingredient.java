@@ -39,25 +39,24 @@ import net.fabricmc.api.Environment;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeFinder;
-import net.minecraft.tag.ItemTags;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.recipe.RecipeMatcher;
+import net.minecraft.tag.ServerTagManagerHolder;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public final class Ingredient
 implements Predicate<ItemStack> {
-    private static final Predicate<? super Entry> NON_EMPTY = entry -> !entry.getStacks().stream().allMatch(ItemStack::isEmpty);
     public static final Ingredient EMPTY = new Ingredient(Stream.empty());
     private final Entry[] entries;
     private ItemStack[] matchingStacks;
     private IntList ids;
 
     private Ingredient(Stream<? extends Entry> entries) {
-        this.entries = (Entry[])entries.filter(NON_EMPTY).toArray(Entry[]::new);
+        this.entries = (Entry[])entries.toArray(Entry[]::new);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -77,10 +76,10 @@ implements Predicate<ItemStack> {
         if (itemStack == null) {
             return false;
         }
-        if (this.entries.length == 0) {
+        this.cacheMatchingStacks();
+        if (this.matchingStacks.length == 0) {
             return itemStack.isEmpty();
         }
-        this.cacheMatchingStacks();
         for (ItemStack itemStack2 : this.matchingStacks) {
             if (itemStack2.getItem() != itemStack.getItem()) continue;
             return true;
@@ -88,12 +87,12 @@ implements Predicate<ItemStack> {
         return false;
     }
 
-    public IntList getIds() {
+    public IntList getMatchingItemIds() {
         if (this.ids == null) {
             this.cacheMatchingStacks();
             this.ids = new IntArrayList(this.matchingStacks.length);
             for (ItemStack itemStack : this.matchingStacks) {
-                this.ids.add(RecipeFinder.getItemId(itemStack));
+                this.ids.add(RecipeMatcher.getItemId(itemStack));
             }
             this.ids.sort((Comparator)IntComparators.NATURAL_COMPARATOR);
         }
@@ -129,12 +128,16 @@ implements Predicate<ItemStack> {
     }
 
     public static Ingredient ofItems(ItemConvertible ... items) {
-        return Ingredient.ofEntries(Arrays.stream(items).map(item -> new StackEntry(new ItemStack((ItemConvertible)item))));
+        return Ingredient.ofStacks(Arrays.stream(items).map(ItemStack::new));
     }
 
     @Environment(value=EnvType.CLIENT)
     public static Ingredient ofStacks(ItemStack ... stacks) {
-        return Ingredient.ofEntries(Arrays.stream(stacks).map(stack -> new StackEntry((ItemStack)stack)));
+        return Ingredient.ofStacks(Arrays.stream(stacks));
+    }
+
+    public static Ingredient ofStacks(Stream<ItemStack> stacks) {
+        return Ingredient.ofEntries(stacks.filter(itemStack -> !itemStack.isEmpty()).map(stack -> new StackEntry((ItemStack)stack)));
     }
 
     public static Ingredient fromTag(Tag<Item> tag) {
@@ -163,18 +166,18 @@ implements Predicate<ItemStack> {
         throw new JsonSyntaxException("Expected item to be object or array of objects");
     }
 
-    public static Entry entryFromJson(JsonObject json) {
+    private static Entry entryFromJson(JsonObject json) {
         if (json.has("item") && json.has("tag")) {
             throw new JsonParseException("An ingredient entry is either a tag or an item, not both");
         }
         if (json.has("item")) {
             Identifier identifier = new Identifier(JsonHelper.getString(json, "item"));
-            Item item = (Item)Registry.ITEM.getOrEmpty(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown item '" + identifier + "'"));
+            Item item = Registry.ITEM.getOrEmpty(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown item '" + identifier + "'"));
             return new StackEntry(new ItemStack(item));
         }
         if (json.has("tag")) {
             Identifier identifier = new Identifier(JsonHelper.getString(json, "tag"));
-            Tag<Item> tag = ItemTags.getContainer().get(identifier);
+            Tag<Item> tag = ServerTagManagerHolder.getTagManager().getItems().getTag(identifier);
             if (tag == null) {
                 throw new JsonSyntaxException("Unknown item tag '" + identifier + "'");
             }
@@ -208,7 +211,7 @@ implements Predicate<ItemStack> {
         @Override
         public JsonObject toJson() {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("tag", this.tag.getId().toString());
+            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getItems().getTagId(this.tag).toString());
             return jsonObject;
         }
     }

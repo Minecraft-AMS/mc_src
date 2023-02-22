@@ -14,21 +14,20 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.tag.FluidTags;
 
 public class StayAboveWaterTask
 extends Task<MobEntity> {
-    private final float minWaterHeight;
     private final float chance;
 
-    public StayAboveWaterTask(float minWaterHeight, float chance) {
+    public StayAboveWaterTask(float chance) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of());
-        this.minWaterHeight = minWaterHeight;
         this.chance = chance;
     }
 
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, MobEntity mobEntity) {
-        return mobEntity.isTouchingWater() && mobEntity.getWaterHeight() > (double)this.minWaterHeight || mobEntity.isInLava();
+        return mobEntity.isTouchingWater() && mobEntity.getFluidHeight(FluidTags.WATER) > mobEntity.method_29241() || mobEntity.isInLava();
     }
 
     @Override

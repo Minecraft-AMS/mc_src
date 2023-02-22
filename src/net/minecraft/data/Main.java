@@ -25,10 +25,12 @@ import joptsimple.OptionSpec;
 import joptsimple.OptionSpecBuilder;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.SnbtProvider;
+import net.minecraft.data.client.BlockStateDefinitionProvider;
 import net.minecraft.data.dev.NbtProvider;
+import net.minecraft.data.report.BiomeListProvider;
 import net.minecraft.data.report.BlockListProvider;
 import net.minecraft.data.report.CommandSyntaxProvider;
-import net.minecraft.data.report.ItemListProvider;
+import net.minecraft.data.report.RegistryDumpProvider;
 import net.minecraft.data.server.AdvancementsProvider;
 import net.minecraft.data.server.BlockTagsProvider;
 import net.minecraft.data.server.EntityTypeTagsProvider;
@@ -71,10 +73,14 @@ public class Main {
         if (includeClient || includeServer) {
             dataGenerator.install(new SnbtProvider(dataGenerator).addWriter(new StructureValidatorProvider()));
         }
+        if (includeClient) {
+            dataGenerator.install(new BlockStateDefinitionProvider(dataGenerator));
+        }
         if (includeServer) {
             dataGenerator.install(new FluidTagsProvider(dataGenerator));
-            dataGenerator.install(new BlockTagsProvider(dataGenerator));
-            dataGenerator.install(new ItemTagsProvider(dataGenerator));
+            BlockTagsProvider blockTagsProvider = new BlockTagsProvider(dataGenerator);
+            dataGenerator.install(blockTagsProvider);
+            dataGenerator.install(new ItemTagsProvider(dataGenerator, blockTagsProvider));
             dataGenerator.install(new EntityTypeTagsProvider(dataGenerator));
             dataGenerator.install(new RecipesProvider(dataGenerator));
             dataGenerator.install(new AdvancementsProvider(dataGenerator));
@@ -85,8 +91,9 @@ public class Main {
         }
         if (includeReports) {
             dataGenerator.install(new BlockListProvider(dataGenerator));
-            dataGenerator.install(new ItemListProvider(dataGenerator));
+            dataGenerator.install(new RegistryDumpProvider(dataGenerator));
             dataGenerator.install(new CommandSyntaxProvider(dataGenerator));
+            dataGenerator.install(new BiomeListProvider(dataGenerator));
         }
         return dataGenerator;
     }

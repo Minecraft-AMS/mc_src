@@ -8,6 +8,13 @@
  *  com.google.common.collect.ImmutableSortedMap
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.mojang.datafixers.util.Pair
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.Decoder
+ *  com.mojang.serialization.Encoder
+ *  com.mojang.serialization.MapCodec
+ *  com.mojang.serialization.MapDecoder
+ *  com.mojang.serialization.MapEncoder
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.state;
@@ -18,50 +25,67 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Decoder;
+import com.mojang.serialization.Encoder;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.MapDecoder;
+import com.mojang.serialization.MapEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.minecraft.state.AbstractState;
 import net.minecraft.state.State;
 import net.minecraft.state.property.Property;
-import net.minecraft.util.MapUtil;
 import org.jetbrains.annotations.Nullable;
 
-public class StateManager<O, S extends State<S>> {
+public class StateManager<O, S extends State<O, S>> {
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("^[a-z0-9_]+$");
     private final O owner;
     private final ImmutableSortedMap<String, Property<?>> properties;
     private final ImmutableList<S> states;
 
-    protected <A extends AbstractState<O, S>> StateManager(O owner, Factory<O, S, A> factory, Map<String, Property<?>> namedProperties) {
-        this.owner = owner;
-        this.properties = ImmutableSortedMap.copyOf(namedProperties);
+    protected StateManager(Function<O, S> function, O object, Factory<O, S> factory, Map<String, Property<?>> propertiesMap) {
+        this.owner = object;
+        this.properties = ImmutableSortedMap.copyOf(propertiesMap);
+        Supplier<State> supplier = () -> (State)function.apply(object);
+        MapCodec<State> mapCodec = MapCodec.of((MapEncoder)Encoder.empty(), (MapDecoder)Decoder.unit(supplier));
+        for (Map.Entry entry : this.properties.entrySet()) {
+            mapCodec = StateManager.method_30040(mapCodec, supplier, (String)entry.getKey(), (Property)entry.getValue());
+        }
+        MapCodec<State> mapCodec2 = mapCodec;
         LinkedHashMap map = Maps.newLinkedHashMap();
         ArrayList list3 = Lists.newArrayList();
         Stream<List<List<Object>>> stream = Stream.of(Collections.emptyList());
         for (Property property : this.properties.values()) {
             stream = stream.flatMap(list -> property.getValues().stream().map(comparable -> {
                 ArrayList list2 = Lists.newArrayList((Iterable)list);
-                list2.add(comparable);
+                list2.add(Pair.of((Object)property, (Object)comparable));
                 return list2;
             }));
         }
         stream.forEach(list2 -> {
-            Map map2 = MapUtil.createMap(this.properties.values(), list2);
-            Object abstractState = factory.create(owner, ImmutableMap.copyOf(map2));
-            map.put(map2, abstractState);
-            list3.add(abstractState);
+            ImmutableMap immutableMap = (ImmutableMap)list2.stream().collect(ImmutableMap.toImmutableMap(Pair::getFirst, Pair::getSecond));
+            State state = (State)factory.create(object, immutableMap, mapCodec2);
+            map.put(immutableMap, state);
+            list3.add(state);
         });
-        for (AbstractState abstractState : list3) {
-            abstractState.createWithTable(map);
+        for (State state : list3) {
+            state.createWithTable(map);
         }
-        this.states = ImmutableList.copyOf((Iterable)list3);
+        this.states = ImmutableList.copyOf((Collection)list3);
+    }
+
+    private static <S extends State<?, S>, T extends Comparable<T>> MapCodec<S> method_30040(MapCodec<S> mapCodec, Supplier<S> supplier, String string, Property<T> property) {
+        return Codec.mapPair(mapCodec, (MapCodec)property.getValueCodec().fieldOf(string).setPartial(() -> property.createValue((State)supplier.get()))).xmap(pair -> (State)((State)pair.getFirst()).with(property, ((Property.Value)pair.getSecond()).getValue()), state -> Pair.of((Object)state, property.createValue((State<?, ?>)state)));
     }
 
     public ImmutableList<S> getStates() {
@@ -89,7 +113,7 @@ public class StateManager<O, S extends State<S>> {
         return (Property)this.properties.get((Object)name);
     }
 
-    public static class Builder<O, S extends State<S>> {
+    public static class Builder<O, S extends State<O, S>> {
         private final O owner;
         private final Map<String, Property<?>> namedProperties = Maps.newHashMap();
 
@@ -124,13 +148,13 @@ public class StateManager<O, S extends State<S>> {
             }
         }
 
-        public <A extends AbstractState<O, S>> StateManager<O, S> build(Factory<O, S, A> factory) {
-            return new StateManager<O, S>(this.owner, factory, this.namedProperties);
+        public StateManager<O, S> build(Function<O, S> ownerToStateFunction, Factory<O, S> factory) {
+            return new StateManager<O, S>(ownerToStateFunction, this.owner, factory, this.namedProperties);
         }
     }
 
-    public static interface Factory<O, S extends State<S>, A extends AbstractState<O, S>> {
-        public A create(O var1, ImmutableMap<Property<?>, Comparable<?>> var2);
+    public static interface Factory<O, S> {
+        public S create(O var1, ImmutableMap<Property<?>, Comparable<?>> var2, MapCodec<S> var3);
     }
 }
 

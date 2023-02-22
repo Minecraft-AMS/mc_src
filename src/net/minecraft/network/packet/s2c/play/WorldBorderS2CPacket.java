@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.world.border.WorldBorder;
 
 public class WorldBorderS2CPacket
@@ -35,9 +35,9 @@ implements Packet<ClientPlayPacketListener> {
         this.centerX = border.getCenterX();
         this.centerZ = border.getCenterZ();
         this.oldSize = border.getSize();
-        this.size = border.getTargetSize();
-        this.interpolationDuration = border.getTargetRemainingTime();
-        this.portalTeleportPosLimit = border.getMaxWorldBorderRadius();
+        this.size = border.getSizeLerpTarget();
+        this.interpolationDuration = border.getSizeLerpTime();
+        this.portalTeleportPosLimit = border.getMaxRadius();
         this.warningBlocks = border.getWarningBlocks();
         this.warningTime = border.getWarningTime();
     }
@@ -129,38 +129,38 @@ implements Packet<ClientPlayPacketListener> {
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public void apply(WorldBorder worldBorder) {
+    public void apply(WorldBorder border) {
         switch (this.type) {
             case SET_SIZE: {
-                worldBorder.setSize(this.size);
+                border.setSize(this.size);
                 break;
             }
             case LERP_SIZE: {
-                worldBorder.interpolateSize(this.oldSize, this.size, this.interpolationDuration);
+                border.interpolateSize(this.oldSize, this.size, this.interpolationDuration);
                 break;
             }
             case SET_CENTER: {
-                worldBorder.setCenter(this.centerX, this.centerZ);
+                border.setCenter(this.centerX, this.centerZ);
                 break;
             }
             case INITIALIZE: {
-                worldBorder.setCenter(this.centerX, this.centerZ);
+                border.setCenter(this.centerX, this.centerZ);
                 if (this.interpolationDuration > 0L) {
-                    worldBorder.interpolateSize(this.oldSize, this.size, this.interpolationDuration);
+                    border.interpolateSize(this.oldSize, this.size, this.interpolationDuration);
                 } else {
-                    worldBorder.setSize(this.size);
+                    border.setSize(this.size);
                 }
-                worldBorder.setMaxWorldBorderRadius(this.portalTeleportPosLimit);
-                worldBorder.setWarningBlocks(this.warningBlocks);
-                worldBorder.setWarningTime(this.warningTime);
+                border.setMaxRadius(this.portalTeleportPosLimit);
+                border.setWarningBlocks(this.warningBlocks);
+                border.setWarningTime(this.warningTime);
                 break;
             }
             case SET_WARNING_TIME: {
-                worldBorder.setWarningTime(this.warningTime);
+                border.setWarningTime(this.warningTime);
                 break;
             }
             case SET_WARNING_BLOCKS: {
-                worldBorder.setWarningBlocks(this.warningBlocks);
+                border.setWarningBlocks(this.warningBlocks);
             }
         }
     }

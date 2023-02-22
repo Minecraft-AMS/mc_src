@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class PlayerMoveC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -79,10 +79,10 @@ implements Packet<ServerPlayPacketListener> {
         }
 
         @Environment(value=EnvType.CLIENT)
-        public LookOnly(float f, float g, boolean bl) {
-            this.yaw = f;
-            this.pitch = g;
-            this.onGround = bl;
+        public LookOnly(float yaw, float pitch, boolean onGround) {
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.onGround = onGround;
             this.changeLook = true;
         }
 
@@ -141,13 +141,13 @@ implements Packet<ServerPlayPacketListener> {
         }
 
         @Environment(value=EnvType.CLIENT)
-        public Both(double d, double e, double f, float g, float h, boolean bl) {
-            this.x = d;
-            this.y = e;
-            this.z = f;
-            this.yaw = g;
-            this.pitch = h;
-            this.onGround = bl;
+        public Both(double x, double y, double z, float yaw, float pitch, boolean onGround) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.onGround = onGround;
             this.changeLook = true;
             this.changePosition = true;
         }

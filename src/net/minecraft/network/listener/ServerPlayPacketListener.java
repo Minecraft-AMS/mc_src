@@ -9,16 +9,17 @@ import net.minecraft.network.packet.c2s.play.BoatPaddleStateC2SPacket;
 import net.minecraft.network.packet.c2s.play.BookUpdateC2SPacket;
 import net.minecraft.network.packet.c2s.play.ButtonClickC2SPacket;
 import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.c2s.play.ClickWindowC2SPacket;
+import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientSettingsC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
-import net.minecraft.network.packet.c2s.play.ConfirmGuiActionC2SPacket;
+import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
+import net.minecraft.network.packet.c2s.play.ConfirmScreenActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.CraftRequestC2SPacket;
 import net.minecraft.network.packet.c2s.play.CreativeInventoryActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.CustomPayloadC2SPacket;
-import net.minecraft.network.packet.c2s.play.GuiCloseC2SPacket;
 import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
+import net.minecraft.network.packet.c2s.play.JigsawGeneratingC2SPacket;
 import net.minecraft.network.packet.c2s.play.KeepAliveC2SPacket;
 import net.minecraft.network.packet.c2s.play.PickFromInventoryC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
@@ -30,10 +31,11 @@ import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.c2s.play.QueryBlockNbtC2SPacket;
 import net.minecraft.network.packet.c2s.play.QueryEntityNbtC2SPacket;
 import net.minecraft.network.packet.c2s.play.RecipeBookDataC2SPacket;
+import net.minecraft.network.packet.c2s.play.RecipeCategoryOptionsC2SPacket;
 import net.minecraft.network.packet.c2s.play.RenameItemC2SPacket;
 import net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket;
 import net.minecraft.network.packet.c2s.play.ResourcePackStatusC2SPacket;
-import net.minecraft.network.packet.c2s.play.SelectVillagerTradeC2SPacket;
+import net.minecraft.network.packet.c2s.play.SelectMerchantTradeC2SPacket;
 import net.minecraft.network.packet.c2s.play.SpectatorTeleportC2SPacket;
 import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateBeaconC2SPacket;
@@ -52,21 +54,21 @@ public interface ServerPlayPacketListener
 extends PacketListener {
     public void onHandSwing(HandSwingC2SPacket var1);
 
-    public void onChatMessage(ChatMessageC2SPacket var1);
+    public void onGameMessage(ChatMessageC2SPacket var1);
 
     public void onClientStatus(ClientStatusC2SPacket var1);
 
     public void onClientSettings(ClientSettingsC2SPacket var1);
 
-    public void onConfirmTransaction(ConfirmGuiActionC2SPacket var1);
+    public void onConfirmScreenAction(ConfirmScreenActionC2SPacket var1);
 
     public void onButtonClick(ButtonClickC2SPacket var1);
 
-    public void onClickWindow(ClickWindowC2SPacket var1);
+    public void onClickSlot(ClickSlotC2SPacket var1);
 
     public void onCraftRequest(CraftRequestC2SPacket var1);
 
-    public void onGuiClose(GuiCloseC2SPacket var1);
+    public void onCloseHandledScreen(CloseHandledScreenC2SPacket var1);
 
     public void onCustomPayload(CustomPayloadC2SPacket var1);
 
@@ -106,6 +108,8 @@ extends PacketListener {
 
     public void onRecipeBookData(RecipeBookDataC2SPacket var1);
 
+    public void onRecipeCategoryOptions(RecipeCategoryOptionsC2SPacket var1);
+
     public void onAdvancementTab(AdvancementTabC2SPacket var1);
 
     public void onRequestCommandCompletions(RequestCommandCompletionsC2SPacket var1);
@@ -122,7 +126,7 @@ extends PacketListener {
 
     public void onStructureBlockUpdate(UpdateStructureBlockC2SPacket var1);
 
-    public void onVillagerTradeSelect(SelectVillagerTradeC2SPacket var1);
+    public void onMerchantTradeSelect(SelectMerchantTradeC2SPacket var1);
 
     public void onBookUpdate(BookUpdateC2SPacket var1);
 
@@ -131,6 +135,8 @@ extends PacketListener {
     public void onQueryBlockNbt(QueryBlockNbtC2SPacket var1);
 
     public void onJigsawUpdate(UpdateJigsawC2SPacket var1);
+
+    public void onJigsawGenerating(JigsawGeneratingC2SPacket var1);
 
     public void onUpdateDifficulty(UpdateDifficultyC2SPacket var1);
 

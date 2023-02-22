@@ -22,8 +22,8 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.function.Predicate;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.ItemPredicateArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.argument.ItemPredicateArgumentType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -41,13 +41,14 @@ public class ClearCommand {
     private static int execute(ServerCommandSource source, Collection<ServerPlayerEntity> targets, Predicate<ItemStack> item, int maxCount) throws CommandSyntaxException {
         int i = 0;
         for (ServerPlayerEntity serverPlayerEntity : targets) {
-            i += serverPlayerEntity.inventory.method_7369(item, maxCount);
-            serverPlayerEntity.container.sendContentUpdates();
-            serverPlayerEntity.method_14241();
+            i += serverPlayerEntity.inventory.remove(item, maxCount, serverPlayerEntity.playerScreenHandler.method_29281());
+            serverPlayerEntity.currentScreenHandler.sendContentUpdates();
+            serverPlayerEntity.playerScreenHandler.onContentChanged(serverPlayerEntity.inventory);
+            serverPlayerEntity.updateCursorStack();
         }
         if (i == 0) {
             if (targets.size() == 1) {
-                throw FAILED_SINGLE_EXCEPTION.create((Object)targets.iterator().next().getName().asFormattedString());
+                throw FAILED_SINGLE_EXCEPTION.create((Object)targets.iterator().next().getName());
             }
             throw FAILED_MULTIPLE_EXCEPTION.create((Object)targets.size());
         }

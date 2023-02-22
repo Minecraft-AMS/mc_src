@@ -9,7 +9,6 @@ package net.minecraft.client.render;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.fluid.FluidState;
@@ -21,8 +20,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3f;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.RayTraceContext;
+import net.minecraft.world.RaycastContext;
 
 @Environment(value=EnvType.CLIENT)
 public class Camera {
@@ -31,9 +31,9 @@ public class Camera {
     private Entity focusedEntity;
     private Vec3d pos = Vec3d.ZERO;
     private final BlockPos.Mutable blockPos = new BlockPos.Mutable();
-    private final Vector3f horizontalPlane = new Vector3f(0.0f, 0.0f, 1.0f);
-    private final Vector3f verticalPlane = new Vector3f(0.0f, 1.0f, 0.0f);
-    private final Vector3f diagonalPlane = new Vector3f(1.0f, 0.0f, 0.0f);
+    private final Vec3f horizontalPlane = new Vec3f(0.0f, 0.0f, 1.0f);
+    private final Vec3f verticalPlane = new Vec3f(0.0f, 1.0f, 0.0f);
+    private final Vec3f diagonalPlane = new Vec3f(1.0f, 0.0f, 0.0f);
     private float pitch;
     private float yaw;
     private final Quaternion rotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
@@ -78,7 +78,7 @@ public class Camera {
             float g = (i >> 1 & 1) * 2 - 1;
             float h = (i >> 2 & 1) * 2 - 1;
             Vec3d vec3d = this.pos.add(f *= 0.1f, g *= 0.1f, h *= 0.1f);
-            if (((HitResult)(hitResult = this.area.rayTrace(new RayTraceContext(vec3d, vec3d2 = new Vec3d(this.pos.x - (double)this.horizontalPlane.getX() * desiredCameraDistance + (double)f + (double)h, this.pos.y - (double)this.horizontalPlane.getY() * desiredCameraDistance + (double)g, this.pos.z - (double)this.horizontalPlane.getZ() * desiredCameraDistance + (double)h), RayTraceContext.ShapeType.COLLIDER, RayTraceContext.FluidHandling.NONE, this.focusedEntity)))).getType() == HitResult.Type.MISS || !((d = hitResult.getPos().distanceTo(this.pos)) < desiredCameraDistance)) continue;
+            if (((HitResult)(hitResult = this.area.raycast(new RaycastContext(vec3d, vec3d2 = new Vec3d(this.pos.x - (double)this.horizontalPlane.getX() * desiredCameraDistance + (double)f + (double)h, this.pos.y - (double)this.horizontalPlane.getY() * desiredCameraDistance + (double)g, this.pos.z - (double)this.horizontalPlane.getZ() * desiredCameraDistance + (double)h), RaycastContext.ShapeType.VISUAL, RaycastContext.FluidHandling.NONE, this.focusedEntity)))).getType() == HitResult.Type.MISS || !((d = hitResult.getPos().distanceTo(this.pos)) < desiredCameraDistance)) continue;
             desiredCameraDistance = d;
         }
         return desiredCameraDistance;
@@ -95,8 +95,8 @@ public class Camera {
         this.pitch = pitch;
         this.yaw = yaw;
         this.rotation.set(0.0f, 0.0f, 0.0f, 1.0f);
-        this.rotation.hamiltonProduct(Vector3f.POSITIVE_Y.getDegreesQuaternion(-yaw));
-        this.rotation.hamiltonProduct(Vector3f.POSITIVE_X.getDegreesQuaternion(pitch));
+        this.rotation.hamiltonProduct(Vec3f.POSITIVE_Y.getDegreesQuaternion(-yaw));
+        this.rotation.hamiltonProduct(Vec3f.POSITIVE_X.getDegreesQuaternion(pitch));
         this.horizontalPlane.set(0.0f, 0.0f, 1.0f);
         this.horizontalPlane.rotate(this.rotation);
         this.verticalPlane.set(0.0f, 1.0f, 0.0f);
@@ -157,11 +157,11 @@ public class Camera {
         return fluidState;
     }
 
-    public final Vector3f getHorizontalPlane() {
+    public final Vec3f getHorizontalPlane() {
         return this.horizontalPlane;
     }
 
-    public final Vector3f getVerticalPlane() {
+    public final Vec3f getVerticalPlane() {
         return this.verticalPlane;
     }
 

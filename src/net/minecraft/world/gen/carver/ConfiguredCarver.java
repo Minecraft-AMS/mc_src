@@ -1,32 +1,47 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.carver;
 
+import com.mojang.serialization.Codec;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.carver.Carver;
 import net.minecraft.world.gen.carver.CarverConfig;
 
 public class ConfiguredCarver<WC extends CarverConfig> {
-    public final Carver<WC> carver;
-    public final WC config;
+    public static final Codec<ConfiguredCarver<?>> CODEC = Registry.CARVER.dispatch(configuredCarver -> configuredCarver.carver, Carver::getCodec);
+    public static final Codec<Supplier<ConfiguredCarver<?>>> REGISTRY_CODEC = RegistryElementCodec.of(Registry.CONFIGURED_CARVER_WORLDGEN, CODEC);
+    public static final Codec<List<Supplier<ConfiguredCarver<?>>>> field_26755 = RegistryElementCodec.method_31194(Registry.CONFIGURED_CARVER_WORLDGEN, CODEC);
+    private final Carver<WC> carver;
+    private final WC config;
 
     public ConfiguredCarver(Carver<WC> carver, WC config) {
         this.carver = carver;
         this.config = config;
     }
 
+    public WC getConfig() {
+        return this.config;
+    }
+
     public boolean shouldCarve(Random random, int chunkX, int chunkZ) {
         return this.carver.shouldCarve(random, chunkX, chunkZ, this.config);
     }
 
-    public boolean carve(Chunk chunk, Function<BlockPos, Biome> function, Random random, int i, int j, int k, int l, int m, BitSet bitSet) {
-        return this.carver.carve(chunk, function, random, i, j, k, l, m, bitSet, this.config);
+    public boolean carve(Chunk chunk, Function<BlockPos, Biome> posToBiome, Random random, int seaLevel, int chunkX, int chunkZ, int mainChunkX, int mainChunkZ, BitSet carvingMask) {
+        return this.carver.carve(chunk, posToBiome, random, seaLevel, chunkX, chunkZ, mainChunkX, mainChunkZ, carvingMask, this.config);
     }
 }
 

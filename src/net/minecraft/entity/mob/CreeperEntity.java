@@ -28,6 +28,7 @@ import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
@@ -41,9 +42,11 @@ import net.minecraft.entity.passive.OcelotEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.GameRules;
@@ -81,10 +84,8 @@ implements SkinOverlayOwner {
         this.targetSelector.add(2, new RevengeGoal(this, new Class[0]));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.25);
+    public static DefaultAttributeContainer.Builder createCreeperAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25);
     }
 
     @Override
@@ -114,28 +115,28 @@ implements SkinOverlayOwner {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
         if (this.dataTracker.get(CHARGED).booleanValue()) {
-            tag.putBoolean("powered", true);
+            nbt.putBoolean("powered", true);
         }
-        tag.putShort("Fuse", (short)this.fuseTime);
-        tag.putByte("ExplosionRadius", (byte)this.explosionRadius);
-        tag.putBoolean("ignited", this.getIgnited());
+        nbt.putShort("Fuse", (short)this.fuseTime);
+        nbt.putByte("ExplosionRadius", (byte)this.explosionRadius);
+        nbt.putBoolean("ignited", this.isIgnited());
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.dataTracker.set(CHARGED, tag.getBoolean("powered"));
-        if (tag.contains("Fuse", 99)) {
-            this.fuseTime = tag.getShort("Fuse");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.dataTracker.set(CHARGED, nbt.getBoolean("powered"));
+        if (nbt.contains("Fuse", 99)) {
+            this.fuseTime = nbt.getShort("Fuse");
         }
-        if (tag.contains("ExplosionRadius", 99)) {
-            this.explosionRadius = tag.getByte("ExplosionRadius");
+        if (nbt.contains("ExplosionRadius", 99)) {
+            this.explosionRadius = nbt.getByte("ExplosionRadius");
         }
-        if (tag.getBoolean("ignited")) {
-            this.setIgnited();
+        if (nbt.getBoolean("ignited")) {
+            this.ignite();
         }
     }
 
@@ -144,7 +145,7 @@ implements SkinOverlayOwner {
         if (this.isAlive()) {
             int i;
             this.lastFuseTime = this.currentFuseTime;
-            if (this.getIgnited()) {
+            if (this.isIgnited()) {
                 this.setFuseSpeed(1);
             }
             if ((i = this.getFuseSpeed()) > 0 && this.currentFuseTime == 0) {
@@ -207,28 +208,28 @@ implements SkinOverlayOwner {
     }
 
     @Override
-    public void onStruckByLightning(LightningEntity lightning) {
-        super.onStruckByLightning(lightning);
+    public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
+        super.onStruckByLightning(world, lightning);
         this.dataTracker.set(CHARGED, true);
     }
 
     @Override
-    protected boolean interactMob(PlayerEntity player, Hand hand) {
+    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.getItem() == Items.FLINT_AND_STEEL) {
             this.world.playSound(player, this.getX(), this.getY(), this.getZ(), SoundEvents.ITEM_FLINTANDSTEEL_USE, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
             if (!this.world.isClient) {
-                this.setIgnited();
+                this.ignite();
                 itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
             }
-            return true;
+            return ActionResult.success(this.world.isClient);
         }
         return super.interactMob(player, hand);
     }
 
     private void explode() {
         if (!this.world.isClient) {
-            Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
+            Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
             float f = this.shouldRenderOverlay() ? 2.0f : 1.0f;
             this.dead = true;
             this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius * f, destructionType);
@@ -253,11 +254,11 @@ implements SkinOverlayOwner {
         }
     }
 
-    public boolean getIgnited() {
+    public boolean isIgnited() {
         return this.dataTracker.get(IGNITED);
     }
 
-    public void setIgnited() {
+    public void ignite() {
         this.dataTracker.set(IGNITED, true);
     }
 

@@ -18,7 +18,7 @@ import net.minecraft.util.Identifier;
 @Environment(value=EnvType.CLIENT)
 public class RavagerEntityRenderer
 extends MobEntityRenderer<RavagerEntity, RavagerEntityModel> {
-    private static final Identifier SKIN = new Identifier("textures/entity/illager/ravager.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/illager/ravager.png");
 
     public RavagerEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new RavagerEntityModel(), 1.1f);
@@ -26,7 +26,7 @@ extends MobEntityRenderer<RavagerEntity, RavagerEntityModel> {
 
     @Override
     public Identifier getTexture(RavagerEntity ravagerEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 }
 

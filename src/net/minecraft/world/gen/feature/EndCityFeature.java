@@ -2,13 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.structure.EndCityGenerator;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructureStart;
@@ -16,68 +15,39 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class EndCityFeature
 extends StructureFeature<DefaultFeatureConfig> {
-    public EndCityFeature(Function<Dynamic<?>, ? extends DefaultFeatureConfig> configFactory) {
-        super(configFactory);
+    public EndCityFeature(Codec<DefaultFeatureConfig> codec) {
+        super(codec);
     }
 
     @Override
-    protected ChunkPos getStart(ChunkGenerator<?> chunkGenerator, Random random, int i, int j, int k, int l) {
-        int m = ((ChunkGeneratorConfig)chunkGenerator.getConfig()).getEndCityDistance();
-        int n = ((ChunkGeneratorConfig)chunkGenerator.getConfig()).getEndCitySeparation();
-        int o = i + m * k;
-        int p = j + m * l;
-        int q = o < 0 ? o - m + 1 : o;
-        int r = p < 0 ? p - m + 1 : p;
-        int s = q / m;
-        int t = r / m;
-        ((ChunkRandom)random).setStructureSeed(chunkGenerator.getSeed(), s, t, 10387313);
-        s *= m;
-        t *= m;
-        return new ChunkPos(s += (random.nextInt(m - n) + random.nextInt(m - n)) / 2, t += (random.nextInt(m - n) + random.nextInt(m - n)) / 2);
-    }
-
-    @Override
-    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
-        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkZ, i, 0, 0);
-        if (chunkZ == chunkPos.x && i == chunkPos.z) {
-            if (!chunkGenerator.hasStructure(biome, this)) {
-                return false;
-            }
-            int j = EndCityFeature.getGenerationHeight(chunkZ, i, chunkGenerator);
-            return j >= 60;
-        }
+    protected boolean isUniformDistribution() {
         return false;
     }
 
     @Override
-    public StructureFeature.StructureStartFactory getStructureStartFactory() {
+    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long l, ChunkRandom chunkRandom, int i, int j, Biome biome, ChunkPos chunkPos, DefaultFeatureConfig defaultFeatureConfig) {
+        return EndCityFeature.getGenerationHeight(i, j, chunkGenerator) >= 60;
+    }
+
+    @Override
+    public StructureFeature.StructureStartFactory<DefaultFeatureConfig> getStructureStartFactory() {
         return Start::new;
     }
 
-    @Override
-    public String getName() {
-        return "EndCity";
-    }
-
-    @Override
-    public int getRadius() {
-        return 8;
-    }
-
-    private static int getGenerationHeight(int chunkX, int chunkZ, ChunkGenerator<?> chunkGenerator) {
+    private static int getGenerationHeight(int chunkX, int chunkZ, ChunkGenerator chunkGenerator) {
         Random random = new Random(chunkX + chunkZ * 10387313);
-        BlockRotation blockRotation = BlockRotation.values()[random.nextInt(BlockRotation.values().length)];
+        BlockRotation blockRotation = BlockRotation.random(random);
         int i = 5;
         int j = 5;
         if (blockRotation == BlockRotation.CLOCKWISE_90) {
@@ -98,19 +68,19 @@ extends StructureFeature<DefaultFeatureConfig> {
     }
 
     public static class Start
-    extends StructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
+    extends StructureStart<DefaultFeatureConfig> {
+        public Start(StructureFeature<DefaultFeatureConfig> structureFeature, int i, int j, BlockBox blockBox, int k, long l) {
+            super(structureFeature, i, j, blockBox, k, l);
         }
 
         @Override
-        public void initialize(ChunkGenerator<?> chunkGenerator, StructureManager structureManager, int x, int z, Biome biome) {
-            BlockRotation blockRotation = BlockRotation.values()[this.random.nextInt(BlockRotation.values().length)];
-            int i = EndCityFeature.getGenerationHeight(x, z, chunkGenerator);
-            if (i < 60) {
+        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, int i, int j, Biome biome, DefaultFeatureConfig defaultFeatureConfig) {
+            BlockRotation blockRotation = BlockRotation.random(this.random);
+            int k = EndCityFeature.getGenerationHeight(i, j, chunkGenerator);
+            if (k < 60) {
                 return;
             }
-            BlockPos blockPos = new BlockPos(x * 16 + 8, i, z * 16 + 8);
+            BlockPos blockPos = new BlockPos(i * 16 + 8, k, j * 16 + 8);
             EndCityGenerator.addPieces(structureManager, blockPos, blockRotation, this.children, this.random);
             this.setBoundingBoxFromChildren();
         }

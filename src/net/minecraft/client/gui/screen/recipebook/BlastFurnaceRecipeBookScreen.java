@@ -13,33 +13,17 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.client.gui.screen.recipebook.AbstractFurnaceRecipeBookScreen;
 import net.minecraft.item.Item;
+import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class BlastFurnaceRecipeBookScreen
 extends AbstractFurnaceRecipeBookScreen {
-    @Override
-    protected boolean isFilteringCraftable() {
-        return this.recipeBook.isBlastFurnaceFilteringCraftable();
-    }
+    private static final Text TOGGLE_BLASTABLE_RECIPES_TEXT = new TranslatableText("gui.recipebook.toggleRecipes.blastable");
 
     @Override
-    protected void setFilteringCraftable(boolean filteringCraftable) {
-        this.recipeBook.setBlastFurnaceFilteringCraftable(filteringCraftable);
-    }
-
-    @Override
-    protected boolean isGuiOpen() {
-        return this.recipeBook.isBlastFurnaceGuiOpen();
-    }
-
-    @Override
-    protected void setGuiOpen(boolean opened) {
-        this.recipeBook.setBlastFurnaceGuiOpen(opened);
-    }
-
-    @Override
-    protected String getToggleCraftableButtonText() {
-        return "gui.recipebook.toggleRecipes.blastable";
+    protected Text getToggleCraftableButtonText() {
+        return TOGGLE_BLASTABLE_RECIPES_TEXT;
     }
 
     @Override

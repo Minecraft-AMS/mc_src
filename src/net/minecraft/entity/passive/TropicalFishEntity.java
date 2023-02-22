@@ -13,7 +13,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -21,13 +21,14 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.passive.SchoolingFishEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.IWorld;
+import net.minecraft.util.Util;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -77,15 +78,15 @@ extends SchoolingFishEntity {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("Variant", this.getVariant());
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("Variant", this.getVariant());
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.setVariant(tag.getInt("Variant"));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.setVariant(nbt.getInt("Variant"));
     }
 
     public void setVariant(int variant) {
@@ -104,8 +105,8 @@ extends SchoolingFishEntity {
     @Override
     protected void copyDataToStack(ItemStack stack) {
         super.copyDataToStack(stack);
-        CompoundTag compoundTag = stack.getOrCreateTag();
-        compoundTag.putInt("BucketVariantTag", this.getVariant());
+        NbtCompound nbtCompound = stack.getOrCreateTag();
+        nbtCompound.putInt("BucketVariantTag", this.getVariant());
     }
 
     @Override
@@ -183,29 +184,29 @@ extends SchoolingFishEntity {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         int l;
         int k;
         int j;
         int i;
-        entityData = super.initialize(world, difficulty, spawnType, entityData, entityTag);
-        if (entityTag != null && entityTag.contains("BucketVariantTag", 3)) {
-            this.setVariant(entityTag.getInt("BucketVariantTag"));
+        entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
+        if (entityNbt != null && entityNbt.contains("BucketVariantTag", 3)) {
+            this.setVariant(entityNbt.getInt("BucketVariantTag"));
             return entityData;
         }
-        if (entityData instanceof Data) {
-            Data data = (Data)entityData;
-            i = data.shape;
-            j = data.pattern;
-            k = data.baseColor;
-            l = data.patternColor;
+        if (entityData instanceof TropicalFishData) {
+            TropicalFishData tropicalFishData = (TropicalFishData)entityData;
+            i = tropicalFishData.shape;
+            j = tropicalFishData.pattern;
+            k = tropicalFishData.baseColor;
+            l = tropicalFishData.patternColor;
         } else if ((double)this.random.nextFloat() < 0.9) {
-            int m = COMMON_VARIANTS[this.random.nextInt(COMMON_VARIANTS.length)];
+            int m = Util.getRandom(COMMON_VARIANTS, this.random);
             i = m & 0xFF;
             j = (m & 0xFF00) >> 8;
             k = (m & 0xFF0000) >> 16;
             l = (m & 0xFF000000) >> 24;
-            entityData = new Data(this, i, j, k, l);
+            entityData = new TropicalFishData(this, i, j, k, l);
         } else {
             this.commonSpawn = false;
             i = this.random.nextInt(2);
@@ -217,14 +218,14 @@ extends SchoolingFishEntity {
         return entityData;
     }
 
-    static class Data
-    extends SchoolingFishEntity.Data {
+    static class TropicalFishData
+    extends SchoolingFishEntity.FishData {
         private final int shape;
         private final int pattern;
         private final int baseColor;
         private final int patternColor;
 
-        private Data(TropicalFishEntity leader, int shape, int pattern, int baseColor, int patternColor) {
+        private TropicalFishData(TropicalFishEntity leader, int shape, int pattern, int baseColor, int patternColor) {
             super(leader);
             this.shape = shape;
             this.pattern = pattern;

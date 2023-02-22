@@ -18,8 +18,6 @@ import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.block.piston.PistonBehavior;
-import net.minecraft.container.Container;
-import net.minecraft.container.ShulkerBoxContainer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -27,14 +25,16 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.SidedInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ShulkerBoxScreenHandler;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Tickable;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -56,9 +56,9 @@ Tickable {
     private DyeColor cachedColor;
     private boolean cachedColorUpdateNeeded;
 
-    public ShulkerBoxBlockEntity(@Nullable DyeColor dyeColor) {
+    public ShulkerBoxBlockEntity(@Nullable DyeColor color) {
         super(BlockEntityType.SHULKER_BOX);
-        this.cachedColor = dyeColor;
+        this.cachedColor = color;
     }
 
     public ShulkerBoxBlockEntity() {
@@ -129,7 +129,7 @@ Tickable {
         }
         Direction direction = blockState.get(ShulkerBoxBlock.FACING);
         Box box = this.getCollisionBox(direction).offset(this.pos);
-        List<Entity> list = this.world.getEntities(null, box);
+        List<Entity> list = this.world.getOtherEntities(null, box);
         if (list.isEmpty()) {
             return;
         }
@@ -142,17 +142,17 @@ Tickable {
             Box box2 = entity.getBoundingBox();
             switch (direction.getAxis()) {
                 case X: {
-                    d = direction.getDirection() == Direction.AxisDirection.POSITIVE ? box.x2 - box2.x1 : box2.x2 - box.x1;
+                    d = direction.getDirection() == Direction.AxisDirection.POSITIVE ? box.maxX - box2.minX : box2.maxX - box.minX;
                     d += 0.01;
                     break;
                 }
                 case Y: {
-                    e = direction.getDirection() == Direction.AxisDirection.POSITIVE ? box.y2 - box2.y1 : box2.y2 - box.y1;
+                    e = direction.getDirection() == Direction.AxisDirection.POSITIVE ? box.maxY - box2.minY : box2.maxY - box.minY;
                     e += 0.01;
                     break;
                 }
                 case Z: {
-                    f = direction.getDirection() == Direction.AxisDirection.POSITIVE ? box.z2 - box2.z1 : box2.z2 - box.z1;
+                    f = direction.getDirection() == Direction.AxisDirection.POSITIVE ? box.maxZ - box2.minZ : box2.maxZ - box.minZ;
                     f += 0.01;
                 }
             }
@@ -161,39 +161,39 @@ Tickable {
     }
 
     @Override
-    public int getInvSize() {
+    public int size() {
         return this.inventory.size();
     }
 
     @Override
-    public boolean onBlockAction(int i, int j) {
-        if (i == 1) {
-            this.viewerCount = j;
-            if (j == 0) {
+    public boolean onSyncedBlockEvent(int type, int data) {
+        if (type == 1) {
+            this.viewerCount = data;
+            if (data == 0) {
                 this.animationStage = AnimationStage.CLOSING;
                 this.updateNeighborStates();
             }
-            if (j == 1) {
+            if (data == 1) {
                 this.animationStage = AnimationStage.OPENING;
                 this.updateNeighborStates();
             }
             return true;
         }
-        return super.onBlockAction(i, j);
+        return super.onSyncedBlockEvent(type, data);
     }
 
     private void updateNeighborStates() {
-        this.getCachedState().updateNeighborStates(this.getWorld(), this.getPos(), 3);
+        this.getCachedState().updateNeighbors(this.getWorld(), this.getPos(), 3);
     }
 
     @Override
-    public void onInvOpen(PlayerEntity player) {
+    public void onOpen(PlayerEntity player) {
         if (!player.isSpectator()) {
             if (this.viewerCount < 0) {
                 this.viewerCount = 0;
             }
             ++this.viewerCount;
-            this.world.addBlockAction(this.pos, this.getCachedState().getBlock(), 1, this.viewerCount);
+            this.world.addSyncedBlockEvent(this.pos, this.getCachedState().getBlock(), 1, this.viewerCount);
             if (this.viewerCount == 1) {
                 this.world.playSound(null, this.pos, SoundEvents.BLOCK_SHULKER_BOX_OPEN, SoundCategory.BLOCKS, 0.5f, this.world.random.nextFloat() * 0.1f + 0.9f);
             }
@@ -201,10 +201,10 @@ Tickable {
     }
 
     @Override
-    public void onInvClose(PlayerEntity player) {
+    public void onClose(PlayerEntity player) {
         if (!player.isSpectator()) {
             --this.viewerCount;
-            this.world.addBlockAction(this.pos, this.getCachedState().getBlock(), 1, this.viewerCount);
+            this.world.addSyncedBlockEvent(this.pos, this.getCachedState().getBlock(), 1, this.viewerCount);
             if (this.viewerCount <= 0) {
                 this.world.playSound(null, this.pos, SoundEvents.BLOCK_SHULKER_BOX_CLOSE, SoundCategory.BLOCKS, 0.5f, this.world.random.nextFloat() * 0.1f + 0.9f);
             }
@@ -213,33 +213,33 @@ Tickable {
 
     @Override
     protected Text getContainerName() {
-        return new TranslatableText("container.shulkerBox", new Object[0]);
+        return new TranslatableText("container.shulkerBox");
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.deserializeInventory(tag);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.readInventoryNbt(tag);
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        return this.serializeInventory(tag);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        return this.writeInventoryNbt(nbt);
     }
 
-    public void deserializeInventory(CompoundTag tag) {
-        this.inventory = DefaultedList.ofSize(this.getInvSize(), ItemStack.EMPTY);
-        if (!this.deserializeLootTable(tag) && tag.contains("Items", 9)) {
-            Inventories.fromTag(tag, this.inventory);
+    public void readInventoryNbt(NbtCompound nbt) {
+        this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
+        if (!this.deserializeLootTable(nbt) && nbt.contains("Items", 9)) {
+            Inventories.readNbt(nbt, this.inventory);
         }
     }
 
-    public CompoundTag serializeInventory(CompoundTag tag) {
-        if (!this.serializeLootTable(tag)) {
-            Inventories.toTag(tag, this.inventory, false);
+    public NbtCompound writeInventoryNbt(NbtCompound nbt) {
+        if (!this.serializeLootTable(nbt)) {
+            Inventories.writeNbt(nbt, this.inventory, false);
         }
-        return tag;
+        return nbt;
     }
 
     @Override
@@ -253,22 +253,22 @@ Tickable {
     }
 
     @Override
-    public int[] getInvAvailableSlots(Direction side) {
+    public int[] getAvailableSlots(Direction side) {
         return AVAILABLE_SLOTS;
     }
 
     @Override
-    public boolean canInsertInvStack(int slot, ItemStack stack, @Nullable Direction dir) {
+    public boolean canInsert(int slot, ItemStack stack, @Nullable Direction dir) {
         return !(Block.getBlockFromItem(stack.getItem()) instanceof ShulkerBoxBlock);
     }
 
     @Override
-    public boolean canExtractInvStack(int slot, ItemStack stack, Direction dir) {
+    public boolean canExtract(int slot, ItemStack stack, Direction dir) {
         return true;
     }
 
-    public float getAnimationProgress(float f) {
-        return MathHelper.lerp(f, this.prevAnimationProgress, this.animationProgress);
+    public float getAnimationProgress(float delta) {
+        return MathHelper.lerp(delta, this.prevAnimationProgress, this.animationProgress);
     }
 
     @Nullable
@@ -282,8 +282,12 @@ Tickable {
     }
 
     @Override
-    protected Container createContainer(int i, PlayerInventory playerInventory) {
-        return new ShulkerBoxContainer(i, playerInventory, this);
+    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return new ShulkerBoxScreenHandler(syncId, playerInventory, this);
+    }
+
+    public boolean suffocates() {
+        return this.animationStage == AnimationStage.CLOSED;
     }
 
     public static enum AnimationStage {

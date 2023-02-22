@@ -8,6 +8,7 @@ package net.minecraft.block;
 
 import com.google.common.collect.Lists;
 import java.util.LinkedList;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -25,28 +26,28 @@ import net.minecraft.world.World;
 
 public class SpongeBlock
 extends Block {
-    protected SpongeBlock(Block.Settings settings) {
+    protected SpongeBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
-        if (oldState.getBlock() == state.getBlock()) {
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        if (oldState.isOf(state.getBlock())) {
             return;
         }
         this.update(world, pos);
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos neighborPos, boolean moved) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
         this.update(world, pos);
-        super.neighborUpdate(state, world, pos, block, neighborPos, moved);
+        super.neighborUpdate(state, world, pos, block, fromPos, notify);
     }
 
     protected void update(World world, BlockPos pos) {
         if (this.absorbWater(world, pos)) {
             world.setBlockState(pos, Blocks.WET_SPONGE.getDefaultState(), 2);
-            world.playLevelEvent(2001, pos, Block.getRawIdFromState(Blocks.WATER.getDefaultState()));
+            world.syncWorldEvent(2001, pos, Block.getRawIdFromState(Blocks.WATER.getDefaultState()));
         }
     }
 
@@ -63,7 +64,7 @@ extends Block {
                 BlockState blockState = world.getBlockState(blockPos2);
                 FluidState fluidState = world.getFluidState(blockPos2);
                 Material material = blockState.getMaterial();
-                if (!fluidState.matches(FluidTags.WATER)) continue;
+                if (!fluidState.isIn(FluidTags.WATER)) continue;
                 if (blockState.getBlock() instanceof FluidDrainable && ((FluidDrainable)((Object)blockState.getBlock())).tryDrainFluid(world, blockPos2, blockState) != Fluids.EMPTY) {
                     ++i;
                     if (j >= 6) continue;

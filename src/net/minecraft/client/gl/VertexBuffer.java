@@ -16,24 +16,24 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.util.math.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexBuffer
 implements AutoCloseable {
-    private int id;
+    private int vertexBufferId;
     private final VertexFormat format;
     private int vertexCount;
 
     public VertexBuffer(VertexFormat format) {
         this.format = format;
         RenderSystem.glGenBuffers(integer -> {
-            this.id = integer;
+            this.vertexBufferId = integer;
         });
     }
 
     public void bind() {
-        RenderSystem.glBindBuffer(34962, () -> this.id);
+        RenderSystem.glBindBuffer(34962, () -> this.vertexBufferId);
     }
 
     public void upload(BufferBuilder buffer) {
@@ -54,7 +54,7 @@ implements AutoCloseable {
 
     private void uploadInternal(BufferBuilder buffer) {
         Pair<BufferBuilder.DrawArrayParameters, ByteBuffer> pair = buffer.popData();
-        if (this.id == -1) {
+        if (this.vertexBufferId == -1) {
             return;
         }
         ByteBuffer byteBuffer = (ByteBuffer)pair.getSecond();
@@ -78,9 +78,9 @@ implements AutoCloseable {
 
     @Override
     public void close() {
-        if (this.id >= 0) {
-            RenderSystem.glDeleteBuffers(this.id);
-            this.id = -1;
+        if (this.vertexBufferId >= 0) {
+            RenderSystem.glDeleteBuffers(this.vertexBufferId);
+            this.vertexBufferId = -1;
         }
     }
 }

@@ -2,20 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonDeserializationContext
- *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  */
 package net.minecraft.advancement.criterion;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.CriterionConditions;
 import net.minecraft.item.ItemStack;
 import net.minecraft.predicate.NumberRange;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateSerializer;
+import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.predicate.item.ItemPredicate;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
@@ -30,19 +28,19 @@ extends AbstractCriterion<Conditions> {
     }
 
     @Override
-    public Conditions conditionsFromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
+    public Conditions conditionsFromJson(JsonObject jsonObject, EntityPredicate.Extended extended, AdvancementEntityPredicateDeserializer advancementEntityPredicateDeserializer) {
         ItemPredicate itemPredicate = ItemPredicate.fromJson(jsonObject.get("item"));
         NumberRange.IntRange intRange = NumberRange.IntRange.fromJson(jsonObject.get("levels"));
-        return new Conditions(itemPredicate, intRange);
+        return new Conditions(extended, itemPredicate, intRange);
     }
 
     public void trigger(ServerPlayerEntity player, ItemStack stack, int levels) {
-        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(stack, levels));
+        this.test(player, conditions -> conditions.matches(stack, levels));
     }
 
     @Override
-    public /* synthetic */ CriterionConditions conditionsFromJson(JsonObject obj, JsonDeserializationContext context) {
-        return this.conditionsFromJson(obj, context);
+    public /* synthetic */ AbstractCriterionConditions conditionsFromJson(JsonObject obj, EntityPredicate.Extended playerPredicate, AdvancementEntityPredicateDeserializer predicateDeserializer) {
+        return this.conditionsFromJson(obj, playerPredicate, predicateDeserializer);
     }
 
     public static class Conditions
@@ -50,14 +48,14 @@ extends AbstractCriterion<Conditions> {
         private final ItemPredicate item;
         private final NumberRange.IntRange levels;
 
-        public Conditions(ItemPredicate item, NumberRange.IntRange intRange) {
-            super(ID);
+        public Conditions(EntityPredicate.Extended player, ItemPredicate item, NumberRange.IntRange levels) {
+            super(ID, player);
             this.item = item;
-            this.levels = intRange;
+            this.levels = levels;
         }
 
         public static Conditions any() {
-            return new Conditions(ItemPredicate.ANY, NumberRange.IntRange.ANY);
+            return new Conditions(EntityPredicate.Extended.EMPTY, ItemPredicate.ANY, NumberRange.IntRange.ANY);
         }
 
         public boolean matches(ItemStack stack, int levels) {
@@ -68,8 +66,8 @@ extends AbstractCriterion<Conditions> {
         }
 
         @Override
-        public JsonElement toJson() {
-            JsonObject jsonObject = new JsonObject();
+        public JsonObject toJson(AdvancementEntityPredicateSerializer predicateSerializer) {
+            JsonObject jsonObject = super.toJson(predicateSerializer);
             jsonObject.add("item", this.item.toJson());
             jsonObject.add("levels", this.levels.toJson());
             return jsonObject;

@@ -6,6 +6,7 @@
  */
 package net.minecraft.block;
 
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -34,14 +35,14 @@ public class TntBlock
 extends Block {
     public static final BooleanProperty UNSTABLE = Properties.UNSTABLE;
 
-    public TntBlock(Block.Settings settings) {
+    public TntBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)this.getDefaultState().with(UNSTABLE, false));
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
-        if (oldState.getBlock() == state.getBlock()) {
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        if (oldState.isOf(state.getBlock())) {
             return;
         }
         if (world.isReceivingRedstonePower(pos)) {
@@ -51,7 +52,7 @@ extends Block {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos neighborPos, boolean moved) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
         if (world.isReceivingRedstonePower(pos)) {
             TntBlock.primeTnt(world, pos);
             world.removeBlock(pos, false);
@@ -71,7 +72,7 @@ extends Block {
         if (world.isClient) {
             return;
         }
-        TntEntity tntEntity = new TntEntity(world, (float)pos.getX() + 0.5f, pos.getY(), (float)pos.getZ() + 0.5f, explosion.getCausingEntity());
+        TntEntity tntEntity = new TntEntity(world, (double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5, explosion.getCausingEntity());
         tntEntity.setFuse((short)(world.random.nextInt(tntEntity.getFuseTimer() / 4) + tntEntity.getFuseTimer() / 8));
         world.spawnEntity(tntEntity);
     }
@@ -103,19 +104,18 @@ extends Block {
                     itemStack.decrement(1);
                 }
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         return super.onUse(state, world, pos, player, hand, hit);
     }
 
     @Override
-    public void onProjectileHit(World world, BlockState state, BlockHitResult hitResult, Entity entity) {
-        if (!world.isClient && entity instanceof ProjectileEntity) {
-            ProjectileEntity projectileEntity = (ProjectileEntity)entity;
-            Entity entity2 = projectileEntity.getOwner();
-            if (projectileEntity.isOnFire()) {
-                BlockPos blockPos = hitResult.getBlockPos();
-                TntBlock.primeTnt(world, blockPos, entity2 instanceof LivingEntity ? (LivingEntity)entity2 : null);
+    public void onProjectileHit(World world, BlockState state, BlockHitResult hit, ProjectileEntity projectile) {
+        if (!world.isClient) {
+            Entity entity = projectile.getOwner();
+            if (projectile.isOnFire()) {
+                BlockPos blockPos = hit.getBlockPos();
+                TntBlock.primeTnt(world, blockPos, entity instanceof LivingEntity ? (LivingEntity)entity : null);
                 world.removeBlock(blockPos, false);
             }
         }

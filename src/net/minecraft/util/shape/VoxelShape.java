@@ -18,9 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.BooleanBiFunction;
-import net.minecraft.util.OffsetDoubleList;
 import net.minecraft.util.Util;
+import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.AxisCycleDirection;
 import net.minecraft.util.math.BlockPos;
@@ -29,6 +28,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.ArrayVoxelShape;
+import net.minecraft.util.shape.OffsetDoubleList;
 import net.minecraft.util.shape.SlicedVoxelShape;
 import net.minecraft.util.shape.VoxelSet;
 import net.minecraft.util.shape.VoxelShapes;
@@ -43,7 +43,7 @@ public abstract class VoxelShape {
         this.voxels = voxels;
     }
 
-    public double getMinimum(Direction.Axis axis) {
+    public double getMin(Direction.Axis axis) {
         int i = this.voxels.getMin(axis);
         if (i >= this.voxels.getSize(axis)) {
             return Double.POSITIVE_INFINITY;
@@ -51,7 +51,7 @@ public abstract class VoxelShape {
         return this.getPointPosition(axis, i);
     }
 
-    public double getMaximum(Direction.Axis axis) {
+    public double getMax(Direction.Axis axis) {
         int i = this.voxels.getMax(axis);
         if (i <= 0) {
             return Double.NEGATIVE_INFINITY;
@@ -63,7 +63,7 @@ public abstract class VoxelShape {
         if (this.isEmpty()) {
             throw Util.throwOrPause(new UnsupportedOperationException("No bounds for empty shape."));
         }
-        return new Box(this.getMinimum(Direction.Axis.X), this.getMinimum(Direction.Axis.Y), this.getMinimum(Direction.Axis.Z), this.getMaximum(Direction.Axis.X), this.getMaximum(Direction.Axis.Y), this.getMaximum(Direction.Axis.Z));
+        return new Box(this.getMin(Direction.Axis.X), this.getMin(Direction.Axis.Y), this.getMin(Direction.Axis.Z), this.getMax(Direction.Axis.X), this.getMax(Direction.Axis.Y), this.getMax(Direction.Axis.Z));
     }
 
     protected double getPointPosition(Direction.Axis axis, int index) {
@@ -110,19 +110,6 @@ public abstract class VoxelShape {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public double getBeginningCoord(Direction.Axis axis, double from, double to) {
-        int j;
-        Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
-        Direction.Axis axis3 = AxisCycleDirection.BACKWARD.cycle(axis);
-        int i = this.getCoordIndex(axis2, from);
-        int k = this.voxels.getBeginningAxisCoord(axis, i, j = this.getCoordIndex(axis3, to));
-        if (k >= this.voxels.getSize(axis)) {
-            return Double.POSITIVE_INFINITY;
-        }
-        return this.getPointPosition(axis, k);
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public double getEndingCoord(Direction.Axis axis, double from, double to) {
         int j;
         Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
@@ -152,7 +139,7 @@ public abstract class VoxelShape {
     }
 
     @Nullable
-    public BlockHitResult rayTrace(Vec3d start, Vec3d end, BlockPos pos) {
+    public BlockHitResult raycast(Vec3d start, Vec3d end, BlockPos pos) {
         if (this.isEmpty()) {
             return null;
         }
@@ -164,7 +151,7 @@ public abstract class VoxelShape {
         if (this.contains(vec3d2.x - (double)pos.getX(), vec3d2.y - (double)pos.getY(), vec3d2.z - (double)pos.getZ())) {
             return new BlockHitResult(vec3d2, Direction.getFacing(vec3d.x, vec3d.y, vec3d.z).getOpposite(), pos, true);
         }
-        return Box.rayTrace(this.getBoundingBoxes(), start, end, pos);
+        return Box.raycast(this.getBoundingBoxes(), start, end, pos);
     }
 
     public VoxelShape getFace(Direction facing) {
@@ -184,9 +171,9 @@ public abstract class VoxelShape {
         return voxelShape;
     }
 
-    private VoxelShape getUncachedFace(Direction facing) {
-        Direction.Axis axis = facing.getAxis();
-        Direction.AxisDirection axisDirection = facing.getDirection();
+    private VoxelShape getUncachedFace(Direction direction) {
+        Direction.Axis axis = direction.getAxis();
+        Direction.AxisDirection axisDirection = direction.getDirection();
         DoubleList doubleList = this.getPointPositions(axis);
         if (doubleList.size() == 2 && DoubleMath.fuzzyEquals((double)doubleList.getDouble(0), (double)0.0, (double)1.0E-7) && DoubleMath.fuzzyEquals((double)doubleList.getDouble(1), (double)1.0, (double)1.0E-7)) {
             return this;

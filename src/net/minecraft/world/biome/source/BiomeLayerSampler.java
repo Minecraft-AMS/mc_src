@@ -10,8 +10,9 @@ package net.minecraft.world.biome.source;
 import net.minecraft.SharedConstants;
 import net.minecraft.util.Util;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.Biomes;
+import net.minecraft.world.biome.BuiltinBiomes;
 import net.minecraft.world.biome.layer.util.CachingLayerSampler;
 import net.minecraft.world.biome.layer.util.LayerFactory;
 import org.apache.logging.log4j.LogManager;
@@ -25,20 +26,21 @@ public class BiomeLayerSampler {
         this.sampler = layerFactory.make();
     }
 
-    private Biome getBiome(int id) {
-        Biome biome = (Biome)Registry.BIOME.get(id);
+    public Biome sample(Registry<Biome> biomeRegistry, int x, int z) {
+        int i = this.sampler.sample(x, z);
+        RegistryKey<Biome> registryKey = BuiltinBiomes.fromRawId(i);
+        if (registryKey == null) {
+            throw new IllegalStateException("Unknown biome id emitted by layers: " + i);
+        }
+        Biome biome = biomeRegistry.get(registryKey);
         if (biome == null) {
             if (SharedConstants.isDevelopment) {
-                throw Util.throwOrPause(new IllegalStateException("Unknown biome id: " + id));
+                throw Util.throwOrPause(new IllegalStateException("Unknown biome id: " + i));
             }
-            LOGGER.warn("Unknown biome id: ", (Object)id);
-            return Biomes.DEFAULT;
+            LOGGER.warn("Unknown biome id: ", (Object)i);
+            return biomeRegistry.get(BuiltinBiomes.fromRawId(0));
         }
         return biome;
-    }
-
-    public Biome sample(int x, int y) {
-        return this.getBiome(this.sampler.sample(x, y));
     }
 }
 

@@ -15,16 +15,23 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
-import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonSerializer;
 
 public class KilledByPlayerLootCondition
 implements LootCondition {
     private static final KilledByPlayerLootCondition INSTANCE = new KilledByPlayerLootCondition();
 
     private KilledByPlayerLootCondition() {
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.KILLED_BY_PLAYER;
     }
 
     @Override
@@ -46,12 +53,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<KilledByPlayerLootCondition> {
-        protected Factory() {
-            super(new Identifier("killed_by_player"), KilledByPlayerLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<KilledByPlayerLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, KilledByPlayerLootCondition killedByPlayerLootCondition, JsonSerializationContext jsonSerializationContext) {
         }
@@ -62,7 +65,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

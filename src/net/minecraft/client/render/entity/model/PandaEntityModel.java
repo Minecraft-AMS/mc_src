@@ -23,8 +23,8 @@ extends QuadrupedEntityModel<T> {
     private float lieOnBackAnimationProgress;
     private float playAnimationProgress;
 
-    public PandaEntityModel(int i, float f) {
-        super(i, f, true, 23.0f, 4.8f, 2.7f, 3.0f, 49);
+    public PandaEntityModel(int legHeight, float scale) {
+        super(legHeight, scale, true, 23.0f, 4.8f, 2.7f, 3.0f, 49);
         this.textureWidth = 64;
         this.textureHeight = 64;
         this.head = new ModelPart(this, 0, 6);
@@ -33,11 +33,11 @@ extends QuadrupedEntityModel<T> {
         this.head.setTextureOffset(45, 16).addCuboid(-3.5f, 0.0f, -6.0f, 7.0f, 5.0f, 2.0f);
         this.head.setTextureOffset(52, 25).addCuboid(-8.5f, -8.0f, -1.0f, 5.0f, 4.0f, 1.0f);
         this.head.setTextureOffset(52, 25).addCuboid(3.5f, -8.0f, -1.0f, 5.0f, 4.0f, 1.0f);
-        this.torso = new ModelPart(this, 0, 25);
-        this.torso.addCuboid(-9.5f, -13.0f, -6.5f, 19.0f, 26.0f, 13.0f);
-        this.torso.setPivot(0.0f, 10.0f, 0.0f);
-        int j = 9;
-        int k = 6;
+        this.body = new ModelPart(this, 0, 25);
+        this.body.addCuboid(-9.5f, -13.0f, -6.5f, 19.0f, 26.0f, 13.0f);
+        this.body.setPivot(0.0f, 10.0f, 0.0f);
+        int i = 9;
+        int j = 6;
         this.backRightLeg = new ModelPart(this, 40, 0);
         this.backRightLeg.addCuboid(-3.0f, 0.0f, -3.0f, 6.0f, 9.0f, 6.0f);
         this.backRightLeg.setPivot(-5.5f, 15.0f, 9.0f);
@@ -67,7 +67,7 @@ extends QuadrupedEntityModel<T> {
         boolean bl2 = ((PandaEntity)pandaEntity).isSneezing();
         int k = ((PandaEntity)pandaEntity).getSneezeProgress();
         boolean bl3 = ((PandaEntity)pandaEntity).isEating();
-        boolean bl4 = ((PandaEntity)pandaEntity).method_6524();
+        boolean bl4 = ((PandaEntity)pandaEntity).isScaredByThunderstorm();
         if (bl) {
             this.head.yaw = 0.35f * MathHelper.sin(0.6f * h);
             this.head.roll = 0.35f * MathHelper.sin(0.6f * h);
@@ -85,7 +85,7 @@ extends QuadrupedEntityModel<T> {
             }
         }
         if (this.scaredAnimationProgress > 0.0f) {
-            this.torso.pitch = ModelUtil.interpolateAngle(this.torso.pitch, 1.7407963f, this.scaredAnimationProgress);
+            this.body.pitch = ModelUtil.interpolateAngle(this.body.pitch, 1.7407963f, this.scaredAnimationProgress);
             this.head.pitch = ModelUtil.interpolateAngle(this.head.pitch, 1.5707964f, this.scaredAnimationProgress);
             this.frontRightLeg.roll = -0.27079642f;
             this.frontLeftLeg.roll = 0.27079642f;

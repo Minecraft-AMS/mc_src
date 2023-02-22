@@ -6,13 +6,14 @@ package net.minecraft.block;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ConnectingBlock;
 import net.minecraft.block.HorizontalConnectingBlock;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.TripwireHookBlock;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.Items;
@@ -26,8 +27,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 
 public class TripwireBlock
 extends Block {
@@ -43,14 +44,14 @@ extends Block {
     protected static final VoxelShape DETACHED_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
     private final TripwireHookBlock hookBlock;
 
-    public TripwireBlock(TripwireHookBlock hookBlock, Block.Settings settings) {
+    public TripwireBlock(TripwireHookBlock hookBlock, AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(POWERED, false)).with(ATTACHED, false)).with(DISARMED, false)).with(NORTH, false)).with(EAST, false)).with(SOUTH, false)).with(WEST, false));
         this.hookBlock = hookBlock;
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return state.get(ATTACHED) != false ? ATTACHED_SHAPE : DETACHED_SHAPE;
     }
 
@@ -62,24 +63,24 @@ extends Block {
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
-        if (facing.getAxis().isHorizontal()) {
-            return (BlockState)state.with(FACING_PROPERTIES.get(facing), this.shouldConnectTo(neighborState, facing));
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        if (direction.getAxis().isHorizontal()) {
+            return (BlockState)state.with(FACING_PROPERTIES.get(direction), this.shouldConnectTo(neighborState, direction));
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
-        if (oldState.getBlock() == state.getBlock()) {
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        if (oldState.isOf(state.getBlock())) {
             return;
         }
         this.update(world, pos, state);
     }
 
     @Override
-    public void onBlockRemoved(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (moved || state.getBlock() == newState.getBlock()) {
+    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (moved || state.isOf(newState.getBlock())) {
             return;
         }
         this.update(world, pos, (BlockState)state.with(POWERED, true));
@@ -98,12 +99,12 @@ extends Block {
             for (int i = 1; i < 42; ++i) {
                 BlockPos blockPos = pos.offset(direction, i);
                 BlockState blockState = world.getBlockState(blockPos);
-                if (blockState.getBlock() == this.hookBlock) {
+                if (blockState.isOf(this.hookBlock)) {
                     if (blockState.get(TripwireHookBlock.FACING) != direction.getOpposite()) continue block0;
                     this.hookBlock.update(world, blockPos, blockState, false, true, i, state);
                     continue block0;
                 }
-                if (blockState.getBlock() != this) continue block0;
+                if (!blockState.isOf(this)) continue block0;
             }
         }
     }
@@ -131,7 +132,7 @@ extends Block {
         BlockState blockState = world.getBlockState(pos);
         boolean bl = blockState.get(POWERED);
         boolean bl2 = false;
-        List<Entity> list = world.getEntities(null, blockState.getOutlineShape(world, pos).getBoundingBox().offset(pos));
+        List<Entity> list = world.getOtherEntities(null, blockState.getOutlineShape(world, pos).getBoundingBox().offset(pos));
         if (!list.isEmpty()) {
             for (Entity entity : list) {
                 if (entity.canAvoidTraps()) continue;
@@ -145,7 +146,7 @@ extends Block {
             this.update(world, pos, blockState);
         }
         if (bl2) {
-            world.getBlockTickScheduler().schedule(new BlockPos(pos), this, this.getTickRate(world));
+            world.getBlockTickScheduler().schedule(new BlockPos(pos), this, 10);
         }
     }
 

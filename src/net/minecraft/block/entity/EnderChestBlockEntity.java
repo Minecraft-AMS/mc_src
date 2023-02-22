@@ -41,7 +41,7 @@ Tickable {
     public void tick() {
         double e;
         if (++this.ticks % 20 * 4 == 0) {
-            this.world.addBlockAction(this.pos, Blocks.ENDER_CHEST, 1, this.viewerCount);
+            this.world.addSyncedBlockEvent(this.pos, Blocks.ENDER_CHEST, 1, this.viewerCount);
         }
         this.lastAnimationProgress = this.animationProgress;
         int i = this.pos.getX();
@@ -72,12 +72,12 @@ Tickable {
     }
 
     @Override
-    public boolean onBlockAction(int i, int j) {
-        if (i == 1) {
-            this.viewerCount = j;
+    public boolean onSyncedBlockEvent(int type, int data) {
+        if (type == 1) {
+            this.viewerCount = data;
             return true;
         }
-        return super.onBlockAction(i, j);
+        return super.onSyncedBlockEvent(type, data);
     }
 
     @Override
@@ -88,25 +88,25 @@ Tickable {
 
     public void onOpen() {
         ++this.viewerCount;
-        this.world.addBlockAction(this.pos, Blocks.ENDER_CHEST, 1, this.viewerCount);
+        this.world.addSyncedBlockEvent(this.pos, Blocks.ENDER_CHEST, 1, this.viewerCount);
     }
 
     public void onClose() {
         --this.viewerCount;
-        this.world.addBlockAction(this.pos, Blocks.ENDER_CHEST, 1, this.viewerCount);
+        this.world.addSyncedBlockEvent(this.pos, Blocks.ENDER_CHEST, 1, this.viewerCount);
     }
 
-    public boolean canPlayerUse(PlayerEntity playerEntity) {
+    public boolean canPlayerUse(PlayerEntity player) {
         if (this.world.getBlockEntity(this.pos) != this) {
             return false;
         }
-        return !(playerEntity.squaredDistanceTo((double)this.pos.getX() + 0.5, (double)this.pos.getY() + 0.5, (double)this.pos.getZ() + 0.5) > 64.0);
+        return !(player.squaredDistanceTo((double)this.pos.getX() + 0.5, (double)this.pos.getY() + 0.5, (double)this.pos.getZ() + 0.5) > 64.0);
     }
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public float getAnimationProgress(float f) {
-        return MathHelper.lerp(f, this.lastAnimationProgress, this.animationProgress);
+    public float getAnimationProgress(float tickDelta) {
+        return MathHelper.lerp(tickDelta, this.lastAnimationProgress, this.animationProgress);
     }
 }
 

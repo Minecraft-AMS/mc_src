@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
@@ -26,9 +26,9 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public PlayerActionC2SPacket(Action action, BlockPos blockPos, Direction direction) {
+    public PlayerActionC2SPacket(Action action, BlockPos pos, Direction direction) {
         this.action = action;
-        this.pos = blockPos.toImmutable();
+        this.pos = pos.toImmutable();
         this.direction = direction;
     }
 
@@ -70,7 +70,7 @@ implements Packet<ServerPlayPacketListener> {
         DROP_ALL_ITEMS,
         DROP_ITEM,
         RELEASE_USE_ITEM,
-        SWAP_HELD_ITEMS;
+        SWAP_ITEM_WITH_OFFHAND;
 
     }
 }

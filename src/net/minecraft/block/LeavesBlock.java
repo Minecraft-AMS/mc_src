@@ -10,9 +10,9 @@ package net.minecraft.block;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.entity.EntityType;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
@@ -23,18 +23,25 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 
 public class LeavesBlock
 extends Block {
     public static final IntProperty DISTANCE = Properties.DISTANCE_1_7;
     public static final BooleanProperty PERSISTENT = Properties.PERSISTENT;
 
-    public LeavesBlock(Block.Settings settings) {
+    public LeavesBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(DISTANCE, 7)).with(PERSISTENT, false));
+    }
+
+    @Override
+    public VoxelShape getSidesShape(BlockState state, BlockView world, BlockPos pos) {
+        return VoxelShapes.empty();
     }
 
     @Override
@@ -56,12 +63,12 @@ extends Block {
     }
 
     @Override
-    public int getOpacity(BlockState state, BlockView view, BlockPos pos) {
+    public int getOpacity(BlockState state, BlockView world, BlockPos pos) {
         return 1;
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         int i = LeavesBlock.getDistanceFromLog(neighborState) + 1;
         if (i != 1 || state.get(DISTANCE) != i) {
             world.getBlockTickScheduler().schedule(pos, this, 1);
@@ -69,15 +76,13 @@ extends Block {
         return state;
     }
 
-    private static BlockState updateDistanceFromLogs(BlockState state, IWorld world, BlockPos pos) {
+    private static BlockState updateDistanceFromLogs(BlockState state, WorldAccess world, BlockPos pos) {
         int i = 7;
-        try (BlockPos.PooledMutable pooledMutable = BlockPos.PooledMutable.get();){
-            for (Direction direction : Direction.values()) {
-                pooledMutable.set(pos).setOffset(direction);
-                i = Math.min(i, LeavesBlock.getDistanceFromLog(world.getBlockState(pooledMutable)) + 1);
-                if (i != 1) continue;
-                break;
-            }
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        for (Direction direction : Direction.values()) {
+            mutable.set(pos, direction);
+            i = Math.min(i, LeavesBlock.getDistanceFromLog(world.getBlockState(mutable)) + 1);
+            if (i == 1) break;
         }
         return (BlockState)state.with(DISTANCE, i);
     }
@@ -106,20 +111,10 @@ extends Block {
         if (blockState.isOpaque() && blockState.isSideSolidFullSquare(world, blockPos, Direction.UP)) {
             return;
         }
-        double d = (float)pos.getX() + random.nextFloat();
+        double d = (double)pos.getX() + random.nextDouble();
         double e = (double)pos.getY() - 0.05;
-        double f = (float)pos.getZ() + random.nextFloat();
+        double f = (double)pos.getZ() + random.nextDouble();
         world.addParticle(ParticleTypes.DRIPPING_WATER, d, e, f, 0.0, 0.0, 0.0);
-    }
-
-    @Override
-    public boolean canSuffocate(BlockState state, BlockView view, BlockPos pos) {
-        return false;
-    }
-
-    @Override
-    public boolean allowsSpawning(BlockState state, BlockView view, BlockPos pos, EntityType<?> type) {
-        return type == EntityType.OCELOT || type == EntityType.PARROT;
     }
 
     @Override

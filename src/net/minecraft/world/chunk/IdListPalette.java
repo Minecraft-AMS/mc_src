@@ -7,38 +7,39 @@
  */
 package net.minecraft.world.chunk;
 
+import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.util.IdList;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.collection.IdList;
 import net.minecraft.world.chunk.Palette;
 
 public class IdListPalette<T>
 implements Palette<T> {
     private final IdList<T> idList;
-    private final T fallback;
+    private final T defaultValue;
 
     public IdListPalette(IdList<T> idList, T defaultValue) {
         this.idList = idList;
-        this.fallback = defaultValue;
+        this.defaultValue = defaultValue;
     }
 
     @Override
     public int getIndex(T object) {
-        int i = this.idList.getId(object);
+        int i = this.idList.getRawId(object);
         return i == -1 ? 0 : i;
     }
 
     @Override
-    public boolean accepts(T object) {
+    public boolean accepts(Predicate<T> predicate) {
         return true;
     }
 
     @Override
     public T getByIndex(int index) {
         T object = this.idList.get(index);
-        return object == null ? this.fallback : object;
+        return object == null ? this.defaultValue : object;
     }
 
     @Override
@@ -52,11 +53,11 @@ implements Palette<T> {
 
     @Override
     public int getPacketSize() {
-        return PacketByteBuf.getVarIntSizeBytes(0);
+        return PacketByteBuf.getVarIntLength(0);
     }
 
     @Override
-    public void fromTag(ListTag tag) {
+    public void readNbt(NbtList nbt) {
     }
 }
 

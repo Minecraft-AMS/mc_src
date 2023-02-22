@@ -5,10 +5,10 @@ package net.minecraft.block.entity;
 
 import net.minecraft.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.container.Container;
-import net.minecraft.container.FurnaceContainer;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.recipe.RecipeType;
+import net.minecraft.screen.FurnaceScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 
@@ -20,12 +20,12 @@ extends AbstractFurnaceBlockEntity {
 
     @Override
     protected Text getContainerName() {
-        return new TranslatableText("container.furnace", new Object[0]);
+        return new TranslatableText("container.furnace");
     }
 
     @Override
-    protected Container createContainer(int i, PlayerInventory playerInventory) {
-        return new FurnaceContainer(i, playerInventory, this, this.propertyDelegate);
+    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return new FurnaceScreenHandler(syncId, playerInventory, this, this.propertyDelegate);
     }
 }
 

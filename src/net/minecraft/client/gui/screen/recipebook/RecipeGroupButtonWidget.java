@@ -15,12 +15,13 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
-import net.minecraft.client.recipe.book.ClientRecipeBook;
-import net.minecraft.client.recipe.book.RecipeBookGroup;
+import net.minecraft.client.recipebook.ClientRecipeBook;
+import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.container.CraftingContainer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.screen.AbstractRecipeScreenHandler;
 
 @Environment(value=EnvType.CLIENT)
 public class RecipeGroupButtonWidget
@@ -37,11 +38,11 @@ extends ToggleButtonWidget {
     public void checkForNewRecipes(MinecraftClient client) {
         ClientRecipeBook clientRecipeBook = client.player.getRecipeBook();
         List<RecipeResultCollection> list = clientRecipeBook.getResultsForGroup(this.category);
-        if (!(client.player.container instanceof CraftingContainer)) {
+        if (!(client.player.currentScreenHandler instanceof AbstractRecipeScreenHandler)) {
             return;
         }
         for (RecipeResultCollection recipeResultCollection : list) {
-            for (Recipe<?> recipe : recipeResultCollection.getResults(clientRecipeBook.isFilteringCraftable((CraftingContainer)client.player.container))) {
+            for (Recipe<?> recipe : recipeResultCollection.getResults(clientRecipeBook.isFilteringCraftable((AbstractRecipeScreenHandler)client.player.currentScreenHandler))) {
                 if (!clientRecipeBook.shouldDisplay(recipe)) continue;
                 this.bounce = 15.0f;
                 return;
@@ -50,7 +51,7 @@ extends ToggleButtonWidget {
     }
 
     @Override
-    public void renderButton(int mouseX, int mouseY, float delta) {
+    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         if (this.bounce > 0.0f) {
             float f = 1.0f + 0.1f * (float)Math.sin(this.bounce / 15.0f * (float)Math.PI);
             RenderSystem.pushMatrix();
@@ -74,7 +75,7 @@ extends ToggleButtonWidget {
             k -= 2;
         }
         RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.blit(k, this.y, i, j, this.width, this.height);
+        this.drawTexture(matrices, k, this.y, i, j, this.width, this.height);
         RenderSystem.enableDepthTest();
         this.renderIcons(minecraftClient.getItemRenderer());
         if (this.bounce > 0.0f) {
@@ -88,10 +89,10 @@ extends ToggleButtonWidget {
         List<ItemStack> list = this.category.getIcons();
         int n = i = this.toggled ? -2 : 0;
         if (list.size() == 1) {
-            itemRenderer.renderGuiItem(list.get(0), this.x + 9 + i, this.y + 5);
+            itemRenderer.renderInGui(list.get(0), this.x + 9 + i, this.y + 5);
         } else if (list.size() == 2) {
-            itemRenderer.renderGuiItem(list.get(0), this.x + 3 + i, this.y + 5);
-            itemRenderer.renderGuiItem(list.get(1), this.x + 14 + i, this.y + 5);
+            itemRenderer.renderInGui(list.get(0), this.x + 3 + i, this.y + 5);
+            itemRenderer.renderInGui(list.get(1), this.x + 14 + i, this.y + 5);
         }
     }
 

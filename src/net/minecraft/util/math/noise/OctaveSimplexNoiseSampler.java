@@ -2,13 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  it.unimi.dsi.fastutil.ints.IntRBTreeSet
  *  it.unimi.dsi.fastutil.ints.IntSortedSet
  */
 package net.minecraft.util.math.noise;
 
+import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import java.util.List;
 import java.util.stream.IntStream;
 import net.minecraft.util.math.noise.NoiseSampler;
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
@@ -20,11 +23,15 @@ implements NoiseSampler {
     private final double field_20661;
     private final double field_20662;
 
-    public OctaveSimplexNoiseSampler(ChunkRandom chunkRandom, int i, int j) {
-        this(chunkRandom, (IntSortedSet)new IntRBTreeSet(IntStream.rangeClosed(-i, j).toArray()));
+    public OctaveSimplexNoiseSampler(ChunkRandom chunkRandom, IntStream intStream) {
+        this(chunkRandom, (List)intStream.boxed().collect(ImmutableList.toImmutableList()));
     }
 
-    public OctaveSimplexNoiseSampler(ChunkRandom chunkRandom, IntSortedSet intSortedSet) {
+    public OctaveSimplexNoiseSampler(ChunkRandom chunkRandom, List<Integer> list) {
+        this(chunkRandom, (IntSortedSet)new IntRBTreeSet(list));
+    }
+
+    private OctaveSimplexNoiseSampler(ChunkRandom chunkRandom, IntSortedSet intSortedSet) {
         int j;
         if (intSortedSet.isEmpty()) {
             throw new IllegalArgumentException("Need some octaves!");
@@ -62,13 +69,13 @@ implements NoiseSampler {
         this.field_20661 = 1.0 / (Math.pow(2.0, k) - 1.0);
     }
 
-    public double sample(double x, double y, boolean bl) {
+    public double sample(double x, double y, boolean useOrigin) {
         double d = 0.0;
         double e = this.field_20662;
         double f = this.field_20661;
         for (SimplexNoiseSampler simplexNoiseSampler : this.octaveSamplers) {
             if (simplexNoiseSampler != null) {
-                d += simplexNoiseSampler.sample(x * e + (bl ? simplexNoiseSampler.originX : 0.0), y * e + (bl ? simplexNoiseSampler.originY : 0.0)) * f;
+                d += simplexNoiseSampler.sample(x * e + (useOrigin ? simplexNoiseSampler.originX : 0.0), y * e + (useOrigin ? simplexNoiseSampler.originY : 0.0)) * f;
             }
             e /= 2.0;
             f *= 2.0;
@@ -77,7 +84,7 @@ implements NoiseSampler {
     }
 
     @Override
-    public double sample(double x, double y, double d, double e) {
+    public double sample(double x, double y, double yScale, double yMax) {
         return this.sample(x, y, true) * 0.55;
     }
 }

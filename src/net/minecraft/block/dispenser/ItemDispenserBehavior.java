@@ -15,11 +15,11 @@ import net.minecraft.world.World;
 public class ItemDispenserBehavior
 implements DispenserBehavior {
     @Override
-    public final ItemStack dispense(BlockPointer location, ItemStack stack) {
-        ItemStack itemStack = this.dispenseSilently(location, stack);
-        this.playSound(location);
-        this.spawnParticles(location, location.getBlockState().get(DispenserBlock.FACING));
-        return itemStack;
+    public final ItemStack dispense(BlockPointer blockPointer, ItemStack itemStack) {
+        ItemStack itemStack2 = this.dispenseSilently(blockPointer, itemStack);
+        this.playSound(blockPointer);
+        this.spawnParticles(blockPointer, blockPointer.getBlockState().get(DispenserBlock.FACING));
+        return itemStack2;
     }
 
     protected ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
@@ -42,11 +42,11 @@ implements DispenserBehavior {
     }
 
     protected void playSound(BlockPointer pointer) {
-        pointer.getWorld().playLevelEvent(1000, pointer.getBlockPos(), 0);
+        pointer.getWorld().syncWorldEvent(1000, pointer.getBlockPos(), 0);
     }
 
     protected void spawnParticles(BlockPointer pointer, Direction side) {
-        pointer.getWorld().playLevelEvent(2000, pointer.getBlockPos(), side.getId());
+        pointer.getWorld().syncWorldEvent(2000, pointer.getBlockPos(), side.getId());
     }
 }
 

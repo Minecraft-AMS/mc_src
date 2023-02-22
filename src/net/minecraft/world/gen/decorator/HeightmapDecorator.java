@@ -2,34 +2,33 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.decorator;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import java.util.stream.Stream;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
-import net.minecraft.world.gen.decorator.Decorator;
-import net.minecraft.world.gen.decorator.NopeDecoratorConfig;
+import net.minecraft.world.gen.decorator.AbstractHeightmapDecorator;
+import net.minecraft.world.gen.decorator.DecoratorConfig;
+import net.minecraft.world.gen.decorator.DecoratorContext;
 
-public class HeightmapDecorator
-extends Decorator<NopeDecoratorConfig> {
-    public HeightmapDecorator(Function<Dynamic<?>, ? extends NopeDecoratorConfig> function) {
-        super(function);
+public abstract class HeightmapDecorator<DC extends DecoratorConfig>
+extends AbstractHeightmapDecorator<DC> {
+    public HeightmapDecorator(Codec<DC> codec) {
+        super(codec);
     }
 
     @Override
-    public Stream<BlockPos> getPositions(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, NopeDecoratorConfig nopeDecoratorConfig, BlockPos blockPos) {
-        int i = random.nextInt(16) + blockPos.getX();
-        int j = random.nextInt(16) + blockPos.getZ();
-        int k = iWorld.getTopY(Heightmap.Type.OCEAN_FLOOR_WG, i, j);
-        return Stream.of(new BlockPos(i, k, j));
+    public Stream<BlockPos> getPositions(DecoratorContext context, Random random, DC config, BlockPos pos) {
+        int i = pos.getX();
+        int j = pos.getZ();
+        int k = context.getTopY(this.getHeightmapType(config), i, j);
+        if (k > 0) {
+            return Stream.of(new BlockPos(i, k, j));
+        }
+        return Stream.of(new BlockPos[0]);
     }
 }
 

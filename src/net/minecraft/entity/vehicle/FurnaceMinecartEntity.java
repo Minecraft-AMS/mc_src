@@ -15,9 +15,10 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -115,7 +116,7 @@ extends AbstractMinecartEntity {
     }
 
     @Override
-    public boolean interact(PlayerEntity player, Hand hand) {
+    public ActionResult interact(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (ACCEPTABLE_FUEL.test(itemStack) && this.fuel + 3600 <= 32000) {
             if (!player.abilities.creativeMode) {
@@ -127,23 +128,23 @@ extends AbstractMinecartEntity {
             this.pushX = this.getX() - player.getX();
             this.pushZ = this.getZ() - player.getZ();
         }
-        return true;
+        return ActionResult.success(this.world.isClient);
     }
 
     @Override
-    protected void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putDouble("PushX", this.pushX);
-        tag.putDouble("PushZ", this.pushZ);
-        tag.putShort("Fuel", (short)this.fuel);
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putDouble("PushX", this.pushX);
+        nbt.putDouble("PushZ", this.pushZ);
+        nbt.putShort("Fuel", (short)this.fuel);
     }
 
     @Override
-    protected void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.pushX = tag.getDouble("PushX");
-        this.pushZ = tag.getDouble("PushZ");
-        this.fuel = tag.getShort("Fuel");
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.pushX = nbt.getDouble("PushX");
+        this.pushZ = nbt.getDouble("PushZ");
+        this.fuel = nbt.getShort("Fuel");
     }
 
     protected boolean isLit() {

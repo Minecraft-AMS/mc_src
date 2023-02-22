@@ -12,8 +12,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class PlayerAbilitiesS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -22,49 +22,49 @@ implements Packet<ClientPlayPacketListener> {
     private boolean allowFlying;
     private boolean creativeMode;
     private float flySpeed;
-    private float fovModifier;
+    private float walkSpeed;
 
     public PlayerAbilitiesS2CPacket() {
     }
 
     public PlayerAbilitiesS2CPacket(PlayerAbilities playerAbilities) {
-        this.setInvulnerable(playerAbilities.invulnerable);
-        this.setFlying(playerAbilities.flying);
-        this.setAllowFlying(playerAbilities.allowFlying);
-        this.setCreativeMode(playerAbilities.creativeMode);
-        this.setFlySpeed(playerAbilities.getFlySpeed());
-        this.setFovModifier(playerAbilities.getWalkSpeed());
+        this.invulnerable = playerAbilities.invulnerable;
+        this.flying = playerAbilities.flying;
+        this.allowFlying = playerAbilities.allowFlying;
+        this.creativeMode = playerAbilities.creativeMode;
+        this.flySpeed = playerAbilities.getFlySpeed();
+        this.walkSpeed = playerAbilities.getWalkSpeed();
     }
 
     @Override
     public void read(PacketByteBuf buf) throws IOException {
         byte b = buf.readByte();
-        this.setInvulnerable((b & 1) > 0);
-        this.setFlying((b & 2) > 0);
-        this.setAllowFlying((b & 4) > 0);
-        this.setCreativeMode((b & 8) > 0);
-        this.setFlySpeed(buf.readFloat());
-        this.setFovModifier(buf.readFloat());
+        this.invulnerable = (b & 1) != 0;
+        this.flying = (b & 2) != 0;
+        this.allowFlying = (b & 4) != 0;
+        this.creativeMode = (b & 8) != 0;
+        this.flySpeed = buf.readFloat();
+        this.walkSpeed = buf.readFloat();
     }
 
     @Override
     public void write(PacketByteBuf buf) throws IOException {
         byte b = 0;
-        if (this.isInvulnerable()) {
+        if (this.invulnerable) {
             b = (byte)(b | 1);
         }
-        if (this.isFlying()) {
+        if (this.flying) {
             b = (byte)(b | 2);
         }
-        if (this.allowFlying()) {
+        if (this.allowFlying) {
             b = (byte)(b | 4);
         }
-        if (this.isCreativeMode()) {
+        if (this.creativeMode) {
             b = (byte)(b | 8);
         }
         buf.writeByte(b);
         buf.writeFloat(this.flySpeed);
-        buf.writeFloat(this.fovModifier);
+        buf.writeFloat(this.walkSpeed);
     }
 
     @Override
@@ -72,36 +72,24 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPlayerAbilities(this);
     }
 
+    @Environment(value=EnvType.CLIENT)
     public boolean isInvulnerable() {
         return this.invulnerable;
     }
 
-    public void setInvulnerable(boolean bl) {
-        this.invulnerable = bl;
-    }
-
+    @Environment(value=EnvType.CLIENT)
     public boolean isFlying() {
         return this.flying;
     }
 
-    public void setFlying(boolean bl) {
-        this.flying = bl;
-    }
-
+    @Environment(value=EnvType.CLIENT)
     public boolean allowFlying() {
         return this.allowFlying;
     }
 
-    public void setAllowFlying(boolean bl) {
-        this.allowFlying = bl;
-    }
-
+    @Environment(value=EnvType.CLIENT)
     public boolean isCreativeMode() {
         return this.creativeMode;
-    }
-
-    public void setCreativeMode(boolean bl) {
-        this.creativeMode = bl;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -109,17 +97,9 @@ implements Packet<ClientPlayPacketListener> {
         return this.flySpeed;
     }
 
-    public void setFlySpeed(float f) {
-        this.flySpeed = f;
-    }
-
     @Environment(value=EnvType.CLIENT)
-    public float getFovModifier() {
-        return this.fovModifier;
-    }
-
-    public void setFovModifier(float f) {
-        this.fovModifier = f;
+    public float getWalkSpeed() {
+        return this.walkSpeed;
     }
 }
 

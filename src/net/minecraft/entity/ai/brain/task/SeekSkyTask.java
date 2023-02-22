@@ -35,23 +35,23 @@ extends Task<LivingEntity> {
     protected void run(ServerWorld world, LivingEntity entity, long time) {
         Optional<Vec3d> optional = Optional.ofNullable(this.findNearbySky(world, entity));
         if (optional.isPresent()) {
-            entity.getBrain().setMemory(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.speed, 0)));
+            entity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.speed, 0)));
         }
     }
 
     @Override
     protected boolean shouldRun(ServerWorld world, LivingEntity entity) {
-        return !world.isSkyVisible(new BlockPos(entity));
+        return !world.isSkyVisible(entity.getBlockPos());
     }
 
     @Nullable
     private Vec3d findNearbySky(ServerWorld world, LivingEntity entity) {
         Random random = entity.getRandom();
-        BlockPos blockPos = new BlockPos(entity);
+        BlockPos blockPos = entity.getBlockPos();
         for (int i = 0; i < 10; ++i) {
             BlockPos blockPos2 = blockPos.add(random.nextInt(20) - 10, random.nextInt(6) - 3, random.nextInt(20) - 10);
             if (!SeekSkyTask.isSkyVisible(world, entity, blockPos2)) continue;
-            return new Vec3d(blockPos2);
+            return Vec3d.ofBottomCenter(blockPos2);
         }
         return null;
     }

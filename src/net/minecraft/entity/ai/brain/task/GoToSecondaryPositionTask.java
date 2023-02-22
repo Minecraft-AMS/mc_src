@@ -10,7 +10,6 @@ package net.minecraft.entity.ai.brain.task;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
@@ -18,7 +17,7 @@ import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.GlobalPos;
+import net.minecraft.util.dynamic.GlobalPos;
 import org.jetbrains.annotations.Nullable;
 
 public class GoToSecondaryPositionTask
@@ -48,7 +47,7 @@ extends Task<VillagerEntity> {
         Optional<GlobalPos> optional2 = villagerEntity.getBrain().getOptionalMemory(this.primaryPosition);
         if (optional.isPresent() && optional2.isPresent() && !(list = optional.get()).isEmpty()) {
             this.chosenPosition = list.get(serverWorld.getRandom().nextInt(list.size()));
-            return this.chosenPosition != null && Objects.equals(serverWorld.getDimension().getType(), this.chosenPosition.getDimension()) && optional2.get().getPos().isWithinDistance(villagerEntity.getPos(), (double)this.primaryPositionActivationDistance);
+            return this.chosenPosition != null && serverWorld.getRegistryKey() == this.chosenPosition.getDimension() && optional2.get().getPos().isWithinDistance(villagerEntity.getPos(), (double)this.primaryPositionActivationDistance);
         }
         return false;
     }
@@ -56,7 +55,7 @@ extends Task<VillagerEntity> {
     @Override
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         if (l > this.nextRunTime && this.chosenPosition != null) {
-            villagerEntity.getBrain().putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(this.chosenPosition.getPos(), this.speed, this.completionRange));
+            villagerEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, new WalkTarget(this.chosenPosition.getPos(), this.speed, this.completionRange));
             this.nextRunTime = l + 100L;
         }
     }

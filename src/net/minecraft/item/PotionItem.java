@@ -11,7 +11,7 @@ package net.minecraft.item;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -19,6 +19,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUsage;
 import net.minecraft.item.Items;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
@@ -26,10 +27,10 @@ import net.minecraft.potion.Potions;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.Text;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.UseAction;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -41,9 +42,8 @@ extends Item {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public ItemStack getStackForRender() {
-        return PotionUtil.setPotion(super.getStackForRender(), Potions.WATER);
+    public ItemStack getDefaultStack() {
+        return PotionUtil.setPotion(super.getDefaultStack(), Potions.WATER);
     }
 
     @Override
@@ -51,7 +51,7 @@ extends Item {
         PlayerEntity playerEntity;
         PlayerEntity playerEntity2 = playerEntity = user instanceof PlayerEntity ? (PlayerEntity)user : null;
         if (playerEntity instanceof ServerPlayerEntity) {
-            Criterions.CONSUME_ITEM.trigger((ServerPlayerEntity)playerEntity, stack);
+            Criteria.CONSUME_ITEM.trigger((ServerPlayerEntity)playerEntity, stack);
         }
         if (!world.isClient) {
             List<StatusEffectInstance> list = PotionUtil.getPotionEffects(stack);
@@ -92,8 +92,7 @@ extends Item {
 
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-        user.setCurrentHand(hand);
-        return TypedActionResult.success(user.getStackInHand(hand));
+        return ItemUsage.consumeHeldItem(world, user, hand);
     }
 
     @Override
@@ -108,8 +107,8 @@ extends Item {
     }
 
     @Override
-    public boolean hasEnchantmentGlint(ItemStack stack) {
-        return super.hasEnchantmentGlint(stack) || !PotionUtil.getPotionEffects(stack).isEmpty();
+    public boolean hasGlint(ItemStack stack) {
+        return super.hasGlint(stack) || !PotionUtil.getPotionEffects(stack).isEmpty();
     }
 
     @Override

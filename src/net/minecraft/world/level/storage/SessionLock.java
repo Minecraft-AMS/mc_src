@@ -1,0 +1,124 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.google.common.base.Charsets
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
+ */
+package net.minecraft.world.level.storage;
+
+import com.google.common.base.Charsets;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+
+public class SessionLock
+implements AutoCloseable {
+    private final FileChannel channel;
+    private final FileLock lock;
+    private static final ByteBuffer field_25353;
+
+    public static SessionLock create(Path path) throws IOException {
+        Path path2 = path.resolve("session.lock");
+        if (!Files.isDirectory(path, new LinkOption[0])) {
+            Files.createDirectories(path, new FileAttribute[0]);
+        }
+        FileChannel fileChannel = FileChannel.open(path2, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+        try {
+            fileChannel.write(field_25353.duplicate());
+            fileChannel.force(true);
+            FileLock fileLock = fileChannel.tryLock();
+            if (fileLock == null) {
+                throw AlreadyLockedException.create(path2);
+            }
+            return new SessionLock(fileChannel, fileLock);
+        }
+        catch (IOException iOException) {
+            try {
+                fileChannel.close();
+            }
+            catch (IOException iOException2) {
+                iOException.addSuppressed(iOException2);
+            }
+            throw iOException;
+        }
+    }
+
+    private SessionLock(FileChannel channel, FileLock lock) {
+        this.channel = channel;
+        this.lock = lock;
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            if (this.lock.isValid()) {
+                this.lock.release();
+            }
+        }
+        finally {
+            if (this.channel.isOpen()) {
+                this.channel.close();
+            }
+        }
+    }
+
+    public boolean isValid() {
+        return this.lock.isValid();
+    }
+
+    /*
+     * Exception decompiling
+     */
+    @Environment(value=EnvType.CLIENT)
+    public static boolean isLocked(Path path) throws IOException {
+        /*
+         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
+         * 
+         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
+         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
+         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
+         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
+         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
+         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
+         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
+         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
+         *     at org.benf.cfr.reader.Main.main(Main.java:54)
+         */
+        throw new IllegalStateException("Decompilation failed");
+    }
+
+    static {
+        byte[] bs = "\u2603".getBytes(Charsets.UTF_8);
+        field_25353 = ByteBuffer.allocateDirect(bs.length);
+        field_25353.put(bs);
+        field_25353.flip();
+    }
+
+    public static class AlreadyLockedException
+    extends IOException {
+        private AlreadyLockedException(Path path, String message) {
+            super(path.toAbsolutePath() + ": " + message);
+        }
+
+        public static AlreadyLockedException create(Path path) {
+            return new AlreadyLockedException(path, "already locked (possibly by other Minecraft instance?)");
+        }
+    }
+}
+

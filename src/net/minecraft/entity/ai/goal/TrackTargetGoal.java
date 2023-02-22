@@ -11,12 +11,10 @@ import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.ai.pathing.PathNode;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.scoreboard.AbstractTeam;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -77,8 +75,7 @@ extends Goal {
     }
 
     protected double getFollowRange() {
-        EntityAttributeInstance entityAttributeInstance = this.mob.getAttributeInstance(EntityAttributes.FOLLOW_RANGE);
-        return entityAttributeInstance == null ? 16.0 : entityAttributeInstance.getValue();
+        return this.mob.getAttributeValue(EntityAttributes.GENERIC_FOLLOW_RANGE);
     }
 
     @Override
@@ -101,7 +98,7 @@ extends Goal {
         if (!targetPredicate.test(this.mob, target)) {
             return false;
         }
-        if (!this.mob.isInWalkTargetRange(new BlockPos(target))) {
+        if (!this.mob.isInWalkTargetRange(target.getBlockPos())) {
             return false;
         }
         if (this.checkCanNavigate) {

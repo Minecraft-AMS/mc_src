@@ -8,21 +8,22 @@ package net.minecraft.block.entity;
 
 import java.util.Optional;
 import java.util.Random;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.CampfireBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.inventory.BasicInventory;
 import net.minecraft.inventory.Inventories;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.CampfireCookingRecipe;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.util.Clearable;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.Tickable;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -68,7 +69,7 @@ Tickable {
             int n = i;
             this.cookingTimes[n] = this.cookingTimes[n] + 1;
             if (this.cookingTimes[i] < this.cookingTotalTimes[i]) continue;
-            BasicInventory inventory = new BasicInventory(itemStack);
+            SimpleInventory inventory = new SimpleInventory(itemStack);
             ItemStack itemStack2 = this.world.getRecipeManager().getFirstMatch(RecipeType.CAMPFIRE_COOKING, inventory, this.world).map(campfireCookingRecipe -> campfireCookingRecipe.craft(inventory)).orElse(itemStack);
             BlockPos blockPos = this.getPos();
             ItemScatterer.spawn(this.world, (double)blockPos.getX(), (double)blockPos.getY(), (double)blockPos.getZ(), itemStack2);
@@ -109,11 +110,11 @@ Tickable {
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
+    public void fromTag(BlockState state, NbtCompound tag) {
         int[] is;
-        super.fromTag(tag);
+        super.fromTag(state, tag);
         this.itemsBeingCooked.clear();
-        Inventories.fromTag(tag, this.itemsBeingCooked);
+        Inventories.readNbt(tag, this.itemsBeingCooked);
         if (tag.contains("CookingTimes", 11)) {
             is = tag.getIntArray("CookingTimes");
             System.arraycopy(is, 0, this.cookingTimes, 0, Math.min(this.cookingTotalTimes.length, is.length));
@@ -125,35 +126,35 @@ Tickable {
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        this.saveInitialChunkData(tag);
-        tag.putIntArray("CookingTimes", this.cookingTimes);
-        tag.putIntArray("CookingTotalTimes", this.cookingTotalTimes);
-        return tag;
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        this.saveInitialChunkData(nbt);
+        nbt.putIntArray("CookingTimes", this.cookingTimes);
+        nbt.putIntArray("CookingTotalTimes", this.cookingTotalTimes);
+        return nbt;
     }
 
-    private CompoundTag saveInitialChunkData(CompoundTag tag) {
-        super.toTag(tag);
-        Inventories.toTag(tag, this.itemsBeingCooked, true);
-        return tag;
+    private NbtCompound saveInitialChunkData(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        Inventories.writeNbt(nbt, this.itemsBeingCooked, true);
+        return nbt;
     }
 
     @Override
     @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 13, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 13, this.toInitialChunkDataNbt());
     }
 
     @Override
-    public CompoundTag toInitialChunkDataTag() {
-        return this.saveInitialChunkData(new CompoundTag());
+    public NbtCompound toInitialChunkDataNbt() {
+        return this.saveInitialChunkData(new NbtCompound());
     }
 
     public Optional<CampfireCookingRecipe> getRecipeFor(ItemStack item) {
         if (this.itemsBeingCooked.stream().noneMatch(ItemStack::isEmpty)) {
             return Optional.empty();
         }
-        return this.world.getRecipeManager().getFirstMatch(RecipeType.CAMPFIRE_COOKING, new BasicInventory(item), this.world);
+        return this.world.getRecipeManager().getFirstMatch(RecipeType.CAMPFIRE_COOKING, new SimpleInventory(item), this.world);
     }
 
     public boolean addItem(ItemStack item, int integer) {
@@ -180,10 +181,12 @@ Tickable {
     }
 
     public void spawnItemsBeingCooked() {
-        if (!this.getWorld().isClient) {
-            ItemScatterer.spawn(this.getWorld(), this.getPos(), this.getItemsBeingCooked());
+        if (this.world != null) {
+            if (!this.world.isClient) {
+                ItemScatterer.spawn(this.world, this.getPos(), this.getItemsBeingCooked());
+            }
+            this.updateListeners();
         }
-        this.updateListeners();
     }
 }
 

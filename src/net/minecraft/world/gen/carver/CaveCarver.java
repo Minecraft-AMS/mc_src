@@ -2,11 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.carver;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.BitSet;
 import java.util.Random;
 import java.util.function.Function;
@@ -19,8 +19,8 @@ import net.minecraft.world.gen.carver.Carver;
 
 public class CaveCarver
 extends Carver<ProbabilityConfig> {
-    public CaveCarver(Function<Dynamic<?>, ? extends ProbabilityConfig> configDeserializer, int heightLimit) {
-        super(configDeserializer, heightLimit);
+    public CaveCarver(Codec<ProbabilityConfig> codec, int i) {
+        super(codec, i);
     }
 
     @Override

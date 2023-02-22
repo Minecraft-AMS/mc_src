@@ -6,6 +6,7 @@ package net.minecraft.entity.mob;
 import java.util.List;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
@@ -17,12 +18,11 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 public class ElderGuardianEntity
 extends GuardianEntity {
-    public static final float field_17492 = EntityType.ELDER_GUARDIAN.getWidth() / EntityType.GUARDIAN.getWidth();
+    public static final float SCALE = EntityType.ELDER_GUARDIAN.getWidth() / EntityType.GUARDIAN.getWidth();
 
     public ElderGuardianEntity(EntityType<? extends ElderGuardianEntity> entityType, World world) {
         super((EntityType<? extends GuardianEntity>)entityType, world);
@@ -32,12 +32,8 @@ extends GuardianEntity {
         }
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.3f);
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(8.0);
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(80.0);
+    public static DefaultAttributeContainer.Builder createElderGuardianAttributes() {
+        return GuardianEntity.createGuardianAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.3f).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 8.0).add(EntityAttributes.GENERIC_MAX_HEALTH, 80.0);
     }
 
     @Override
@@ -77,12 +73,12 @@ extends GuardianEntity {
             int l = 1200;
             for (ServerPlayerEntity serverPlayerEntity2 : list) {
                 if (serverPlayerEntity2.hasStatusEffect(statusEffect) && serverPlayerEntity2.getStatusEffect(statusEffect).getAmplifier() >= 2 && serverPlayerEntity2.getStatusEffect(statusEffect).getDuration() >= 1200) continue;
-                serverPlayerEntity2.networkHandler.sendPacket(new GameStateChangeS2CPacket(10, 0.0f));
+                serverPlayerEntity2.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.ELDER_GUARDIAN_EFFECT, this.isSilent() ? 0.0f : 1.0f));
                 serverPlayerEntity2.addStatusEffect(new StatusEffectInstance(statusEffect, 6000, 2));
             }
         }
         if (!this.hasPositionTarget()) {
-            this.setPositionTarget(new BlockPos(this), 16);
+            this.setPositionTarget(this.getBlockPos(), 16);
         }
     }
 }

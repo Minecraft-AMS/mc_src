@@ -16,7 +16,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
-import net.minecraft.entity.ai.brain.EntityPosWrapper;
+import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
@@ -35,8 +35,8 @@ extends Task<VillagerEntity> {
     private int offerIndex;
     private int ticksLeft;
 
-    public HoldTradeOffersTask(int rminRunTime, int maxRunTime) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.INTERACTION_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT)), rminRunTime, maxRunTime);
+    public HoldTradeOffersTask(int minRunTime, int maxRunTime) {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.INTERACTION_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT)), minRunTime, maxRunTime);
     }
 
     @Override
@@ -57,7 +57,7 @@ extends Task<VillagerEntity> {
     @Override
     public void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         super.run(serverWorld, villagerEntity, l);
-        this.findPotentialCuatomer(villagerEntity);
+        this.findPotentialCustomer(villagerEntity);
         this.offerShownTicks = 0;
         this.offerIndex = 0;
         this.ticksLeft = 40;
@@ -65,7 +65,7 @@ extends Task<VillagerEntity> {
 
     @Override
     public void keepRunning(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
-        LivingEntity livingEntity = this.findPotentialCuatomer(villagerEntity);
+        LivingEntity livingEntity = this.findPotentialCustomer(villagerEntity);
         this.setupOffers(livingEntity, villagerEntity);
         if (!this.offers.isEmpty()) {
             this.refreshShownOffer(villagerEntity);
@@ -108,7 +108,7 @@ extends Task<VillagerEntity> {
     private void loadPossibleOffers(VillagerEntity villager) {
         for (TradeOffer tradeOffer : villager.getOffers()) {
             if (tradeOffer.isDisabled() || !this.isPossible(tradeOffer)) continue;
-            this.offers.add(tradeOffer.getMutableSellItem());
+            this.offers.add(tradeOffer.getSellItem());
         }
     }
 
@@ -116,10 +116,10 @@ extends Task<VillagerEntity> {
         return ItemStack.areItemsEqualIgnoreDamage(this.customerHeldStack, offer.getAdjustedFirstBuyItem()) || ItemStack.areItemsEqualIgnoreDamage(this.customerHeldStack, offer.getSecondBuyItem());
     }
 
-    private LivingEntity findPotentialCuatomer(VillagerEntity villager) {
+    private LivingEntity findPotentialCustomer(VillagerEntity villager) {
         Brain<VillagerEntity> brain = villager.getBrain();
         LivingEntity livingEntity = brain.getOptionalMemory(MemoryModuleType.INTERACTION_TARGET).get();
-        brain.putMemory(MemoryModuleType.LOOK_TARGET, new EntityPosWrapper(livingEntity));
+        brain.remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget(livingEntity, true));
         return livingEntity;
     }
 

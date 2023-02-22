@@ -11,12 +11,14 @@ import com.google.common.collect.Sets;
 import java.util.EnumSet;
 import java.util.HashSet;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
 import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
@@ -26,9 +28,9 @@ import org.jetbrains.annotations.Nullable;
 public class BirdPathNodeMaker
 extends LandPathNodeMaker {
     @Override
-    public void init(ChunkCache chunkCache, MobEntity mobEntity) {
-        super.init(chunkCache, mobEntity);
-        this.waterPathNodeTypeWeight = mobEntity.getPathfindingPenalty(PathNodeType.WATER);
+    public void init(ChunkCache cachedWorld, MobEntity entity) {
+        super.init(cachedWorld, entity);
+        this.waterPathNodeTypeWeight = entity.getPathfindingPenalty(PathNodeType.WATER);
     }
 
     @Override
@@ -45,22 +47,22 @@ extends LandPathNodeMaker {
         if (this.canSwim() && this.entity.isTouchingWater()) {
             i = MathHelper.floor(this.entity.getY());
             BlockPos.Mutable mutable = new BlockPos.Mutable(this.entity.getX(), (double)i, this.entity.getZ());
-            Block block = this.field_20622.getBlockState(mutable).getBlock();
+            Block block = this.cachedWorld.getBlockState(mutable).getBlock();
             while (block == Blocks.WATER) {
                 mutable.set(this.entity.getX(), (double)(++i), this.entity.getZ());
-                block = this.field_20622.getBlockState(mutable).getBlock();
+                block = this.cachedWorld.getBlockState(mutable).getBlock();
             }
         } else {
             i = MathHelper.floor(this.entity.getY() + 0.5);
         }
-        if (this.entity.getPathfindingPenalty(pathNodeType = this.method_9(this.entity, (blockPos = new BlockPos(this.entity)).getX(), i, blockPos.getZ())) < 0.0f) {
+        if (this.entity.getPathfindingPenalty(pathNodeType = this.getNodeType(this.entity, (blockPos = this.entity.getBlockPos()).getX(), i, blockPos.getZ())) < 0.0f) {
             HashSet set = Sets.newHashSet();
-            set.add(new BlockPos(this.entity.getBoundingBox().x1, (double)i, this.entity.getBoundingBox().z1));
-            set.add(new BlockPos(this.entity.getBoundingBox().x1, (double)i, this.entity.getBoundingBox().z2));
-            set.add(new BlockPos(this.entity.getBoundingBox().x2, (double)i, this.entity.getBoundingBox().z1));
-            set.add(new BlockPos(this.entity.getBoundingBox().x2, (double)i, this.entity.getBoundingBox().z2));
+            set.add(new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().minZ));
+            set.add(new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().maxZ));
+            set.add(new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().minZ));
+            set.add(new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().maxZ));
             for (BlockPos blockPos2 : set) {
-                PathNodeType pathNodeType2 = this.method_10(this.entity, blockPos2);
+                PathNodeType pathNodeType2 = this.getNodeType(this.entity, blockPos2);
                 if (!(this.entity.getPathfindingPenalty(pathNodeType2) >= 0.0f)) continue;
                 return super.getNode(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ());
             }
@@ -102,100 +104,100 @@ extends LandPathNodeMaker {
         PathNode pathNode2;
         int i = 0;
         PathNode pathNode = this.getNode(node.x, node.y, node.z + 1);
-        if (this.method_22878(pathNode)) {
+        if (this.unvisited(pathNode)) {
             successors[i++] = pathNode;
         }
-        if (this.method_22878(pathNode2 = this.getNode(node.x - 1, node.y, node.z))) {
+        if (this.unvisited(pathNode2 = this.getNode(node.x - 1, node.y, node.z))) {
             successors[i++] = pathNode2;
         }
-        if (this.method_22878(pathNode3 = this.getNode(node.x + 1, node.y, node.z))) {
+        if (this.unvisited(pathNode3 = this.getNode(node.x + 1, node.y, node.z))) {
             successors[i++] = pathNode3;
         }
-        if (this.method_22878(pathNode4 = this.getNode(node.x, node.y, node.z - 1))) {
+        if (this.unvisited(pathNode4 = this.getNode(node.x, node.y, node.z - 1))) {
             successors[i++] = pathNode4;
         }
-        if (this.method_22878(pathNode5 = this.getNode(node.x, node.y + 1, node.z))) {
+        if (this.unvisited(pathNode5 = this.getNode(node.x, node.y + 1, node.z))) {
             successors[i++] = pathNode5;
         }
-        if (this.method_22878(pathNode6 = this.getNode(node.x, node.y - 1, node.z))) {
+        if (this.unvisited(pathNode6 = this.getNode(node.x, node.y - 1, node.z))) {
             successors[i++] = pathNode6;
         }
-        if (this.method_22878(pathNode7 = this.getNode(node.x, node.y + 1, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode5)) {
+        if (this.unvisited(pathNode7 = this.getNode(node.x, node.y + 1, node.z + 1)) && this.isPassable(pathNode) && this.isPassable(pathNode5)) {
             successors[i++] = pathNode7;
         }
-        if (this.method_22878(pathNode8 = this.getNode(node.x - 1, node.y + 1, node.z)) && this.method_22877(pathNode2) && this.method_22877(pathNode5)) {
+        if (this.unvisited(pathNode8 = this.getNode(node.x - 1, node.y + 1, node.z)) && this.isPassable(pathNode2) && this.isPassable(pathNode5)) {
             successors[i++] = pathNode8;
         }
-        if (this.method_22878(pathNode9 = this.getNode(node.x + 1, node.y + 1, node.z)) && this.method_22877(pathNode3) && this.method_22877(pathNode5)) {
+        if (this.unvisited(pathNode9 = this.getNode(node.x + 1, node.y + 1, node.z)) && this.isPassable(pathNode3) && this.isPassable(pathNode5)) {
             successors[i++] = pathNode9;
         }
-        if (this.method_22878(pathNode10 = this.getNode(node.x, node.y + 1, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode5)) {
+        if (this.unvisited(pathNode10 = this.getNode(node.x, node.y + 1, node.z - 1)) && this.isPassable(pathNode4) && this.isPassable(pathNode5)) {
             successors[i++] = pathNode10;
         }
-        if (this.method_22878(pathNode11 = this.getNode(node.x, node.y - 1, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode6)) {
+        if (this.unvisited(pathNode11 = this.getNode(node.x, node.y - 1, node.z + 1)) && this.isPassable(pathNode) && this.isPassable(pathNode6)) {
             successors[i++] = pathNode11;
         }
-        if (this.method_22878(pathNode12 = this.getNode(node.x - 1, node.y - 1, node.z)) && this.method_22877(pathNode2) && this.method_22877(pathNode6)) {
+        if (this.unvisited(pathNode12 = this.getNode(node.x - 1, node.y - 1, node.z)) && this.isPassable(pathNode2) && this.isPassable(pathNode6)) {
             successors[i++] = pathNode12;
         }
-        if (this.method_22878(pathNode13 = this.getNode(node.x + 1, node.y - 1, node.z)) && this.method_22877(pathNode3) && this.method_22877(pathNode6)) {
+        if (this.unvisited(pathNode13 = this.getNode(node.x + 1, node.y - 1, node.z)) && this.isPassable(pathNode3) && this.isPassable(pathNode6)) {
             successors[i++] = pathNode13;
         }
-        if (this.method_22878(pathNode14 = this.getNode(node.x, node.y - 1, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode6)) {
+        if (this.unvisited(pathNode14 = this.getNode(node.x, node.y - 1, node.z - 1)) && this.isPassable(pathNode4) && this.isPassable(pathNode6)) {
             successors[i++] = pathNode14;
         }
-        if (this.method_22878(pathNode15 = this.getNode(node.x + 1, node.y, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode3)) {
+        if (this.unvisited(pathNode15 = this.getNode(node.x + 1, node.y, node.z - 1)) && this.isPassable(pathNode4) && this.isPassable(pathNode3)) {
             successors[i++] = pathNode15;
         }
-        if (this.method_22878(pathNode16 = this.getNode(node.x + 1, node.y, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode3)) {
+        if (this.unvisited(pathNode16 = this.getNode(node.x + 1, node.y, node.z + 1)) && this.isPassable(pathNode) && this.isPassable(pathNode3)) {
             successors[i++] = pathNode16;
         }
-        if (this.method_22878(pathNode17 = this.getNode(node.x - 1, node.y, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode2)) {
+        if (this.unvisited(pathNode17 = this.getNode(node.x - 1, node.y, node.z - 1)) && this.isPassable(pathNode4) && this.isPassable(pathNode2)) {
             successors[i++] = pathNode17;
         }
-        if (this.method_22878(pathNode18 = this.getNode(node.x - 1, node.y, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode2)) {
+        if (this.unvisited(pathNode18 = this.getNode(node.x - 1, node.y, node.z + 1)) && this.isPassable(pathNode) && this.isPassable(pathNode2)) {
             successors[i++] = pathNode18;
         }
-        if (this.method_22878(pathNode19 = this.getNode(node.x + 1, node.y + 1, node.z - 1)) && this.method_22877(pathNode15) && this.method_22877(pathNode10) && this.method_22877(pathNode9)) {
+        if (this.unvisited(pathNode19 = this.getNode(node.x + 1, node.y + 1, node.z - 1)) && this.isPassable(pathNode15) && this.isPassable(pathNode4) && this.isPassable(pathNode3) && this.isPassable(pathNode5) && this.isPassable(pathNode10) && this.isPassable(pathNode9)) {
             successors[i++] = pathNode19;
         }
-        if (this.method_22878(pathNode20 = this.getNode(node.x + 1, node.y + 1, node.z + 1)) && this.method_22877(pathNode16) && this.method_22877(pathNode7) && this.method_22877(pathNode9)) {
+        if (this.unvisited(pathNode20 = this.getNode(node.x + 1, node.y + 1, node.z + 1)) && this.isPassable(pathNode16) && this.isPassable(pathNode) && this.isPassable(pathNode3) && this.isPassable(pathNode5) && this.isPassable(pathNode7) && this.isPassable(pathNode9)) {
             successors[i++] = pathNode20;
         }
-        if (this.method_22878(pathNode21 = this.getNode(node.x - 1, node.y + 1, node.z - 1)) && this.method_22877(pathNode17) && this.method_22877(pathNode10) && this.method_22877(pathNode8)) {
+        if (this.unvisited(pathNode21 = this.getNode(node.x - 1, node.y + 1, node.z - 1)) && this.isPassable(pathNode17) && this.isPassable(pathNode4) && this.isPassable(pathNode2) & this.isPassable(pathNode5) && this.isPassable(pathNode10) && this.isPassable(pathNode8)) {
             successors[i++] = pathNode21;
         }
-        if (this.method_22878(pathNode22 = this.getNode(node.x - 1, node.y + 1, node.z + 1)) && this.method_22877(pathNode18) && this.method_22877(pathNode7) && this.method_22877(pathNode8)) {
+        if (this.unvisited(pathNode22 = this.getNode(node.x - 1, node.y + 1, node.z + 1)) && this.isPassable(pathNode18) && this.isPassable(pathNode) && this.isPassable(pathNode2) & this.isPassable(pathNode5) && this.isPassable(pathNode7) && this.isPassable(pathNode8)) {
             successors[i++] = pathNode22;
         }
-        if (this.method_22878(pathNode23 = this.getNode(node.x + 1, node.y - 1, node.z - 1)) && this.method_22877(pathNode15) && this.method_22877(pathNode14) && this.method_22877(pathNode13)) {
+        if (this.unvisited(pathNode23 = this.getNode(node.x + 1, node.y - 1, node.z - 1)) && this.isPassable(pathNode15) && this.isPassable(pathNode4) && this.isPassable(pathNode3) && this.isPassable(pathNode6) && this.isPassable(pathNode14) && this.isPassable(pathNode13)) {
             successors[i++] = pathNode23;
         }
-        if (this.method_22878(pathNode24 = this.getNode(node.x + 1, node.y - 1, node.z + 1)) && this.method_22877(pathNode16) && this.method_22877(pathNode11) && this.method_22877(pathNode13)) {
+        if (this.unvisited(pathNode24 = this.getNode(node.x + 1, node.y - 1, node.z + 1)) && this.isPassable(pathNode16) && this.isPassable(pathNode) && this.isPassable(pathNode3) && this.isPassable(pathNode6) && this.isPassable(pathNode11) && this.isPassable(pathNode13)) {
             successors[i++] = pathNode24;
         }
-        if (this.method_22878(pathNode25 = this.getNode(node.x - 1, node.y - 1, node.z - 1)) && this.method_22877(pathNode17) && this.method_22877(pathNode14) && this.method_22877(pathNode12)) {
+        if (this.unvisited(pathNode25 = this.getNode(node.x - 1, node.y - 1, node.z - 1)) && this.isPassable(pathNode17) && this.isPassable(pathNode4) && this.isPassable(pathNode2) && this.isPassable(pathNode6) && this.isPassable(pathNode14) && this.isPassable(pathNode12)) {
             successors[i++] = pathNode25;
         }
-        if (this.method_22878(pathNode26 = this.getNode(node.x - 1, node.y - 1, node.z + 1)) && this.method_22877(pathNode18) && this.method_22877(pathNode11) && this.method_22877(pathNode12)) {
+        if (this.unvisited(pathNode26 = this.getNode(node.x - 1, node.y - 1, node.z + 1)) && this.isPassable(pathNode18) && this.isPassable(pathNode) && this.isPassable(pathNode2) && this.isPassable(pathNode6) && this.isPassable(pathNode11) && this.isPassable(pathNode12)) {
             successors[i++] = pathNode26;
         }
         return i;
     }
 
-    private boolean method_22877(@Nullable PathNode pathNode) {
-        return pathNode != null && pathNode.penalty >= 0.0f;
+    private boolean isPassable(@Nullable PathNode node) {
+        return node != null && node.penalty >= 0.0f;
     }
 
-    private boolean method_22878(@Nullable PathNode pathNode) {
-        return pathNode != null && !pathNode.visited;
+    private boolean unvisited(@Nullable PathNode node) {
+        return node != null && !node.visited;
     }
 
     @Override
     @Nullable
     protected PathNode getNode(int x, int y, int z) {
         PathNode pathNode = null;
-        PathNodeType pathNodeType = this.method_9(this.entity, x, y, z);
+        PathNodeType pathNodeType = this.getNodeType(this.entity, x, y, z);
         float f = this.entity.getPathfindingPenalty(pathNodeType);
         if (f >= 0.0f) {
             pathNode = super.getNode(x, y, z);
@@ -215,8 +217,8 @@ extends LandPathNodeMaker {
     public PathNodeType getNodeType(BlockView world, int x, int y, int z, MobEntity mob, int sizeX, int sizeY, int sizeZ, boolean canOpenDoors, boolean canEnterOpenDoors) {
         EnumSet<PathNodeType> enumSet = EnumSet.noneOf(PathNodeType.class);
         PathNodeType pathNodeType = PathNodeType.BLOCKED;
-        BlockPos blockPos = new BlockPos(mob);
-        pathNodeType = this.getNodeType(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
+        BlockPos blockPos = mob.getBlockPos();
+        pathNodeType = this.findNearbyNodeTypes(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
         if (enumSet.contains((Object)PathNodeType.FENCE)) {
             return PathNodeType.FENCE;
         }
@@ -235,12 +237,13 @@ extends LandPathNodeMaker {
     }
 
     @Override
-    public PathNodeType getNodeType(BlockView world, int x, int y, int z) {
-        PathNodeType pathNodeType = BirdPathNodeMaker.getBasicPathNodeType(world, x, y, z);
+    public PathNodeType getDefaultNodeType(BlockView world, int x, int y, int z) {
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        PathNodeType pathNodeType = BirdPathNodeMaker.getCommonNodeType(world, mutable.set(x, y, z));
         if (pathNodeType == PathNodeType.OPEN && y >= 1) {
-            Block block = world.getBlockState(new BlockPos(x, y - 1, z)).getBlock();
-            PathNodeType pathNodeType2 = BirdPathNodeMaker.getBasicPathNodeType(world, x, y - 1, z);
-            if (pathNodeType2 == PathNodeType.DAMAGE_FIRE || block == Blocks.MAGMA_BLOCK || pathNodeType2 == PathNodeType.LAVA || block == Blocks.CAMPFIRE) {
+            BlockState blockState = world.getBlockState(mutable.set(x, y - 1, z));
+            PathNodeType pathNodeType2 = BirdPathNodeMaker.getCommonNodeType(world, mutable.set(x, y - 1, z));
+            if (pathNodeType2 == PathNodeType.DAMAGE_FIRE || blockState.isOf(Blocks.MAGMA_BLOCK) || pathNodeType2 == PathNodeType.LAVA || blockState.isIn(BlockTags.CAMPFIRES)) {
                 pathNodeType = PathNodeType.DAMAGE_FIRE;
             } else if (pathNodeType2 == PathNodeType.DAMAGE_CACTUS) {
                 pathNodeType = PathNodeType.DAMAGE_CACTUS;
@@ -255,17 +258,17 @@ extends LandPathNodeMaker {
             }
         }
         if (pathNodeType == PathNodeType.WALKABLE || pathNodeType == PathNodeType.OPEN) {
-            pathNodeType = BirdPathNodeMaker.method_59(world, x, y, z, pathNodeType);
+            pathNodeType = BirdPathNodeMaker.getNodeTypeFromNeighbors(world, mutable.set(x, y, z), pathNodeType);
         }
         return pathNodeType;
     }
 
-    private PathNodeType method_10(MobEntity mobEntity, BlockPos blockPos) {
-        return this.method_9(mobEntity, blockPos.getX(), blockPos.getY(), blockPos.getZ());
+    private PathNodeType getNodeType(MobEntity entity, BlockPos pos) {
+        return this.getNodeType(entity, pos.getX(), pos.getY(), pos.getZ());
     }
 
-    private PathNodeType method_9(MobEntity mobEntity, int i, int j, int k) {
-        return this.getNodeType(this.field_20622, i, j, k, mobEntity, this.field_31, this.field_30, this.field_28, this.canOpenDoors(), this.canEnterOpenDoors());
+    private PathNodeType getNodeType(MobEntity entity, int x, int y, int z) {
+        return this.getNodeType(this.cachedWorld, x, y, z, entity, this.entityBlockXSize, this.entityBlockYSize, this.entityBlockZSize, this.canOpenDoors(), this.canEnterOpenDoors());
     }
 }
 

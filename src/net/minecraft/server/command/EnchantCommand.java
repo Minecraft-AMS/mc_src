@@ -26,8 +26,8 @@ import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import java.util.Collection;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.ItemEnchantmentArgumentType;
+import net.minecraft.command.argument.EnchantmentArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -42,15 +42,15 @@ public class EnchantCommand {
     private static final DynamicCommandExceptionType FAILED_ITEMLESS_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.enchant.failed.itemless", object));
     private static final DynamicCommandExceptionType FAILED_INCOMPATIBLE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.enchant.failed.incompatible", object));
     private static final Dynamic2CommandExceptionType FAILED_LEVEL_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("commands.enchant.failed.level", object, object2));
-    private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.enchant.failed", new Object[0]));
+    private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.enchant.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("enchant").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("targets", EntityArgumentType.entities()).then(((RequiredArgumentBuilder)CommandManager.argument("enchantment", ItemEnchantmentArgumentType.itemEnchantment()).executes(commandContext -> EnchantCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets"), ItemEnchantmentArgumentType.getEnchantment((CommandContext<ServerCommandSource>)commandContext, "enchantment"), 1))).then(CommandManager.argument("level", IntegerArgumentType.integer((int)0)).executes(commandContext -> EnchantCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets"), ItemEnchantmentArgumentType.getEnchantment((CommandContext<ServerCommandSource>)commandContext, "enchantment"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"level")))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("enchant").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("targets", EntityArgumentType.entities()).then(((RequiredArgumentBuilder)CommandManager.argument("enchantment", EnchantmentArgumentType.enchantment()).executes(commandContext -> EnchantCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets"), EnchantmentArgumentType.getEnchantment((CommandContext<ServerCommandSource>)commandContext, "enchantment"), 1))).then(CommandManager.argument("level", IntegerArgumentType.integer((int)0)).executes(commandContext -> EnchantCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets"), EnchantmentArgumentType.getEnchantment((CommandContext<ServerCommandSource>)commandContext, "enchantment"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"level")))))));
     }
 
     private static int execute(ServerCommandSource source, Collection<? extends Entity> targets, Enchantment enchantment, int level) throws CommandSyntaxException {
-        if (level > enchantment.getMaximumLevel()) {
-            throw FAILED_LEVEL_EXCEPTION.create((Object)level, (Object)enchantment.getMaximumLevel());
+        if (level > enchantment.getMaxLevel()) {
+            throw FAILED_LEVEL_EXCEPTION.create((Object)level, (Object)enchantment.getMaxLevel());
         }
         int i = 0;
         for (Entity entity : targets) {
@@ -58,7 +58,7 @@ public class EnchantCommand {
                 LivingEntity livingEntity = (LivingEntity)entity;
                 ItemStack itemStack = livingEntity.getMainHandStack();
                 if (!itemStack.isEmpty()) {
-                    if (enchantment.isAcceptableItem(itemStack) && EnchantmentHelper.contains(EnchantmentHelper.getEnchantments(itemStack).keySet(), enchantment)) {
+                    if (enchantment.isAcceptableItem(itemStack) && EnchantmentHelper.isCompatible(EnchantmentHelper.get(itemStack).keySet(), enchantment)) {
                         itemStack.addEnchantment(enchantment, level);
                         ++i;
                         continue;

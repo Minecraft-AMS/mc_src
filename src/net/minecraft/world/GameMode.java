@@ -31,10 +31,10 @@ public enum GameMode {
     }
 
     public Text getTranslatableName() {
-        return new TranslatableText("gameMode." + this.name, new Object[0]);
+        return new TranslatableText("gameMode." + this.name);
     }
 
-    public void setAbilitites(PlayerAbilities abilities) {
+    public void setAbilities(PlayerAbilities abilities) {
         if (this == CREATIVE) {
             abilities.allowFlying = true;
             abilities.creativeMode = true;
@@ -50,10 +50,10 @@ public enum GameMode {
             abilities.invulnerable = false;
             abilities.flying = false;
         }
-        abilities.allowModifyWorld = !this.shouldLimitWorldModification();
+        abilities.allowModifyWorld = !this.isBlockBreakingRestricted();
     }
 
-    public boolean shouldLimitWorldModification() {
+    public boolean isBlockBreakingRestricted() {
         return this == ADVENTURE || this == SPECTATOR;
     }
 

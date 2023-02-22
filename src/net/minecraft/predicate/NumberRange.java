@@ -36,8 +36,8 @@ import net.minecraft.util.JsonHelper;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class NumberRange<T extends Number> {
-    public static final SimpleCommandExceptionType EXCEPTION_EMPTY = new SimpleCommandExceptionType((Message)new TranslatableText("argument.range.empty", new Object[0]));
-    public static final SimpleCommandExceptionType EXCEPTION_SWAPPED = new SimpleCommandExceptionType((Message)new TranslatableText("argument.range.swapped", new Object[0]));
+    public static final SimpleCommandExceptionType EXCEPTION_EMPTY = new SimpleCommandExceptionType((Message)new TranslatableText("argument.range.empty"));
+    public static final SimpleCommandExceptionType EXCEPTION_SWAPPED = new SimpleCommandExceptionType((Message)new TranslatableText("argument.range.swapped"));
     protected final T min;
     protected final T max;
 

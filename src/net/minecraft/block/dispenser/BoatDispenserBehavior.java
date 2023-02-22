@@ -7,11 +7,11 @@ import net.minecraft.block.DispenserBlock;
 import net.minecraft.block.dispenser.ItemDispenserBehavior;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPointer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
 
 public class BoatDispenserBehavior
 extends ItemDispenserBehavior {
@@ -26,14 +26,14 @@ extends ItemDispenserBehavior {
     public ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
         double g;
         Direction direction = pointer.getBlockState().get(DispenserBlock.FACING);
-        World world = pointer.getWorld();
+        ServerWorld world = pointer.getWorld();
         double d = pointer.getX() + (double)((float)direction.getOffsetX() * 1.125f);
         double e = pointer.getY() + (double)((float)direction.getOffsetY() * 1.125f);
         double f = pointer.getZ() + (double)((float)direction.getOffsetZ() * 1.125f);
         BlockPos blockPos = pointer.getBlockPos().offset(direction);
-        if (world.getFluidState(blockPos).matches(FluidTags.WATER)) {
+        if (world.getFluidState(blockPos).isIn(FluidTags.WATER)) {
             g = 1.0;
-        } else if (world.getBlockState(blockPos).isAir() && world.getFluidState(blockPos.down()).matches(FluidTags.WATER)) {
+        } else if (world.getBlockState(blockPos).isAir() && world.getFluidState(blockPos.down()).isIn(FluidTags.WATER)) {
             g = 0.0;
         } else {
             return this.itemDispenser.dispense(pointer, stack);
@@ -48,7 +48,7 @@ extends ItemDispenserBehavior {
 
     @Override
     protected void playSound(BlockPointer pointer) {
-        pointer.getWorld().playLevelEvent(1000, pointer.getBlockPos(), 0);
+        pointer.getWorld().syncWorldEvent(1000, pointer.getBlockPos(), 0);
     }
 }
 

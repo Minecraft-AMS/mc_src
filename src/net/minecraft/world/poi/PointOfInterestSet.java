@@ -2,11 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  it.unimi.dsi.fastutil.shorts.Short2ObjectMap
  *  it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap
  *  org.apache.logging.log4j.LogManager
@@ -15,13 +17,17 @@
  */
 package net.minecraft.world.poi;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -29,7 +35,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import net.minecraft.util.DynamicSerializable;
+import net.minecraft.SharedConstants;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -40,30 +46,25 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.util.Supplier;
 
-public class PointOfInterestSet
-implements DynamicSerializable {
+public class PointOfInterestSet {
     private static final Logger LOGGER = LogManager.getLogger();
     private final Short2ObjectMap<PointOfInterest> pointsOfInterestByPos = new Short2ObjectOpenHashMap();
     private final Map<PointOfInterestType, Set<PointOfInterest>> pointsOfInterestByType = Maps.newHashMap();
     private final Runnable updateListener;
     private boolean valid;
 
-    public PointOfInterestSet(Runnable updateListener) {
-        this.updateListener = updateListener;
-        this.valid = true;
+    public static Codec<PointOfInterestSet> createCodec(Runnable updateListener) {
+        return RecordCodecBuilder.create(instance -> instance.group((App)RecordCodecBuilder.point((Object)updateListener), (App)Codec.BOOL.optionalFieldOf("Valid", (Object)false).forGetter(pointOfInterestSet -> pointOfInterestSet.valid), (App)PointOfInterest.createCodec(updateListener).listOf().fieldOf("Records").forGetter(pointOfInterestSet -> ImmutableList.copyOf((Collection)pointOfInterestSet.pointsOfInterestByPos.values()))).apply((Applicative)instance, PointOfInterestSet::new)).orElseGet(Util.method_29188("Failed to read POI section: ", arg_0 -> ((Logger)LOGGER).error(arg_0)), () -> new PointOfInterestSet(updateListener, false, (List<PointOfInterest>)ImmutableList.of()));
     }
 
-    public <T> PointOfInterestSet(Runnable updateListener, Dynamic<T> dynamic2) {
+    public PointOfInterestSet(Runnable updateListener) {
+        this(updateListener, true, (List<PointOfInterest>)ImmutableList.of());
+    }
+
+    private PointOfInterestSet(Runnable updateListener, boolean valid, List<PointOfInterest> list) {
         this.updateListener = updateListener;
-        try {
-            this.valid = dynamic2.get("Valid").asBoolean(false);
-            dynamic2.get("Records").asStream().forEach(dynamic -> this.add(new PointOfInterest(dynamic, updateListener)));
-        }
-        catch (Exception exception) {
-            LOGGER.error("Failed to load POI chunk", (Throwable)exception);
-            this.clear();
-            this.valid = false;
-        }
+        this.valid = valid;
+        list.forEach(this::add);
     }
 
     public Stream<PointOfInterest> get(Predicate<PointOfInterestType> predicate, PointOfInterestStorage.OccupationStatus occupationStatus) {
@@ -80,13 +81,17 @@ implements DynamicSerializable {
     private boolean add(PointOfInterest poi) {
         BlockPos blockPos = poi.getPos();
         PointOfInterestType pointOfInterestType2 = poi.getType();
-        short s = ChunkSectionPos.getPackedLocalPos(blockPos);
+        short s = ChunkSectionPos.packLocal(blockPos);
         PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(s);
         if (pointOfInterest != null) {
             if (pointOfInterestType2.equals(pointOfInterest.getType())) {
                 return false;
             }
-            throw Util.throwOrPause(new IllegalStateException("POI data mismatch: already registered at " + blockPos));
+            String string = "POI data mismatch: already registered at " + blockPos;
+            if (SharedConstants.isDevelopment) {
+                throw Util.throwOrPause(new IllegalStateException(string));
+            }
+            LOGGER.error(string);
         }
         this.pointsOfInterestByPos.put(s, (Object)poi);
         this.pointsOfInterestByType.computeIfAbsent(pointOfInterestType2, pointOfInterestType -> Sets.newHashSet()).add(poi);
@@ -94,7 +99,7 @@ implements DynamicSerializable {
     }
 
     public void remove(BlockPos pos) {
-        PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.remove(ChunkSectionPos.getPackedLocalPos(pos));
+        PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.remove(ChunkSectionPos.packLocal(pos));
         if (pointOfInterest == null) {
             LOGGER.error("POI data mismatch: never registered at " + pos);
             return;
@@ -108,7 +113,7 @@ implements DynamicSerializable {
     }
 
     public boolean releaseTicket(BlockPos pos) {
-        PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(ChunkSectionPos.getPackedLocalPos(pos));
+        PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(ChunkSectionPos.packLocal(pos));
         if (pointOfInterest == null) {
             throw Util.throwOrPause(new IllegalStateException("POI never registered at " + pos));
         }
@@ -118,21 +123,15 @@ implements DynamicSerializable {
     }
 
     public boolean test(BlockPos pos, Predicate<PointOfInterestType> predicate) {
-        short s = ChunkSectionPos.getPackedLocalPos(pos);
+        short s = ChunkSectionPos.packLocal(pos);
         PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(s);
         return pointOfInterest != null && predicate.test(pointOfInterest.getType());
     }
 
     public Optional<PointOfInterestType> getType(BlockPos pos) {
-        short s = ChunkSectionPos.getPackedLocalPos(pos);
+        short s = ChunkSectionPos.packLocal(pos);
         PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(s);
         return pointOfInterest != null ? Optional.of(pointOfInterest.getType()) : Optional.empty();
-    }
-
-    @Override
-    public <T> T serialize(DynamicOps<T> ops) {
-        Object object = ops.createList(this.pointsOfInterestByPos.values().stream().map(pointOfInterest -> pointOfInterest.serialize(ops)));
-        return (T)ops.createMap((Map)ImmutableMap.of((Object)ops.createString("Records"), (Object)object, (Object)ops.createString("Valid"), (Object)ops.createBoolean(this.valid)));
     }
 
     public void updatePointsOfInterest(Consumer<BiConsumer<BlockPos, PointOfInterestType>> consumer) {
@@ -155,7 +154,7 @@ implements DynamicSerializable {
     }
 
     private /* synthetic */ void method_20352(Short2ObjectMap short2ObjectMap, BlockPos blockPos, PointOfInterestType pointOfInterestType) {
-        short s = ChunkSectionPos.getPackedLocalPos(blockPos);
+        short s = ChunkSectionPos.packLocal(blockPos);
         PointOfInterest pointOfInterest = (PointOfInterest)short2ObjectMap.computeIfAbsent(s, i -> new PointOfInterest(blockPos, pointOfInterestType, this.updateListener));
         this.add(pointOfInterest);
     }

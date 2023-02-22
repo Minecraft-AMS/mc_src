@@ -23,10 +23,10 @@ import net.minecraft.util.Identifier;
 @Environment(value=EnvType.CLIENT)
 public class VillagerEntityRenderer
 extends MobEntityRenderer<VillagerEntity, VillagerResemblingModel<VillagerEntity>> {
-    private static final Identifier VILLAGER_SKIN = new Identifier("textures/entity/villager/villager.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/villager/villager.png");
 
-    public VillagerEntityRenderer(EntityRenderDispatcher entityRenderDispatcher, ReloadableResourceManager reloadableResourceManager) {
-        super(entityRenderDispatcher, new VillagerResemblingModel(0.0f), 0.5f);
+    public VillagerEntityRenderer(EntityRenderDispatcher dispatcher, ReloadableResourceManager reloadableResourceManager) {
+        super(dispatcher, new VillagerResemblingModel(0.0f), 0.5f);
         this.addFeature(new HeadFeatureRenderer<VillagerEntity, VillagerResemblingModel<VillagerEntity>>(this));
         this.addFeature(new VillagerClothingFeatureRenderer<VillagerEntity, VillagerResemblingModel<VillagerEntity>>(this, reloadableResourceManager, "villager"));
         this.addFeature(new VillagerHeldItemFeatureRenderer<VillagerEntity, VillagerResemblingModel<VillagerEntity>>(this));
@@ -34,7 +34,7 @@ extends MobEntityRenderer<VillagerEntity, VillagerResemblingModel<VillagerEntity
 
     @Override
     public Identifier getTexture(VillagerEntity villagerEntity) {
-        return VILLAGER_SKIN;
+        return TEXTURE;
     }
 
     @Override
@@ -42,9 +42,9 @@ extends MobEntityRenderer<VillagerEntity, VillagerResemblingModel<VillagerEntity
         float g = 0.9375f;
         if (villagerEntity.isBaby()) {
             g = (float)((double)g * 0.5);
-            this.shadowSize = 0.25f;
+            this.shadowRadius = 0.25f;
         } else {
-            this.shadowSize = 0.5f;
+            this.shadowRadius = 0.5f;
         }
         matrixStack.scale(g, g, g);
     }

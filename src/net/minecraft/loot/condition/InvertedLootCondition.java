@@ -14,10 +14,12 @@ import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 
 public class InvertedLootCondition
 implements LootCondition {
@@ -25,6 +27,11 @@ implements LootCondition {
 
     private InvertedLootCondition(LootCondition term) {
         this.term = term;
+    }
+
+    @Override
+    public LootConditionType getType() {
+        return LootConditionTypes.INVERTED;
     }
 
     @Override
@@ -38,9 +45,9 @@ implements LootCondition {
     }
 
     @Override
-    public void check(LootTableReporter reporter) {
-        LootCondition.super.check(reporter);
-        this.term.check(reporter);
+    public void validate(LootTableReporter reporter) {
+        LootCondition.super.validate(reporter);
+        this.term.validate(reporter);
     }
 
     public static LootCondition.Builder builder(LootCondition.Builder term) {
@@ -53,12 +60,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<InvertedLootCondition> {
-        public Factory() {
-            super(new Identifier("inverted"), InvertedLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<InvertedLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, InvertedLootCondition invertedLootCondition, JsonSerializationContext jsonSerializationContext) {
             jsonObject.add("term", jsonSerializationContext.serialize((Object)invertedLootCondition.term));
@@ -71,7 +74,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

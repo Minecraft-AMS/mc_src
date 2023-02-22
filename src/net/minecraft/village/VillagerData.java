@@ -2,39 +2,36 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.village;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import java.util.Map;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.village.VillagerProfession;
 import net.minecraft.village.VillagerType;
 
 public class VillagerData {
     private static final int[] LEVEL_BASE_EXPERIENCE = new int[]{0, 10, 70, 150, 250};
+    public static final Codec<VillagerData> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.VILLAGER_TYPE.fieldOf("type").orElseGet(() -> VillagerType.PLAINS).forGetter(villagerData -> villagerData.type), (App)Registry.VILLAGER_PROFESSION.fieldOf("profession").orElseGet(() -> VillagerProfession.NONE).forGetter(villagerData -> villagerData.profession), (App)Codec.INT.fieldOf("level").orElse((Object)1).forGetter(villagerData -> villagerData.level)).apply((Applicative)instance, VillagerData::new));
     private final VillagerType type;
     private final VillagerProfession profession;
     private final int level;
 
-    public VillagerData(VillagerType villagerType, VillagerProfession villagerProfession, int level) {
+    public VillagerData(VillagerType villagerType, VillagerProfession villagerProfession, int i) {
         this.type = villagerType;
         this.profession = villagerProfession;
-        this.level = Math.max(1, level);
-    }
-
-    public VillagerData(Dynamic<?> dynamic) {
-        this(Registry.VILLAGER_TYPE.get(Identifier.tryParse(dynamic.get("type").asString(""))), Registry.VILLAGER_PROFESSION.get(Identifier.tryParse(dynamic.get("profession").asString(""))), dynamic.get("level").asInt(1));
+        this.level = Math.max(1, i);
     }
 
     public VillagerType getType() {
@@ -49,20 +46,16 @@ public class VillagerData {
         return this.level;
     }
 
-    public VillagerData withType(VillagerType villagerType) {
-        return new VillagerData(villagerType, this.profession, this.level);
+    public VillagerData withType(VillagerType type) {
+        return new VillagerData(type, this.profession, this.level);
     }
 
-    public VillagerData withProfession(VillagerProfession villagerProfession) {
-        return new VillagerData(this.type, villagerProfession, this.level);
+    public VillagerData withProfession(VillagerProfession profession) {
+        return new VillagerData(this.type, profession, this.level);
     }
 
     public VillagerData withLevel(int level) {
         return new VillagerData(this.type, this.profession, level);
-    }
-
-    public <T> T serialize(DynamicOps<T> ops) {
-        return (T)ops.createMap((Map)ImmutableMap.of((Object)ops.createString("type"), (Object)ops.createString(Registry.VILLAGER_TYPE.getId(this.type).toString()), (Object)ops.createString("profession"), (Object)ops.createString(Registry.VILLAGER_PROFESSION.getId(this.profession).toString()), (Object)ops.createString("level"), (Object)ops.createInt(this.level)));
     }
 
     @Environment(value=EnvType.CLIENT)

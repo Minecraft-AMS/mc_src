@@ -9,28 +9,34 @@ package net.minecraft.entity.ai.goal;
 import java.util.EnumSet;
 import net.minecraft.entity.ai.TargetFinder;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 public class WanderAroundGoal
 extends Goal {
-    protected final MobEntityWithAi mob;
+    protected final PathAwareEntity mob;
     protected double targetX;
     protected double targetY;
     protected double targetZ;
     protected final double speed;
     protected int chance;
     protected boolean ignoringChance;
+    private boolean field_24463;
 
-    public WanderAroundGoal(MobEntityWithAi mob, double speed) {
+    public WanderAroundGoal(PathAwareEntity mob, double speed) {
         this(mob, speed, 120);
     }
 
-    public WanderAroundGoal(MobEntityWithAi mob, double speed, int chance) {
-        this.mob = mob;
-        this.speed = speed;
-        this.chance = chance;
+    public WanderAroundGoal(PathAwareEntity mob, double speed, int chance) {
+        this(mob, speed, chance, true);
+    }
+
+    public WanderAroundGoal(PathAwareEntity pathAwareEntity, double d, int i, boolean bl) {
+        this.mob = pathAwareEntity;
+        this.speed = d;
+        this.chance = i;
+        this.field_24463 = bl;
         this.setControls(EnumSet.of(Goal.Control.MOVE));
     }
 
@@ -41,7 +47,7 @@ extends Goal {
             return false;
         }
         if (!this.ignoringChance) {
-            if (this.mob.getDespawnCounter() >= 100) {
+            if (this.field_24463 && this.mob.getDespawnCounter() >= 100) {
                 return false;
             }
             if (this.mob.getRandom().nextInt(this.chance) != 0) {

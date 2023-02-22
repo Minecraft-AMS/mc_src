@@ -23,22 +23,22 @@ import net.minecraft.block.entity.LockableContainerBlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.block.enums.ChestType;
 import net.minecraft.client.block.ChestAnimationProgress;
-import net.minecraft.container.Container;
-import net.minecraft.container.GenericContainer;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.DoubleInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Tickable;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -66,31 +66,31 @@ Tickable {
     }
 
     @Override
-    public int getInvSize() {
+    public int size() {
         return 27;
     }
 
     @Override
     protected Text getContainerName() {
-        return new TranslatableText("container.chest", new Object[0]);
+        return new TranslatableText("container.chest");
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.inventory = DefaultedList.ofSize(this.getInvSize(), ItemStack.EMPTY);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
         if (!this.deserializeLootTable(tag)) {
-            Inventories.fromTag(tag, this.inventory);
+            Inventories.readNbt(tag, this.inventory);
         }
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        if (!this.serializeLootTable(tag)) {
-            Inventories.toTag(tag, this.inventory);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        if (!this.serializeLootTable(nbt)) {
+            Inventories.writeNbt(nbt, this.inventory);
         }
-        return tag;
+        return nbt;
     }
 
     @Override
@@ -121,20 +121,20 @@ Tickable {
         }
     }
 
-    public static int tickViewerCount(World world, LockableContainerBlockEntity blockEntity, int ticksOpen, int x, int y, int z, int viewerCount) {
+    public static int tickViewerCount(World world, LockableContainerBlockEntity inventory, int ticksOpen, int x, int y, int z, int viewerCount) {
         if (!world.isClient && viewerCount != 0 && (ticksOpen + x + y + z) % 200 == 0) {
-            viewerCount = ChestBlockEntity.countViewers(world, blockEntity, x, y, z);
+            viewerCount = ChestBlockEntity.countViewers(world, inventory, x, y, z);
         }
         return viewerCount;
     }
 
-    public static int countViewers(World world, LockableContainerBlockEntity container, int ticksOpen, int x, int y) {
+    public static int countViewers(World world, LockableContainerBlockEntity inventory, int x, int y, int z) {
         int i = 0;
         float f = 5.0f;
-        List<PlayerEntity> list = world.getNonSpectatingEntities(PlayerEntity.class, new Box((float)ticksOpen - 5.0f, (float)x - 5.0f, (float)y - 5.0f, (float)(ticksOpen + 1) + 5.0f, (float)(x + 1) + 5.0f, (float)(y + 1) + 5.0f));
+        List<PlayerEntity> list = world.getNonSpectatingEntities(PlayerEntity.class, new Box((float)x - 5.0f, (float)y - 5.0f, (float)z - 5.0f, (float)(x + 1) + 5.0f, (float)(y + 1) + 5.0f, (float)(z + 1) + 5.0f));
         for (PlayerEntity playerEntity : list) {
-            Inventory inventory;
-            if (!(playerEntity.container instanceof GenericContainer) || (inventory = ((GenericContainer)playerEntity.container).getInventory()) != container && (!(inventory instanceof DoubleInventory) || !((DoubleInventory)inventory).isPart(container))) continue;
+            Inventory inventory2;
+            if (!(playerEntity.currentScreenHandler instanceof GenericContainerScreenHandler) || (inventory2 = ((GenericContainerScreenHandler)playerEntity.currentScreenHandler).getInventory()) != inventory && (!(inventory2 instanceof DoubleInventory) || !((DoubleInventory)inventory2).isPart(inventory))) continue;
             ++i;
         }
         return i;
@@ -157,16 +157,16 @@ Tickable {
     }
 
     @Override
-    public boolean onBlockAction(int i, int j) {
-        if (i == 1) {
-            this.viewerCount = j;
+    public boolean onSyncedBlockEvent(int type, int data) {
+        if (type == 1) {
+            this.viewerCount = data;
             return true;
         }
-        return super.onBlockAction(i, j);
+        return super.onSyncedBlockEvent(type, data);
     }
 
     @Override
-    public void onInvOpen(PlayerEntity player) {
+    public void onOpen(PlayerEntity player) {
         if (!player.isSpectator()) {
             if (this.viewerCount < 0) {
                 this.viewerCount = 0;
@@ -177,7 +177,7 @@ Tickable {
     }
 
     @Override
-    public void onInvClose(PlayerEntity player) {
+    public void onClose(PlayerEntity player) {
         if (!player.isSpectator()) {
             --this.viewerCount;
             this.onInvOpenOrClose();
@@ -187,7 +187,7 @@ Tickable {
     protected void onInvOpenOrClose() {
         Block block = this.getCachedState().getBlock();
         if (block instanceof ChestBlock) {
-            this.world.addBlockAction(this.pos, block, 1, this.viewerCount);
+            this.world.addSyncedBlockEvent(this.pos, block, 1, this.viewerCount);
             this.world.updateNeighborsAlways(this.pos, block);
         }
     }
@@ -204,8 +204,8 @@ Tickable {
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public float getAnimationProgress(float f) {
-        return MathHelper.lerp(f, this.lastAnimationAngle, this.animationAngle);
+    public float getAnimationProgress(float tickDelta) {
+        return MathHelper.lerp(tickDelta, this.lastAnimationAngle, this.animationAngle);
     }
 
     public static int getPlayersLookingInChestCount(BlockView world, BlockPos pos) {
@@ -224,8 +224,8 @@ Tickable {
     }
 
     @Override
-    protected Container createContainer(int i, PlayerInventory playerInventory) {
-        return GenericContainer.createGeneric9x3(i, playerInventory, this);
+    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, this);
     }
 }
 

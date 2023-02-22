@@ -6,6 +6,7 @@
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.opengl.ARBFramebufferObject
+ *  org.lwjgl.opengl.EXTFramebufferBlit
  *  org.lwjgl.opengl.EXTFramebufferObject
  *  org.lwjgl.opengl.GL11
  *  org.lwjgl.opengl.GL13
@@ -29,12 +30,12 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.util.GlAllocationUtils;
 import net.minecraft.client.util.Untracker;
-import net.minecraft.client.util.math.Matrix4f;
-import net.minecraft.client.util.math.Vector3f;
-import net.minecraft.client.util.math.Vector4f;
-import net.minecraft.util.Util;
+import net.minecraft.util.math.Matrix4f;
+import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.Vector4f;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.ARBFramebufferObject;
+import org.lwjgl.opengl.EXTFramebufferBlit;
 import org.lwjgl.opengl.EXTFramebufferObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
@@ -59,11 +60,9 @@ public class GlStateManager {
     private static final PolygonOffsetState POLY_OFFSET = new PolygonOffsetState();
     private static final LogicOpState COLOR_LOGIC = new LogicOpState();
     private static final TexGenState TEX_GEN = new TexGenState();
-    private static final ClearState CLEAR = new ClearState();
     private static final StencilState STENCIL = new StencilState();
+    private static final class_5518 field_26839 = new class_5518();
     private static final FloatBuffer colorBuffer = GlAllocationUtils.allocateFloatBuffer(4);
-    private static final Vector3f DIFFUSE_LIGHT_0_POSITION = Util.make(new Vector3f(0.2f, 1.0f, -0.7f), Vector3f::normalize);
-    private static final Vector3f DIFFUSE_LIGHT_1_POSITION = Util.make(new Vector3f(-0.2f, 1.0f, 0.7f), Vector3f::normalize);
     private static int activeTexture;
     private static final Texture2DState[] TEXTURES;
     private static int modelShadeMode;
@@ -71,6 +70,7 @@ public class GlStateManager {
     private static final ColorMask COLOR_MASK;
     private static final Color4 COLOR;
     private static FBOMode fboMode;
+    private static FBOBlitMode fboBlitMode;
 
     @Deprecated
     public static void pushLightingAttributes() {
@@ -170,6 +170,21 @@ public class GlStateManager {
         GL11.glNormal3f((float)nx, (float)ny, (float)nz);
     }
 
+    public static void method_31318() {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        GlStateManager.field_26839.field_26840.disable();
+    }
+
+    public static void method_31319() {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        GlStateManager.field_26839.field_26840.enable();
+    }
+
+    public static void method_31317(int i, int j, int k, int l) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        GL20.glScissor((int)i, (int)j, (int)k, (int)l);
+    }
+
     public static void disableDepthTest() {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         GlStateManager.DEPTH.capState.disable();
@@ -237,6 +252,7 @@ public class GlStateManager {
 
     public static String initFramebufferSupport(GLCapabilities capabilities) {
         RenderSystem.assertThread(RenderSystem::isInInitPhase);
+        fboBlitMode = capabilities.OpenGL30 ? FBOBlitMode.BASE : (capabilities.GL_EXT_framebuffer_blit ? FBOBlitMode.EXT : FBOBlitMode.NONE);
         if (capabilities.OpenGL30) {
             fboMode = FBOMode.BASE;
             FramebufferInfo.FRAME_BUFFER = 36160;
@@ -424,6 +440,11 @@ public class GlStateManager {
         GL15.glDeleteBuffers((int)buffer);
     }
 
+    public static void copyTexSubImage2d(int i, int j, int k, int l, int m, int n, int o, int p) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        GL20.glCopyTexSubImage2D((int)i, (int)j, (int)k, (int)l, (int)m, (int)n, (int)o, (int)p);
+    }
+
     public static void bindFramebuffer(int target, int framebuffer) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         switch (fboMode) {
@@ -441,36 +462,35 @@ public class GlStateManager {
         }
     }
 
-    public static void bindRenderbuffer(int target, int renderbuffer) {
+    public static int getFramebufferDepthAttachment() {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         switch (fboMode) {
             case BASE: {
-                GL30.glBindRenderbuffer((int)target, (int)renderbuffer);
-                break;
+                if (GL30.glGetFramebufferAttachmentParameteri((int)36160, (int)36096, (int)36048) != 5890) break;
+                return GL30.glGetFramebufferAttachmentParameteri((int)36160, (int)36096, (int)36049);
             }
             case ARB: {
-                ARBFramebufferObject.glBindRenderbuffer((int)target, (int)renderbuffer);
-                break;
+                if (ARBFramebufferObject.glGetFramebufferAttachmentParameteri((int)36160, (int)36096, (int)36048) != 5890) break;
+                return ARBFramebufferObject.glGetFramebufferAttachmentParameteri((int)36160, (int)36096, (int)36049);
             }
             case EXT: {
-                EXTFramebufferObject.glBindRenderbufferEXT((int)target, (int)renderbuffer);
+                if (EXTFramebufferObject.glGetFramebufferAttachmentParameteriEXT((int)36160, (int)36096, (int)36048) != 5890) break;
+                return EXTFramebufferObject.glGetFramebufferAttachmentParameteriEXT((int)36160, (int)36096, (int)36049);
             }
         }
+        return 0;
     }
 
-    public static void deleteRenderbuffers(int renderbuffers) {
+    public static void blitFramebuffer(int i, int j, int k, int l, int m, int n, int o, int p, int q, int r) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
-        switch (fboMode) {
+        switch (fboBlitMode) {
             case BASE: {
-                GL30.glDeleteRenderbuffers((int)renderbuffers);
-                break;
-            }
-            case ARB: {
-                ARBFramebufferObject.glDeleteRenderbuffers((int)renderbuffers);
+                GL30.glBlitFramebuffer((int)i, (int)j, (int)k, (int)l, (int)m, (int)n, (int)o, (int)p, (int)q, (int)r);
                 break;
             }
             case EXT: {
-                EXTFramebufferObject.glDeleteRenderbuffersEXT((int)renderbuffers);
+                EXTFramebufferBlit.glBlitFramebufferEXT((int)i, (int)j, (int)k, (int)l, (int)m, (int)n, (int)o, (int)p, (int)q, (int)r);
+                break;
             }
         }
     }
@@ -508,56 +528,6 @@ public class GlStateManager {
         return -1;
     }
 
-    public static int genRenderbuffers() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
-        switch (fboMode) {
-            case BASE: {
-                return GL30.glGenRenderbuffers();
-            }
-            case ARB: {
-                return ARBFramebufferObject.glGenRenderbuffers();
-            }
-            case EXT: {
-                return EXTFramebufferObject.glGenRenderbuffersEXT();
-            }
-        }
-        return -1;
-    }
-
-    public static void renderbufferStorage(int target, int internalFormat, int width, int height) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
-        switch (fboMode) {
-            case BASE: {
-                GL30.glRenderbufferStorage((int)target, (int)internalFormat, (int)width, (int)height);
-                break;
-            }
-            case ARB: {
-                ARBFramebufferObject.glRenderbufferStorage((int)target, (int)internalFormat, (int)width, (int)height);
-                break;
-            }
-            case EXT: {
-                EXTFramebufferObject.glRenderbufferStorageEXT((int)target, (int)internalFormat, (int)width, (int)height);
-            }
-        }
-    }
-
-    public static void framebufferRenderbuffer(int target, int attachment, int renderbufferTarget, int renderbuffer) {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
-        switch (fboMode) {
-            case BASE: {
-                GL30.glFramebufferRenderbuffer((int)target, (int)attachment, (int)renderbufferTarget, (int)renderbuffer);
-                break;
-            }
-            case ARB: {
-                ARBFramebufferObject.glFramebufferRenderbuffer((int)target, (int)attachment, (int)renderbufferTarget, (int)renderbuffer);
-                break;
-            }
-            case EXT: {
-                EXTFramebufferObject.glFramebufferRenderbufferEXT((int)target, (int)attachment, (int)renderbufferTarget, (int)renderbuffer);
-            }
-        }
-    }
-
     public static int checkFramebufferStatus(int target) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         switch (fboMode) {
@@ -589,6 +559,11 @@ public class GlStateManager {
                 EXTFramebufferObject.glFramebufferTexture2DEXT((int)target, (int)attachment, (int)textureTarget, (int)texture, (int)level);
             }
         }
+    }
+
+    @Deprecated
+    public static int getActiveBoundTexture() {
+        return GlStateManager.TEXTURES[GlStateManager.activeTexture].boundTexture;
     }
 
     public static void activeTextureUntracked(int texture) {
@@ -684,21 +659,21 @@ public class GlStateManager {
         GlStateManager.texEnv(8960, 34200, 770);
     }
 
-    public static void setupLevelDiffuseLighting(Matrix4f modelMatrix) {
+    public static void setupLevelDiffuseLighting(Vec3f vec3f, Vec3f vec3f2, Matrix4f matrix4f) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         GlStateManager.pushMatrix();
         GlStateManager.loadIdentity();
         GlStateManager.enableLight(0);
         GlStateManager.enableLight(1);
-        Vector4f vector4f = new Vector4f(DIFFUSE_LIGHT_0_POSITION);
-        vector4f.transform(modelMatrix);
+        Vector4f vector4f = new Vector4f(vec3f);
+        vector4f.transform(matrix4f);
         GlStateManager.light(16384, 4611, GlStateManager.getBuffer(vector4f.getX(), vector4f.getY(), vector4f.getZ(), 0.0f));
         float f = 0.6f;
         GlStateManager.light(16384, 4609, GlStateManager.getBuffer(0.6f, 0.6f, 0.6f, 1.0f));
         GlStateManager.light(16384, 4608, GlStateManager.getBuffer(0.0f, 0.0f, 0.0f, 1.0f));
         GlStateManager.light(16384, 4610, GlStateManager.getBuffer(0.0f, 0.0f, 0.0f, 1.0f));
-        Vector4f vector4f2 = new Vector4f(DIFFUSE_LIGHT_1_POSITION);
-        vector4f2.transform(modelMatrix);
+        Vector4f vector4f2 = new Vector4f(vec3f2);
+        vector4f2.transform(matrix4f);
         GlStateManager.light(16385, 4611, GlStateManager.getBuffer(vector4f2.getX(), vector4f2.getY(), vector4f2.getZ(), 0.0f));
         GlStateManager.light(16385, 4609, GlStateManager.getBuffer(0.6f, 0.6f, 0.6f, 1.0f));
         GlStateManager.light(16385, 4608, GlStateManager.getBuffer(0.0f, 0.0f, 0.0f, 1.0f));
@@ -709,26 +684,26 @@ public class GlStateManager {
         GlStateManager.popMatrix();
     }
 
-    public static void method_24221() {
+    public static void setupGuiFlatDiffuseLighting(Vec3f vec3f, Vec3f vec3f2) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         Matrix4f matrix4f = new Matrix4f();
         matrix4f.loadIdentity();
         matrix4f.multiply(Matrix4f.scale(1.0f, -1.0f, 1.0f));
-        matrix4f.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(-22.5f));
-        matrix4f.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(135.0f));
-        GlStateManager.setupLevelDiffuseLighting(matrix4f);
+        matrix4f.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-22.5f));
+        matrix4f.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(135.0f));
+        GlStateManager.setupLevelDiffuseLighting(vec3f, vec3f2, matrix4f);
     }
 
-    public static void method_24222() {
+    public static void setupGui3dDiffuseLighting(Vec3f vec3f, Vec3f vec3f2) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         Matrix4f matrix4f = new Matrix4f();
         matrix4f.loadIdentity();
-        matrix4f.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(62.0f));
-        matrix4f.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(185.5f));
+        matrix4f.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(62.0f));
+        matrix4f.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(185.5f));
         matrix4f.multiply(Matrix4f.scale(1.0f, -1.0f, 1.0f));
-        matrix4f.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(-22.5f));
-        matrix4f.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(135.0f));
-        GlStateManager.setupLevelDiffuseLighting(matrix4f);
+        matrix4f.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-22.5f));
+        matrix4f.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(135.0f));
+        GlStateManager.setupLevelDiffuseLighting(vec3f, vec3f2, matrix4f);
     }
 
     private static FloatBuffer getBuffer(float a, float b, float c, float d) {
@@ -757,9 +732,9 @@ public class GlStateManager {
     }
 
     public static void mulTextureByProjModelView() {
-        GlStateManager.texEnv(2983, MATRIX_BUFFER);
+        GlStateManager.getFloat(2983, MATRIX_BUFFER);
         GlStateManager.multMatrix(MATRIX_BUFFER);
-        GlStateManager.texEnv(2982, MATRIX_BUFFER);
+        GlStateManager.getFloat(2982, MATRIX_BUFFER);
         GlStateManager.multMatrix(MATRIX_BUFFER);
     }
 
@@ -972,9 +947,14 @@ public class GlStateManager {
         return GL11.glGetTexLevelParameteri((int)target, (int)level, (int)pname);
     }
 
-    public static int getTexLevelParameter() {
+    public static int genTextures() {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         return GL11.glGenTextures();
+    }
+
+    public static void method_30498(int[] is) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        GL11.glGenTextures((int[])is);
     }
 
     public static void deleteTexture(int texture) {
@@ -984,6 +964,17 @@ public class GlStateManager {
             if (texture2DState.boundTexture != texture) continue;
             texture2DState.boundTexture = -1;
         }
+    }
+
+    public static void method_30499(int[] is) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
+        for (Texture2DState texture2DState : TEXTURES) {
+            for (int i : is) {
+                if (texture2DState.boundTexture != i) continue;
+                texture2DState.boundTexture = -1;
+            }
+        }
+        GL11.glDeleteTextures((int[])is);
     }
 
     public static void bindTexture(int texture) {
@@ -1080,29 +1071,17 @@ public class GlStateManager {
 
     public static void clearDepth(double depth) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
-        if (depth != GlStateManager.CLEAR.clearDepth) {
-            GlStateManager.CLEAR.clearDepth = depth;
-            GL11.glClearDepth((double)depth);
-        }
+        GL11.glClearDepth((double)depth);
     }
 
     public static void clearColor(float red, float green, float blue, float alpha) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
-        if (red != GlStateManager.CLEAR.clearColor.red || green != GlStateManager.CLEAR.clearColor.green || blue != GlStateManager.CLEAR.clearColor.blue || alpha != GlStateManager.CLEAR.clearColor.alpha) {
-            GlStateManager.CLEAR.clearColor.red = red;
-            GlStateManager.CLEAR.clearColor.green = green;
-            GlStateManager.CLEAR.clearColor.blue = blue;
-            GlStateManager.CLEAR.clearColor.alpha = alpha;
-            GL11.glClearColor((float)red, (float)green, (float)blue, (float)alpha);
-        }
+        GL11.glClearColor((float)red, (float)green, (float)blue, (float)alpha);
     }
 
     public static void clearStencil(int stencil) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        if (stencil != GlStateManager.CLEAR.clearStencil) {
-            GlStateManager.CLEAR.clearStencil = stencil;
-            GL11.glClearStencil((int)stencil);
-        }
+        GL11.glClearStencil((int)stencil);
     }
 
     public static void clear(int mask, boolean getError) {
@@ -1138,7 +1117,7 @@ public class GlStateManager {
     }
 
     @Deprecated
-    public static void texEnv(int pname, FloatBuffer params) {
+    public static void getFloat(int pname, FloatBuffer params) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         GL11.glGetFloatv((int)pname, (FloatBuffer)params);
     }
@@ -1188,7 +1167,7 @@ public class GlStateManager {
     @Deprecated
     public static void multMatrix(Matrix4f matrix) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        matrix.writeToBuffer(MATRIX_BUFFER);
+        matrix.writeRowFirst(MATRIX_BUFFER);
         MATRIX_BUFFER.rewind();
         GlStateManager.multMatrix(MATRIX_BUFFER);
     }
@@ -1305,8 +1284,12 @@ public class GlStateManager {
         return GL11.glGetInteger((int)pname);
     }
 
+    public static boolean supportsGl30() {
+        return fboBlitMode != FBOBlitMode.NONE;
+    }
+
     static {
-        TEXTURES = (Texture2DState[])IntStream.range(0, 8).mapToObj(i -> new Texture2DState()).toArray(Texture2DState[]::new);
+        TEXTURES = (Texture2DState[])IntStream.range(0, 12).mapToObj(i -> new Texture2DState()).toArray(Texture2DState[]::new);
         modelShadeMode = 7425;
         RESCALE_NORMAL = new CapabilityTracker(32826);
         COLOR_MASK = new ColorMask();
@@ -1330,10 +1313,10 @@ public class GlStateManager {
         SRC_COLOR(768),
         ZERO(0);
 
-        public final int value;
+        public final int field_22528;
 
         private DstFactor(int j) {
-            this.value = j;
+            this.field_22528 = j;
         }
     }
 
@@ -1355,10 +1338,10 @@ public class GlStateManager {
         SRC_COLOR(768),
         ZERO(0);
 
-        public final int value;
+        public final int field_22545;
 
         private SrcFactor(int j) {
-            this.value = j;
+            this.field_22545 = j;
         }
     }
 
@@ -1459,6 +1442,14 @@ public class GlStateManager {
     }
 
     @Environment(value=EnvType.CLIENT)
+    static class class_5518 {
+        public final CapabilityTracker field_26840 = new CapabilityTracker(3089);
+
+        private class_5518() {
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
     static class StencilState {
         public final StencilSubState subState = new StencilSubState();
         public int mask = -1;
@@ -1477,16 +1468,6 @@ public class GlStateManager {
         public int mask = -1;
 
         private StencilSubState() {
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    static class ClearState {
-        public double clearDepth = 1.0;
-        public final Color4 clearColor = new Color4(0.0f, 0.0f, 0.0f, 0.0f);
-        public int clearStencil;
-
-        private ClearState() {
         }
     }
 
@@ -1583,6 +1564,14 @@ public class GlStateManager {
 
         private Texture2DState() {
         }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static enum FBOBlitMode {
+        BASE,
+        EXT,
+        NONE;
+
     }
 
     @Environment(value=EnvType.CLIENT)

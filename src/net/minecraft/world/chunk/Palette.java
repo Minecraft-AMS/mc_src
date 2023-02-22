@@ -8,16 +8,17 @@
  */
 package net.minecraft.world.chunk;
 
+import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.network.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 public interface Palette<T> {
     public int getIndex(T var1);
 
-    public boolean accepts(T var1);
+    public boolean accepts(Predicate<T> var1);
 
     @Nullable
     public T getByIndex(int var1);
@@ -29,6 +30,6 @@ public interface Palette<T> {
 
     public int getPacketSize();
 
-    public void fromTag(ListTag var1);
+    public void readNbt(NbtList var1);
 }
 

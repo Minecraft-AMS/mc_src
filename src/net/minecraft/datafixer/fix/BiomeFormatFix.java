@@ -24,8 +24,8 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class BiomeFormatFix
 extends DataFix {
-    public BiomeFormatFix(Schema schema, boolean changesType) {
-        super(schema, changesType);
+    public BiomeFormatFix(Schema outputSchema, boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     protected TypeRewriteRule makeRule() {
@@ -33,7 +33,7 @@ extends DataFix {
         OpticFinder opticFinder = type.findField("Level");
         return this.fixTypeEverywhereTyped("Leaves fix", type, typed2 -> typed2.updateTyped(opticFinder, typed -> typed.update(DSL.remainderFinder(), dynamic -> {
             int i;
-            Optional optional = dynamic.get("Biomes").asIntStreamOpt();
+            Optional optional = dynamic.get("Biomes").asIntStreamOpt().result();
             if (!optional.isPresent()) {
                 return dynamic;
             }

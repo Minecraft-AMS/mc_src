@@ -2,23 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.JsonDeserializationContext
- *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.advancement.criterion;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.CriterionConditions;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateSerializer;
+import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class ChangedDimensionCriterion
@@ -31,39 +31,39 @@ extends AbstractCriterion<Conditions> {
     }
 
     @Override
-    public Conditions conditionsFromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
-        DimensionType dimensionType = jsonObject.has("from") ? DimensionType.byId(new Identifier(JsonHelper.getString(jsonObject, "from"))) : null;
-        DimensionType dimensionType2 = jsonObject.has("to") ? DimensionType.byId(new Identifier(JsonHelper.getString(jsonObject, "to"))) : null;
-        return new Conditions(dimensionType, dimensionType2);
+    public Conditions conditionsFromJson(JsonObject jsonObject, EntityPredicate.Extended extended, AdvancementEntityPredicateDeserializer advancementEntityPredicateDeserializer) {
+        RegistryKey<World> registryKey = jsonObject.has("from") ? RegistryKey.of(Registry.WORLD_KEY, new Identifier(JsonHelper.getString(jsonObject, "from"))) : null;
+        RegistryKey<World> registryKey2 = jsonObject.has("to") ? RegistryKey.of(Registry.WORLD_KEY, new Identifier(JsonHelper.getString(jsonObject, "to"))) : null;
+        return new Conditions(extended, registryKey, registryKey2);
     }
 
-    public void trigger(ServerPlayerEntity player, DimensionType from, DimensionType to) {
-        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(from, to));
+    public void trigger(ServerPlayerEntity player, RegistryKey<World> from, RegistryKey<World> to) {
+        this.test(player, conditions -> conditions.matches(from, to));
     }
 
     @Override
-    public /* synthetic */ CriterionConditions conditionsFromJson(JsonObject obj, JsonDeserializationContext context) {
-        return this.conditionsFromJson(obj, context);
+    public /* synthetic */ AbstractCriterionConditions conditionsFromJson(JsonObject obj, EntityPredicate.Extended playerPredicate, AdvancementEntityPredicateDeserializer predicateDeserializer) {
+        return this.conditionsFromJson(obj, playerPredicate, predicateDeserializer);
     }
 
     public static class Conditions
     extends AbstractCriterionConditions {
         @Nullable
-        private final DimensionType from;
+        private final RegistryKey<World> from;
         @Nullable
-        private final DimensionType to;
+        private final RegistryKey<World> to;
 
-        public Conditions(@Nullable DimensionType from, @Nullable DimensionType to) {
-            super(ID);
+        public Conditions(EntityPredicate.Extended player, @Nullable RegistryKey<World> from, @Nullable RegistryKey<World> to) {
+            super(ID, player);
             this.from = from;
             this.to = to;
         }
 
-        public static Conditions to(DimensionType to) {
-            return new Conditions(null, to);
+        public static Conditions to(RegistryKey<World> to) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, null, to);
         }
 
-        public boolean matches(DimensionType from, DimensionType to) {
+        public boolean matches(RegistryKey<World> from, RegistryKey<World> to) {
             if (this.from != null && this.from != from) {
                 return false;
             }
@@ -71,13 +71,13 @@ extends AbstractCriterion<Conditions> {
         }
 
         @Override
-        public JsonElement toJson() {
-            JsonObject jsonObject = new JsonObject();
+        public JsonObject toJson(AdvancementEntityPredicateSerializer predicateSerializer) {
+            JsonObject jsonObject = super.toJson(predicateSerializer);
             if (this.from != null) {
-                jsonObject.addProperty("from", DimensionType.getId(this.from).toString());
+                jsonObject.addProperty("from", this.from.getValue().toString());
             }
             if (this.to != null) {
-                jsonObject.addProperty("to", DimensionType.getId(this.to).toString());
+                jsonObject.addProperty("to", this.to.getValue().toString());
             }
             return jsonObject;
         }

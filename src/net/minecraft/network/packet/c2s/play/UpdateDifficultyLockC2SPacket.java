@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class UpdateDifficultyLockC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -22,8 +22,8 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public UpdateDifficultyLockC2SPacket(boolean bl) {
-        this.difficultyLocked = bl;
+    public UpdateDifficultyLockC2SPacket(boolean difficultyLocked) {
+        this.difficultyLocked = difficultyLocked;
     }
 
     @Override

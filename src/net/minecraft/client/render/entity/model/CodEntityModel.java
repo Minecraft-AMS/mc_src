@@ -25,7 +25,7 @@ extends CompositeEntityModel<T> {
     private final ModelPart face;
     private final ModelPart rightFin;
     private final ModelPart leftFin;
-    private final ModelPart tail;
+    private final ModelPart tailFin;
 
     public CodEntityModel() {
         this.textureWidth = 32;
@@ -48,9 +48,9 @@ extends CompositeEntityModel<T> {
         this.leftFin.addCuboid(0.0f, 0.0f, -1.0f, 2.0f, 0.0f, 2.0f);
         this.leftFin.setPivot(1.0f, 23.0f, 0.0f);
         this.leftFin.roll = 0.7853982f;
-        this.tail = new ModelPart(this, 22, 3);
-        this.tail.addCuboid(0.0f, -2.0f, 0.0f, 0.0f, 4.0f, 4.0f);
-        this.tail.setPivot(0.0f, 22.0f, 7.0f);
+        this.tailFin = new ModelPart(this, 22, 3);
+        this.tailFin.addCuboid(0.0f, -2.0f, 0.0f, 0.0f, 4.0f, 4.0f);
+        this.tailFin.setPivot(0.0f, 22.0f, 7.0f);
         this.topFin = new ModelPart(this, 20, -6);
         this.topFin.addCuboid(0.0f, -1.0f, -1.0f, 0.0f, 1.0f, 6.0f);
         this.topFin.setPivot(0.0f, 20.0f, 0.0f);
@@ -58,16 +58,16 @@ extends CompositeEntityModel<T> {
 
     @Override
     public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.body, (Object)this.head, (Object)this.face, (Object)this.rightFin, (Object)this.leftFin, (Object)this.tail, (Object)this.topFin);
+        return ImmutableList.of((Object)this.body, (Object)this.head, (Object)this.face, (Object)this.rightFin, (Object)this.leftFin, (Object)this.tailFin, (Object)this.topFin);
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
+    public void setAngles(T entity, float limbAngle, float limbDistance, float animationProgress, float headYaw, float headPitch) {
         float f = 1.0f;
         if (!((Entity)entity).isTouchingWater()) {
             f = 1.5f;
         }
-        this.tail.yaw = -f * 0.45f * MathHelper.sin(0.6f * customAngle);
+        this.tailFin.yaw = -f * 0.45f * MathHelper.sin(0.6f * animationProgress);
     }
 }
 

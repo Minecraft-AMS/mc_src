@@ -13,8 +13,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 
@@ -26,9 +26,13 @@ implements Packet<ClientPlayPacketListener> {
     public BlockUpdateS2CPacket() {
     }
 
+    public BlockUpdateS2CPacket(BlockPos blockPos, BlockState blockState) {
+        this.pos = blockPos;
+        this.state = blockState;
+    }
+
     public BlockUpdateS2CPacket(BlockView world, BlockPos pos) {
-        this.pos = pos;
-        this.state = world.getBlockState(pos);
+        this(pos, world.getBlockState(pos));
     }
 
     @Override

@@ -8,19 +8,19 @@
 package net.minecraft.server.network;
 
 import java.util.Objects;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.CommandBlock;
 import net.minecraft.block.JigsawBlock;
 import net.minecraft.block.StructureBlock;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.container.NameableContainerFactory;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.s2c.play.PlayerActionResponseS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
+import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
@@ -39,6 +39,7 @@ public class ServerPlayerInteractionManager {
     public ServerWorld world;
     public ServerPlayerEntity player;
     private GameMode gameMode = GameMode.NOT_SET;
+    private GameMode previousGameMode = GameMode.NOT_SET;
     private boolean mining;
     private int startMiningTime;
     private BlockPos miningPos = BlockPos.ORIGIN;
@@ -53,15 +54,24 @@ public class ServerPlayerInteractionManager {
     }
 
     public void setGameMode(GameMode gameMode) {
+        this.setGameMode(gameMode, gameMode != this.gameMode ? this.gameMode : this.previousGameMode);
+    }
+
+    public void setGameMode(GameMode gameMode, GameMode previousGameMode) {
+        this.previousGameMode = previousGameMode;
         this.gameMode = gameMode;
-        gameMode.setAbilitites(this.player.abilities);
+        gameMode.setAbilities(this.player.abilities);
         this.player.sendAbilitiesUpdate();
         this.player.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_GAME_MODE, this.player));
-        this.world.updatePlayersSleeping();
+        this.world.updateSleepingPlayers();
     }
 
     public GameMode getGameMode() {
         return this.gameMode;
+    }
+
+    public GameMode getPreviousGameMode() {
+        return this.previousGameMode;
     }
 
     public boolean isSurvivalLike() {
@@ -104,12 +114,12 @@ public class ServerPlayerInteractionManager {
         }
     }
 
-    private float continueMining(BlockState blockState, BlockPos blockPos, int i) {
+    private float continueMining(BlockState state, BlockPos pos, int i) {
         int j = this.tickCounter - i;
-        float f = blockState.calcBlockBreakingDelta(this.player, this.player.world, blockPos) * (float)(j + 1);
+        float f = state.calcBlockBreakingDelta(this.player, this.player.world, pos) * (float)(j + 1);
         int k = (int)(f * 10.0f);
         if (k != this.blockBreakingProgress) {
-            this.world.setBlockBreakingInfo(this.player.getEntityId(), blockPos, k);
+            this.world.setBlockBreakingInfo(this.player.getEntityId(), pos, k);
             this.blockBreakingProgress = k;
         }
         return f;
@@ -134,18 +144,13 @@ public class ServerPlayerInteractionManager {
                 return;
             }
             if (this.isCreative()) {
-                if (!this.world.extinguishFire(null, pos, direction)) {
-                    this.finishMining(pos, action, "creative destroy");
-                } else {
-                    this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, true, "fire put out"));
-                }
+                this.finishMining(pos, action, "creative destroy");
                 return;
             }
-            if (this.player.canMine(this.world, pos, this.gameMode)) {
+            if (this.player.isBlockBreakingRestricted(this.world, pos, this.gameMode)) {
                 this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, false, "block action restricted"));
                 return;
             }
-            this.world.extinguishFire(null, pos, direction);
             this.startMiningTime = this.tickCounter;
             float h = 1.0f;
             BlockState blockState = this.world.getBlockState(pos);
@@ -199,47 +204,47 @@ public class ServerPlayerInteractionManager {
         }
     }
 
-    public void finishMining(BlockPos blockPos, PlayerActionC2SPacket.Action action, String reason) {
-        if (this.tryBreakBlock(blockPos)) {
-            this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(blockPos, this.world.getBlockState(blockPos), action, true, reason));
+    public void finishMining(BlockPos pos, PlayerActionC2SPacket.Action action, String reason) {
+        if (this.tryBreakBlock(pos)) {
+            this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, true, reason));
         } else {
-            this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(blockPos, this.world.getBlockState(blockPos), action, false, reason));
+            this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, false, reason));
         }
     }
 
-    public boolean tryBreakBlock(BlockPos blockPos) {
-        BlockState blockState = this.world.getBlockState(blockPos);
-        if (!this.player.getMainHandStack().getItem().canMine(blockState, this.world, blockPos, this.player)) {
+    public boolean tryBreakBlock(BlockPos pos) {
+        BlockState blockState = this.world.getBlockState(pos);
+        if (!this.player.getMainHandStack().getItem().canMine(blockState, this.world, pos, this.player)) {
             return false;
         }
-        BlockEntity blockEntity = this.world.getBlockEntity(blockPos);
+        BlockEntity blockEntity = this.world.getBlockEntity(pos);
         Block block = blockState.getBlock();
         if ((block instanceof CommandBlock || block instanceof StructureBlock || block instanceof JigsawBlock) && !this.player.isCreativeLevelTwoOp()) {
-            this.world.updateListeners(blockPos, blockState, blockState, 3);
+            this.world.updateListeners(pos, blockState, blockState, 3);
             return false;
         }
-        if (this.player.canMine(this.world, blockPos, this.gameMode)) {
+        if (this.player.isBlockBreakingRestricted(this.world, pos, this.gameMode)) {
             return false;
         }
-        block.onBreak(this.world, blockPos, blockState, this.player);
-        boolean bl = this.world.removeBlock(blockPos, false);
+        block.onBreak(this.world, pos, blockState, this.player);
+        boolean bl = this.world.removeBlock(pos, false);
         if (bl) {
-            block.onBroken(this.world, blockPos, blockState);
+            block.onBroken(this.world, pos, blockState);
         }
         if (this.isCreative()) {
             return true;
         }
         ItemStack itemStack = this.player.getMainHandStack();
         ItemStack itemStack2 = itemStack.copy();
-        boolean bl2 = this.player.isUsingEffectiveTool(blockState);
-        itemStack.postMine(this.world, blockState, blockPos, this.player);
+        boolean bl2 = this.player.canHarvest(blockState);
+        itemStack.postMine(this.world, blockState, pos, this.player);
         if (bl && bl2) {
-            block.afterBreak(this.world, this.player, blockPos, blockState, blockEntity, itemStack2);
+            block.afterBreak(this.world, this.player, pos, blockState, blockEntity, itemStack2);
         }
         return true;
     }
 
-    public ActionResult interactItem(PlayerEntity player, World world, ItemStack stack, Hand hand) {
+    public ActionResult interactItem(ServerPlayerEntity player, World world, ItemStack stack, Hand hand) {
         if (this.gameMode == GameMode.SPECTATOR) {
             return ActionResult.PASS;
         }
@@ -267,27 +272,29 @@ public class ServerPlayerInteractionManager {
             player.setStackInHand(hand, ItemStack.EMPTY);
         }
         if (!player.isUsingItem()) {
-            ((ServerPlayerEntity)player).openContainer(player.playerContainer);
+            player.refreshScreenHandler(player.playerScreenHandler);
         }
         return typedActionResult.getResult();
     }
 
-    public ActionResult interactBlock(PlayerEntity player, World world, ItemStack stack, Hand hand, BlockHitResult hitResult) {
+    public ActionResult interactBlock(ServerPlayerEntity player, World world, ItemStack stack, Hand hand, BlockHitResult hitResult) {
+        ActionResult actionResult2;
         ActionResult actionResult;
-        boolean bl2;
         BlockPos blockPos = hitResult.getBlockPos();
         BlockState blockState = world.getBlockState(blockPos);
         if (this.gameMode == GameMode.SPECTATOR) {
-            NameableContainerFactory nameableContainerFactory = blockState.createContainerFactory(world, blockPos);
-            if (nameableContainerFactory != null) {
-                player.openContainer(nameableContainerFactory);
+            NamedScreenHandlerFactory namedScreenHandlerFactory = blockState.createScreenHandlerFactory(world, blockPos);
+            if (namedScreenHandlerFactory != null) {
+                player.openHandledScreen(namedScreenHandlerFactory);
                 return ActionResult.SUCCESS;
             }
             return ActionResult.PASS;
         }
         boolean bl = !player.getMainHandStack().isEmpty() || !player.getOffHandStack().isEmpty();
-        boolean bl3 = bl2 = player.shouldCancelInteraction() && bl;
+        boolean bl2 = player.shouldCancelInteraction() && bl;
+        ItemStack itemStack = stack.copy();
         if (!bl2 && (actionResult = blockState.onUse(world, player, hand, hitResult)).isAccepted()) {
+            Criteria.ITEM_USED_ON_BLOCK.test(player, blockPos, itemStack);
             return actionResult;
         }
         if (stack.isEmpty() || player.getItemCooldownManager().isCoolingDown(stack.getItem())) {
@@ -296,11 +303,15 @@ public class ServerPlayerInteractionManager {
         ItemUsageContext itemUsageContext = new ItemUsageContext(player, hand, hitResult);
         if (this.isCreative()) {
             int i = stack.getCount();
-            ActionResult actionResult2 = stack.useOnBlock(itemUsageContext);
+            actionResult2 = stack.useOnBlock(itemUsageContext);
             stack.setCount(i);
-            return actionResult2;
+        } else {
+            actionResult2 = stack.useOnBlock(itemUsageContext);
         }
-        return stack.useOnBlock(itemUsageContext);
+        if (actionResult2.isAccepted()) {
+            Criteria.ITEM_USED_ON_BLOCK.test(player, blockPos, itemStack);
+        }
+        return actionResult2;
     }
 
     public void setWorld(ServerWorld world) {

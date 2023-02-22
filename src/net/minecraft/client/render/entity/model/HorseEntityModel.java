@@ -21,7 +21,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class HorseEntityModel<T extends HorseBaseEntity>
 extends AnimalModel<T> {
-    protected final ModelPart torso;
+    protected final ModelPart body;
     protected final ModelPart head;
     private final ModelPart leftBackLeg;
     private final ModelPart rightBackLeg;
@@ -35,75 +35,75 @@ extends AnimalModel<T> {
     private final ModelPart[] field_3304;
     private final ModelPart[] field_3301;
 
-    public HorseEntityModel(float f) {
+    public HorseEntityModel(float scale) {
         super(true, 16.2f, 1.36f, 2.7272f, 2.0f, 20.0f);
         this.textureWidth = 64;
         this.textureHeight = 64;
-        this.torso = new ModelPart(this, 0, 32);
-        this.torso.addCuboid(-5.0f, -8.0f, -17.0f, 10.0f, 10.0f, 22.0f, 0.05f);
-        this.torso.setPivot(0.0f, 11.0f, 5.0f);
+        this.body = new ModelPart(this, 0, 32);
+        this.body.addCuboid(-5.0f, -8.0f, -17.0f, 10.0f, 10.0f, 22.0f, 0.05f);
+        this.body.setPivot(0.0f, 11.0f, 5.0f);
         this.head = new ModelPart(this, 0, 35);
         this.head.addCuboid(-2.05f, -6.0f, -2.0f, 4.0f, 12.0f, 7.0f);
         this.head.pitch = 0.5235988f;
         ModelPart modelPart = new ModelPart(this, 0, 13);
-        modelPart.addCuboid(-3.0f, -11.0f, -2.0f, 6.0f, 5.0f, 7.0f, f);
+        modelPart.addCuboid(-3.0f, -11.0f, -2.0f, 6.0f, 5.0f, 7.0f, scale);
         ModelPart modelPart2 = new ModelPart(this, 56, 36);
-        modelPart2.addCuboid(-1.0f, -11.0f, 5.01f, 2.0f, 16.0f, 2.0f, f);
+        modelPart2.addCuboid(-1.0f, -11.0f, 5.01f, 2.0f, 16.0f, 2.0f, scale);
         ModelPart modelPart3 = new ModelPart(this, 0, 25);
-        modelPart3.addCuboid(-2.0f, -11.0f, -7.0f, 4.0f, 5.0f, 5.0f, f);
+        modelPart3.addCuboid(-2.0f, -11.0f, -7.0f, 4.0f, 5.0f, 5.0f, scale);
         this.head.addChild(modelPart);
         this.head.addChild(modelPart2);
         this.head.addChild(modelPart3);
         this.method_2789(this.head);
         this.leftBackLeg = new ModelPart(this, 48, 21);
         this.leftBackLeg.mirror = true;
-        this.leftBackLeg.addCuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, f);
+        this.leftBackLeg.addCuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale);
         this.leftBackLeg.setPivot(4.0f, 14.0f, 7.0f);
         this.rightBackLeg = new ModelPart(this, 48, 21);
-        this.rightBackLeg.addCuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, f);
+        this.rightBackLeg.addCuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale);
         this.rightBackLeg.setPivot(-4.0f, 14.0f, 7.0f);
         this.leftFrontLeg = new ModelPart(this, 48, 21);
         this.leftFrontLeg.mirror = true;
-        this.leftFrontLeg.addCuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, f);
+        this.leftFrontLeg.addCuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale);
         this.leftFrontLeg.setPivot(4.0f, 6.0f, -12.0f);
         this.rightFrontLeg = new ModelPart(this, 48, 21);
-        this.rightFrontLeg.addCuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, f);
+        this.rightFrontLeg.addCuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale);
         this.rightFrontLeg.setPivot(-4.0f, 6.0f, -12.0f);
-        float g = 5.5f;
+        float f = 5.5f;
         this.field_20930 = new ModelPart(this, 48, 21);
         this.field_20930.mirror = true;
-        this.field_20930.addCuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, f, f + 5.5f, f);
+        this.field_20930.addCuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
         this.field_20930.setPivot(4.0f, 14.0f, 7.0f);
         this.field_20931 = new ModelPart(this, 48, 21);
-        this.field_20931.addCuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, f, f + 5.5f, f);
+        this.field_20931.addCuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
         this.field_20931.setPivot(-4.0f, 14.0f, 7.0f);
         this.field_20932 = new ModelPart(this, 48, 21);
         this.field_20932.mirror = true;
-        this.field_20932.addCuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, f, f + 5.5f, f);
+        this.field_20932.addCuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
         this.field_20932.setPivot(4.0f, 6.0f, -12.0f);
         this.field_20933 = new ModelPart(this, 48, 21);
-        this.field_20933.addCuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, f, f + 5.5f, f);
+        this.field_20933.addCuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
         this.field_20933.setPivot(-4.0f, 6.0f, -12.0f);
         this.tail = new ModelPart(this, 42, 36);
-        this.tail.addCuboid(-1.5f, 0.0f, 0.0f, 3.0f, 14.0f, 4.0f, f);
+        this.tail.addCuboid(-1.5f, 0.0f, 0.0f, 3.0f, 14.0f, 4.0f, scale);
         this.tail.setPivot(0.0f, -5.0f, 2.0f);
         this.tail.pitch = 0.5235988f;
-        this.torso.addChild(this.tail);
+        this.body.addChild(this.tail);
         ModelPart modelPart4 = new ModelPart(this, 26, 0);
         modelPart4.addCuboid(-5.0f, -8.0f, -9.0f, 10.0f, 9.0f, 9.0f, 0.5f);
-        this.torso.addChild(modelPart4);
+        this.body.addChild(modelPart4);
         ModelPart modelPart5 = new ModelPart(this, 29, 5);
-        modelPart5.addCuboid(2.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, f);
+        modelPart5.addCuboid(2.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, scale);
         this.head.addChild(modelPart5);
         ModelPart modelPart6 = new ModelPart(this, 29, 5);
-        modelPart6.addCuboid(-3.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, f);
+        modelPart6.addCuboid(-3.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, scale);
         this.head.addChild(modelPart6);
         ModelPart modelPart7 = new ModelPart(this, 32, 2);
-        modelPart7.addCuboid(3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, f);
+        modelPart7.addCuboid(3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, scale);
         modelPart7.pitch = -0.5235988f;
         this.head.addChild(modelPart7);
         ModelPart modelPart8 = new ModelPart(this, 32, 2);
-        modelPart8.addCuboid(-3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, f);
+        modelPart8.addCuboid(-3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, scale);
         modelPart8.pitch = -0.5235988f;
         this.head.addChild(modelPart8);
         ModelPart modelPart9 = new ModelPart(this, 1, 1);
@@ -135,7 +135,7 @@ extends AnimalModel<T> {
         for (ModelPart modelPart : this.field_3301) {
             modelPart.visible = bl2 && bl;
         }
-        this.torso.pivotY = 11.0f;
+        this.body.pivotY = 11.0f;
     }
 
     @Override
@@ -145,7 +145,7 @@ extends AnimalModel<T> {
 
     @Override
     protected Iterable<ModelPart> getBodyParts() {
-        return ImmutableList.of((Object)this.torso, (Object)this.leftBackLeg, (Object)this.rightBackLeg, (Object)this.leftFrontLeg, (Object)this.rightFrontLeg, (Object)this.field_20930, (Object)this.field_20931, (Object)this.field_20932, (Object)this.field_20933);
+        return ImmutableList.of((Object)this.body, (Object)this.leftBackLeg, (Object)this.rightBackLeg, (Object)this.leftFrontLeg, (Object)this.rightFrontLeg, (Object)this.field_20930, (Object)this.field_20931, (Object)this.field_20932, (Object)this.field_20933);
     }
 
     @Override
@@ -169,11 +169,11 @@ extends AnimalModel<T> {
         float o = ((HorseBaseEntity)horseBaseEntity).getAngryAnimationProgress(h);
         float p = 1.0f - o;
         float q = ((HorseBaseEntity)horseBaseEntity).getEatingAnimationProgress(h);
-        boolean bl = ((HorseBaseEntity)horseBaseEntity).field_6957 != 0;
+        boolean bl = ((HorseBaseEntity)horseBaseEntity).tailWagTicks != 0;
         float r = (float)((HorseBaseEntity)horseBaseEntity).age + h;
         this.head.pivotY = 4.0f;
         this.head.pivotZ = -12.0f;
-        this.torso.pitch = 0.0f;
+        this.body.pitch = 0.0f;
         this.head.pitch = 0.5235988f + m;
         this.head.yaw = l * ((float)Math.PI / 180);
         float s = ((Entity)horseBaseEntity).isTouchingWater() ? 0.2f : 1.0f;
@@ -184,7 +184,7 @@ extends AnimalModel<T> {
         this.head.yaw = o * l * ((float)Math.PI / 180) + (1.0f - Math.max(o, n)) * this.head.yaw;
         this.head.pivotY = o * -4.0f + n * 11.0f + (1.0f - Math.max(o, n)) * this.head.pivotY;
         this.head.pivotZ = o * -4.0f + n * -12.0f + (1.0f - Math.max(o, n)) * this.head.pivotZ;
-        this.torso.pitch = o * -0.7853982f + p * this.torso.pitch;
+        this.body.pitch = o * -0.7853982f + p * this.body.pitch;
         float w = 0.2617994f * o;
         float x = MathHelper.cos(r * 0.6f + (float)Math.PI);
         this.leftFrontLeg.pivotY = 2.0f * o + 14.0f * p;
@@ -222,7 +222,7 @@ extends AnimalModel<T> {
         this.field_20931.visible = bl2;
         this.field_20932.visible = bl2;
         this.field_20933.visible = bl2;
-        this.torso.pivotY = bl2 ? 10.8f : 0.0f;
+        this.body.pivotY = bl2 ? 10.8f : 0.0f;
     }
 }
 

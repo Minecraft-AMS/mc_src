@@ -14,15 +14,19 @@ import java.util.List;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.EndPortalBlockEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Tickable;
 import net.minecraft.util.math.BlockPos;
@@ -35,10 +39,9 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.dimension.TheEndDimension;
+import net.minecraft.world.gen.feature.ConfiguredFeatures;
 import net.minecraft.world.gen.feature.EndGatewayFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.FeatureConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -58,21 +61,21 @@ implements Tickable {
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        tag.putLong("Age", this.age);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        nbt.putLong("Age", this.age);
         if (this.exitPortalPos != null) {
-            tag.put("ExitPortal", NbtHelper.fromBlockPos(this.exitPortalPos));
+            nbt.put("ExitPortal", NbtHelper.fromBlockPos(this.exitPortalPos));
         }
         if (this.exactTeleport) {
-            tag.putBoolean("ExactTeleport", this.exactTeleport);
+            nbt.putBoolean("ExactTeleport", this.exactTeleport);
         }
-        return tag;
+        return nbt;
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
         this.age = tag.getLong("Age");
         if (tag.contains("ExitPortal", 10)) {
             this.exitPortalPos = NbtHelper.toBlockPos(tag.getCompound("ExitPortal"));
@@ -82,8 +85,8 @@ implements Tickable {
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public double getSquaredRenderDistance() {
-        return 65536.0;
+    public double getRenderDistance() {
+        return 256.0;
     }
 
     @Override
@@ -94,9 +97,9 @@ implements Tickable {
         if (bl2) {
             --this.teleportCooldown;
         } else if (!this.world.isClient) {
-            List<Entity> list = this.world.getNonSpectatingEntities(Entity.class, new Box(this.getPos()));
+            List<Entity> list = this.world.getEntitiesByClass(Entity.class, new Box(this.getPos()), EndGatewayBlockEntity::method_30276);
             if (!list.isEmpty()) {
-                this.tryTeleportingEntity(list.get(0).getRootVehicle());
+                this.tryTeleportingEntity(list.get(this.world.random.nextInt(list.size())));
             }
             if (this.age % 2400L == 0L) {
                 this.startTeleportCooldown();
@@ -105,6 +108,10 @@ implements Tickable {
         if (bl != this.isRecentlyGenerated() || bl2 != this.needsCooldownBeforeTeleporting()) {
             this.markDirty();
         }
+    }
+
+    public static boolean method_30276(Entity entity) {
+        return EntityPredicates.EXCEPT_SPECTATOR.test(entity) && !entity.getRootVehicle().hasNetherPortalCooldown();
     }
 
     public boolean isRecentlyGenerated() {
@@ -128,29 +135,29 @@ implements Tickable {
     @Override
     @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 8, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 8, this.toInitialChunkDataNbt());
     }
 
     @Override
-    public CompoundTag toInitialChunkDataTag() {
-        return this.toTag(new CompoundTag());
+    public NbtCompound toInitialChunkDataNbt() {
+        return this.writeNbt(new NbtCompound());
     }
 
     public void startTeleportCooldown() {
         if (!this.world.isClient) {
             this.teleportCooldown = 40;
-            this.world.addBlockAction(this.getPos(), this.getCachedState().getBlock(), 1, 0);
+            this.world.addSyncedBlockEvent(this.getPos(), this.getCachedState().getBlock(), 1, 0);
             this.markDirty();
         }
     }
 
     @Override
-    public boolean onBlockAction(int i, int j) {
-        if (i == 1) {
+    public boolean onSyncedBlockEvent(int type, int data) {
+        if (type == 1) {
             this.teleportCooldown = 40;
             return true;
         }
-        return super.onBlockAction(i, j);
+        return super.onSyncedBlockEvent(type, data);
     }
 
     public void tryTeleportingEntity(Entity entity) {
@@ -158,61 +165,78 @@ implements Tickable {
             return;
         }
         this.teleportCooldown = 100;
-        if (this.exitPortalPos == null && this.world.dimension instanceof TheEndDimension) {
+        if (this.exitPortalPos == null && this.world.getRegistryKey() == World.END) {
             this.createPortal((ServerWorld)this.world);
         }
         if (this.exitPortalPos != null) {
-            BlockPos blockPos = this.exactTeleport ? this.exitPortalPos : this.findBestPortalExitPos();
-            entity.teleport((double)blockPos.getX() + 0.5, (double)blockPos.getY() + 0.5, (double)blockPos.getZ() + 0.5);
+            Entity entity3;
+            BlockPos blockPos;
+            BlockPos blockPos2 = blockPos = this.exactTeleport ? this.exitPortalPos : this.findBestPortalExitPos();
+            if (entity instanceof EnderPearlEntity) {
+                Entity entity2 = ((EnderPearlEntity)entity).getOwner();
+                if (entity2 instanceof ServerPlayerEntity) {
+                    Criteria.ENTER_BLOCK.trigger((ServerPlayerEntity)entity2, this.world.getBlockState(this.getPos()));
+                }
+                if (entity2 != null) {
+                    entity3 = entity2;
+                    entity.remove();
+                } else {
+                    entity3 = entity;
+                }
+            } else {
+                entity3 = entity.getRootVehicle();
+            }
+            entity3.resetNetherPortalCooldown();
+            entity3.teleport((double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5);
         }
         this.startTeleportCooldown();
     }
 
     private BlockPos findBestPortalExitPos() {
-        BlockPos blockPos = EndGatewayBlockEntity.findExitPortalPos(this.world, this.exitPortalPos, 5, false);
+        BlockPos blockPos = EndGatewayBlockEntity.findExitPortalPos(this.world, this.exitPortalPos.add(0, 2, 0), 5, false);
         LOGGER.debug("Best exit position for portal at {} is {}", (Object)this.exitPortalPos, (Object)blockPos);
         return blockPos.up();
     }
 
-    private void createPortal(ServerWorld serverWorld) {
+    private void createPortal(ServerWorld world) {
         Vec3d vec3d = new Vec3d(this.getPos().getX(), 0.0, this.getPos().getZ()).normalize();
         Vec3d vec3d2 = vec3d.multiply(1024.0);
         int i = 16;
-        while (EndGatewayBlockEntity.getChunk(serverWorld, vec3d2).getHighestNonEmptySectionYOffset() > 0 && i-- > 0) {
+        while (EndGatewayBlockEntity.getChunk(world, vec3d2).getHighestNonEmptySectionYOffset() > 0 && i-- > 0) {
             LOGGER.debug("Skipping backwards past nonempty chunk at {}", (Object)vec3d2);
             vec3d2 = vec3d2.add(vec3d.multiply(-16.0));
         }
         i = 16;
-        while (EndGatewayBlockEntity.getChunk(serverWorld, vec3d2).getHighestNonEmptySectionYOffset() == 0 && i-- > 0) {
+        while (EndGatewayBlockEntity.getChunk(world, vec3d2).getHighestNonEmptySectionYOffset() == 0 && i-- > 0) {
             LOGGER.debug("Skipping forward past empty chunk at {}", (Object)vec3d2);
             vec3d2 = vec3d2.add(vec3d.multiply(16.0));
         }
         LOGGER.debug("Found chunk at {}", (Object)vec3d2);
-        WorldChunk worldChunk = EndGatewayBlockEntity.getChunk(serverWorld, vec3d2);
+        WorldChunk worldChunk = EndGatewayBlockEntity.getChunk(world, vec3d2);
         this.exitPortalPos = EndGatewayBlockEntity.findPortalPosition(worldChunk);
         if (this.exitPortalPos == null) {
             this.exitPortalPos = new BlockPos(vec3d2.x + 0.5, 75.0, vec3d2.z + 0.5);
             LOGGER.debug("Failed to find suitable block, settling on {}", (Object)this.exitPortalPos);
-            Feature.END_ISLAND.configure(FeatureConfig.DEFAULT).generate(serverWorld, serverWorld.getChunkManager().getChunkGenerator(), new Random(this.exitPortalPos.asLong()), this.exitPortalPos);
+            ConfiguredFeatures.END_ISLAND.generate(world, world.getChunkManager().getChunkGenerator(), new Random(this.exitPortalPos.asLong()), this.exitPortalPos);
         } else {
             LOGGER.debug("Found block at {}", (Object)this.exitPortalPos);
         }
-        this.exitPortalPos = EndGatewayBlockEntity.findExitPortalPos(serverWorld, this.exitPortalPos, 16, true);
+        this.exitPortalPos = EndGatewayBlockEntity.findExitPortalPos(world, this.exitPortalPos, 16, true);
         LOGGER.debug("Creating portal at {}", (Object)this.exitPortalPos);
         this.exitPortalPos = this.exitPortalPos.up(10);
-        this.createPortal(serverWorld, this.exitPortalPos);
+        this.createPortal(world, this.exitPortalPos);
         this.markDirty();
     }
 
-    private static BlockPos findExitPortalPos(BlockView world, BlockPos pos, int searchRadius, boolean bl) {
+    private static BlockPos findExitPortalPos(BlockView world, BlockPos pos, int searchRadius, boolean force) {
         Vec3i blockPos = null;
         for (int i = -searchRadius; i <= searchRadius; ++i) {
             block1: for (int j = -searchRadius; j <= searchRadius; ++j) {
-                if (i == 0 && j == 0 && !bl) continue;
+                if (i == 0 && j == 0 && !force) continue;
                 for (int k = 255; k > (blockPos == null ? 0 : blockPos.getY()); --k) {
                     BlockPos blockPos2 = new BlockPos(pos.getX() + i, k, pos.getZ() + j);
                     BlockState blockState = world.getBlockState(blockPos2);
-                    if (!blockState.isFullCube(world, blockPos2) || !bl && blockState.getBlock() == Blocks.BEDROCK) continue;
+                    if (!blockState.isFullCube(world, blockPos2) || !force && blockState.isOf(Blocks.BEDROCK)) continue;
                     blockPos = blockPos2;
                     continue block1;
                 }
@@ -226,18 +250,18 @@ implements Tickable {
     }
 
     @Nullable
-    private static BlockPos findPortalPosition(WorldChunk worldChunk) {
-        ChunkPos chunkPos = worldChunk.getPos();
+    private static BlockPos findPortalPosition(WorldChunk chunk) {
+        ChunkPos chunkPos = chunk.getPos();
         BlockPos blockPos = new BlockPos(chunkPos.getStartX(), 30, chunkPos.getStartZ());
-        int i = worldChunk.getHighestNonEmptySectionYOffset() + 16 - 1;
+        int i = chunk.getHighestNonEmptySectionYOffset() + 16 - 1;
         BlockPos blockPos2 = new BlockPos(chunkPos.getEndX(), i, chunkPos.getEndZ());
         BlockPos blockPos3 = null;
         double d = 0.0;
         for (BlockPos blockPos4 : BlockPos.iterate(blockPos, blockPos2)) {
-            BlockState blockState = worldChunk.getBlockState(blockPos4);
+            BlockState blockState = chunk.getBlockState(blockPos4);
             BlockPos blockPos5 = blockPos4.up();
             BlockPos blockPos6 = blockPos4.up(2);
-            if (blockState.getBlock() != Blocks.END_STONE || worldChunk.getBlockState(blockPos5).isFullCube(worldChunk, blockPos5) || worldChunk.getBlockState(blockPos6).isFullCube(worldChunk, blockPos6)) continue;
+            if (!blockState.isOf(Blocks.END_STONE) || chunk.getBlockState(blockPos5).isFullCube(chunk, blockPos5) || chunk.getBlockState(blockPos6).isFullCube(chunk, blockPos6)) continue;
             double e = blockPos4.getSquaredDistance(0.0, 0.0, 0.0, true);
             if (blockPos3 != null && !(e < d)) continue;
             blockPos3 = blockPos4;
@@ -246,8 +270,8 @@ implements Tickable {
         return blockPos3;
     }
 
-    private void createPortal(ServerWorld serverWorld, BlockPos blockPos) {
-        Feature.END_GATEWAY.configure(EndGatewayFeatureConfig.createConfig(this.getPos(), false)).generate(serverWorld, serverWorld.getChunkManager().getChunkGenerator(), new Random(), blockPos);
+    private void createPortal(ServerWorld world, BlockPos pos) {
+        Feature.END_GATEWAY.configure(EndGatewayFeatureConfig.createConfig(this.getPos(), false)).generate(world, world.getChunkManager().getChunkGenerator(), new Random(), pos);
     }
 
     @Override
@@ -265,9 +289,9 @@ implements Tickable {
         return i;
     }
 
-    public void setExitPortalPos(BlockPos blockPos, boolean bl) {
-        this.exactTeleport = bl;
-        this.exitPortalPos = blockPos;
+    public void setExitPortalPos(BlockPos pos, boolean exactTeleport) {
+        this.exactTeleport = exactTeleport;
+        this.exitPortalPos = pos;
     }
 }
 

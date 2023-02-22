@@ -14,10 +14,11 @@ import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RayTraceContext;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 public class BoatItem
@@ -33,13 +34,13 @@ extends Item {
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack itemStack = user.getStackInHand(hand);
-        HitResult hitResult = BoatItem.rayTrace(world, user, RayTraceContext.FluidHandling.ANY);
-        if (hitResult.getType() == HitResult.Type.MISS) {
+        BlockHitResult hitResult = BoatItem.raycast(world, user, RaycastContext.FluidHandling.ANY);
+        if (((HitResult)hitResult).getType() == HitResult.Type.MISS) {
             return TypedActionResult.pass(itemStack);
         }
         Vec3d vec3d = user.getRotationVec(1.0f);
         double d = 5.0;
-        List<Entity> list = world.getEntities(user, user.getBoundingBox().stretch(vec3d.multiply(5.0)).expand(1.0), RIDERS);
+        List<Entity> list = world.getOtherEntities(user, user.getBoundingBox().stretch(vec3d.multiply(5.0)).expand(1.0), RIDERS);
         if (!list.isEmpty()) {
             Vec3d vec3d2 = user.getCameraPosVec(1.0f);
             for (Entity entity : list) {
@@ -48,11 +49,11 @@ extends Item {
                 return TypedActionResult.pass(itemStack);
             }
         }
-        if (hitResult.getType() == HitResult.Type.BLOCK) {
+        if (((HitResult)hitResult).getType() == HitResult.Type.BLOCK) {
             BoatEntity boatEntity = new BoatEntity(world, hitResult.getPos().x, hitResult.getPos().y, hitResult.getPos().z);
             boatEntity.setBoatType(this.type);
             boatEntity.yaw = user.yaw;
-            if (!world.doesNotCollide(boatEntity, boatEntity.getBoundingBox().expand(-0.1))) {
+            if (!world.isSpaceEmpty(boatEntity, boatEntity.getBoundingBox().expand(-0.1))) {
                 return TypedActionResult.fail(itemStack);
             }
             if (!world.isClient) {
@@ -62,7 +63,7 @@ extends Item {
                 }
             }
             user.incrementStat(Stats.USED.getOrCreateStat(this));
-            return TypedActionResult.success(itemStack);
+            return TypedActionResult.success(itemStack, world.isClient());
         }
         return TypedActionResult.pass(itemStack);
     }

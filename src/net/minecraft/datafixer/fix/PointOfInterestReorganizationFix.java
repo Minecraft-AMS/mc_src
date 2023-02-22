@@ -6,10 +6,10 @@
  *  com.google.common.collect.Maps
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.types.Type
+ *  com.mojang.serialization.Dynamic
  */
 package net.minecraft.datafixer.fix;
 
@@ -17,10 +17,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
+import com.mojang.serialization.Dynamic;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -41,18 +41,18 @@ extends DataFix {
         return this.fixTypeEverywhere("POI reorganization", type, dynamicOps -> pair -> pair.mapSecond(PointOfInterestReorganizationFix::reorganize));
     }
 
-    private static <T> Dynamic<T> reorganize(Dynamic<T> tag) {
+    private static <T> Dynamic<T> reorganize(Dynamic<T> dynamic) {
         HashMap map = Maps.newHashMap();
         for (int i = 0; i < 16; ++i) {
             String string = String.valueOf(i);
-            Optional optional = tag.get(string).get();
+            Optional optional = dynamic.get(string).result();
             if (!optional.isPresent()) continue;
-            Dynamic dynamic = (Dynamic)optional.get();
-            Dynamic dynamic2 = tag.createMap((Map)ImmutableMap.of((Object)tag.createString("Records"), (Object)dynamic));
-            map.put(tag.createInt(i), dynamic2);
-            tag = tag.remove(string);
+            Dynamic dynamic2 = (Dynamic)optional.get();
+            Dynamic dynamic3 = dynamic.createMap((Map)ImmutableMap.of((Object)dynamic.createString("Records"), (Object)dynamic2));
+            map.put(dynamic.createInt(i), dynamic3);
+            dynamic = dynamic.remove(string);
         }
-        return tag.set("Sections", tag.createMap((Map)map));
+        return dynamic.set("Sections", dynamic.createMap((Map)map));
     }
 }
 

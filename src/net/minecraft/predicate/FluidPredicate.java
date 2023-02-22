@@ -18,7 +18,7 @@ import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.predicate.StatePredicate;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.tag.ServerTagManagerHolder;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -71,7 +71,7 @@ public class FluidPredicate {
         Tag<Fluid> tag = null;
         if (jsonObject.has("tag")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "tag"));
-            tag = FluidTags.getContainer().get(identifier2);
+            tag = ServerTagManagerHolder.getTagManager().getFluids().getTag(identifier2);
             if (tag == null) {
                 throw new JsonSyntaxException("Unknown fluid tag '" + identifier2 + "'");
             }
@@ -89,7 +89,7 @@ public class FluidPredicate {
             jsonObject.addProperty("fluid", Registry.FLUID.getId(this.fluid).toString());
         }
         if (this.tag != null) {
-            jsonObject.addProperty("tag", this.tag.getId().toString());
+            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getFluids().getTagId(this.tag).toString());
         }
         jsonObject.add("state", this.state.toJson());
         return jsonObject;

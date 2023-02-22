@@ -30,16 +30,18 @@ import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
 import net.minecraft.entity.ai.pathing.MobNavigation;
 import net.minecraft.entity.ai.pathing.PathNodeNavigator;
 import net.minecraft.entity.ai.pathing.PathNodeType;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.IllagerEntity;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.AbstractTraderEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.raid.RaiderEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -77,13 +79,13 @@ extends RaiderEntity {
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 8.0f));
         this.targetSelector.add(2, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
         this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
-        this.targetSelector.add(4, new FollowTargetGoal<AbstractTraderEntity>((MobEntity)this, AbstractTraderEntity.class, true));
+        this.targetSelector.add(4, new FollowTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, true));
         this.targetSelector.add(4, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
     }
 
     @Override
-    protected void method_20417() {
-        boolean bl = !(this.getPrimaryPassenger() instanceof MobEntity) || this.getPrimaryPassenger().getType().isTaggedWith(EntityTypeTags.RAIDERS);
+    protected void updateGoalControls() {
+        boolean bl = !(this.getPrimaryPassenger() instanceof MobEntity) || this.getPrimaryPassenger().getType().isIn(EntityTypeTags.RAIDERS);
         boolean bl2 = !(this.getVehicle() instanceof BoatEntity);
         this.goalSelector.setControlEnabled(Goal.Control.MOVE, bl);
         this.goalSelector.setControlEnabled(Goal.Control.JUMP, bl && bl2);
@@ -91,31 +93,24 @@ extends RaiderEntity {
         this.goalSelector.setControlEnabled(Goal.Control.TARGET, bl);
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(100.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.3);
-        this.getAttributeInstance(EntityAttributes.KNOCKBACK_RESISTANCE).setBaseValue(0.5);
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(12.0);
-        this.getAttributeInstance(EntityAttributes.ATTACK_KNOCKBACK).setBaseValue(1.5);
-        this.getAttributeInstance(EntityAttributes.FOLLOW_RANGE).setBaseValue(32.0);
+    public static DefaultAttributeContainer.Builder createRavagerAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 100.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.3).add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 0.75).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 12.0).add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 1.5).add(EntityAttributes.GENERIC_FOLLOW_RANGE, 32.0);
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("AttackTick", this.attackTick);
-        tag.putInt("StunTick", this.stunTick);
-        tag.putInt("RoarTick", this.roarTick);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("AttackTick", this.attackTick);
+        nbt.putInt("StunTick", this.stunTick);
+        nbt.putInt("RoarTick", this.roarTick);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.attackTick = tag.getInt("AttackTick");
-        this.stunTick = tag.getInt("StunTick");
-        this.roarTick = tag.getInt("RoarTick");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.attackTick = nbt.getInt("AttackTick");
+        this.stunTick = nbt.getInt("StunTick");
+        this.roarTick = nbt.getInt("RoarTick");
     }
 
     @Override
@@ -159,16 +154,16 @@ extends RaiderEntity {
             return;
         }
         if (this.isImmobile()) {
-            this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.0);
+            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(0.0);
         } else {
             double d = this.getTarget() != null ? 0.35 : 0.3;
-            double e = this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).getBaseValue();
-            this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(MathHelper.lerp(0.1, e, d));
+            double e = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).getBaseValue();
+            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(MathHelper.lerp(0.1, e, d));
         }
-        if (this.horizontalCollision && this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING)) {
+        if (this.horizontalCollision && this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
             boolean bl = false;
             Box box = this.getBoundingBox().expand(0.2);
-            for (BlockPos blockPos : BlockPos.iterate(MathHelper.floor(box.x1), MathHelper.floor(box.y1), MathHelper.floor(box.z1), MathHelper.floor(box.x2), MathHelper.floor(box.y2), MathHelper.floor(box.z2))) {
+            for (BlockPos blockPos : BlockPos.iterate(MathHelper.floor(box.minX), MathHelper.floor(box.minY), MathHelper.floor(box.minZ), MathHelper.floor(box.maxX), MathHelper.floor(box.maxY), MathHelper.floor(box.maxZ))) {
                 BlockState blockState = this.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();
                 if (!(block instanceof LeavesBlock)) continue;
@@ -236,7 +231,7 @@ extends RaiderEntity {
 
     private void roar() {
         if (this.isAlive()) {
-            List<Entity> list = this.world.getEntities(LivingEntity.class, this.getBoundingBox().expand(4.0), IS_NOT_RAVAGER);
+            List<Entity> list = this.world.getEntitiesByClass(LivingEntity.class, this.getBoundingBox().expand(4.0), IS_NOT_RAVAGER);
             for (Entity entity : list) {
                 if (!(entity instanceof IllagerEntity)) {
                     entity.damage(DamageSource.mob(this), 6.0f);
@@ -346,14 +341,14 @@ extends RaiderEntity {
 
     static class Navigation
     extends MobNavigation {
-        public Navigation(MobEntity world, World world2) {
-            super(world, world2);
+        public Navigation(MobEntity mobEntity, World world) {
+            super(mobEntity, world);
         }
 
         @Override
-        protected PathNodeNavigator createPathNodeNavigator(int i) {
+        protected PathNodeNavigator createPathNodeNavigator(int range) {
             this.nodeMaker = new PathNodeMaker();
-            return new PathNodeNavigator(this.nodeMaker, i);
+            return new PathNodeNavigator(this.nodeMaker, range);
         }
     }
 

@@ -8,6 +8,7 @@ package net.minecraft.block;
 
 import java.util.List;
 import java.util.Random;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractRedstoneGateBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
@@ -39,7 +40,7 @@ extends AbstractRedstoneGateBlock
 implements BlockEntityProvider {
     public static final EnumProperty<ComparatorMode> MODE = Properties.COMPARATOR_MODE;
 
-    public ComparatorBlock(Block.Settings settings) {
+    public ComparatorBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(POWERED, false)).with(MODE, ComparatorMode.COMPARE));
     }
@@ -50,8 +51,8 @@ implements BlockEntityProvider {
     }
 
     @Override
-    protected int getOutputLevel(BlockView view, BlockPos pos, BlockState state) {
-        BlockEntity blockEntity = view.getBlockEntity(pos);
+    protected int getOutputLevel(BlockView world, BlockPos pos, BlockState state) {
+        BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof ComparatorBlockEntity) {
             return ((ComparatorBlockEntity)blockEntity).getOutputSignal();
         }
@@ -86,13 +87,13 @@ implements BlockEntityProvider {
         BlockState blockState = world.getBlockState(blockPos);
         if (blockState.hasComparatorOutput()) {
             i = blockState.getComparatorOutput(world, blockPos);
-        } else if (i < 15 && blockState.isSimpleFullBlock(world, blockPos)) {
-            ItemFrameEntity itemFrameEntity;
-            blockState = world.getBlockState(blockPos = blockPos.offset(direction));
-            if (blockState.hasComparatorOutput()) {
-                i = blockState.getComparatorOutput(world, blockPos);
-            } else if (blockState.isAir() && (itemFrameEntity = this.getAttachedItemFrame(world, direction, blockPos)) != null) {
-                i = itemFrameEntity.getComparatorPower();
+        } else if (i < 15 && blockState.isSolidBlock(world, blockPos)) {
+            blockPos = blockPos.offset(direction);
+            blockState = world.getBlockState(blockPos);
+            ItemFrameEntity itemFrameEntity = this.getAttachedItemFrame(world, direction, blockPos);
+            int j = Math.max(itemFrameEntity == null ? Integer.MIN_VALUE : itemFrameEntity.getComparatorPower(), blockState.hasComparatorOutput() ? blockState.getComparatorOutput(world, blockPos) : Integer.MIN_VALUE);
+            if (j != Integer.MIN_VALUE) {
+                i = j;
             }
         }
         return i;
@@ -100,7 +101,7 @@ implements BlockEntityProvider {
 
     @Nullable
     private ItemFrameEntity getAttachedItemFrame(World world, Direction facing, BlockPos pos) {
-        List<ItemFrameEntity> list = world.getEntities(ItemFrameEntity.class, new Box(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), itemFrameEntity -> itemFrameEntity != null && itemFrameEntity.getHorizontalFacing() == facing);
+        List<ItemFrameEntity> list = world.getEntitiesByClass(ItemFrameEntity.class, new Box(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1), itemFrameEntity -> itemFrameEntity != null && itemFrameEntity.getHorizontalFacing() == facing);
         if (list.size() == 1) {
             return list.get(0);
         }
@@ -116,7 +117,7 @@ implements BlockEntityProvider {
         world.playSound(player, pos, SoundEvents.BLOCK_COMPARATOR_CLICK, SoundCategory.BLOCKS, 0.3f, f);
         world.setBlockState(pos, state, 2);
         this.update(world, pos, state);
-        return ActionResult.SUCCESS;
+        return ActionResult.success(world.isClient);
     }
 
     @Override
@@ -161,14 +162,14 @@ implements BlockEntityProvider {
     }
 
     @Override
-    public boolean onBlockAction(BlockState state, World world, BlockPos pos, int type, int data) {
-        super.onBlockAction(state, world, pos, type, data);
+    public boolean onSyncedBlockEvent(BlockState state, World world, BlockPos pos, int type, int data) {
+        super.onSyncedBlockEvent(state, world, pos, type, data);
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        return blockEntity != null && blockEntity.onBlockAction(type, data);
+        return blockEntity != null && blockEntity.onSyncedBlockEvent(type, data);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new ComparatorBlockEntity();
     }
 

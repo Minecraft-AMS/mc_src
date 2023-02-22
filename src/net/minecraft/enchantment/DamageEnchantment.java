@@ -22,23 +22,23 @@ extends Enchantment {
     private static final int[] field_9064 = new int[]{20, 20, 20};
     public final int typeIndex;
 
-    public DamageEnchantment(Enchantment.Weight weight, int typeIndex, EquipmentSlot ... slots) {
+    public DamageEnchantment(Enchantment.Rarity weight, int typeIndex, EquipmentSlot ... slots) {
         super(weight, EnchantmentTarget.WEAPON, slots);
         this.typeIndex = typeIndex;
     }
 
     @Override
-    public int getMinimumPower(int level) {
+    public int getMinPower(int level) {
         return field_9063[this.typeIndex] + (level - 1) * field_9066[this.typeIndex];
     }
 
     @Override
-    public int getMaximumPower(int level) {
-        return this.getMinimumPower(level) + field_9064[this.typeIndex];
+    public int getMaxPower(int level) {
+        return this.getMinPower(level) + field_9064[this.typeIndex];
     }
 
     @Override
-    public int getMaximumLevel() {
+    public int getMaxLevel() {
         return 5;
     }
 
@@ -57,7 +57,7 @@ extends Enchantment {
     }
 
     @Override
-    public boolean differs(Enchantment other) {
+    public boolean canAccept(Enchantment other) {
         return !(other instanceof DamageEnchantment);
     }
 

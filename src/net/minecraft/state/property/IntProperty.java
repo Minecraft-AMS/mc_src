@@ -12,10 +12,10 @@ import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
-import net.minecraft.state.property.AbstractProperty;
+import net.minecraft.state.property.Property;
 
 public class IntProperty
-extends AbstractProperty<Integer> {
+extends Property<Integer> {
     private final ImmutableSet<Integer> values;
 
     protected IntProperty(String name, int min, int max) {
@@ -39,12 +39,12 @@ extends AbstractProperty<Integer> {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object object) {
+        if (this == object) {
             return true;
         }
-        if (o instanceof IntProperty && super.equals(o)) {
-            IntProperty intProperty = (IntProperty)o;
+        if (object instanceof IntProperty && super.equals(object)) {
+            IntProperty intProperty = (IntProperty)object;
             return this.values.equals(intProperty.values);
         }
         return false;

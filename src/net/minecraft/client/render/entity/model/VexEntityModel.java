@@ -28,7 +28,7 @@ extends BipedEntityModel<VexEntity> {
     public VexEntityModel() {
         super(0.0f, 0.0f, 64, 64);
         this.leftLeg.visible = false;
-        this.helmet.visible = false;
+        this.hat.visible = false;
         this.rightLeg = new ModelPart(this, 32, 0);
         this.rightLeg.addCuboid(-1.0f, -1.0f, -2.0f, 6.0f, 10.0f, 4.0f, 0.0f);
         this.rightLeg.setPivot(-1.9f, 12.0f, 0.0f);
@@ -48,7 +48,10 @@ extends BipedEntityModel<VexEntity> {
     public void setAngles(VexEntity vexEntity, float f, float g, float h, float i, float j) {
         super.setAngles(vexEntity, f, g, h, i, j);
         if (vexEntity.isCharging()) {
-            if (vexEntity.getMainArm() == Arm.RIGHT) {
+            if (vexEntity.getMainHandStack().isEmpty()) {
+                this.rightArm.pitch = 4.712389f;
+                this.leftArm.pitch = 4.712389f;
+            } else if (vexEntity.getMainArm() == Arm.RIGHT) {
                 this.rightArm.pitch = 3.7699115f;
             } else {
                 this.leftArm.pitch = 3.7699115f;

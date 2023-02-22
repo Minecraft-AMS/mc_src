@@ -2,24 +2,35 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
+ *  com.google.common.collect.Maps
  *  com.google.common.io.Files
  *  com.mojang.datafixers.DataFixer
+ *  com.mojang.datafixers.util.Pair
+ *  com.mojang.serialization.DataResult
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
+ *  com.mojang.serialization.Lifecycle
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.lang3.StringUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.level.storage;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.Lifecycle;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
@@ -39,24 +50,43 @@ import java.time.format.SignStyle;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.DataFixTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtHelper;
+import net.minecraft.datafixer.Schemas;
+import net.minecraft.datafixer.TypeReferences;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.resource.DataPackSettings;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.FileNameUtil;
 import net.minecraft.util.ProgressListener;
+import net.minecraft.util.Util;
+import net.minecraft.util.WorldSavePath;
+import net.minecraft.util.dynamic.RegistryLookupCodec;
+import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.SaveProperties;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldSaveHandler;
+import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.gen.GeneratorOptions;
+import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import net.minecraft.world.level.storage.AnvilLevelStorage;
 import net.minecraft.world.level.storage.LevelStorageException;
 import net.minecraft.world.level.storage.LevelSummary;
-import org.apache.commons.lang3.StringUtils;
+import net.minecraft.world.level.storage.SaveVersionInfo;
+import net.minecraft.world.level.storage.SessionLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +94,7 @@ import org.jetbrains.annotations.Nullable;
 public class LevelStorage {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final DateTimeFormatter TIME_FORMATTER = new DateTimeFormatterBuilder().appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD).appendLiteral('-').appendValue(ChronoField.MONTH_OF_YEAR, 2).appendLiteral('-').appendValue(ChronoField.DAY_OF_MONTH, 2).appendLiteral('_').appendValue(ChronoField.HOUR_OF_DAY, 2).appendLiteral('-').appendValue(ChronoField.MINUTE_OF_HOUR, 2).appendLiteral('-').appendValue(ChronoField.SECOND_OF_MINUTE, 2).toFormatter();
+    private static final ImmutableList<String> GENERATOR_OPTION_KEYS = ImmutableList.of((Object)"RandomSeed", (Object)"generatorName", (Object)"generatorOptions", (Object)"generatorVersion", (Object)"legacy_custom_options", (Object)"MapFeatures", (Object)"BonusChest");
     private final Path savesDirectory;
     private final Path backupsDirectory;
     private final DataFixer dataFixer;
@@ -80,29 +111,51 @@ public class LevelStorage {
         this.backupsDirectory = backupsDirectory;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public String getName() {
-        return "Anvil";
+    public static LevelStorage create(Path path) {
+        return new LevelStorage(path, path.resolve("../backups"), Schemas.getFixer());
+    }
+
+    private static <T> Pair<GeneratorOptions, Lifecycle> readGeneratorProperties(Dynamic<T> levelData, DataFixer dataFixer, int version) {
+        Dynamic dynamic = levelData.get("WorldGenSettings").orElseEmptyMap();
+        for (String string : GENERATOR_OPTION_KEYS) {
+            Optional optional = levelData.get(string).result();
+            if (!optional.isPresent()) continue;
+            dynamic = dynamic.set(string, (Dynamic)optional.get());
+        }
+        Dynamic dynamic2 = dataFixer.update(TypeReferences.CHUNK_GENERATOR_SETTINGS, dynamic, version, SharedConstants.getGameVersion().getWorldVersion());
+        DataResult dataResult = GeneratorOptions.CODEC.parse(dynamic2);
+        return Pair.of((Object)dataResult.resultOrPartial(Util.method_29188("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseGet(() -> {
+            Registry registry = (Registry)RegistryLookupCodec.of(Registry.DIMENSION_TYPE_KEY).codec().parse(dynamic2).resultOrPartial(Util.method_29188("Dimension type registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get dimension registry"));
+            Registry registry2 = (Registry)RegistryLookupCodec.of(Registry.BIOME_KEY).codec().parse(dynamic2).resultOrPartial(Util.method_29188("Biome registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get biome registry"));
+            Registry registry3 = (Registry)RegistryLookupCodec.of(Registry.NOISE_SETTINGS_WORLDGEN).codec().parse(dynamic2).resultOrPartial(Util.method_29188("Noise settings registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get noise settings registry"));
+            return GeneratorOptions.getDefaultOptions(registry, registry2, registry3);
+        }), (Object)dataResult.lifecycle());
+    }
+
+    private static DataPackSettings parseDataPackSettings(Dynamic<?> dynamic) {
+        return DataPackSettings.CODEC.parse(dynamic).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).orElse(DataPackSettings.SAFE_MODE);
     }
 
     @Environment(value=EnvType.CLIENT)
     public List<LevelSummary> getLevelList() throws LevelStorageException {
         File[] files;
         if (!Files.isDirectory(this.savesDirectory, new LinkOption[0])) {
-            throw new LevelStorageException(new TranslatableText("selectWorld.load_folder_access", new Object[0]).getString());
+            throw new LevelStorageException(new TranslatableText("selectWorld.load_folder_access").getString());
         }
         ArrayList list = Lists.newArrayList();
         for (File file : files = this.savesDirectory.toFile().listFiles()) {
-            String string;
-            LevelProperties levelProperties;
-            if (!file.isDirectory() || (levelProperties = this.getLevelProperties(string = file.getName())) == null || levelProperties.getVersion() != 19132 && levelProperties.getVersion() != 19133) continue;
-            boolean bl = levelProperties.getVersion() != this.getCurrentVersion();
-            String string2 = levelProperties.getLevelName();
-            if (StringUtils.isEmpty((CharSequence)string2)) {
-                string2 = string;
+            boolean bl;
+            if (!file.isDirectory()) continue;
+            try {
+                bl = SessionLock.isLocked(file.toPath());
             }
-            long l = 0L;
-            list.add(new LevelSummary(levelProperties, string, string2, 0L, bl));
+            catch (Exception exception) {
+                LOGGER.warn("Failed to read {} lock", (Object)file, (Object)exception);
+                continue;
+            }
+            LevelSummary levelSummary = this.readLevelProperties(file, this.createLevelDataParser(file, bl));
+            if (levelSummary == null) continue;
+            list.add(levelSummary);
         }
         return list;
     }
@@ -111,55 +164,32 @@ public class LevelStorage {
         return 19133;
     }
 
-    public WorldSaveHandler createSaveHandler(String name, @Nullable MinecraftServer server) {
-        return LevelStorage.createSaveHandler(this.savesDirectory, this.dataFixer, name, server);
-    }
-
-    protected static WorldSaveHandler createSaveHandler(Path savesDirectory, DataFixer dataFixer, String name, @Nullable MinecraftServer server) {
-        return new WorldSaveHandler(savesDirectory.toFile(), name, server, dataFixer);
-    }
-
-    public boolean requiresConversion(String name) {
-        LevelProperties levelProperties = this.getLevelProperties(name);
-        return levelProperties != null && levelProperties.getVersion() != this.getCurrentVersion();
-    }
-
-    public boolean convertLevel(String name, ProgressListener progressListener) {
-        return AnvilLevelStorage.convertLevel(this.savesDirectory, this.dataFixer, name, progressListener);
-    }
-
     @Nullable
-    public LevelProperties getLevelProperties(String string) {
-        return LevelStorage.getLevelProperties(this.savesDirectory, this.dataFixer, string);
-    }
-
-    @Nullable
-    protected static LevelProperties getLevelProperties(Path savesDirectory, DataFixer dataFixer, String name) {
-        LevelProperties levelProperties;
-        File file = new File(savesDirectory.toFile(), name);
+    private <T> T readLevelProperties(File file, BiFunction<File, DataFixer, T> levelDataParser) {
+        T object;
         if (!file.exists()) {
             return null;
         }
         File file2 = new File(file, "level.dat");
-        if (file2.exists() && (levelProperties = LevelStorage.readLevelProperties(file2, dataFixer)) != null) {
-            return levelProperties;
+        if (file2.exists() && (object = levelDataParser.apply(file2, this.dataFixer)) != null) {
+            return object;
         }
         file2 = new File(file, "level.dat_old");
         if (file2.exists()) {
-            return LevelStorage.readLevelProperties(file2, dataFixer);
+            return levelDataParser.apply(file2, this.dataFixer);
         }
         return null;
     }
 
     @Nullable
-    public static LevelProperties readLevelProperties(File file, DataFixer dataFixer) {
+    private static DataPackSettings readDataPackSettings(File file, DataFixer dataFixer) {
         try {
-            CompoundTag compoundTag = NbtIo.readCompressed(new FileInputStream(file));
-            CompoundTag compoundTag2 = compoundTag.getCompound("Data");
-            CompoundTag compoundTag3 = compoundTag2.contains("Player", 10) ? compoundTag2.getCompound("Player") : null;
-            compoundTag2.remove("Player");
-            int i = compoundTag2.contains("DataVersion", 99) ? compoundTag2.getInt("DataVersion") : -1;
-            return new LevelProperties(NbtHelper.update(dataFixer, DataFixTypes.LEVEL, compoundTag2, i), dataFixer, i, compoundTag3);
+            NbtCompound nbtCompound = NbtIo.readCompressed(file);
+            NbtCompound nbtCompound2 = nbtCompound.getCompound("Data");
+            nbtCompound2.remove("Player");
+            int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
+            Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+            return dynamic.get("DataPacks").result().map(LevelStorage::parseDataPackSettings).orElse(DataPackSettings.SAFE_MODE);
         }
         catch (Exception exception) {
             LOGGER.error("Exception reading {}", (Object)file, (Object)exception);
@@ -167,30 +197,57 @@ public class LevelStorage {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public void renameLevel(String name, String newName) {
-        File file = new File(this.savesDirectory.toFile(), name);
-        if (!file.exists()) {
-            return;
-        }
-        File file2 = new File(file, "level.dat");
-        if (file2.exists()) {
+    private static BiFunction<File, DataFixer, LevelProperties> createLevelDataParser(DynamicOps<NbtElement> dynamicOps, DataPackSettings dataPackSettings) {
+        return (file, dataFixer) -> {
             try {
-                CompoundTag compoundTag = NbtIo.readCompressed(new FileInputStream(file2));
-                CompoundTag compoundTag2 = compoundTag.getCompound("Data");
-                compoundTag2.putString("LevelName", newName);
-                NbtIo.writeCompressed(compoundTag, new FileOutputStream(file2));
+                NbtCompound nbtCompound = NbtIo.readCompressed(file);
+                NbtCompound nbtCompound2 = nbtCompound.getCompound("Data");
+                NbtCompound nbtCompound3 = nbtCompound2.contains("Player", 10) ? nbtCompound2.getCompound("Player") : null;
+                nbtCompound2.remove("Player");
+                int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
+                Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic(dynamicOps, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+                Pair<GeneratorOptions, Lifecycle> pair = LevelStorage.readGeneratorProperties(dynamic, dataFixer, i);
+                SaveVersionInfo saveVersionInfo = SaveVersionInfo.fromDynamic(dynamic);
+                LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataPackSettings);
+                return LevelProperties.readProperties((Dynamic<NbtElement>)dynamic, dataFixer, i, nbtCompound3, levelInfo, saveVersionInfo, (GeneratorOptions)pair.getFirst(), (Lifecycle)pair.getSecond());
             }
             catch (Exception exception) {
-                exception.printStackTrace();
+                LOGGER.error("Exception reading {}", file, (Object)exception);
+                return null;
             }
-        }
+        };
+    }
+
+    private BiFunction<File, DataFixer, LevelSummary> createLevelDataParser(File file, boolean locked) {
+        return (file2, dataFixer) -> {
+            try {
+                NbtCompound nbtCompound = NbtIo.readCompressed(file2);
+                NbtCompound nbtCompound2 = nbtCompound.getCompound("Data");
+                nbtCompound2.remove("Player");
+                int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
+                Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+                SaveVersionInfo saveVersionInfo = SaveVersionInfo.fromDynamic(dynamic);
+                int j = saveVersionInfo.getLevelFormatVersion();
+                if (j == 19132 || j == 19133) {
+                    boolean bl2 = j != this.getCurrentVersion();
+                    File file3 = new File(file, "icon.png");
+                    DataPackSettings dataPackSettings = dynamic.get("DataPacks").result().map(LevelStorage::parseDataPackSettings).orElse(DataPackSettings.SAFE_MODE);
+                    LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataPackSettings);
+                    return new LevelSummary(levelInfo, saveVersionInfo, file.getName(), bl2, locked, file3);
+                }
+                return null;
+            }
+            catch (Exception exception) {
+                LOGGER.error("Exception reading {}", file2, (Object)exception);
+                return null;
+            }
+        };
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isLevelNameValid(String string) {
+    public boolean isLevelNameValid(String name) {
         try {
-            Path path = this.savesDirectory.resolve(string);
+            Path path = this.savesDirectory.resolve(name);
             Files.createDirectory(path, new FileAttribute[0]);
             Files.deleteIfExists(path);
             return true;
@@ -198,44 +255,6 @@ public class LevelStorage {
         catch (IOException iOException) {
             return false;
         }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean deleteLevel(String name) {
-        File file = new File(this.savesDirectory.toFile(), name);
-        if (!file.exists()) {
-            return true;
-        }
-        LOGGER.info("Deleting level {}", (Object)name);
-        for (int i = 1; i <= 5; ++i) {
-            LOGGER.info("Attempt {}...", (Object)i);
-            if (LevelStorage.deleteFilesRecursively(file.listFiles())) break;
-            LOGGER.warn("Unsuccessful in deleting contents.");
-            if (i >= 5) continue;
-            try {
-                Thread.sleep(500L);
-                continue;
-            }
-            catch (InterruptedException interruptedException) {
-                // empty catch block
-            }
-        }
-        return file.delete();
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    private static boolean deleteFilesRecursively(File[] files) {
-        for (File file : files) {
-            LOGGER.debug("Deleting {}", (Object)file);
-            if (file.isDirectory() && !LevelStorage.deleteFilesRecursively(file.listFiles())) {
-                LOGGER.warn("Couldn't delete directory {}", (Object)file);
-                return false;
-            }
-            if (file.delete()) continue;
-            LOGGER.warn("Couldn't delete file {}", (Object)file);
-            return false;
-        }
-        return true;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -248,53 +267,220 @@ public class LevelStorage {
         return this.savesDirectory;
     }
 
-    public File resolveFile(String string, String string2) {
-        return this.savesDirectory.resolve(string).resolve(string2).toFile();
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    private Path resolvePath(String string) {
-        return this.savesDirectory.resolve(string);
-    }
-
     @Environment(value=EnvType.CLIENT)
     public Path getBackupsDirectory() {
         return this.backupsDirectory;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public long backupLevel(String name) throws IOException {
-        final Path path = this.resolvePath(name);
-        String string = LocalDateTime.now().format(TIME_FORMATTER) + "_" + name;
-        Path path2 = this.getBackupsDirectory();
-        try {
-            Files.createDirectories(Files.exists(path2, new LinkOption[0]) ? path2.toRealPath(new LinkOption[0]) : path2, new FileAttribute[0]);
-        }
-        catch (IOException iOException) {
-            throw new RuntimeException(iOException);
-        }
-        Path path3 = path2.resolve(FileNameUtil.getNextUniqueName(path2, string, ".zip"));
-        try (final ZipOutputStream zipOutputStream = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(path3, new OpenOption[0])));){
-            final Path path4 = Paths.get(name, new String[0]);
-            Files.walkFileTree(path, (FileVisitor<? super Path>)new SimpleFileVisitor<Path>(){
+    public Session createSession(String directoryName) throws IOException {
+        return new Session(directoryName);
+    }
 
-                @Override
-                public FileVisitResult visitFile(Path path2, BasicFileAttributes basicFileAttributes) throws IOException {
-                    String string = path4.resolve(path.relativize(path2)).toString().replace('\\', '/');
-                    ZipEntry zipEntry = new ZipEntry(string);
-                    zipOutputStream.putNextEntry(zipEntry);
-                    com.google.common.io.Files.asByteSource((File)path2.toFile()).copyTo((OutputStream)zipOutputStream);
-                    zipOutputStream.closeEntry();
-                    return FileVisitResult.CONTINUE;
-                }
+    public class Session
+    implements AutoCloseable {
+        private final SessionLock lock;
+        private final Path directory;
+        private final String directoryName;
+        private final Map<WorldSavePath, Path> paths = Maps.newHashMap();
 
-                @Override
-                public /* synthetic */ FileVisitResult visitFile(Object object, BasicFileAttributes basicFileAttributes) throws IOException {
-                    return this.visitFile((Path)object, basicFileAttributes);
-                }
-            });
+        public Session(String directoryName) throws IOException {
+            this.directoryName = directoryName;
+            this.directory = LevelStorage.this.savesDirectory.resolve(directoryName);
+            this.lock = SessionLock.create(this.directory);
         }
-        return Files.size(path3);
+
+        public String getDirectoryName() {
+            return this.directoryName;
+        }
+
+        public Path getDirectory(WorldSavePath savePath) {
+            return this.paths.computeIfAbsent(savePath, path -> this.directory.resolve(path.getRelativePath()));
+        }
+
+        public File getWorldDirectory(RegistryKey<World> key) {
+            return DimensionType.getSaveDirectory(key, this.directory.toFile());
+        }
+
+        private void checkValid() {
+            if (!this.lock.isValid()) {
+                throw new IllegalStateException("Lock is no longer valid");
+            }
+        }
+
+        public WorldSaveHandler createSaveHandler() {
+            this.checkValid();
+            return new WorldSaveHandler(this, LevelStorage.this.dataFixer);
+        }
+
+        public boolean needsConversion() {
+            LevelSummary levelSummary = this.getLevelSummary();
+            return levelSummary != null && levelSummary.method_29586().getLevelFormatVersion() != LevelStorage.this.getCurrentVersion();
+        }
+
+        public boolean convert(ProgressListener progressListener) {
+            this.checkValid();
+            return AnvilLevelStorage.convertLevel(this, progressListener);
+        }
+
+        @Nullable
+        public LevelSummary getLevelSummary() {
+            this.checkValid();
+            return (LevelSummary)LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage.this.createLevelDataParser(this.directory.toFile(), false));
+        }
+
+        @Nullable
+        public SaveProperties readLevelProperties(DynamicOps<NbtElement> dynamicOps, DataPackSettings dataPackSettings) {
+            this.checkValid();
+            return (SaveProperties)LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage.createLevelDataParser((DynamicOps<NbtElement>)dynamicOps, dataPackSettings));
+        }
+
+        @Nullable
+        public DataPackSettings getDataPackSettings() {
+            this.checkValid();
+            return (DataPackSettings)LevelStorage.this.readLevelProperties(this.directory.toFile(), (file, dataFixer) -> LevelStorage.readDataPackSettings(file, dataFixer));
+        }
+
+        public void backupLevelDataFile(DynamicRegistryManager dynamicRegistryManager, SaveProperties saveProperties) {
+            this.backupLevelDataFile(dynamicRegistryManager, saveProperties, null);
+        }
+
+        public void backupLevelDataFile(DynamicRegistryManager dynamicRegistryManager, SaveProperties saveProperties, @Nullable NbtCompound nbtCompound) {
+            File file = this.directory.toFile();
+            NbtCompound nbtCompound2 = saveProperties.cloneWorldNbt(dynamicRegistryManager, nbtCompound);
+            NbtCompound nbtCompound3 = new NbtCompound();
+            nbtCompound3.put("Data", nbtCompound2);
+            try {
+                File file2 = File.createTempFile("level", ".dat", file);
+                NbtIo.writeCompressed(nbtCompound3, file2);
+                File file3 = new File(file, "level.dat_old");
+                File file4 = new File(file, "level.dat");
+                Util.backupAndReplace(file4, file2, file3);
+            }
+            catch (Exception exception) {
+                LOGGER.error("Failed to save level {}", (Object)file, (Object)exception);
+            }
+        }
+
+        public File getIconFile() {
+            this.checkValid();
+            return this.directory.resolve("icon.png").toFile();
+        }
+
+        @Environment(value=EnvType.CLIENT)
+        public void deleteSessionLock() throws IOException {
+            this.checkValid();
+            final Path path = this.directory.resolve("session.lock");
+            for (int i = 1; i <= 5; ++i) {
+                LOGGER.info("Attempt {}...", (Object)i);
+                try {
+                    Files.walkFileTree(this.directory, (FileVisitor<? super Path>)new SimpleFileVisitor<Path>(){
+
+                        @Override
+                        public FileVisitResult visitFile(Path path2, BasicFileAttributes basicFileAttributes) throws IOException {
+                            if (!path2.equals(path)) {
+                                LOGGER.debug("Deleting {}", (Object)path2);
+                                Files.delete(path2);
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult postVisitDirectory(Path path2, IOException iOException) throws IOException {
+                            if (iOException != null) {
+                                throw iOException;
+                            }
+                            if (path2.equals(Session.this.directory)) {
+                                Session.this.lock.close();
+                                Files.deleteIfExists(path);
+                            }
+                            Files.delete(path2);
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public /* synthetic */ FileVisitResult postVisitDirectory(Object object, IOException iOException) throws IOException {
+                            return this.postVisitDirectory((Path)object, iOException);
+                        }
+
+                        @Override
+                        public /* synthetic */ FileVisitResult visitFile(Object object, BasicFileAttributes basicFileAttributes) throws IOException {
+                            return this.visitFile((Path)object, basicFileAttributes);
+                        }
+                    });
+                    break;
+                }
+                catch (IOException iOException) {
+                    if (i < 5) {
+                        LOGGER.warn("Failed to delete {}", (Object)this.directory, (Object)iOException);
+                        try {
+                            Thread.sleep(500L);
+                        }
+                        catch (InterruptedException interruptedException) {}
+                        continue;
+                    }
+                    throw iOException;
+                }
+            }
+        }
+
+        @Environment(value=EnvType.CLIENT)
+        public void save(String name) throws IOException {
+            this.checkValid();
+            File file = new File(LevelStorage.this.savesDirectory.toFile(), this.directoryName);
+            if (!file.exists()) {
+                return;
+            }
+            File file2 = new File(file, "level.dat");
+            if (file2.exists()) {
+                NbtCompound nbtCompound = NbtIo.readCompressed(file2);
+                NbtCompound nbtCompound2 = nbtCompound.getCompound("Data");
+                nbtCompound2.putString("LevelName", name);
+                NbtIo.writeCompressed(nbtCompound, file2);
+            }
+        }
+
+        @Environment(value=EnvType.CLIENT)
+        public long createBackup() throws IOException {
+            this.checkValid();
+            String string = LocalDateTime.now().format(TIME_FORMATTER) + "_" + this.directoryName;
+            Path path = LevelStorage.this.getBackupsDirectory();
+            try {
+                Files.createDirectories(Files.exists(path, new LinkOption[0]) ? path.toRealPath(new LinkOption[0]) : path, new FileAttribute[0]);
+            }
+            catch (IOException iOException) {
+                throw new RuntimeException(iOException);
+            }
+            Path path2 = path.resolve(FileNameUtil.getNextUniqueName(path, string, ".zip"));
+            try (final ZipOutputStream zipOutputStream = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(path2, new OpenOption[0])));){
+                final Path path3 = Paths.get(this.directoryName, new String[0]);
+                Files.walkFileTree(this.directory, (FileVisitor<? super Path>)new SimpleFileVisitor<Path>(){
+
+                    @Override
+                    public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                        if (path.endsWith("session.lock")) {
+                            return FileVisitResult.CONTINUE;
+                        }
+                        String string = path3.resolve(Session.this.directory.relativize(path)).toString().replace('\\', '/');
+                        ZipEntry zipEntry = new ZipEntry(string);
+                        zipOutputStream.putNextEntry(zipEntry);
+                        com.google.common.io.Files.asByteSource((File)path.toFile()).copyTo((OutputStream)zipOutputStream);
+                        zipOutputStream.closeEntry();
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public /* synthetic */ FileVisitResult visitFile(Object object, BasicFileAttributes basicFileAttributes) throws IOException {
+                        return this.visitFile((Path)object, basicFileAttributes);
+                    }
+                });
+            }
+            return Files.size(path2);
+        }
+
+        @Override
+        public void close() throws IOException {
+            this.lock.close();
+        }
     }
 }
 

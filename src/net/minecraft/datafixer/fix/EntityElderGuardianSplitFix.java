@@ -2,15 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.serialization.Dynamic
  */
 package net.minecraft.datafixer.fix;
 
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Dynamic;
 import java.util.Objects;
 import net.minecraft.datafixer.fix.EntitySimpleTransformFix;
 
@@ -21,8 +21,8 @@ extends EntitySimpleTransformFix {
     }
 
     @Override
-    protected Pair<String, Dynamic<?>> transform(String choice, Dynamic<?> tag) {
-        return Pair.of((Object)(Objects.equals(choice, "Guardian") && tag.get("Elder").asBoolean(false) ? "ElderGuardian" : choice), tag);
+    protected Pair<String, Dynamic<?>> transform(String choice, Dynamic<?> dynamic) {
+        return Pair.of((Object)(Objects.equals(choice, "Guardian") && dynamic.get("Elder").asBoolean(false) ? "ElderGuardian" : choice), dynamic);
     }
 }
 

@@ -16,8 +16,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.RecipeType;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.world.World;
 
 public interface Recipe<C extends Inventory> {
@@ -30,17 +30,17 @@ public interface Recipe<C extends Inventory> {
 
     public ItemStack getOutput();
 
-    default public DefaultedList<ItemStack> getRemainingStacks(C inventory) {
-        DefaultedList<ItemStack> defaultedList = DefaultedList.ofSize(inventory.getInvSize(), ItemStack.EMPTY);
+    default public DefaultedList<ItemStack> getRemainder(C inventory) {
+        DefaultedList<ItemStack> defaultedList = DefaultedList.ofSize(inventory.size(), ItemStack.EMPTY);
         for (int i = 0; i < defaultedList.size(); ++i) {
-            Item item = inventory.getInvStack(i).getItem();
+            Item item = inventory.getStack(i).getItem();
             if (!item.hasRecipeRemainder()) continue;
             defaultedList.set(i, new ItemStack(item.getRecipeRemainder()));
         }
         return defaultedList;
     }
 
-    default public DefaultedList<Ingredient> getPreviewInputs() {
+    default public DefaultedList<Ingredient> getIngredients() {
         return DefaultedList.of();
     }
 
@@ -54,7 +54,7 @@ public interface Recipe<C extends Inventory> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    default public ItemStack getRecipeKindIcon() {
+    default public ItemStack createIcon() {
         return new ItemStack(Blocks.CRAFTING_TABLE);
     }
 

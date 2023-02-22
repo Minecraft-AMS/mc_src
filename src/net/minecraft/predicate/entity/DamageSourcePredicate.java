@@ -33,17 +33,17 @@ public class DamageSourcePredicate {
     private final EntityPredicate directEntity;
     private final EntityPredicate sourceEntity;
 
-    public DamageSourcePredicate(@Nullable Boolean boolean_, @Nullable Boolean boolean2, @Nullable Boolean boolean3, @Nullable Boolean boolean4, @Nullable Boolean boolean5, @Nullable Boolean boolean6, @Nullable Boolean boolean7, @Nullable Boolean boolean8, EntityPredicate entityPredicate, EntityPredicate entityPredicate2) {
-        this.isProjectile = boolean_;
-        this.isExplosion = boolean2;
-        this.bypassesArmor = boolean3;
-        this.bypassesInvulnerability = boolean4;
-        this.bypassesMagic = boolean5;
-        this.isFire = boolean6;
-        this.isMagic = boolean7;
-        this.isLightning = boolean8;
-        this.directEntity = entityPredicate;
-        this.sourceEntity = entityPredicate2;
+    public DamageSourcePredicate(@Nullable Boolean isProjectile, @Nullable Boolean isExplosion, @Nullable Boolean bypassesArmor, @Nullable Boolean bypassesInvulnerability, @Nullable Boolean bypassesMagic, @Nullable Boolean isFire, @Nullable Boolean isMagic, @Nullable Boolean isLightning, EntityPredicate directEntity, EntityPredicate sourceEntity) {
+        this.isProjectile = isProjectile;
+        this.isExplosion = isExplosion;
+        this.bypassesArmor = bypassesArmor;
+        this.bypassesInvulnerability = bypassesInvulnerability;
+        this.bypassesMagic = bypassesMagic;
+        this.isFire = isFire;
+        this.isMagic = isMagic;
+        this.isLightning = isLightning;
+        this.directEntity = directEntity;
+        this.sourceEntity = sourceEntity;
     }
 
     public boolean test(ServerPlayerEntity player, DamageSource damageSource) {
@@ -72,7 +72,7 @@ public class DamageSourcePredicate {
         if (this.isFire != null && this.isFire.booleanValue() != damageSource.isFire()) {
             return false;
         }
-        if (this.isMagic != null && this.isMagic.booleanValue() != damageSource.getMagic()) {
+        if (this.isMagic != null && this.isMagic.booleanValue() != damageSource.isMagic()) {
             return false;
         }
         if (this.isLightning != null && this.isLightning != (damageSource == DamageSource.LIGHTNING_BOLT)) {
@@ -84,11 +84,11 @@ public class DamageSourcePredicate {
         return this.sourceEntity.test(world, pos, damageSource.getAttacker());
     }
 
-    public static DamageSourcePredicate deserialize(@Nullable JsonElement element) {
-        if (element == null || element.isJsonNull()) {
+    public static DamageSourcePredicate fromJson(@Nullable JsonElement json) {
+        if (json == null || json.isJsonNull()) {
             return EMPTY;
         }
-        JsonObject jsonObject = JsonHelper.asObject(element, "damage type");
+        JsonObject jsonObject = JsonHelper.asObject(json, "damage type");
         Boolean boolean_ = DamageSourcePredicate.getBoolean(jsonObject, "is_projectile");
         Boolean boolean2 = DamageSourcePredicate.getBoolean(jsonObject, "is_explosion");
         Boolean boolean3 = DamageSourcePredicate.getBoolean(jsonObject, "bypasses_armor");
@@ -107,7 +107,7 @@ public class DamageSourcePredicate {
         return obj.has(name) ? Boolean.valueOf(JsonHelper.getBoolean(obj, name)) : null;
     }
 
-    public JsonElement serialize() {
+    public JsonElement toJson() {
         if (this == EMPTY) {
             return JsonNull.INSTANCE;
         }
@@ -120,14 +120,14 @@ public class DamageSourcePredicate {
         this.addProperty(jsonObject, "is_fire", this.isFire);
         this.addProperty(jsonObject, "is_magic", this.isMagic);
         this.addProperty(jsonObject, "is_lightning", this.isLightning);
-        jsonObject.add("direct_entity", this.directEntity.serialize());
-        jsonObject.add("source_entity", this.sourceEntity.serialize());
+        jsonObject.add("direct_entity", this.directEntity.toJson());
+        jsonObject.add("source_entity", this.sourceEntity.toJson());
         return jsonObject;
     }
 
-    private void addProperty(JsonObject json, String key, @Nullable Boolean boolean_) {
-        if (boolean_ != null) {
-            json.addProperty(key, boolean_);
+    private void addProperty(JsonObject json, String key, @Nullable Boolean value) {
+        if (value != null) {
+            json.addProperty(key, value);
         }
     }
 
@@ -147,13 +147,13 @@ public class DamageSourcePredicate {
             return new Builder();
         }
 
-        public Builder projectile(Boolean boolean_) {
-            this.isProjectile = boolean_;
+        public Builder projectile(Boolean projectile) {
+            this.isProjectile = projectile;
             return this;
         }
 
-        public Builder lightning(Boolean boolean_) {
-            this.isLightning = boolean_;
+        public Builder lightning(Boolean lightning) {
+            this.isLightning = lightning;
             return this;
         }
 

@@ -2,50 +2,66 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.datafixers.Products$P3
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
+ *  com.mojang.serialization.codecs.RecordCodecBuilder$Instance
+ *  com.mojang.serialization.codecs.RecordCodecBuilder$Mu
  */
 package net.minecraft.world.gen.foliage;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.datafixers.Products;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Random;
 import java.util.Set;
+import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.ModifiableTestableWorld;
-import net.minecraft.world.gen.feature.BranchedTreeFeatureConfig;
+import net.minecraft.world.gen.UniformIntDistribution;
+import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import net.minecraft.world.gen.foliage.FoliagePlacer;
 import net.minecraft.world.gen.foliage.FoliagePlacerType;
 
 public class BlobFoliagePlacer
 extends FoliagePlacer {
-    public BlobFoliagePlacer(int radius, int radiusRandom) {
-        super(radius, radiusRandom, FoliagePlacerType.BLOB_FOLIAGE_PLACER);
+    public static final Codec<BlobFoliagePlacer> CODEC = RecordCodecBuilder.create(instance -> BlobFoliagePlacer.createCodec(instance).apply((Applicative)instance, BlobFoliagePlacer::new));
+    protected final int height;
+
+    protected static <P extends BlobFoliagePlacer> Products.P3<RecordCodecBuilder.Mu<P>, UniformIntDistribution, UniformIntDistribution, Integer> createCodec(RecordCodecBuilder.Instance<P> builder) {
+        return BlobFoliagePlacer.fillFoliagePlacerFields(builder).and((App)Codec.intRange((int)0, (int)16).fieldOf("height").forGetter(blobFoliagePlacer -> blobFoliagePlacer.height));
     }
 
-    public <T> BlobFoliagePlacer(Dynamic<T> dynamic) {
-        this(dynamic.get("radius").asInt(0), dynamic.get("radius_random").asInt(0));
+    public BlobFoliagePlacer(UniformIntDistribution radius, UniformIntDistribution offset, int height) {
+        super(radius, offset);
+        this.height = height;
     }
 
     @Override
-    public void generate(ModifiableTestableWorld world, Random random, BranchedTreeFeatureConfig config, int i, int j, int k, BlockPos pos, Set<BlockPos> positions) {
-        for (int l = i; l >= j; --l) {
-            int m = Math.max(k - 1 - (l - i) / 2, 0);
-            this.generate(world, random, config, i, pos, l, m, positions);
+    protected FoliagePlacerType<?> getType() {
+        return FoliagePlacerType.BLOB_FOLIAGE_PLACER;
+    }
+
+    @Override
+    protected void generate(ModifiableTestableWorld world, Random random, TreeFeatureConfig config, int trunkHeight, FoliagePlacer.TreeNode treeNode, int foliageHeight, int radius, Set<BlockPos> leaves, int offset, BlockBox box) {
+        for (int i = offset; i >= offset - foliageHeight; --i) {
+            int j = Math.max(radius + treeNode.getFoliageRadius() - 1 - i / 2, 0);
+            this.generateSquare(world, random, config, treeNode.getCenter(), j, leaves, i, treeNode.isGiantTrunk(), box);
         }
     }
 
     @Override
-    public int getRadius(Random random, int i, int j, BranchedTreeFeatureConfig config) {
-        return this.radius + random.nextInt(this.randomRadius + 1);
+    public int getRandomHeight(Random random, int trunkHeight, TreeFeatureConfig config) {
+        return this.height;
     }
 
     @Override
-    protected boolean method_23451(Random random, int i, int j, int k, int l, int m) {
-        return Math.abs(j) == m && Math.abs(l) == m && (random.nextInt(2) == 0 || k == i);
-    }
-
-    @Override
-    public int method_23447(int i, int j, int k, int l) {
-        return l == 0 ? 0 : 1;
+    protected boolean isInvalidForLeaves(Random random, int dx, int y, int dz, int radius, boolean giantTrunk) {
+        return dx == radius && dz == radius && (random.nextInt(2) == 0 || y == 0);
     }
 }
 

@@ -58,13 +58,13 @@ extends Sensor<MobEntity> {
             this.positionToExpiryTime.put(l, this.expiryTime + 40L);
             return true;
         };
-        Stream<BlockPos> stream = pointOfInterestStorage.getPositions(PointOfInterestType.HOME.getCompletionCondition(), predicate, new BlockPos(mobEntity), 48, PointOfInterestStorage.OccupationStatus.ANY);
+        Stream<BlockPos> stream = pointOfInterestStorage.getPositions(PointOfInterestType.HOME.getCompletionCondition(), predicate, mobEntity.getBlockPos(), 48, PointOfInterestStorage.OccupationStatus.ANY);
         Path path = mobEntity.getNavigation().findPathToAny(stream, PointOfInterestType.HOME.getSearchDistance());
         if (path != null && path.reachesTarget()) {
             BlockPos blockPos2 = path.getTarget();
             Optional<PointOfInterestType> optional = pointOfInterestStorage.getType(blockPos2);
             if (optional.isPresent()) {
-                mobEntity.getBrain().putMemory(MemoryModuleType.NEAREST_BED, blockPos2);
+                mobEntity.getBrain().remember(MemoryModuleType.NEAREST_BED, blockPos2);
             }
         } else if (this.tries < 5) {
             this.positionToExpiryTime.long2LongEntrySet().removeIf(entry -> entry.getLongValue() < this.expiryTime);

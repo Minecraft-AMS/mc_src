@@ -8,6 +8,7 @@ package net.minecraft.entity.mob;
 
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.passive.HorseBaseEntity;
@@ -15,9 +16,10 @@ import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.SpawnEggItem;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -28,12 +30,13 @@ extends HorseBaseEntity {
         super((EntityType<? extends HorseBaseEntity>)entityType, world);
     }
 
+    public static DefaultAttributeContainer.Builder createZombieHorseAttributes() {
+        return ZombieHorseEntity.createBaseHorseAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 15.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.2f);
+    }
+
     @Override
     protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(15.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.2f);
-        this.getAttributeInstance(JUMP_STRENGTH).setBaseValue(this.getChildJumpStrengthBonus());
+        this.getAttributeInstance(EntityAttributes.HORSE_JUMP_STRENGTH).setBaseValue(this.getChildJumpStrengthBonus());
     }
 
     @Override
@@ -61,40 +64,38 @@ extends HorseBaseEntity {
 
     @Override
     @Nullable
-    public PassiveEntity createChild(PassiveEntity mate) {
-        return EntityType.ZOMBIE_HORSE.create(this.world);
+    public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        return EntityType.ZOMBIE_HORSE.create(world);
     }
 
     @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() instanceof SpawnEggItem) {
-            return super.interactMob(player, hand);
-        }
         if (!this.isTame()) {
-            return false;
+            return ActionResult.PASS;
         }
         if (this.isBaby()) {
             return super.interactMob(player, hand);
         }
         if (player.shouldCancelInteraction()) {
             this.openInventory(player);
-            return true;
+            return ActionResult.success(this.world.isClient);
         }
         if (this.hasPassengers()) {
             return super.interactMob(player, hand);
         }
         if (!itemStack.isEmpty()) {
-            if (!this.isSaddled() && itemStack.getItem() == Items.SADDLE) {
+            if (itemStack.getItem() == Items.SADDLE && !this.isSaddled()) {
                 this.openInventory(player);
-                return true;
+                return ActionResult.success(this.world.isClient);
             }
-            if (itemStack.useOnEntity(player, this, hand)) {
-                return true;
+            ActionResult actionResult = itemStack.useOnEntity(player, this, hand);
+            if (actionResult.isAccepted()) {
+                return actionResult;
             }
         }
         this.putPlayerOnBack(player);
-        return true;
+        return ActionResult.success(this.world.isClient);
     }
 
     @Override

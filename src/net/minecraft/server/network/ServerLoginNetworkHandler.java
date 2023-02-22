@@ -28,10 +28,12 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.NetworkEncryptionUtils;
+import net.minecraft.network.encryption.NetworkEncryptionException;
+import net.minecraft.network.encryption.NetworkEncryptionUtils;
 import net.minecraft.network.listener.ServerLoginPacketListener;
 import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
 import net.minecraft.network.packet.c2s.login.LoginKeyC2SPacket;
@@ -44,7 +46,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.UncaughtExceptionLogger;
+import net.minecraft.util.logging.UncaughtExceptionLogger;
 import org.apache.commons.lang3.Validate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -52,7 +54,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ServerLoginNetworkHandler
 implements ServerLoginPacketListener {
-    private static final AtomicInteger authenticatorThreadId = new AtomicInteger(0);
+    private static final AtomicInteger NEXT_AUTHENTICATOR_THREAD_ID = new AtomicInteger(0);
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Random RANDOM = new Random();
     private final byte[] nonce = new byte[4];
@@ -61,13 +63,13 @@ implements ServerLoginPacketListener {
     private State state = State.HELLO;
     private int loginTicks;
     private GameProfile profile;
-    private final String field_14165 = "";
+    private final String serverId = "";
     private SecretKey secretKey;
-    private ServerPlayerEntity clientEntity;
+    private ServerPlayerEntity delayedPlayer;
 
-    public ServerLoginNetworkHandler(MinecraftServer minecraftServer, ClientConnection clientConnection) {
-        this.server = minecraftServer;
-        this.connection = clientConnection;
+    public ServerLoginNetworkHandler(MinecraftServer server, ClientConnection connection) {
+        this.server = server;
+        this.connection = connection;
         RANDOM.nextBytes(this.nonce);
     }
 
@@ -77,11 +79,11 @@ implements ServerLoginPacketListener {
             this.acceptPlayer();
         } else if (this.state == State.DELAY_ACCEPT && (serverPlayerEntity = this.server.getPlayerManager().getPlayer(this.profile.getId())) == null) {
             this.state = State.READY_TO_ACCEPT;
-            this.server.getPlayerManager().onPlayerConnect(this.connection, this.clientEntity);
-            this.clientEntity = null;
+            this.server.getPlayerManager().onPlayerConnect(this.connection, this.delayedPlayer);
+            this.delayedPlayer = null;
         }
         if (this.loginTicks++ == 600) {
-            this.disconnect(new TranslatableText("multiplayer.disconnect.slow_login", new Object[0]));
+            this.disconnect(new TranslatableText("multiplayer.disconnect.slow_login"));
         }
     }
 
@@ -117,7 +119,7 @@ implements ServerLoginPacketListener {
             ServerPlayerEntity serverPlayerEntity = this.server.getPlayerManager().getPlayer(this.profile.getId());
             if (serverPlayerEntity != null) {
                 this.state = State.DELAY_ACCEPT;
-                this.clientEntity = this.server.getPlayerManager().createPlayer(this.profile);
+                this.delayedPlayer = this.server.getPlayerManager().createPlayer(this.profile);
             } else {
                 this.server.getPlayerManager().onPlayerConnect(this.connection, this.server.getPlayerManager().createPlayer(this.profile));
             }
@@ -142,7 +144,7 @@ implements ServerLoginPacketListener {
         this.profile = packet.getProfile();
         if (this.server.isOnlineMode() && !this.connection.isLocal()) {
             this.state = State.KEY;
-            this.connection.send(new LoginHelloS2CPacket("", this.server.getKeyPair().getPublic(), this.nonce));
+            this.connection.send(new LoginHelloS2CPacket("", this.server.getKeyPair().getPublic().getEncoded(), this.nonce));
         } else {
             this.state = State.READY_TO_ACCEPT;
         }
@@ -150,22 +152,30 @@ implements ServerLoginPacketListener {
 
     @Override
     public void onKey(LoginKeyC2SPacket packet) {
+        String string;
         Validate.validState((this.state == State.KEY ? 1 : 0) != 0, (String)"Unexpected key packet", (Object[])new Object[0]);
         PrivateKey privateKey = this.server.getKeyPair().getPrivate();
-        if (!Arrays.equals(this.nonce, packet.decryptNonce(privateKey))) {
-            throw new IllegalStateException("Invalid nonce!");
+        try {
+            if (!Arrays.equals(this.nonce, packet.decryptNonce(privateKey))) {
+                throw new IllegalStateException("Protocol error");
+            }
+            this.secretKey = packet.decryptSecretKey(privateKey);
+            Cipher cipher = NetworkEncryptionUtils.cipherFromKey(2, this.secretKey);
+            Cipher cipher2 = NetworkEncryptionUtils.cipherFromKey(1, this.secretKey);
+            string = new BigInteger(NetworkEncryptionUtils.generateServerId("", this.server.getKeyPair().getPublic(), this.secretKey)).toString(16);
+            this.state = State.AUTHENTICATING;
+            this.connection.setupEncryption(cipher, cipher2);
         }
-        this.secretKey = packet.decryptSecretKey(privateKey);
-        this.state = State.AUTHENTICATING;
-        this.connection.setupEncryption(this.secretKey);
-        Thread thread = new Thread("User Authenticator #" + authenticatorThreadId.incrementAndGet()){
+        catch (NetworkEncryptionException networkEncryptionException) {
+            throw new IllegalStateException("Protocol error", networkEncryptionException);
+        }
+        Thread thread = new Thread("User Authenticator #" + NEXT_AUTHENTICATOR_THREAD_ID.incrementAndGet()){
 
             @Override
             public void run() {
                 GameProfile gameProfile = ServerLoginNetworkHandler.this.profile;
                 try {
-                    String string = new BigInteger(NetworkEncryptionUtils.generateServerId("", ServerLoginNetworkHandler.this.server.getKeyPair().getPublic(), ServerLoginNetworkHandler.this.secretKey)).toString(16);
-                    ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.server.getSessionService().hasJoinedServer(new GameProfile(null, gameProfile.getName()), string, this.method_14386());
+                    ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.server.getSessionService().hasJoinedServer(new GameProfile(null, gameProfile.getName()), string, this.getClientAddress());
                     if (ServerLoginNetworkHandler.this.profile != null) {
                         LOGGER.info("UUID of player {} is {}", (Object)ServerLoginNetworkHandler.this.profile.getName(), (Object)ServerLoginNetworkHandler.this.profile.getId());
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
@@ -174,7 +184,7 @@ implements ServerLoginPacketListener {
                         ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.toOfflineProfile(gameProfile);
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
                     } else {
-                        ServerLoginNetworkHandler.this.disconnect(new TranslatableText("multiplayer.disconnect.unverified_username", new Object[0]));
+                        ServerLoginNetworkHandler.this.disconnect(new TranslatableText("multiplayer.disconnect.unverified_username"));
                         LOGGER.error("Username '{}' tried to join with an invalid session", (Object)gameProfile.getName());
                     }
                 }
@@ -184,13 +194,13 @@ implements ServerLoginPacketListener {
                         ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.toOfflineProfile(gameProfile);
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
                     }
-                    ServerLoginNetworkHandler.this.disconnect(new TranslatableText("multiplayer.disconnect.authservers_down", new Object[0]));
+                    ServerLoginNetworkHandler.this.disconnect(new TranslatableText("multiplayer.disconnect.authservers_down"));
                     LOGGER.error("Couldn't verify username because servers are unavailable");
                 }
             }
 
             @Nullable
-            private InetAddress method_14386() {
+            private InetAddress getClientAddress() {
                 SocketAddress socketAddress = ServerLoginNetworkHandler.this.connection.getAddress();
                 return ServerLoginNetworkHandler.this.server.shouldPreventProxyConnections() && socketAddress instanceof InetSocketAddress ? ((InetSocketAddress)socketAddress).getAddress() : null;
             }
@@ -201,7 +211,7 @@ implements ServerLoginPacketListener {
 
     @Override
     public void onQueryResponse(LoginQueryResponseC2SPacket packet) {
-        this.disconnect(new TranslatableText("multiplayer.disconnect.unexpected_query_response", new Object[0]));
+        this.disconnect(new TranslatableText("multiplayer.disconnect.unexpected_query_response"));
     }
 
     protected GameProfile toOfflineProfile(GameProfile profile) {

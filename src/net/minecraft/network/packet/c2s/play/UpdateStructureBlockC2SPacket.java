@@ -13,10 +13,10 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.block.enums.StructureBlockMode;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 
@@ -64,17 +64,19 @@ implements Packet<ServerPlayPacketListener> {
         this.action = buf.readEnumConstant(StructureBlockBlockEntity.Action.class);
         this.mode = buf.readEnumConstant(StructureBlockMode.class);
         this.structureName = buf.readString(Short.MAX_VALUE);
-        this.offset = new BlockPos(MathHelper.clamp(buf.readByte(), -32, 32), MathHelper.clamp(buf.readByte(), -32, 32), MathHelper.clamp(buf.readByte(), -32, 32));
-        this.size = new BlockPos(MathHelper.clamp(buf.readByte(), 0, 32), MathHelper.clamp(buf.readByte(), 0, 32), MathHelper.clamp(buf.readByte(), 0, 32));
+        int i = 48;
+        this.offset = new BlockPos(MathHelper.clamp(buf.readByte(), -48, 48), MathHelper.clamp(buf.readByte(), -48, 48), MathHelper.clamp(buf.readByte(), -48, 48));
+        int j = 48;
+        this.size = new BlockPos(MathHelper.clamp(buf.readByte(), 0, 48), MathHelper.clamp(buf.readByte(), 0, 48), MathHelper.clamp(buf.readByte(), 0, 48));
         this.mirror = buf.readEnumConstant(BlockMirror.class);
         this.rotation = buf.readEnumConstant(BlockRotation.class);
         this.metadata = buf.readString(12);
         this.integrity = MathHelper.clamp(buf.readFloat(), 0.0f, 1.0f);
         this.seed = buf.readVarLong();
-        byte i = buf.readByte();
-        this.ignoreEntities = (i & 1) != 0;
-        this.showAir = (i & 2) != 0;
-        this.showBoundingBox = (i & 4) != 0;
+        byte k = buf.readByte();
+        this.ignoreEntities = (k & 1) != 0;
+        this.showAir = (k & 2) != 0;
+        this.showBoundingBox = (k & 4) != 0;
     }
 
     @Override
@@ -148,7 +150,7 @@ implements Packet<ServerPlayPacketListener> {
         return this.metadata;
     }
 
-    public boolean getIgnoreEntities() {
+    public boolean shouldIgnoreEntities() {
         return this.ignoreEntities;
     }
 

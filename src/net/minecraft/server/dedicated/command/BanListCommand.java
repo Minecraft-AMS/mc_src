@@ -21,8 +21,8 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.TranslatableText;
 
 public class BanListCommand {
-    public static void register(CommandDispatcher<ServerCommandSource> commandDispatcher) {
-        commandDispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("banlist").requires(serverCommandSource -> (serverCommandSource.getMinecraftServer().getPlayerManager().getUserBanList().isEnabled() || serverCommandSource.getMinecraftServer().getPlayerManager().getIpBanList().isEnabled()) && serverCommandSource.hasPermissionLevel(3))).executes(commandContext -> {
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("banlist").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).executes(commandContext -> {
             PlayerManager playerManager = ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager();
             return BanListCommand.execute((ServerCommandSource)commandContext.getSource(), Lists.newArrayList((Iterable)Iterables.concat(playerManager.getUserBanList().values(), playerManager.getIpBanList().values())));
         })).then(CommandManager.literal("ips").executes(commandContext -> BanListCommand.execute((ServerCommandSource)commandContext.getSource(), ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().getIpBanList().values())))).then(CommandManager.literal("players").executes(commandContext -> BanListCommand.execute((ServerCommandSource)commandContext.getSource(), ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().getUserBanList().values()))));
@@ -30,7 +30,7 @@ public class BanListCommand {
 
     private static int execute(ServerCommandSource source, Collection<? extends BanEntry<?>> targets) {
         if (targets.isEmpty()) {
-            source.sendFeedback(new TranslatableText("commands.banlist.none", new Object[0]), false);
+            source.sendFeedback(new TranslatableText("commands.banlist.none"), false);
         } else {
             source.sendFeedback(new TranslatableText("commands.banlist.list", targets.size()), false);
             for (BanEntry<?> banEntry : targets) {

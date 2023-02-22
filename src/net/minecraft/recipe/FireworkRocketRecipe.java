@@ -12,8 +12,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.SpecialCraftingRecipe;
@@ -34,8 +34,8 @@ extends SpecialCraftingRecipe {
     public boolean matches(CraftingInventory craftingInventory, World world) {
         boolean bl = false;
         int i = 0;
-        for (int j = 0; j < craftingInventory.getInvSize(); ++j) {
-            ItemStack itemStack = craftingInventory.getInvStack(j);
+        for (int j = 0; j < craftingInventory.size(); ++j) {
+            ItemStack itemStack = craftingInventory.getStack(j);
             if (itemStack.isEmpty()) continue;
             if (PAPER.test(itemStack)) {
                 if (bl) {
@@ -53,23 +53,23 @@ extends SpecialCraftingRecipe {
     @Override
     public ItemStack craft(CraftingInventory craftingInventory) {
         ItemStack itemStack = new ItemStack(Items.FIREWORK_ROCKET, 3);
-        CompoundTag compoundTag = itemStack.getOrCreateSubTag("Fireworks");
-        ListTag listTag = new ListTag();
+        NbtCompound nbtCompound = itemStack.getOrCreateSubTag("Fireworks");
+        NbtList nbtList = new NbtList();
         int i = 0;
-        for (int j = 0; j < craftingInventory.getInvSize(); ++j) {
-            CompoundTag compoundTag2;
-            ItemStack itemStack2 = craftingInventory.getInvStack(j);
+        for (int j = 0; j < craftingInventory.size(); ++j) {
+            NbtCompound nbtCompound2;
+            ItemStack itemStack2 = craftingInventory.getStack(j);
             if (itemStack2.isEmpty()) continue;
             if (DURATION_MODIFIER.test(itemStack2)) {
                 ++i;
                 continue;
             }
-            if (!FIREWORK_STAR.test(itemStack2) || (compoundTag2 = itemStack2.getSubTag("Explosion")) == null) continue;
-            listTag.add(compoundTag2);
+            if (!FIREWORK_STAR.test(itemStack2) || (nbtCompound2 = itemStack2.getSubTag("Explosion")) == null) continue;
+            nbtList.add(nbtCompound2);
         }
-        compoundTag.putByte("Flight", (byte)i);
-        if (!listTag.isEmpty()) {
-            compoundTag.put("Explosions", listTag);
+        nbtCompound.putByte("Flight", (byte)i);
+        if (!nbtList.isEmpty()) {
+            nbtCompound.put("Explosions", nbtList);
         }
         return itemStack;
     }

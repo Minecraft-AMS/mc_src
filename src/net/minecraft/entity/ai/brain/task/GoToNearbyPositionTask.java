@@ -8,43 +8,44 @@ package net.minecraft.entity.ai.brain.task;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.Task;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.GlobalPos;
+import net.minecraft.util.dynamic.GlobalPos;
 
 public class GoToNearbyPositionTask
-extends Task<MobEntityWithAi> {
+extends Task<PathAwareEntity> {
     private final MemoryModuleType<GlobalPos> memoryModuleType;
     private final int completionRange;
     private final int maxDistance;
+    private final float field_25753;
     private long nextRunTime;
 
-    public GoToNearbyPositionTask(MemoryModuleType<GlobalPos> memoryModuleType, int completionRange, int maxDistance) {
+    public GoToNearbyPositionTask(MemoryModuleType<GlobalPos> memoryModuleType, float walkSpeed, int completionRange, int maxDistance) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), memoryModuleType, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
         this.memoryModuleType = memoryModuleType;
+        this.field_25753 = walkSpeed;
         this.completionRange = completionRange;
         this.maxDistance = maxDistance;
     }
 
     @Override
-    protected boolean shouldRun(ServerWorld serverWorld, MobEntityWithAi mobEntityWithAi) {
-        Optional<GlobalPos> optional = mobEntityWithAi.getBrain().getOptionalMemory(this.memoryModuleType);
-        return optional.isPresent() && Objects.equals(serverWorld.getDimension().getType(), optional.get().getDimension()) && optional.get().getPos().isWithinDistance(mobEntityWithAi.getPos(), (double)this.maxDistance);
+    protected boolean shouldRun(ServerWorld serverWorld, PathAwareEntity pathAwareEntity) {
+        Optional<GlobalPos> optional = pathAwareEntity.getBrain().getOptionalMemory(this.memoryModuleType);
+        return optional.isPresent() && serverWorld.getRegistryKey() == optional.get().getDimension() && optional.get().getPos().isWithinDistance(pathAwareEntity.getPos(), (double)this.maxDistance);
     }
 
     @Override
-    protected void run(ServerWorld serverWorld, MobEntityWithAi mobEntityWithAi, long l) {
+    protected void run(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
         if (l > this.nextRunTime) {
-            Brain<?> brain = mobEntityWithAi.getBrain();
+            Brain<?> brain = pathAwareEntity.getBrain();
             Optional<GlobalPos> optional = brain.getOptionalMemory(this.memoryModuleType);
-            optional.ifPresent(globalPos -> brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), 0.4f, this.completionRange)));
+            optional.ifPresent(globalPos -> brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), this.field_25753, this.completionRange)));
             this.nextRunTime = l + 80L;
         }
     }

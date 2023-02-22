@@ -8,6 +8,7 @@
  */
 package net.minecraft.world;
 
+import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
@@ -24,7 +25,7 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.dimension.Dimension;
+import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.level.ColorResolver;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,6 +49,19 @@ BiomeAccess.Storage {
         return this.getBiomeAccess().getBiome(pos);
     }
 
+    default public Stream<BlockState> method_29556(Box box) {
+        int n;
+        int i = MathHelper.floor(box.minX);
+        int j = MathHelper.floor(box.maxX);
+        int k = MathHelper.floor(box.minY);
+        int l = MathHelper.floor(box.maxY);
+        int m = MathHelper.floor(box.minZ);
+        if (this.isRegionLoaded(i, k, m, j, l, n = MathHelper.floor(box.maxZ))) {
+            return this.method_29546(box);
+        }
+        return Stream.empty();
+    }
+
     @Override
     @Environment(value=EnvType.CLIENT)
     default public int getColor(BlockPos pos, ColorResolver colorResolver) {
@@ -67,9 +81,10 @@ BiomeAccess.Storage {
 
     public boolean isClient();
 
+    @Deprecated
     public int getSeaLevel();
 
-    public Dimension getDimension();
+    public DimensionType getDimension();
 
     default public BlockPos getTopPosition(Heightmap.Type heightmap, BlockPos pos) {
         return new BlockPos(pos.getX(), this.getTopY(heightmap, pos.getX(), pos.getZ()), pos.getZ());
@@ -100,7 +115,7 @@ BiomeAccess.Storage {
 
     @Deprecated
     default public float getBrightness(BlockPos pos) {
-        return this.getDimension().getBrightness(this.getLightLevel(pos));
+        return this.getDimension().method_28516(this.getLightLevel(pos));
     }
 
     default public int getStrongRedstonePower(BlockPos pos, Direction direction) {
@@ -121,30 +136,28 @@ BiomeAccess.Storage {
 
     @Override
     @Nullable
-    default public BlockView getExistingChunk(int chunkX, int chunkZ) {
+    default public BlockView getChunkAsView(int chunkX, int chunkZ) {
         return this.getChunk(chunkX, chunkZ, ChunkStatus.EMPTY, false);
     }
 
     default public boolean isWater(BlockPos pos) {
-        return this.getFluidState(pos).matches(FluidTags.WATER);
+        return this.getFluidState(pos).isIn(FluidTags.WATER);
     }
 
     default public boolean containsFluid(Box box) {
-        int i = MathHelper.floor(box.x1);
-        int j = MathHelper.ceil(box.x2);
-        int k = MathHelper.floor(box.y1);
-        int l = MathHelper.ceil(box.y2);
-        int m = MathHelper.floor(box.z1);
-        int n = MathHelper.ceil(box.z2);
-        try (BlockPos.PooledMutable pooledMutable = BlockPos.PooledMutable.get();){
-            for (int o = i; o < j; ++o) {
-                for (int p = k; p < l; ++p) {
-                    for (int q = m; q < n; ++q) {
-                        BlockState blockState = this.getBlockState(pooledMutable.set(o, p, q));
-                        if (blockState.getFluidState().isEmpty()) continue;
-                        boolean bl = true;
-                        return bl;
-                    }
+        int i = MathHelper.floor(box.minX);
+        int j = MathHelper.ceil(box.maxX);
+        int k = MathHelper.floor(box.minY);
+        int l = MathHelper.ceil(box.maxY);
+        int m = MathHelper.floor(box.minZ);
+        int n = MathHelper.ceil(box.maxZ);
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        for (int o = i; o < j; ++o) {
+            for (int p = k; p < l; ++p) {
+                for (int q = m; q < n; ++q) {
+                    BlockState blockState = this.getBlockState(mutable.set(o, p, q));
+                    if (blockState.getFluidState().isEmpty()) continue;
+                    return true;
                 }
             }
         }

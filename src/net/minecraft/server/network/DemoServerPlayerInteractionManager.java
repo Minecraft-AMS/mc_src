@@ -3,15 +3,16 @@
  */
 package net.minecraft.server.network;
 
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.network.ServerPlayerInteractionManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -36,7 +37,7 @@ extends ServerPlayerInteractionManager {
         long m = l / 24000L + 1L;
         if (!this.sentHelp && this.tick > 20) {
             this.sentHelp = true;
-            this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(5, 0.0f));
+            this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 0.0f));
         }
         boolean bl = this.demoEnded = l > 120500L;
         if (this.demoEnded) {
@@ -45,27 +46,27 @@ extends ServerPlayerInteractionManager {
         if (l % 24000L == 500L) {
             if (m <= 6L) {
                 if (m == 6L) {
-                    this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(5, 104.0f));
+                    this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 104.0f));
                 } else {
-                    this.player.sendMessage(new TranslatableText("demo.day." + m, new Object[0]));
+                    this.player.sendSystemMessage(new TranslatableText("demo.day." + m), Util.NIL_UUID);
                 }
             }
         } else if (m == 1L) {
             if (l == 100L) {
-                this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(5, 101.0f));
+                this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 101.0f));
             } else if (l == 175L) {
-                this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(5, 102.0f));
+                this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 102.0f));
             } else if (l == 250L) {
-                this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(5, 103.0f));
+                this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 103.0f));
             }
         } else if (m == 5L && l % 24000L == 22000L) {
-            this.player.sendMessage(new TranslatableText("demo.day.warning", new Object[0]));
+            this.player.sendSystemMessage(new TranslatableText("demo.day.warning"), Util.NIL_UUID);
         }
     }
 
     private void sendDemoReminder() {
         if (this.reminderTicks > 100) {
-            this.player.sendMessage(new TranslatableText("demo.reminder", new Object[0]));
+            this.player.sendSystemMessage(new TranslatableText("demo.reminder"), Util.NIL_UUID);
             this.reminderTicks = 0;
         }
     }
@@ -80,7 +81,7 @@ extends ServerPlayerInteractionManager {
     }
 
     @Override
-    public ActionResult interactItem(PlayerEntity player, World world, ItemStack stack, Hand hand) {
+    public ActionResult interactItem(ServerPlayerEntity player, World world, ItemStack stack, Hand hand) {
         if (this.demoEnded) {
             this.sendDemoReminder();
             return ActionResult.PASS;
@@ -89,7 +90,7 @@ extends ServerPlayerInteractionManager {
     }
 
     @Override
-    public ActionResult interactBlock(PlayerEntity player, World world, ItemStack stack, Hand hand, BlockHitResult hitResult) {
+    public ActionResult interactBlock(ServerPlayerEntity player, World world, ItemStack stack, Hand hand, BlockHitResult hitResult) {
         if (this.demoEnded) {
             this.sendDemoReminder();
             return ActionResult.PASS;

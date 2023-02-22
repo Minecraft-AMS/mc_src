@@ -84,27 +84,12 @@ extends BlockEntityRenderer<SkullBlockEntity> {
         if (direction == null) {
             matrixStack.translate(0.5, 0.0, 0.5);
         } else {
-            switch (direction) {
-                case NORTH: {
-                    matrixStack.translate(0.5, 0.25, 0.74f);
-                    break;
-                }
-                case SOUTH: {
-                    matrixStack.translate(0.5, 0.25, 0.26f);
-                    break;
-                }
-                case WEST: {
-                    matrixStack.translate(0.74f, 0.25, 0.5);
-                    break;
-                }
-                default: {
-                    matrixStack.translate(0.26f, 0.25, 0.5);
-                }
-            }
+            float h = 0.25f;
+            matrixStack.translate(0.5f - (float)direction.getOffsetX() * 0.25f, 0.25, 0.5f - (float)direction.getOffsetZ() * 0.25f);
         }
         matrixStack.scale(-1.0f, -1.0f, 1.0f);
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(SkullBlockEntityRenderer.method_3578(skullType, gameProfile));
-        skullEntityModel.render(g, f, 0.0f);
+        skullEntityModel.method_2821(g, f, 0.0f);
         skullEntityModel.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
         matrixStack.pop();
     }
@@ -112,7 +97,7 @@ extends BlockEntityRenderer<SkullBlockEntity> {
     private static RenderLayer method_3578(SkullBlock.SkullType skullType, @Nullable GameProfile gameProfile) {
         Identifier identifier = TEXTURES.get(skullType);
         if (skullType != SkullBlock.Type.PLAYER || gameProfile == null) {
-            return RenderLayer.getEntityCutoutNoCull(identifier);
+            return RenderLayer.getEntityCutoutNoCullZOffset(identifier);
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraftClient.getSkinProvider().getTextures(gameProfile);

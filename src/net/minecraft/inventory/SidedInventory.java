@@ -13,10 +13,10 @@ import org.jetbrains.annotations.Nullable;
 
 public interface SidedInventory
 extends Inventory {
-    public int[] getInvAvailableSlots(Direction var1);
+    public int[] getAvailableSlots(Direction var1);
 
-    public boolean canInsertInvStack(int var1, ItemStack var2, @Nullable Direction var3);
+    public boolean canInsert(int var1, ItemStack var2, @Nullable Direction var3);
 
-    public boolean canExtractInvStack(int var1, ItemStack var2, Direction var3);
+    public boolean canExtract(int var1, ItemStack var2, Direction var3);
 }
 

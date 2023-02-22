@@ -18,20 +18,21 @@ import com.mojang.datafixers.types.Type;
 import java.util.Objects;
 import java.util.function.Function;
 import net.minecraft.datafixer.TypeReferences;
+import net.minecraft.datafixer.schema.IdentifierNormalizingSchema;
 
 public class RecipeRenameFix
 extends DataFix {
     private final String name;
     private final Function<String, String> renamer;
 
-    public RecipeRenameFix(Schema schema, boolean bl, String name, Function<String, String> renamer) {
-        super(schema, bl);
+    public RecipeRenameFix(Schema outputSchema, boolean changesType, String name, Function<String, String> renamer) {
+        super(outputSchema, changesType);
         this.name = name;
         this.renamer = renamer;
     }
 
     protected TypeRewriteRule makeRule() {
-        Type type = DSL.named((String)TypeReferences.RECIPE.typeName(), (Type)DSL.namespacedString());
+        Type type = DSL.named((String)TypeReferences.RECIPE.typeName(), IdentifierNormalizingSchema.getIdentifierType());
         if (!Objects.equals(type, this.getInputSchema().getType(TypeReferences.RECIPE))) {
             throw new IllegalStateException("Recipe type is not what was expected.");
         }

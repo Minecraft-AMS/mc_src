@@ -13,9 +13,9 @@ import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.util.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 public class ScoreboardDisplayS2CPacket
@@ -26,9 +26,9 @@ implements Packet<ClientPlayPacketListener> {
     public ScoreboardDisplayS2CPacket() {
     }
 
-    public ScoreboardDisplayS2CPacket(int slot, @Nullable ScoreboardObjective scoreboardObjective) {
+    public ScoreboardDisplayS2CPacket(int slot, @Nullable ScoreboardObjective objective) {
         this.slot = slot;
-        this.name = scoreboardObjective == null ? "" : scoreboardObjective.getName();
+        this.name = objective == null ? "" : objective.getName();
     }
 
     @Override

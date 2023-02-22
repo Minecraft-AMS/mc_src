@@ -19,16 +19,16 @@ import org.jetbrains.annotations.Nullable;
 public class ChargingPlayerPhase
 extends AbstractPhase {
     private static final Logger LOGGER = LogManager.getLogger();
-    private Vec3d target;
+    private Vec3d pathTarget;
     private int field_7037;
 
-    public ChargingPlayerPhase(EnderDragonEntity dragon) {
-        super(dragon);
+    public ChargingPlayerPhase(EnderDragonEntity enderDragonEntity) {
+        super(enderDragonEntity);
     }
 
     @Override
     public void serverTick() {
-        if (this.target == null) {
+        if (this.pathTarget == null) {
             LOGGER.warn("Aborting charge player as no target was set.");
             this.dragon.getPhaseManager().setPhase(PhaseType.HOLDING_PATTERN);
             return;
@@ -37,7 +37,7 @@ extends AbstractPhase {
             this.dragon.getPhaseManager().setPhase(PhaseType.HOLDING_PATTERN);
             return;
         }
-        double d = this.target.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
+        double d = this.pathTarget.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
         if (d < 100.0 || d > 22500.0 || this.dragon.horizontalCollision || this.dragon.verticalCollision) {
             ++this.field_7037;
         }
@@ -45,23 +45,23 @@ extends AbstractPhase {
 
     @Override
     public void beginPhase() {
-        this.target = null;
+        this.pathTarget = null;
         this.field_7037 = 0;
     }
 
-    public void setTarget(Vec3d target) {
-        this.target = target;
+    public void setPathTarget(Vec3d pathTarget) {
+        this.pathTarget = pathTarget;
     }
 
     @Override
-    public float method_6846() {
+    public float getMaxYAcceleration() {
         return 3.0f;
     }
 
     @Override
     @Nullable
-    public Vec3d getTarget() {
-        return this.target;
+    public Vec3d getPathTarget() {
+        return this.pathTarget;
     }
 
     public PhaseType<ChargingPlayerPhase> getType() {

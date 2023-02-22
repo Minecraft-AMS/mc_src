@@ -22,7 +22,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import net.minecraft.command.arguments.EntityArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -32,7 +32,7 @@ import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
 
 public class SpectateCommand {
-    private static final SimpleCommandExceptionType SPECTATE_SELF_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.spectate.self", new Object[0]));
+    private static final SimpleCommandExceptionType SPECTATE_SELF_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.spectate.self"));
     private static final DynamicCommandExceptionType NOT_SPECTATOR_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.spectate.not_spectator", object));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -50,7 +50,7 @@ public class SpectateCommand {
         if (entity != null) {
             source.sendFeedback(new TranslatableText("commands.spectate.success.started", entity.getDisplayName()), false);
         } else {
-            source.sendFeedback(new TranslatableText("commands.spectate.success.stopped", new Object[0]), false);
+            source.sendFeedback(new TranslatableText("commands.spectate.success.stopped"), false);
         }
         return 1;
     }

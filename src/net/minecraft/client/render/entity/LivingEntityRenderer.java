@@ -29,7 +29,6 @@ import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
@@ -39,6 +38,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3f;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -51,10 +51,10 @@ implements FeatureRendererContext<T, M> {
     protected M model;
     protected final List<FeatureRenderer<T, M>> features = Lists.newArrayList();
 
-    public LivingEntityRenderer(EntityRenderDispatcher dispatcher, M model, float shadowSize) {
+    public LivingEntityRenderer(EntityRenderDispatcher dispatcher, M model, float shadowRadius) {
         super(dispatcher);
         this.model = model;
-        this.shadowSize = shadowSize;
+        this.shadowRadius = shadowRadius;
     }
 
     protected final boolean addFeature(FeatureRenderer<T, M> feature) {
@@ -118,12 +118,14 @@ implements FeatureRendererContext<T, M> {
         }
         ((EntityModel)this.model).animateModel(livingEntity, o, n, g);
         ((EntityModel)this.model).setAngles(livingEntity, o, n, l, k, m);
-        boolean bl = this.isFullyVisible(livingEntity);
-        boolean bl2 = !bl && !((Entity)livingEntity).isInvisibleTo(MinecraftClient.getInstance().player);
-        RenderLayer renderLayer = this.getRenderLayer(livingEntity, bl, bl2);
+        MinecraftClient minecraftClient = MinecraftClient.getInstance();
+        boolean bl = this.isVisible(livingEntity);
+        boolean bl2 = !bl && !((Entity)livingEntity).isInvisibleTo(minecraftClient.player);
+        boolean bl3 = minecraftClient.hasOutline((Entity)livingEntity);
+        RenderLayer renderLayer = this.getRenderLayer(livingEntity, bl, bl2, bl3);
         if (renderLayer != null) {
             VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(renderLayer);
-            int p = LivingEntityRenderer.getOverlay(livingEntity, this.getWhiteOverlayProgress(livingEntity, g));
+            int p = LivingEntityRenderer.getOverlay(livingEntity, this.getAnimationCounter(livingEntity, g));
             ((Model)this.model).render(matrixStack, vertexConsumer, i, p, 1.0f, 1.0f, 1.0f, bl2 ? 0.15f : 1.0f);
         }
         if (!((Entity)livingEntity).isSpectator()) {
@@ -136,15 +138,15 @@ implements FeatureRendererContext<T, M> {
     }
 
     @Nullable
-    protected RenderLayer getRenderLayer(T entity, boolean showBody, boolean translucent) {
+    protected RenderLayer getRenderLayer(T entity, boolean showBody, boolean translucent, boolean showOutline) {
         Identifier identifier = this.getTexture(entity);
         if (translucent) {
-            return RenderLayer.getEntityTranslucent(identifier);
+            return RenderLayer.getItemEntityTranslucentCull(identifier);
         }
         if (showBody) {
             return ((Model)this.model).getLayer(identifier);
         }
-        if (((Entity)entity).isGlowing()) {
+        if (showOutline) {
             return RenderLayer.getOutline(identifier);
         }
         return null;
@@ -154,7 +156,7 @@ implements FeatureRendererContext<T, M> {
         return OverlayTexture.packUv(OverlayTexture.getU(whiteOverlayProgress), OverlayTexture.getV(entity.hurtTime > 0 || entity.deathTime > 0));
     }
 
-    protected boolean isFullyVisible(T entity) {
+    protected boolean isVisible(T entity) {
         return !((Entity)entity).isInvisible();
     }
 
@@ -176,30 +178,37 @@ implements FeatureRendererContext<T, M> {
         return 0.0f;
     }
 
+    protected boolean isShaking(T entity) {
+        return false;
+    }
+
     protected void setupTransforms(T entity, MatrixStack matrices, float animationProgress, float bodyYaw, float tickDelta) {
         String string;
-        EntityPose entityPose = ((Entity)entity).getPose();
-        if (entityPose != EntityPose.SLEEPING) {
-            matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f - bodyYaw));
+        EntityPose entityPose;
+        if (this.isShaking(entity)) {
+            bodyYaw += (float)(Math.cos((double)((LivingEntity)entity).age * 3.25) * Math.PI * (double)0.4f);
+        }
+        if ((entityPose = ((Entity)entity).getPose()) != EntityPose.SLEEPING) {
+            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f - bodyYaw));
         }
         if (((LivingEntity)entity).deathTime > 0) {
             float f = ((float)((LivingEntity)entity).deathTime + tickDelta - 1.0f) / 20.0f * 1.6f;
             if ((f = MathHelper.sqrt(f)) > 1.0f) {
                 f = 1.0f;
             }
-            matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(f * this.getLyingAngle(entity)));
+            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(f * this.getLyingAngle(entity)));
         } else if (((LivingEntity)entity).isUsingRiptide()) {
-            matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(-90.0f - ((LivingEntity)entity).pitch));
-            matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(((float)((LivingEntity)entity).age + tickDelta) * -75.0f));
+            matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(-90.0f - ((LivingEntity)entity).pitch));
+            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(((float)((LivingEntity)entity).age + tickDelta) * -75.0f));
         } else if (entityPose == EntityPose.SLEEPING) {
             Direction direction = ((LivingEntity)entity).getSleepingDirection();
             float g = direction != null ? LivingEntityRenderer.getYaw(direction) : bodyYaw;
-            matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(g));
-            matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(this.getLyingAngle(entity)));
-            matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(270.0f));
+            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(g));
+            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(this.getLyingAngle(entity)));
+            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(270.0f));
         } else if ((((Entity)entity).hasCustomName() || entity instanceof PlayerEntity) && ("Dinnerbone".equals(string = Formatting.strip(((Entity)entity).getName().getString())) || "Grumm".equals(string)) && (!(entity instanceof PlayerEntity) || ((PlayerEntity)entity).isPartVisible(PlayerModelPart.CAPE))) {
             matrices.translate(0.0, ((Entity)entity).getHeight() + 0.1f, 0.0);
-            matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
+            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
         }
     }
 
@@ -215,18 +224,18 @@ implements FeatureRendererContext<T, M> {
         return 90.0f;
     }
 
-    protected float getWhiteOverlayProgress(T entity, float tickDelta) {
+    protected float getAnimationCounter(T entity, float tickDelta) {
         return 0.0f;
     }
 
-    protected void scale(T entity, MatrixStack matrices, float tickDelta) {
+    protected void scale(T entity, MatrixStack matrices, float amount) {
     }
 
     @Override
     protected boolean hasLabel(T livingEntity) {
         boolean bl;
         float f;
-        double d = this.renderManager.getSquaredDistanceToCamera((Entity)livingEntity);
+        double d = this.dispatcher.getSquaredDistanceToCamera((Entity)livingEntity);
         float f2 = f = ((Entity)livingEntity).isSneaky() ? 32.0f : 64.0f;
         if (d >= (double)(f * f)) {
             return false;
@@ -257,11 +266,6 @@ implements FeatureRendererContext<T, M> {
             }
         }
         return MinecraftClient.isHudEnabled() && livingEntity != minecraftClient.getCameraEntity() && bl && !((Entity)livingEntity).hasPassengers();
-    }
-
-    @Override
-    protected /* synthetic */ boolean hasLabel(Entity entity) {
-        return this.hasLabel((T)((LivingEntity)entity));
     }
 }
 

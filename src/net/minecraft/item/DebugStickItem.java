@@ -13,7 +13,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.MessageType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.state.StateManager;
@@ -25,8 +25,8 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class DebugStickItem
@@ -36,7 +36,7 @@ extends Item {
     }
 
     @Override
-    public boolean hasEnchantmentGlint(ItemStack stack) {
+    public boolean hasGlint(ItemStack stack) {
         return true;
     }
 
@@ -56,10 +56,10 @@ extends Item {
             BlockPos blockPos = context.getBlockPos();
             this.use(playerEntity, world.getBlockState(blockPos), world, blockPos, true, context.getStack());
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.success(world.isClient);
     }
 
-    private void use(PlayerEntity player, BlockState state, IWorld world, BlockPos pos, boolean update, ItemStack stack) {
+    private void use(PlayerEntity player, BlockState state, WorldAccess world, BlockPos pos, boolean update, ItemStack stack) {
         if (!player.isCreativeLevelTwoOp()) {
             return;
         }
@@ -71,8 +71,8 @@ extends Item {
             DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".empty", string));
             return;
         }
-        CompoundTag compoundTag = stack.getOrCreateSubTag("DebugProperty");
-        String string2 = compoundTag.getString(string);
+        NbtCompound nbtCompound = stack.getOrCreateSubTag("DebugProperty");
+        String string2 = nbtCompound.getString(string);
         Property<?> property = stateManager.getProperty(string2);
         if (update) {
             if (property == null) {
@@ -84,7 +84,7 @@ extends Item {
         } else {
             property = DebugStickItem.cycle(collection, property, player.shouldCancelInteraction());
             String string3 = property.getName();
-            compoundTag.putString(string, string3);
+            nbtCompound.putString(string, string3);
             DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".select", string3, DebugStickItem.getValueString(state, property)));
         }
     }
@@ -98,7 +98,7 @@ extends Item {
     }
 
     private static void sendMessage(PlayerEntity player, Text message) {
-        ((ServerPlayerEntity)player).sendChatMessage(message, MessageType.GAME_INFO);
+        ((ServerPlayerEntity)player).sendMessage(message, MessageType.GAME_INFO, Util.NIL_UUID);
     }
 
     private static <T extends Comparable<T>> String getValueString(BlockState state, Property<T> property) {

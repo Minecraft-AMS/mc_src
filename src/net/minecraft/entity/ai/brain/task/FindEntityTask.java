@@ -7,13 +7,14 @@
 package net.minecraft.entity.ai.brain.task;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
-import net.minecraft.entity.ai.brain.EntityPosWrapper;
+import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -31,7 +32,7 @@ extends Task<E> {
     private final MemoryModuleType<T> targetModule;
 
     public FindEntityTask(EntityType<? extends T> entityType, int maxDistance, Predicate<E> shouldRunPredicate, Predicate<T> predicate, MemoryModuleType<T> targetModule, float speed, int completionRange) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), targetModule, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.VISIBLE_MOBS, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.VISIBLE_MOBS, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
         this.entityType = entityType;
         this.speed = speed;
         this.maxSquaredDistance = maxDistance * maxDistance;
@@ -47,16 +48,25 @@ extends Task<E> {
 
     @Override
     protected boolean shouldRun(ServerWorld world, E entity) {
-        return this.shouldRunPredicate.test(entity) && ((LivingEntity)entity).getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get().stream().anyMatch(livingEntity -> this.entityType.equals(livingEntity.getType()) && this.predicate.test((LivingEntity)livingEntity));
+        return this.shouldRunPredicate.test(entity) && this.method_24582(entity);
+    }
+
+    private boolean method_24582(E livingEntity) {
+        List<LivingEntity> list = ((LivingEntity)livingEntity).getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get();
+        return list.stream().anyMatch(this::method_24583);
+    }
+
+    private boolean method_24583(LivingEntity livingEntity) {
+        return this.entityType.equals(livingEntity.getType()) && this.predicate.test(livingEntity);
     }
 
     @Override
     protected void run(ServerWorld world, E entity, long time) {
         Brain<?> brain = ((LivingEntity)entity).getBrain();
         brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).ifPresent(list -> list.stream().filter(livingEntity -> this.entityType.equals(livingEntity.getType())).map(livingEntity -> livingEntity).filter(livingEntity2 -> livingEntity2.squaredDistanceTo((Entity)entity) <= (double)this.maxSquaredDistance).filter(this.predicate).findFirst().ifPresent(livingEntity -> {
-            brain.putMemory(this.targetModule, livingEntity);
-            brain.putMemory(MemoryModuleType.LOOK_TARGET, new EntityPosWrapper((Entity)livingEntity));
-            brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityPosWrapper((Entity)livingEntity), this.speed, this.completionRange));
+            brain.remember(this.targetModule, livingEntity);
+            brain.remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget((Entity)livingEntity, true));
+            brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityLookTarget((Entity)livingEntity, false), this.speed, this.completionRange));
         }));
     }
 }

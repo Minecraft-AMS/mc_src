@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.EndPortalBlockEntity;
@@ -41,11 +41,11 @@ import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.boss.dragon.EnderDragonSpawnState;
 import net.minecraft.entity.boss.dragon.phase.PhaseType;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.decoration.EnderCrystalEntity;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.IntTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.entity.decoration.EndCrystalEntity;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.nbt.NbtInt;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.predicate.block.BlockPredicate;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -63,10 +63,9 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.gen.feature.EndGatewayFeatureConfig;
+import net.minecraft.world.gen.feature.ConfiguredFeatures;
 import net.minecraft.world.gen.feature.EndPortalFeature;
 import net.minecraft.world.gen.feature.EndSpikeFeature;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -74,8 +73,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class EnderDragonFight {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Predicate<Entity> VALID_ENTITY = EntityPredicates.VALID_ENTITY.and(EntityPredicates.maximumDistance(0.0, 128.0, 0.0, 192.0));
-    private final ServerBossBar bossBar = (ServerBossBar)new ServerBossBar(new TranslatableText("entity.minecraft.ender_dragon", new Object[0]), BossBar.Color.PINK, BossBar.Style.PROGRESS).setDragonMusic(true).setThickenFog(true);
+    private static final Predicate<Entity> VALID_ENTITY = EntityPredicates.VALID_ENTITY.and(EntityPredicates.maxDistance(0.0, 128.0, 0.0, 192.0));
+    private final ServerBossBar bossBar = (ServerBossBar)new ServerBossBar(new TranslatableText("entity.minecraft.ender_dragon"), BossBar.Color.PINK, BossBar.Style.PROGRESS).setDragonMusic(true).setThickenFog(true);
     private final ServerWorld world;
     private final List<Integer> gateways = Lists.newArrayList();
     private final BlockPattern endPortalPattern;
@@ -90,54 +89,54 @@ public class EnderDragonFight {
     private BlockPos exitPortalLocation;
     private EnderDragonSpawnState dragonSpawnState;
     private int spawnStateTimer;
-    private List<EnderCrystalEntity> crystals;
+    private List<EndCrystalEntity> crystals;
 
-    public EnderDragonFight(ServerWorld world, CompoundTag compoundTag) {
+    public EnderDragonFight(ServerWorld world, long gatewaysSeed, NbtCompound nbt) {
         this.world = world;
-        if (compoundTag.contains("DragonKilled", 99)) {
-            if (compoundTag.containsUuid("DragonUUID")) {
-                this.dragonUuid = compoundTag.getUuid("DragonUUID");
+        if (nbt.contains("DragonKilled", 99)) {
+            if (nbt.containsUuid("Dragon")) {
+                this.dragonUuid = nbt.getUuid("Dragon");
             }
-            this.dragonKilled = compoundTag.getBoolean("DragonKilled");
-            this.previouslyKilled = compoundTag.getBoolean("PreviouslyKilled");
-            if (compoundTag.getBoolean("IsRespawning")) {
+            this.dragonKilled = nbt.getBoolean("DragonKilled");
+            this.previouslyKilled = nbt.getBoolean("PreviouslyKilled");
+            if (nbt.getBoolean("IsRespawning")) {
                 this.dragonSpawnState = EnderDragonSpawnState.START;
             }
-            if (compoundTag.contains("ExitPortalLocation", 10)) {
-                this.exitPortalLocation = NbtHelper.toBlockPos(compoundTag.getCompound("ExitPortalLocation"));
+            if (nbt.contains("ExitPortalLocation", 10)) {
+                this.exitPortalLocation = NbtHelper.toBlockPos(nbt.getCompound("ExitPortalLocation"));
             }
         } else {
             this.dragonKilled = true;
             this.previouslyKilled = true;
         }
-        if (compoundTag.contains("Gateways", 9)) {
-            ListTag listTag = compoundTag.getList("Gateways", 3);
-            for (int i = 0; i < listTag.size(); ++i) {
-                this.gateways.add(listTag.getInt(i));
+        if (nbt.contains("Gateways", 9)) {
+            NbtList nbtList = nbt.getList("Gateways", 3);
+            for (int i = 0; i < nbtList.size(); ++i) {
+                this.gateways.add(nbtList.getInt(i));
             }
         } else {
             this.gateways.addAll((Collection<Integer>)ContiguousSet.create((Range)Range.closedOpen((Comparable)Integer.valueOf(0), (Comparable)Integer.valueOf(20)), (DiscreteDomain)DiscreteDomain.integers()));
-            Collections.shuffle(this.gateways, new Random(world.getSeed()));
+            Collections.shuffle(this.gateways, new Random(gatewaysSeed));
         }
         this.endPortalPattern = BlockPatternBuilder.start().aisle("       ", "       ", "       ", "   #   ", "       ", "       ", "       ").aisle("       ", "       ", "       ", "   #   ", "       ", "       ", "       ").aisle("       ", "       ", "       ", "   #   ", "       ", "       ", "       ").aisle("  ###  ", " #   # ", "#     #", "#  #  #", "#     #", " #   # ", "  ###  ").aisle("       ", "  ###  ", " ##### ", " ##### ", " ##### ", "  ###  ", "       ").where('#', CachedBlockPosition.matchesBlockState(BlockPredicate.make(Blocks.BEDROCK))).build();
     }
 
-    public CompoundTag toTag() {
-        CompoundTag compoundTag = new CompoundTag();
+    public NbtCompound toNbt() {
+        NbtCompound nbtCompound = new NbtCompound();
         if (this.dragonUuid != null) {
-            compoundTag.putUuid("DragonUUID", this.dragonUuid);
+            nbtCompound.putUuid("Dragon", this.dragonUuid);
         }
-        compoundTag.putBoolean("DragonKilled", this.dragonKilled);
-        compoundTag.putBoolean("PreviouslyKilled", this.previouslyKilled);
+        nbtCompound.putBoolean("DragonKilled", this.dragonKilled);
+        nbtCompound.putBoolean("PreviouslyKilled", this.previouslyKilled);
         if (this.exitPortalLocation != null) {
-            compoundTag.put("ExitPortalLocation", NbtHelper.fromBlockPos(this.exitPortalLocation));
+            nbtCompound.put("ExitPortalLocation", NbtHelper.fromBlockPos(this.exitPortalLocation));
         }
-        ListTag listTag = new ListTag();
+        NbtList nbtList = new NbtList();
         for (int i : this.gateways) {
-            listTag.add(IntTag.of(i));
+            nbtList.add(NbtInt.of(i));
         }
-        compoundTag.put("Gateways", listTag);
-        return compoundTag;
+        nbtCompound.put("Gateways", nbtList);
+        return nbtCompound;
     }
 
     public void tick() {
@@ -218,20 +217,20 @@ public class EnderDragonFight {
         }
     }
 
-    protected void setSpawnState(EnderDragonSpawnState enderDragonSpawnState) {
+    protected void setSpawnState(EnderDragonSpawnState spawnState) {
         if (this.dragonSpawnState == null) {
             throw new IllegalStateException("Dragon respawn isn't in progress, can't skip ahead in the animation.");
         }
         this.spawnStateTimer = 0;
-        if (enderDragonSpawnState == EnderDragonSpawnState.END) {
+        if (spawnState == EnderDragonSpawnState.END) {
             this.dragonSpawnState = null;
             this.dragonKilled = false;
             EnderDragonEntity enderDragonEntity = this.createDragon();
             for (ServerPlayerEntity serverPlayerEntity : this.bossBar.getPlayers()) {
-                Criterions.SUMMONED_ENTITY.trigger(serverPlayerEntity, enderDragonEntity);
+                Criteria.SUMMONED_ENTITY.trigger(serverPlayerEntity, enderDragonEntity);
             }
         } else {
-            this.dragonSpawnState = enderDragonSpawnState;
+            this.dragonSpawnState = spawnState;
         }
     }
 
@@ -309,7 +308,7 @@ public class EnderDragonFight {
         this.crystalCountTimer = 0;
         this.endCrystalsAlive = 0;
         for (EndSpikeFeature.Spike spike : EndSpikeFeature.getSpikes(this.world)) {
-            this.endCrystalsAlive += this.world.getNonSpectatingEntities(EnderCrystalEntity.class, spike.getBoundingBox()).size();
+            this.endCrystalsAlive += this.world.getNonSpectatingEntities(EndCrystalEntity.class, spike.getBoundingBox()).size();
         }
         LOGGER.debug("Found {} end crystals still alive", (Object)this.endCrystalsAlive);
     }
@@ -338,16 +337,16 @@ public class EnderDragonFight {
         this.generateEndGateway(new BlockPos(j, 75, k));
     }
 
-    private void generateEndGateway(BlockPos blockPos) {
-        this.world.playLevelEvent(3000, blockPos, 0);
-        Feature.END_GATEWAY.configure(EndGatewayFeatureConfig.createConfig()).generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), blockPos);
+    private void generateEndGateway(BlockPos pos) {
+        this.world.syncWorldEvent(3000, pos, 0);
+        ConfiguredFeatures.END_GATEWAY_DELAYED.generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), pos);
     }
 
     private void generateEndPortal(boolean previouslyKilled) {
         EndPortalFeature endPortalFeature = new EndPortalFeature(previouslyKilled);
         if (this.exitPortalLocation == null) {
             this.exitPortalLocation = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN).down();
-            while (this.world.getBlockState(this.exitPortalLocation).getBlock() == Blocks.BEDROCK && this.exitPortalLocation.getY() > this.world.getSeaLevel()) {
+            while (this.world.getBlockState(this.exitPortalLocation).isOf(Blocks.BEDROCK) && this.exitPortalLocation.getY() > this.world.getSeaLevel()) {
                 this.exitPortalLocation = this.exitPortalLocation.down();
             }
         }
@@ -366,7 +365,7 @@ public class EnderDragonFight {
 
     public void updateFight(EnderDragonEntity dragon) {
         if (dragon.getUuid().equals(this.dragonUuid)) {
-            this.bossBar.setPercent(dragon.getHealth() / dragon.getMaximumHealth());
+            this.bossBar.setPercent(dragon.getHealth() / dragon.getMaxHealth());
             this.dragonSeenTimer = 0;
             if (dragon.hasCustomName()) {
                 this.bossBar.setName(dragon.getDisplayName());
@@ -378,7 +377,7 @@ public class EnderDragonFight {
         return this.endCrystalsAlive;
     }
 
-    public void crystalDestroyed(EnderCrystalEntity enderCrystal, DamageSource source) {
+    public void crystalDestroyed(EndCrystalEntity enderCrystal, DamageSource source) {
         if (this.dragonSpawnState != null && this.crystals.contains(enderCrystal)) {
             LOGGER.debug("Aborting respawn sequence");
             this.dragonSpawnState = null;
@@ -389,7 +388,7 @@ public class EnderDragonFight {
             this.countAliveCrystals();
             Entity entity = this.world.getEntity(this.dragonUuid);
             if (entity instanceof EnderDragonEntity) {
-                ((EnderDragonEntity)entity).crystalDestroyed(enderCrystal, new BlockPos(enderCrystal), source);
+                ((EnderDragonEntity)entity).crystalDestroyed(enderCrystal, enderCrystal.getBlockPos(), source);
             }
         }
     }
@@ -415,7 +414,7 @@ public class EnderDragonFight {
             ArrayList list = Lists.newArrayList();
             BlockPos blockPos2 = blockPos.up(1);
             for (Direction direction : Direction.Type.HORIZONTAL) {
-                List<EnderCrystalEntity> list2 = this.world.getNonSpectatingEntities(EnderCrystalEntity.class, new Box(blockPos2.offset(direction, 2)));
+                List<EndCrystalEntity> list2 = this.world.getNonSpectatingEntities(EndCrystalEntity.class, new Box(blockPos2.offset(direction, 2)));
                 if (list2.isEmpty()) {
                     return;
                 }
@@ -426,7 +425,7 @@ public class EnderDragonFight {
         }
     }
 
-    private void respawnDragon(List<EnderCrystalEntity> list) {
+    private void respawnDragon(List<EndCrystalEntity> crystals) {
         if (this.dragonKilled && this.dragonSpawnState == null) {
             BlockPattern.Result result = this.findEndPortal();
             while (result != null) {
@@ -434,7 +433,7 @@ public class EnderDragonFight {
                     for (int j = 0; j < this.endPortalPattern.getHeight(); ++j) {
                         for (int k = 0; k < this.endPortalPattern.getDepth(); ++k) {
                             CachedBlockPosition cachedBlockPosition = result.translate(i, j, k);
-                            if (cachedBlockPosition.getBlockState().getBlock() != Blocks.BEDROCK && cachedBlockPosition.getBlockState().getBlock() != Blocks.END_PORTAL) continue;
+                            if (!cachedBlockPosition.getBlockState().isOf(Blocks.BEDROCK) && !cachedBlockPosition.getBlockState().isOf(Blocks.END_PORTAL)) continue;
                             this.world.setBlockState(cachedBlockPosition.getBlockPos(), Blocks.END_STONE.getDefaultState());
                         }
                     }
@@ -444,16 +443,16 @@ public class EnderDragonFight {
             this.dragonSpawnState = EnderDragonSpawnState.START;
             this.spawnStateTimer = 0;
             this.generateEndPortal(false);
-            this.crystals = list;
+            this.crystals = crystals;
         }
     }
 
     public void resetEndCrystals() {
         for (EndSpikeFeature.Spike spike : EndSpikeFeature.getSpikes(this.world)) {
-            List<EnderCrystalEntity> list = this.world.getNonSpectatingEntities(EnderCrystalEntity.class, spike.getBoundingBox());
-            for (EnderCrystalEntity enderCrystalEntity : list) {
-                enderCrystalEntity.setInvulnerable(false);
-                enderCrystalEntity.setBeamTarget(null);
+            List<EndCrystalEntity> list = this.world.getNonSpectatingEntities(EndCrystalEntity.class, spike.getBoundingBox());
+            for (EndCrystalEntity endCrystalEntity : list) {
+                endCrystalEntity.setInvulnerable(false);
+                endCrystalEntity.setBeamTarget(null);
             }
         }
     }

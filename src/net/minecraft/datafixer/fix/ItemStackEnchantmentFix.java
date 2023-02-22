@@ -5,11 +5,11 @@
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
  *  com.mojang.datafixers.DataFixUtils
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.OpticFinder
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.types.Type
+ *  com.mojang.serialization.Dynamic
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
  *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
  */
@@ -18,11 +18,11 @@ package net.minecraft.datafixer.fix;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
+import com.mojang.serialization.Dynamic;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Optional;
@@ -77,12 +77,12 @@ extends DataFix {
         return this.fixTypeEverywhereTyped("ItemStackEnchantmentFix", type, typed2 -> typed2.updateTyped(opticFinder, typed -> typed.update(DSL.remainderFinder(), this::fixEnchantments)));
     }
 
-    private Dynamic<?> fixEnchantments(Dynamic<?> tag) {
-        Optional<Dynamic> optional = tag.get("ench").asStreamOpt().map(stream -> stream.map(dynamic -> dynamic.set("id", dynamic.createString((String)ID_TO_ENCHANTMENTS_MAP.getOrDefault(dynamic.get("id").asInt(0), (Object)"null"))))).map(arg_0 -> tag.createList(arg_0));
+    private Dynamic<?> fixEnchantments(Dynamic<?> dynamic2) {
+        Optional optional = dynamic2.get("ench").asStreamOpt().map(stream -> stream.map(dynamic -> dynamic.set("id", dynamic.createString((String)ID_TO_ENCHANTMENTS_MAP.getOrDefault(dynamic.get("id").asInt(0), (Object)"null"))))).map(arg_0 -> dynamic2.createList(arg_0)).result();
         if (optional.isPresent()) {
-            tag = tag.remove("ench").set("Enchantments", optional.get());
+            dynamic2 = dynamic2.remove("ench").set("Enchantments", (Dynamic)optional.get());
         }
-        return tag.update("StoredEnchantments", dynamic -> (Dynamic)DataFixUtils.orElse(dynamic.asStreamOpt().map(stream -> stream.map(dynamic -> dynamic.set("id", dynamic.createString((String)ID_TO_ENCHANTMENTS_MAP.getOrDefault(dynamic.get("id").asInt(0), (Object)"null"))))).map(arg_0 -> ((Dynamic)dynamic).createList(arg_0)), (Object)dynamic));
+        return dynamic2.update("StoredEnchantments", dynamic -> (Dynamic)DataFixUtils.orElse((Optional)dynamic.asStreamOpt().map(stream -> stream.map(dynamic -> dynamic.set("id", dynamic.createString((String)ID_TO_ENCHANTMENTS_MAP.getOrDefault(dynamic.get("id").asInt(0), (Object)"null"))))).map(arg_0 -> ((Dynamic)dynamic).createList(arg_0)).result(), (Object)dynamic));
     }
 }
 

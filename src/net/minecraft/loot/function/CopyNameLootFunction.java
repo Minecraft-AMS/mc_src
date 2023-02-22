@@ -20,7 +20,8 @@ import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.function.ConditionalLootFunction;
-import net.minecraft.util.Identifier;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Nameable;
 
@@ -31,6 +32,11 @@ extends ConditionalLootFunction {
     private CopyNameLootFunction(LootCondition[] conditions, Source source) {
         super(conditions);
         this.source = source;
+    }
+
+    @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.COPY_NAME;
     }
 
     @Override
@@ -52,12 +58,8 @@ extends ConditionalLootFunction {
         return CopyNameLootFunction.builder((LootCondition[] conditions) -> new CopyNameLootFunction((LootCondition[])conditions, source));
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<CopyNameLootFunction> {
-        public Factory() {
-            super(new Identifier("copy_name"), CopyNameLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<CopyNameLootFunction> {
         @Override
         public void toJson(JsonObject jsonObject, CopyNameLootFunction copyNameLootFunction, JsonSerializationContext jsonSerializationContext) {
             super.toJson(jsonObject, copyNameLootFunction, jsonSerializationContext);

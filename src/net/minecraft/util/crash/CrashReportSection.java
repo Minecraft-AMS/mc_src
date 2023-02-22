@@ -26,9 +26,9 @@ public class CrashReportSection {
     private final List<Element> elements = Lists.newArrayList();
     private StackTraceElement[] stackTrace = new StackTraceElement[0];
 
-    public CrashReportSection(CrashReport report, String string) {
+    public CrashReportSection(CrashReport report, String title) {
         this.report = report;
-        this.title = string;
+        this.title = title;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -92,18 +92,18 @@ public class CrashReportSection {
         return stringBuilder.toString();
     }
 
-    public CrashReportSection add(String string, CrashCallable<String> crashCallable) {
+    public CrashReportSection add(String name, CrashCallable<String> crashCallable) {
         try {
-            this.add(string, crashCallable.call());
+            this.add(name, crashCallable.call());
         }
         catch (Throwable throwable) {
-            this.add(string, throwable);
+            this.add(name, throwable);
         }
         return this;
     }
 
-    public CrashReportSection add(String name, Object object) {
-        this.elements.add(new Element(name, object));
+    public CrashReportSection add(String name, Object detail) {
+        this.elements.add(new Element(name, detail));
         return this;
     }
 
@@ -145,20 +145,20 @@ public class CrashReportSection {
         this.stackTrace = stackTraceElements;
     }
 
-    public void addStackTrace(StringBuilder stringBuilder) {
-        stringBuilder.append("-- ").append(this.title).append(" --\n");
-        stringBuilder.append("Details:");
+    public void addStackTrace(StringBuilder crashReportBuilder) {
+        crashReportBuilder.append("-- ").append(this.title).append(" --\n");
+        crashReportBuilder.append("Details:");
         for (Element element : this.elements) {
-            stringBuilder.append("\n\t");
-            stringBuilder.append(element.getName());
-            stringBuilder.append(": ");
-            stringBuilder.append(element.getDetail());
+            crashReportBuilder.append("\n\t");
+            crashReportBuilder.append(element.getName());
+            crashReportBuilder.append(": ");
+            crashReportBuilder.append(element.getDetail());
         }
         if (this.stackTrace != null && this.stackTrace.length > 0) {
-            stringBuilder.append("\nStacktrace:");
+            crashReportBuilder.append("\nStacktrace:");
             for (StackTraceElement stackTraceElement : this.stackTrace) {
-                stringBuilder.append("\n\tat ");
-                stringBuilder.append(stackTraceElement);
+                crashReportBuilder.append("\n\tat ");
+                crashReportBuilder.append(stackTraceElement);
             }
         }
     }
@@ -178,15 +178,15 @@ public class CrashReportSection {
         private final String name;
         private final String detail;
 
-        public Element(String string, Object object) {
-            this.name = string;
-            if (object == null) {
+        public Element(String name, @Nullable Object detail) {
+            this.name = name;
+            if (detail == null) {
                 this.detail = "~~NULL~~";
-            } else if (object instanceof Throwable) {
-                Throwable throwable = (Throwable)object;
+            } else if (detail instanceof Throwable) {
+                Throwable throwable = (Throwable)detail;
                 this.detail = "~~ERROR~~ " + throwable.getClass().getSimpleName() + ": " + throwable.getMessage();
             } else {
-                this.detail = object.toString();
+                this.detail = detail.toString();
             }
         }
 

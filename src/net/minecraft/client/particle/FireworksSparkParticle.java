@@ -21,17 +21,18 @@ import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.item.FireworkItem;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.DyeColor;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -47,8 +48,8 @@ public class FireworksSparkParticle {
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            Explosion explosion = new Explosion(world, d, e, f, g, h, i, MinecraftClient.getInstance().particleManager, this.spriteProvider);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            Explosion explosion = new Explosion(clientWorld, d, e, f, g, h, i, MinecraftClient.getInstance().particleManager, this.spriteProvider);
             explosion.setColorAlpha(0.99f);
             return explosion;
         }
@@ -64,8 +65,8 @@ public class FireworksSparkParticle {
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            Flash flash = new Flash(world, d, e, f);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            Flash flash = new Flash(clientWorld, d, e, f);
             flash.setSprite(this.spriteProvider);
             return flash;
         }
@@ -74,8 +75,8 @@ public class FireworksSparkParticle {
     @Environment(value=EnvType.CLIENT)
     public static class Flash
     extends SpriteBillboardParticle {
-        private Flash(World x, double y, double d, double e) {
-            super(x, y, d, e);
+        private Flash(ClientWorld world, double x, double y, double z) {
+            super(world, x, y, z);
             this.maxAge = 4;
         }
 
@@ -107,8 +108,8 @@ public class FireworksSparkParticle {
         private float field_3799;
         private boolean field_3802;
 
-        private Explosion(World world, double d, double e, double f, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, SpriteProvider spriteProvider) {
-            super(world, d, e, f, spriteProvider, -0.004f);
+        private Explosion(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, SpriteProvider spriteProvider) {
+            super(world, x, y, z, spriteProvider, -0.004f);
             this.velocityX = velocityX;
             this.velocityY = velocityY;
             this.velocityZ = velocityZ;
@@ -158,10 +159,10 @@ public class FireworksSparkParticle {
     extends NoRenderParticle {
         private int age;
         private final ParticleManager particleManager;
-        private ListTag explosions;
+        private NbtList explosions;
         private boolean flicker;
 
-        public FireworkParticle(World world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, @Nullable CompoundTag tag) {
+        public FireworkParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, @Nullable NbtCompound tag) {
             super(world, x, y, z);
             this.velocityX = velocityX;
             this.velocityY = velocityY;
@@ -175,8 +176,8 @@ public class FireworksSparkParticle {
                 } else {
                     this.maxAge = this.explosions.size() * 2 - 1;
                     for (int i = 0; i < this.explosions.size(); ++i) {
-                        CompoundTag compoundTag = this.explosions.getCompound(i);
-                        if (!compoundTag.getBoolean("Flicker")) continue;
+                        NbtCompound nbtCompound = this.explosions.getCompound(i);
+                        if (!nbtCompound.getBoolean("Flicker")) continue;
                         this.flicker = true;
                         this.maxAge += 15;
                         break;
@@ -195,8 +196,8 @@ public class FireworksSparkParticle {
                     bl2 = true;
                 } else {
                     for (int i = 0; i < this.explosions.size(); ++i) {
-                        CompoundTag compoundTag = this.explosions.getCompound(i);
-                        if (FireworkItem.Type.byId(compoundTag.getByte("Type")) != FireworkItem.Type.LARGE_BALL) continue;
+                        NbtCompound nbtCompound = this.explosions.getCompound(i);
+                        if (FireworkItem.Type.byId(nbtCompound.getByte("Type")) != FireworkItem.Type.LARGE_BALL) continue;
                         bl2 = true;
                         break;
                     }
@@ -206,12 +207,12 @@ public class FireworksSparkParticle {
             }
             if (this.age % 2 == 0 && this.explosions != null && this.age / 2 < this.explosions.size()) {
                 int j = this.age / 2;
-                CompoundTag compoundTag2 = this.explosions.getCompound(j);
-                FireworkItem.Type type = FireworkItem.Type.byId(compoundTag2.getByte("Type"));
-                boolean bl3 = compoundTag2.getBoolean("Trail");
-                boolean bl4 = compoundTag2.getBoolean("Flicker");
-                int[] is = compoundTag2.getIntArray("Colors");
-                int[] js = compoundTag2.getIntArray("FadeColors");
+                NbtCompound nbtCompound2 = this.explosions.getCompound(j);
+                FireworkItem.Type type = FireworkItem.Type.byId(nbtCompound2.getByte("Type"));
+                boolean bl3 = nbtCompound2.getBoolean("Trail");
+                boolean bl4 = nbtCompound2.getBoolean("Flicker");
+                int[] is = nbtCompound2.getIntArray("Colors");
+                int[] js = nbtCompound2.getIntArray("FadeColors");
                 if (is.length == 0) {
                     is = new int[]{DyeColor.BLACK.getFireworkColor()};
                 }
@@ -267,7 +268,7 @@ public class FireworksSparkParticle {
             int i = this.random.nextInt(colors.length);
             explosion.setColor(colors[i]);
             if (fadeColors.length > 0) {
-                explosion.setTargetColor(fadeColors[this.random.nextInt(fadeColors.length)]);
+                explosion.setTargetColor(Util.getRandom(fadeColors, this.random));
             }
         }
 

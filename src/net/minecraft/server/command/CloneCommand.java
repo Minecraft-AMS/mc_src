@@ -32,9 +32,9 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.pattern.CachedBlockPosition;
-import net.minecraft.command.arguments.BlockPosArgumentType;
-import net.minecraft.command.arguments.BlockPredicateArgumentType;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.command.argument.BlockPosArgumentType;
+import net.minecraft.command.argument.BlockPredicateArgumentType;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerTickScheduler;
@@ -46,9 +46,9 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 public class CloneCommand {
-    private static final SimpleCommandExceptionType OVERLAP_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.clone.overlap", new Object[0]));
-    private static final Dynamic2CommandExceptionType TOOBIG_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("commands.clone.toobig", object, object2));
-    private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.clone.failed", new Object[0]));
+    private static final SimpleCommandExceptionType OVERLAP_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.clone.overlap"));
+    private static final Dynamic2CommandExceptionType TOO_BIG_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("commands.clone.toobig", object, object2));
+    private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.clone.failed"));
     public static final Predicate<CachedBlockPosition> IS_AIR_PREDICATE = cachedBlockPosition -> !cachedBlockPosition.getBlockState().isAir();
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -64,7 +64,7 @@ public class CloneCommand {
         }
         int i = blockBox.getBlockCountX() * blockBox.getBlockCountY() * blockBox.getBlockCountZ();
         if (i > 32768) {
-            throw TOOBIG_EXCEPTION.create((Object)32768, (Object)i);
+            throw TOO_BIG_EXCEPTION.create((Object)32768, (Object)i);
         }
         ServerWorld serverWorld = source.getWorld();
         if (!serverWorld.isRegionLoaded(begin, end) || !serverWorld.isRegionLoaded(destination, blockPos)) {
@@ -85,12 +85,12 @@ public class CloneCommand {
                     if (!filter.test(cachedBlockPosition)) continue;
                     BlockEntity blockEntity = serverWorld.getBlockEntity(blockPos3);
                     if (blockEntity != null) {
-                        CompoundTag compoundTag = blockEntity.toTag(new CompoundTag());
-                        list2.add(new BlockInfo(blockPos4, blockState, compoundTag));
+                        NbtCompound nbtCompound = blockEntity.writeNbt(new NbtCompound());
+                        list2.add(new BlockInfo(blockPos4, blockState, nbtCompound));
                         deque.addLast(blockPos3);
                         continue;
                     }
-                    if (blockState.isFullOpaque(serverWorld, blockPos3) || blockState.isFullCube(serverWorld, blockPos3)) {
+                    if (blockState.isOpaqueFullCube(serverWorld, blockPos3) || blockState.isFullCube(serverWorld, blockPos3)) {
                         list.add(new BlockInfo(blockPos4, blockState, null));
                         deque.addLast(blockPos3);
                         continue;
@@ -131,7 +131,7 @@ public class CloneCommand {
                 blockInfo2.blockEntityTag.putInt("x", blockInfo2.pos.getX());
                 blockInfo2.blockEntityTag.putInt("y", blockInfo2.pos.getY());
                 blockInfo2.blockEntityTag.putInt("z", blockInfo2.pos.getZ());
-                blockEntity4.fromTag(blockInfo2.blockEntityTag);
+                blockEntity4.fromTag(blockInfo2.state, blockInfo2.blockEntityTag);
                 blockEntity4.markDirty();
             }
             serverWorld.setBlockState(blockInfo2.pos, blockInfo2.state, 2);
@@ -151,9 +151,9 @@ public class CloneCommand {
         public final BlockPos pos;
         public final BlockState state;
         @Nullable
-        public final CompoundTag blockEntityTag;
+        public final NbtCompound blockEntityTag;
 
-        public BlockInfo(BlockPos pos, BlockState state, @Nullable CompoundTag blockEntityTag) {
+        public BlockInfo(BlockPos pos, BlockState state, @Nullable NbtCompound blockEntityTag) {
             this.pos = pos;
             this.state = state;
             this.blockEntityTag = blockEntityTag;

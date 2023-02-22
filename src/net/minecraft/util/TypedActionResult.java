@@ -37,5 +37,9 @@ public class TypedActionResult<T> {
     public static <T> TypedActionResult<T> fail(T data) {
         return new TypedActionResult<T>(ActionResult.FAIL, data);
     }
+
+    public static <T> TypedActionResult<T> success(T data, boolean swingHand) {
+        return swingHand ? TypedActionResult.success(data) : TypedActionResult.consume(data);
+    }
 }
 

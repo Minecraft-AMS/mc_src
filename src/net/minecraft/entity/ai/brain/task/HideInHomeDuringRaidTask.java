@@ -5,9 +5,8 @@ package net.minecraft.entity.ai.brain.task;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.task.HideInHomeTask;
-import net.minecraft.entity.raid.Raid;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.village.raid.Raid;
 
 public class HideInHomeDuringRaidTask
 extends HideInHomeTask {
@@ -17,7 +16,7 @@ extends HideInHomeTask {
 
     @Override
     protected boolean shouldRun(ServerWorld world, LivingEntity entity) {
-        Raid raid = world.getRaidAt(new BlockPos(entity));
+        Raid raid = world.getRaidAt(entity.getBlockPos());
         return super.shouldRun(world, entity) && raid != null && raid.isActive() && !raid.hasWon() && !raid.hasLost();
     }
 }

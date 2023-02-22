@@ -6,11 +6,11 @@
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
  *  com.mojang.datafixers.DataFixUtils
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.OpticFinder
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.types.Type
+ *  com.mojang.serialization.Dynamic
  *  org.apache.commons.lang3.StringUtils
  */
 package net.minecraft.datafixer.fix;
@@ -19,11 +19,12 @@ import com.google.gson.JsonParseException;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
+import com.mojang.serialization.Dynamic;
+import java.util.Optional;
 import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.datafixer.fix.BlockEntitySignTextStrictJsonFix;
 import net.minecraft.text.LiteralText;
@@ -37,20 +38,20 @@ extends DataFix {
         super(outputSchema, changesType);
     }
 
-    public Dynamic<?> fixBookPages(Dynamic<?> tag) {
-        return tag.update("pages", dynamic2 -> (Dynamic)DataFixUtils.orElse(dynamic2.asStreamOpt().map(stream -> stream.map(dynamic -> {
-            if (!dynamic.asString().isPresent()) {
+    public Dynamic<?> fixBookPages(Dynamic<?> dynamic) {
+        return dynamic.update("pages", dynamic2 -> (Dynamic)DataFixUtils.orElse((Optional)dynamic2.asStreamOpt().map(stream -> stream.map(dynamic -> {
+            if (!dynamic.asString().result().isPresent()) {
                 return dynamic;
             }
             String string = dynamic.asString("");
             Text text = null;
             if ("null".equals(string) || StringUtils.isEmpty((CharSequence)string)) {
-                text = new LiteralText("");
+                text = LiteralText.EMPTY;
             } else if (string.charAt(0) == '\"' && string.charAt(string.length() - 1) == '\"' || string.charAt(0) == '{' && string.charAt(string.length() - 1) == '}') {
                 try {
                     text = JsonHelper.deserialize(BlockEntitySignTextStrictJsonFix.GSON, string, Text.class, true);
                     if (text == null) {
-                        text = new LiteralText("");
+                        text = LiteralText.EMPTY;
                     }
                 }
                 catch (JsonParseException jsonParseException) {
@@ -79,7 +80,7 @@ extends DataFix {
                 text = new LiteralText(string);
             }
             return dynamic.createString(Text.Serializer.toJson(text));
-        })).map(arg_0 -> ((Dynamic)tag).createList(arg_0)), (Object)tag.emptyList()));
+        })).map(arg_0 -> ((Dynamic)dynamic).createList(arg_0)).result(), (Object)dynamic.emptyList()));
     }
 
     public TypeRewriteRule makeRule() {

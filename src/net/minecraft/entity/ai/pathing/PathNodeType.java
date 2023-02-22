@@ -7,12 +7,14 @@ public enum PathNodeType {
     BLOCKED(-1.0f),
     OPEN(0.0f),
     WALKABLE(0.0f),
+    WALKABLE_DOOR(0.0f),
     TRAPDOOR(0.0f),
     FENCE(-1.0f),
     LAVA(-1.0f),
     WATER(8.0f),
     WATER_BORDER(8.0f),
     RAIL(0.0f),
+    UNPASSABLE_RAIL(-1.0f),
     DANGER_FIRE(8.0f),
     DAMAGE_FIRE(16.0f),
     DANGER_CACTUS(8.0f),
@@ -29,8 +31,8 @@ public enum PathNodeType {
 
     private final float defaultPenalty;
 
-    private PathNodeType(float f) {
-        this.defaultPenalty = f;
+    private PathNodeType(float defaultPenalty) {
+        this.defaultPenalty = defaultPenalty;
     }
 
     public float getDefaultPenalty() {

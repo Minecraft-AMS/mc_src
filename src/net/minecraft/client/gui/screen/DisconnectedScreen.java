@@ -7,12 +7,13 @@
  */
 package net.minecraft.client.gui.screen;
 
-import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 
@@ -20,12 +21,12 @@ import net.minecraft.text.TranslatableText;
 public class DisconnectedScreen
 extends Screen {
     private final Text reason;
-    private List<String> reasonFormatted;
+    private MultilineText reasonFormatted = MultilineText.EMPTY;
     private final Screen parent;
     private int reasonHeight;
 
-    public DisconnectedScreen(Screen parent, String title, Text reason) {
-        super(new TranslatableText(title, new Object[0]));
+    public DisconnectedScreen(Screen parent, Text text, Text reason) {
+        super(text);
         this.parent = parent;
         this.reason = reason;
     }
@@ -37,23 +38,17 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.reasonFormatted = this.font.wrapStringToWidthAsList(this.reason.asFormattedString(), this.width - 50);
-        this.reasonHeight = this.reasonFormatted.size() * this.font.fontHeight;
-        this.addButton(new ButtonWidget(this.width / 2 - 100, Math.min(this.height / 2 + this.reasonHeight / 2 + this.font.fontHeight, this.height - 30), 200, 20, I18n.translate("gui.toMenu", new Object[0]), buttonWidget -> this.minecraft.openScreen(this.parent)));
+        this.reasonFormatted = MultilineText.create(this.textRenderer, (StringVisitable)this.reason, this.width - 50);
+        this.reasonHeight = this.reasonFormatted.count() * this.textRenderer.fontHeight;
+        this.addButton(new ButtonWidget(this.width / 2 - 100, Math.min(this.height / 2 + this.reasonHeight / 2 + this.textRenderer.fontHeight, this.height - 30), 200, 20, new TranslatableText("gui.toMenu"), buttonWidget -> this.client.openScreen(this.parent)));
     }
 
     @Override
-    public void render(int mouseX, int mouseY, float delta) {
-        this.renderBackground();
-        this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, this.height / 2 - this.reasonHeight / 2 - this.font.fontHeight * 2, 0xAAAAAA);
-        int i = this.height / 2 - this.reasonHeight / 2;
-        if (this.reasonFormatted != null) {
-            for (String string : this.reasonFormatted) {
-                this.drawCenteredString(this.font, string, this.width / 2, i, 0xFFFFFF);
-                i += this.font.fontHeight;
-            }
-        }
-        super.render(mouseX, mouseY, delta);
+    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        this.renderBackground(matrices);
+        DisconnectedScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, this.height / 2 - this.reasonHeight / 2 - this.textRenderer.fontHeight * 2, 0xAAAAAA);
+        this.reasonFormatted.drawCenterWithShadow(matrices, this.width / 2, this.height / 2 - this.reasonHeight / 2);
+        super.render(matrices, mouseX, mouseY, delta);
     }
 }
 

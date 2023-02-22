@@ -11,7 +11,6 @@ package net.minecraft.world.chunk;
 
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortList;
-import java.util.BitSet;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -21,9 +20,8 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.fluid.Fluid;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.structure.StructureStart;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.BlockView;
@@ -34,7 +32,7 @@ import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
-import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.feature.StructureFeature;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,19 +78,19 @@ StructureHolder {
 
     public void setLastSaveTime(long var1);
 
-    public Map<String, StructureStart> getStructureStarts();
+    public Map<StructureFeature<?>, StructureStart<?>> getStructureStarts();
 
-    public void setStructureStarts(Map<String, StructureStart> var1);
+    public void setStructureStarts(Map<StructureFeature<?>, StructureStart<?>> var1);
 
-    default public boolean method_12228(int i, int j) {
-        if (i < 0) {
-            i = 0;
+    default public boolean areSectionsEmptyBetween(int lowerHeight, int upperHeight) {
+        if (lowerHeight < 0) {
+            lowerHeight = 0;
         }
-        if (j >= 256) {
-            j = 255;
+        if (upperHeight >= 256) {
+            upperHeight = 255;
         }
-        for (int k = i; k <= j; k += 16) {
-            if (ChunkSection.isEmpty(this.getSectionArray()[k >> 4])) continue;
+        for (int i = lowerHeight; i <= upperHeight; i += 16) {
+            if (ChunkSection.isEmpty(this.getSectionArray()[i >> 4])) continue;
             return false;
         }
         return true;
@@ -109,35 +107,31 @@ StructureHolder {
 
     public void removeBlockEntity(BlockPos var1);
 
-    default public void markBlockForPostProcessing(BlockPos blockPos) {
-        LogManager.getLogger().warn("Trying to mark a block for PostProcessing @ {}, but this operation is not supported.", (Object)blockPos);
+    default public void markBlockForPostProcessing(BlockPos pos) {
+        LogManager.getLogger().warn("Trying to mark a block for PostProcessing @ {}, but this operation is not supported.", (Object)pos);
     }
 
     public ShortList[] getPostProcessingLists();
 
-    default public void markBlockForPostProcessing(short s, int i) {
-        Chunk.getList(this.getPostProcessingLists(), i).add(s);
+    default public void markBlockForPostProcessing(short packedPos, int index) {
+        Chunk.getList(this.getPostProcessingLists(), index).add(packedPos);
     }
 
-    default public void addPendingBlockEntityTag(CompoundTag compoundTag) {
+    default public void addPendingBlockEntityNbt(NbtCompound nbt) {
         LogManager.getLogger().warn("Trying to set a BlockEntity, but this operation is not supported.");
     }
 
     @Nullable
-    public CompoundTag getBlockEntityTagAt(BlockPos var1);
+    public NbtCompound getBlockEntityNbt(BlockPos var1);
 
     @Nullable
-    public CompoundTag method_20598(BlockPos var1);
+    public NbtCompound getPackedBlockEntityNbt(BlockPos var1);
 
     public Stream<BlockPos> getLightSourcesStream();
 
     public TickScheduler<Block> getBlockTickScheduler();
 
     public TickScheduler<Fluid> getFluidTickScheduler();
-
-    default public BitSet getCarvingMask(GenerationStep.Carver carver) {
-        throw Util.throwOrPause(new RuntimeException("Meaningless in this context"));
-    }
 
     public UpgradeData getUpgradeData();
 

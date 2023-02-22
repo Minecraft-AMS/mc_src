@@ -14,22 +14,24 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.TargetPredicate;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.AmbientEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class BatEntity
@@ -91,19 +93,17 @@ extends AmbientEntity {
     protected void tickCramming() {
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(6.0);
+    public static DefaultAttributeContainer.Builder createBatAttributes() {
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 6.0);
     }
 
     public boolean isRoosting() {
         return (this.dataTracker.get(BAT_FLAGS) & 1) != 0;
     }
 
-    public void setRoosting(boolean bl) {
+    public void setRoosting(boolean roosting) {
         byte b = this.dataTracker.get(BAT_FLAGS);
-        if (bl) {
+        if (roosting) {
             this.dataTracker.set(BAT_FLAGS, (byte)(b | 1));
         } else {
             this.dataTracker.set(BAT_FLAGS, (byte)(b & 0xFFFFFFFE));
@@ -124,20 +124,25 @@ extends AmbientEntity {
     @Override
     protected void mobTick() {
         super.mobTick();
-        BlockPos blockPos = new BlockPos(this);
+        BlockPos blockPos = this.getBlockPos();
         BlockPos blockPos2 = blockPos.up();
         if (this.isRoosting()) {
-            if (this.world.getBlockState(blockPos2).isSimpleFullBlock(this.world, blockPos)) {
+            boolean bl = this.isSilent();
+            if (this.world.getBlockState(blockPos2).isSolidBlock(this.world, blockPos)) {
                 if (this.random.nextInt(200) == 0) {
                     this.headYaw = this.random.nextInt(360);
                 }
                 if (this.world.getClosestPlayer(CLOSE_PLAYER_PREDICATE, this) != null) {
                     this.setRoosting(false);
-                    this.world.playLevelEvent(null, 1025, blockPos, 0);
+                    if (!bl) {
+                        this.world.syncWorldEvent(null, 1025, blockPos, 0);
+                    }
                 }
             } else {
                 this.setRoosting(false);
-                this.world.playLevelEvent(null, 1025, blockPos, 0);
+                if (!bl) {
+                    this.world.syncWorldEvent(null, 1025, blockPos, 0);
+                }
             }
         } else {
             if (!(this.hangingPosition == null || this.world.isAir(this.hangingPosition) && this.hangingPosition.getY() >= 1)) {
@@ -156,7 +161,7 @@ extends AmbientEntity {
             float h = MathHelper.wrapDegrees(g - this.yaw);
             this.forwardSpeed = 0.5f;
             this.yaw += h;
-            if (this.random.nextInt(100) == 0 && this.world.getBlockState(blockPos2).isSimpleFullBlock(this.world, blockPos2)) {
+            if (this.random.nextInt(100) == 0 && this.world.getBlockState(blockPos2).isSolidBlock(this.world, blockPos2)) {
                 this.setRoosting(true);
             }
         }
@@ -193,18 +198,18 @@ extends AmbientEntity {
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.dataTracker.set(BAT_FLAGS, tag.getByte("BatFlags"));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.dataTracker.set(BAT_FLAGS, nbt.getByte("BatFlags"));
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putByte("BatFlags", this.dataTracker.get(BAT_FLAGS));
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putByte("BatFlags", this.dataTracker.get(BAT_FLAGS));
     }
 
-    public static boolean canSpawn(EntityType<BatEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+    public static boolean canSpawn(EntityType<BatEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
         if (pos.getY() >= world.getSeaLevel()) {
             return false;
         }
@@ -218,7 +223,7 @@ extends AmbientEntity {
         if (i > random.nextInt(j)) {
             return false;
         }
-        return BatEntity.canMobSpawn(type, world, spawnType, pos, random);
+        return BatEntity.canMobSpawn(type, world, spawnReason, pos, random);
     }
 
     private static boolean isTodayAroundHalloween() {

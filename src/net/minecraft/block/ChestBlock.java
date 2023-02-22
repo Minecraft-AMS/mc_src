@@ -16,24 +16,23 @@ import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractChestBlock;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.DoubleBlockProperties;
 import net.minecraft.block.HorizontalFacingBlock;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.block.enums.ChestType;
 import net.minecraft.client.block.ChestAnimationProgress;
-import net.minecraft.container.Container;
-import net.minecraft.container.GenericContainer;
-import net.minecraft.container.NameableContainerFactory;
-import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.pathing.NavigationType;
+import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -43,6 +42,9 @@ import net.minecraft.inventory.DoubleInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
@@ -64,8 +66,8 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class ChestBlock
@@ -101,20 +103,20 @@ implements Waterloggable {
             return this.getFallback();
         }
     };
-    private static final DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Optional<NameableContainerFactory>> NAME_RETRIEVER = new DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Optional<NameableContainerFactory>>(){
+    private static final DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Optional<NamedScreenHandlerFactory>> NAME_RETRIEVER = new DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Optional<NamedScreenHandlerFactory>>(){
 
         @Override
-        public Optional<NameableContainerFactory> getFromBoth(final ChestBlockEntity chestBlockEntity, final ChestBlockEntity chestBlockEntity2) {
+        public Optional<NamedScreenHandlerFactory> getFromBoth(final ChestBlockEntity chestBlockEntity, final ChestBlockEntity chestBlockEntity2) {
             final DoubleInventory inventory = new DoubleInventory(chestBlockEntity, chestBlockEntity2);
-            return Optional.of(new NameableContainerFactory(){
+            return Optional.of(new NamedScreenHandlerFactory(){
 
                 @Override
                 @Nullable
-                public Container createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity playerEntity) {
+                public ScreenHandler createMenu(int i, PlayerInventory playerInventory, PlayerEntity playerEntity) {
                     if (chestBlockEntity.checkUnlocked(playerEntity) && chestBlockEntity2.checkUnlocked(playerEntity)) {
                         chestBlockEntity.checkLootInteraction(playerInventory.player);
                         chestBlockEntity2.checkLootInteraction(playerInventory.player);
-                        return GenericContainer.createGeneric9x6(syncId, playerInventory, inventory);
+                        return GenericContainerScreenHandler.createGeneric9x6(i, playerInventory, inventory);
                     }
                     return null;
                 }
@@ -127,18 +129,18 @@ implements Waterloggable {
                     if (chestBlockEntity2.hasCustomName()) {
                         return chestBlockEntity2.getDisplayName();
                     }
-                    return new TranslatableText("container.chestDouble", new Object[0]);
+                    return new TranslatableText("container.chestDouble");
                 }
             });
         }
 
         @Override
-        public Optional<NameableContainerFactory> getFrom(ChestBlockEntity chestBlockEntity) {
+        public Optional<NamedScreenHandlerFactory> getFrom(ChestBlockEntity chestBlockEntity) {
             return Optional.of(chestBlockEntity);
         }
 
         @Override
-        public Optional<NameableContainerFactory> getFallback() {
+        public Optional<NamedScreenHandlerFactory> getFallback() {
             return Optional.empty();
         }
 
@@ -148,7 +150,7 @@ implements Waterloggable {
         }
     };
 
-    protected ChestBlock(Block.Settings settings, Supplier<BlockEntityType<? extends ChestBlockEntity>> supplier) {
+    protected ChestBlock(AbstractBlock.Settings settings, Supplier<BlockEntityType<? extends ChestBlockEntity>> supplier) {
         super(settings, supplier);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(CHEST_TYPE, ChestType.SINGLE)).with(WATERLOGGED, false));
     }
@@ -170,23 +172,23 @@ implements Waterloggable {
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
             world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
-        if (neighborState.getBlock() == this && facing.getAxis().isHorizontal()) {
+        if (neighborState.isOf(this) && direction.getAxis().isHorizontal()) {
             ChestType chestType = neighborState.get(CHEST_TYPE);
-            if (state.get(CHEST_TYPE) == ChestType.SINGLE && chestType != ChestType.SINGLE && state.get(FACING) == neighborState.get(FACING) && ChestBlock.getFacing(neighborState) == facing.getOpposite()) {
+            if (state.get(CHEST_TYPE) == ChestType.SINGLE && chestType != ChestType.SINGLE && state.get(FACING) == neighborState.get(FACING) && ChestBlock.getFacing(neighborState) == direction.getOpposite()) {
                 return (BlockState)state.with(CHEST_TYPE, chestType.getOpposite());
             }
-        } else if (ChestBlock.getFacing(state) == facing) {
+        } else if (ChestBlock.getFacing(state) == direction) {
             return (BlockState)state.with(CHEST_TYPE, ChestType.SINGLE);
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         if (state.get(CHEST_TYPE) == ChestType.SINGLE) {
             return SINGLE_SHAPE;
         }
@@ -243,7 +245,7 @@ implements Waterloggable {
     @Nullable
     private Direction getNeighborChestDirection(ItemPlacementContext ctx, Direction dir) {
         BlockState blockState = ctx.getWorld().getBlockState(ctx.getBlockPos().offset(dir));
-        return blockState.getBlock() == this && blockState.get(CHEST_TYPE) == ChestType.SINGLE ? blockState.get(FACING) : null;
+        return blockState.isOf(this) && blockState.get(CHEST_TYPE) == ChestType.SINGLE ? blockState.get(FACING) : null;
     }
 
     @Override
@@ -255,16 +257,16 @@ implements Waterloggable {
     }
 
     @Override
-    public void onBlockRemoved(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (state.getBlock() == newState.getBlock()) {
+    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (state.isOf(newState.getBlock())) {
             return;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof Inventory) {
             ItemScatterer.spawn(world, pos, (Inventory)((Object)blockEntity));
-            world.updateHorizontalAdjacent(pos, this);
+            world.updateComparators(pos, this);
         }
-        super.onBlockRemoved(state, world, pos, newState, moved);
+        super.onStateReplaced(state, world, pos, newState, moved);
     }
 
     @Override
@@ -272,12 +274,13 @@ implements Waterloggable {
         if (world.isClient) {
             return ActionResult.SUCCESS;
         }
-        NameableContainerFactory nameableContainerFactory = this.createContainerFactory(state, world, pos);
-        if (nameableContainerFactory != null) {
-            player.openContainer(nameableContainerFactory);
+        NamedScreenHandlerFactory namedScreenHandlerFactory = this.createScreenHandlerFactory(state, world, pos);
+        if (namedScreenHandlerFactory != null) {
+            player.openHandledScreen(namedScreenHandlerFactory);
             player.incrementStat(this.getOpenStat());
+            PiglinBrain.onGuardedBlockInteracted(player, true);
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.CONSUME;
     }
 
     protected Stat<Identifier> getOpenStat() {
@@ -291,13 +294,13 @@ implements Waterloggable {
 
     @Override
     public DoubleBlockProperties.PropertySource<? extends ChestBlockEntity> getBlockEntitySource(BlockState state, World world, BlockPos pos, boolean ignoreBlocked) {
-        BiPredicate<IWorld, BlockPos> biPredicate = ignoreBlocked ? (iWorld, blockPos) -> false : ChestBlock::isChestBlocked;
+        BiPredicate<WorldAccess, BlockPos> biPredicate = ignoreBlocked ? (worldAccess, blockPos) -> false : ChestBlock::isChestBlocked;
         return DoubleBlockProperties.toPropertySource((BlockEntityType)this.entityTypeRetriever.get(), ChestBlock::getDoubleBlockType, ChestBlock::getFacing, FACING, state, world, pos, biPredicate);
     }
 
     @Override
     @Nullable
-    public NameableContainerFactory createContainerFactory(BlockState state, World world, BlockPos pos) {
+    public NamedScreenHandlerFactory createScreenHandlerFactory(BlockState state, World world, BlockPos pos) {
         return this.getBlockEntitySource(state, world, pos, false).apply(NAME_RETRIEVER).orElse(null);
     }
 
@@ -328,24 +331,24 @@ implements Waterloggable {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new ChestBlockEntity();
     }
 
-    public static boolean isChestBlocked(IWorld world, BlockPos pos) {
+    public static boolean isChestBlocked(WorldAccess world, BlockPos pos) {
         return ChestBlock.hasBlockOnTop(world, pos) || ChestBlock.hasOcelotOnTop(world, pos);
     }
 
-    private static boolean hasBlockOnTop(BlockView view, BlockPos pos) {
+    private static boolean hasBlockOnTop(BlockView world, BlockPos pos) {
         BlockPos blockPos = pos.up();
-        return view.getBlockState(blockPos).isSimpleFullBlock(view, blockPos);
+        return world.getBlockState(blockPos).isSolidBlock(world, blockPos);
     }
 
-    private static boolean hasOcelotOnTop(IWorld world, BlockPos pos) {
+    private static boolean hasOcelotOnTop(WorldAccess world, BlockPos pos) {
         List<CatEntity> list = world.getNonSpectatingEntities(CatEntity.class, new Box(pos.getX(), pos.getY() + 1, pos.getZ(), pos.getX() + 1, pos.getY() + 2, pos.getZ() + 1));
         if (!list.isEmpty()) {
             for (CatEntity catEntity : list) {
-                if (!catEntity.isSitting()) continue;
+                if (!catEntity.isInSittingPose()) continue;
                 return true;
             }
         }
@@ -359,7 +362,7 @@ implements Waterloggable {
 
     @Override
     public int getComparatorOutput(BlockState state, World world, BlockPos pos) {
-        return Container.calculateComparatorOutput(ChestBlock.getInventory(this, state, world, pos, false));
+        return ScreenHandler.calculateComparatorOutput(ChestBlock.getInventory(this, state, world, pos, false));
     }
 
     @Override
@@ -378,7 +381,7 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
+    public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
         return false;
     }
 }

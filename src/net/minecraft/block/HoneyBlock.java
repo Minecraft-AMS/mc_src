@@ -9,13 +9,14 @@ package net.minecraft.block;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.TransparentBlock;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.TntEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
@@ -34,7 +35,7 @@ public class HoneyBlock
 extends TransparentBlock {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 15.0, 15.0);
 
-    public HoneyBlock(Block.Settings settings) {
+    public HoneyBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
@@ -43,7 +44,7 @@ extends TransparentBlock {
     }
 
     @Override
-    public VoxelShape getCollisionShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return SHAPE;
     }
 
@@ -69,7 +70,7 @@ extends TransparentBlock {
     }
 
     private boolean isSliding(BlockPos pos, Entity entity) {
-        if (entity.onGround) {
+        if (entity.isOnGround()) {
             return false;
         }
         if (entity.getY() > (double)pos.getY() + 0.9375 - 1.0E-7) {
@@ -86,7 +87,7 @@ extends TransparentBlock {
 
     private void triggerAdvancement(Entity entity, BlockPos pos) {
         if (entity instanceof ServerPlayerEntity && entity.world.getTime() % 20L == 0L) {
-            Criterions.SLIDE_DOWN_BLOCK.test((ServerPlayerEntity)entity, entity.world.getBlockState(pos));
+            Criteria.SLIDE_DOWN_BLOCK.test((ServerPlayerEntity)entity, entity.world.getBlockState(pos));
         }
     }
 

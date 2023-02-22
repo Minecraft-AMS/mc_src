@@ -5,13 +5,13 @@ package net.minecraft.entity.ai.goal;
 
 import java.util.EnumSet;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldView;
 
 public abstract class MoveToTargetPosGoal
 extends Goal {
-    protected final MobEntityWithAi mob;
+    protected final PathAwareEntity mob;
     public final double speed;
     protected int cooldown;
     protected int tryingTime;
@@ -22,11 +22,11 @@ extends Goal {
     private final int maxYDifference;
     protected int lowestY;
 
-    public MoveToTargetPosGoal(MobEntityWithAi mob, double speed, int range) {
+    public MoveToTargetPosGoal(PathAwareEntity mob, double speed, int range) {
         this(mob, speed, range, 1);
     }
 
-    public MoveToTargetPosGoal(MobEntityWithAi mob, double speed, int range, int maxYDifference) {
+    public MoveToTargetPosGoal(PathAwareEntity mob, double speed, int range, int maxYDifference) {
         this.mob = mob;
         this.speed = speed;
         this.range = range;
@@ -45,7 +45,7 @@ extends Goal {
         return this.findTargetPos();
     }
 
-    protected int getInterval(MobEntityWithAi mob) {
+    protected int getInterval(PathAwareEntity mob) {
         return 200 + mob.getRandom().nextInt(200);
     }
 
@@ -69,13 +69,18 @@ extends Goal {
         return 1.0;
     }
 
+    protected BlockPos getTargetPos() {
+        return this.targetPos.up();
+    }
+
     @Override
     public void tick() {
-        if (!this.targetPos.up().isWithinDistance(this.mob.getPos(), this.getDesiredSquaredDistanceToTarget())) {
+        BlockPos blockPos = this.getTargetPos();
+        if (!blockPos.isWithinDistance(this.mob.getPos(), this.getDesiredSquaredDistanceToTarget())) {
             this.reached = false;
             ++this.tryingTime;
             if (this.shouldResetPath()) {
-                this.mob.getNavigation().startMovingTo((double)this.targetPos.getX() + 0.5, this.targetPos.getY() + 1, (double)this.targetPos.getZ() + 0.5, this.speed);
+                this.mob.getNavigation().startMovingTo((double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5, this.speed);
             }
         } else {
             this.reached = true;
@@ -94,7 +99,7 @@ extends Goal {
     protected boolean findTargetPos() {
         int i = this.range;
         int j = this.maxYDifference;
-        BlockPos blockPos = new BlockPos(this.mob);
+        BlockPos blockPos = this.mob.getBlockPos();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         int k = this.lowestY;
         while (k <= j) {
@@ -104,7 +109,7 @@ extends Goal {
                     int n;
                     int n2 = n = m < l && m > -l ? l : 0;
                     while (n <= l) {
-                        mutable.set(blockPos).setOffset(m, k - 1, n);
+                        mutable.set(blockPos, m, k - 1, n);
                         if (this.mob.isInWalkTargetRange(mutable) && this.isTargetPos(this.mob.world, mutable)) {
                             this.targetPos = mutable;
                             return true;

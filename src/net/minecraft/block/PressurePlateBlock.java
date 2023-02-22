@@ -4,6 +4,7 @@
 package net.minecraft.block;
 
 import java.util.List;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractPressurePlateBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -17,15 +18,15 @@ import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 
 public class PressurePlateBlock
 extends AbstractPressurePlateBlock {
     public static final BooleanProperty POWERED = Properties.POWERED;
     private final ActivationRule type;
 
-    protected PressurePlateBlock(ActivationRule type, Block.Settings settings) {
+    protected PressurePlateBlock(ActivationRule type, AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(POWERED, false));
         this.type = type;
@@ -42,8 +43,8 @@ extends AbstractPressurePlateBlock {
     }
 
     @Override
-    protected void playPressSound(IWorld world, BlockPos pos) {
-        if (this.material == Material.WOOD) {
+    protected void playPressSound(WorldAccess world, BlockPos pos) {
+        if (this.material == Material.WOOD || this.material == Material.NETHER_WOOD) {
             world.playSound(null, pos, SoundEvents.BLOCK_WOODEN_PRESSURE_PLATE_CLICK_ON, SoundCategory.BLOCKS, 0.3f, 0.8f);
         } else {
             world.playSound(null, pos, SoundEvents.BLOCK_STONE_PRESSURE_PLATE_CLICK_ON, SoundCategory.BLOCKS, 0.3f, 0.6f);
@@ -51,8 +52,8 @@ extends AbstractPressurePlateBlock {
     }
 
     @Override
-    protected void playDepressSound(IWorld world, BlockPos pos) {
-        if (this.material == Material.WOOD) {
+    protected void playDepressSound(WorldAccess world, BlockPos pos) {
+        if (this.material == Material.WOOD || this.material == Material.NETHER_WOOD) {
             world.playSound(null, pos, SoundEvents.BLOCK_WOODEN_PRESSURE_PLATE_CLICK_OFF, SoundCategory.BLOCKS, 0.3f, 0.7f);
         } else {
             world.playSound(null, pos, SoundEvents.BLOCK_STONE_PRESSURE_PLATE_CLICK_OFF, SoundCategory.BLOCKS, 0.3f, 0.5f);
@@ -65,7 +66,7 @@ extends AbstractPressurePlateBlock {
         Box box = BOX.offset(pos);
         switch (this.type) {
             case EVERYTHING: {
-                list = world.getEntities(null, box);
+                list = world.getOtherEntities(null, box);
                 break;
             }
             case MOBS: {

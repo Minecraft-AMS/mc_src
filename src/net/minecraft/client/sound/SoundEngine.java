@@ -25,7 +25,7 @@ import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.AlUtil;
-import net.minecraft.client.sound.Listener;
+import net.minecraft.client.sound.SoundListener;
 import net.minecraft.client.sound.Source;
 import net.minecraft.util.math.MathHelper;
 import org.apache.logging.log4j.LogManager;
@@ -73,7 +73,7 @@ public class SoundEngine {
     };
     private SourceSet streamingSources = EMPTY_SOURCE_SET;
     private SourceSet staticSources = EMPTY_SOURCE_SET;
-    private final Listener listener = new Listener();
+    private final SoundListener listener = new SoundListener();
 
     public void init() {
         this.devicePointer = SoundEngine.openDevice();
@@ -148,7 +148,7 @@ public class SoundEngine {
         }
     }
 
-    public Listener getListener() {
+    public SoundListener getListener() {
         return this.listener;
     }
 
@@ -181,6 +181,7 @@ public class SoundEngine {
         @Nullable
         public Source createSource() {
             if (this.sources.size() >= this.maxSourceCount) {
+                LOGGER.warn("Maximum sound pool size {} reached", (Object)this.maxSourceCount);
                 return null;
             }
             Source source = Source.create();

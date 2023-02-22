@@ -18,13 +18,14 @@ import net.minecraft.client.render.entity.model.SkullEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.projectile.WitherSkullEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class WitherSkullEntityRenderer
 extends EntityRenderer<WitherSkullEntity> {
-    private static final Identifier INVINCIBLE_SKIN = new Identifier("textures/entity/wither/wither_invulnerable.png");
-    private static final Identifier SKIN = new Identifier("textures/entity/wither/wither.png");
+    private static final Identifier INVULNERABLE_TEXTURE = new Identifier("textures/entity/wither/wither_invulnerable.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/wither/wither.png");
     private final SkullEntityModel model = new SkullEntityModel();
 
     public WitherSkullEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
@@ -32,7 +33,7 @@ extends EntityRenderer<WitherSkullEntity> {
     }
 
     @Override
-    protected int getBlockLight(WitherSkullEntity witherSkullEntity, float f) {
+    protected int getBlockLight(WitherSkullEntity witherSkullEntity, BlockPos blockPos) {
         return 15;
     }
 
@@ -43,7 +44,7 @@ extends EntityRenderer<WitherSkullEntity> {
         float h = MathHelper.lerpAngle(witherSkullEntity.prevYaw, witherSkullEntity.yaw, g);
         float j = MathHelper.lerp(g, witherSkullEntity.prevPitch, witherSkullEntity.pitch);
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(this.getTexture(witherSkullEntity)));
-        this.model.render(0.0f, h, j);
+        this.model.method_2821(0.0f, h, j);
         this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
         matrixStack.pop();
         super.render(witherSkullEntity, f, g, matrixStack, vertexConsumerProvider, i);
@@ -51,7 +52,7 @@ extends EntityRenderer<WitherSkullEntity> {
 
     @Override
     public Identifier getTexture(WitherSkullEntity witherSkullEntity) {
-        return witherSkullEntity.isCharged() ? INVINCIBLE_SKIN : SKIN;
+        return witherSkullEntity.isCharged() ? INVULNERABLE_TEXTURE : TEXTURE;
     }
 }
 

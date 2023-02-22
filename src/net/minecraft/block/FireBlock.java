@@ -2,32 +2,29 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMap
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
+import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.Map;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import net.minecraft.block.AbstractBlock;
+import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ConnectingBlock;
-import net.minecraft.block.NetherPortalBlock;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.TntBlock;
-import net.minecraft.entity.EntityContext;
 import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;
@@ -39,15 +36,12 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
-import net.minecraft.world.dimension.DimensionType;
-import net.minecraft.world.dimension.TheEndDimension;
-import org.jetbrains.annotations.Nullable;
 
 public class FireBlock
-extends Block {
+extends AbstractFireBlock {
     public static final IntProperty AGE = Properties.AGE_15;
     public static final BooleanProperty NORTH = ConnectingBlock.NORTH;
     public static final BooleanProperty EAST = ConnectingBlock.EAST;
@@ -55,34 +49,60 @@ extends Block {
     public static final BooleanProperty WEST = ConnectingBlock.WEST;
     public static final BooleanProperty UP = ConnectingBlock.UP;
     private static final Map<Direction, BooleanProperty> DIRECTION_PROPERTIES = ConnectingBlock.FACING_PROPERTIES.entrySet().stream().filter(entry -> entry.getKey() != Direction.DOWN).collect(Util.toMap());
+    private static final VoxelShape field_26653 = Block.createCuboidShape(0.0, 15.0, 0.0, 16.0, 16.0, 16.0);
+    private static final VoxelShape field_26654 = Block.createCuboidShape(0.0, 0.0, 0.0, 1.0, 16.0, 16.0);
+    private static final VoxelShape field_26655 = Block.createCuboidShape(15.0, 0.0, 0.0, 16.0, 16.0, 16.0);
+    private static final VoxelShape field_26656 = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 16.0, 1.0);
+    private static final VoxelShape field_26657 = Block.createCuboidShape(0.0, 0.0, 15.0, 16.0, 16.0, 16.0);
+    private final Map<BlockState, VoxelShape> field_26658;
     private final Object2IntMap<Block> burnChances = new Object2IntOpenHashMap();
     private final Object2IntMap<Block> spreadChances = new Object2IntOpenHashMap();
 
-    protected FireBlock(Block.Settings settings) {
-        super(settings);
+    public FireBlock(AbstractBlock.Settings settings) {
+        super(settings, 1.0f);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(AGE, 0)).with(NORTH, false)).with(EAST, false)).with(SOUTH, false)).with(WEST, false)).with(UP, false));
+        this.field_26658 = ImmutableMap.copyOf(this.stateManager.getStates().stream().filter(blockState -> blockState.get(AGE) == 0).collect(Collectors.toMap(Function.identity(), FireBlock::method_31016)));
+    }
+
+    private static VoxelShape method_31016(BlockState blockState) {
+        VoxelShape voxelShape = VoxelShapes.empty();
+        if (blockState.get(UP).booleanValue()) {
+            voxelShape = field_26653;
+        }
+        if (blockState.get(NORTH).booleanValue()) {
+            voxelShape = VoxelShapes.union(voxelShape, field_26656);
+        }
+        if (blockState.get(SOUTH).booleanValue()) {
+            voxelShape = VoxelShapes.union(voxelShape, field_26657);
+        }
+        if (blockState.get(EAST).booleanValue()) {
+            voxelShape = VoxelShapes.union(voxelShape, field_26655);
+        }
+        if (blockState.get(WEST).booleanValue()) {
+            voxelShape = VoxelShapes.union(voxelShape, field_26654);
+        }
+        return voxelShape.isEmpty() ? BASE_SHAPE : voxelShape;
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
-        return VoxelShapes.empty();
-    }
-
-    @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (this.canPlaceAt(state, world, pos)) {
-            return (BlockState)this.getStateForPosition(world, pos).with(AGE, state.get(AGE));
+            return this.method_24855(world, pos, state.get(AGE));
         }
         return Blocks.AIR.getDefaultState();
     }
 
     @Override
-    @Nullable
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        return this.field_26658.get(state.with(AGE, 0));
+    }
+
+    @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         return this.getStateForPosition(ctx.getWorld(), ctx.getBlockPos());
     }
 
-    public BlockState getStateForPosition(BlockView world, BlockPos pos) {
+    protected BlockState getStateForPosition(BlockView world, BlockPos pos) {
         BlockPos blockPos = pos.down();
         BlockState blockState = world.getBlockState(blockPos);
         if (this.isFlammable(blockState) || blockState.isSideSolidFullSquare(world, blockPos, Direction.UP)) {
@@ -104,21 +124,17 @@ extends Block {
     }
 
     @Override
-    public int getTickRate(WorldView worldView) {
-        return 30;
-    }
-
-    @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         boolean bl2;
+        world.getBlockTickScheduler().schedule(pos, this, FireBlock.method_26155(world.random));
         if (!world.getGameRules().getBoolean(GameRules.DO_FIRE_TICK)) {
             return;
         }
         if (!state.canPlaceAt(world, pos)) {
             world.removeBlock(pos, false);
         }
-        Block block = world.getBlockState(pos.down()).getBlock();
-        boolean bl = world.dimension instanceof TheEndDimension && block == Blocks.BEDROCK || block == Blocks.NETHERRACK || block == Blocks.MAGMA_BLOCK;
+        BlockState blockState = world.getBlockState(pos.down());
+        boolean bl = blockState.isIn(world.getDimension().getInfiniburnBlocks());
         int i = state.get(AGE);
         if (!bl && world.isRaining() && this.isRainingAround(world, pos) && random.nextFloat() < 0.2f + (float)i * 0.03f) {
             world.removeBlock(pos, false);
@@ -130,7 +146,6 @@ extends Block {
             world.setBlockState(pos, state, 4);
         }
         if (!bl) {
-            world.getBlockTickScheduler().schedule(pos, this, this.getTickRate(world) + random.nextInt(10));
             if (!this.areBlocksAroundFlammable(world, pos)) {
                 BlockPos blockPos = pos.down();
                 if (!world.getBlockState(blockPos).isSideSolidFullSquare(world, blockPos, Direction.UP) || i > 3) {
@@ -159,7 +174,7 @@ extends Block {
                     if (n > 1) {
                         o += (n - 1) * 100;
                     }
-                    mutable.set(pos).setOffset(l, n, m);
+                    mutable.set(pos, l, n, m);
                     int p = this.getBurnChance(world, mutable);
                     if (p <= 0) continue;
                     int q = (p + 40 + world.getDifficulty().getId() * 7) / (i + 30);
@@ -168,7 +183,7 @@ extends Block {
                     }
                     if (q <= 0 || random.nextInt(o) > q || world.isRaining() && this.isRainingAround(world, mutable)) continue;
                     int r = Math.min(15, i + random.nextInt(5) / 4);
-                    world.setBlockState(mutable, (BlockState)this.getStateForPosition(world, mutable).with(AGE, r), 3);
+                    world.setBlockState(mutable, this.method_24855(world, mutable, r), 3);
                 }
             }
         }
@@ -198,7 +213,7 @@ extends Block {
             BlockState blockState = world.getBlockState(pos);
             if (rand.nextInt(currentAge + 10) < 5 && !world.hasRain(pos)) {
                 int j = Math.min(currentAge + rand.nextInt(5) / 4, 15);
-                world.setBlockState(pos, (BlockState)this.getStateForPosition(world, pos).with(AGE, j), 3);
+                world.setBlockState(pos, this.method_24855(world, pos, j), 3);
             } else {
                 world.removeBlock(pos, false);
             }
@@ -210,6 +225,14 @@ extends Block {
         }
     }
 
+    private BlockState method_24855(WorldAccess worldAccess, BlockPos blockPos, int i) {
+        BlockState blockState = FireBlock.getState(worldAccess, blockPos);
+        if (blockState.isOf(Blocks.FIRE)) {
+            return (BlockState)blockState.with(AGE, i);
+        }
+        return blockState;
+    }
+
     private boolean areBlocksAroundFlammable(BlockView world, BlockPos pos) {
         for (Direction direction : Direction.values()) {
             if (!this.isFlammable(world.getBlockState(pos.offset(direction)))) continue;
@@ -218,100 +241,31 @@ extends Block {
         return false;
     }
 
-    private int getBurnChance(WorldView worldView, BlockPos pos) {
-        if (!worldView.isAir(pos)) {
+    private int getBurnChance(WorldView world, BlockPos pos) {
+        if (!world.isAir(pos)) {
             return 0;
         }
         int i = 0;
         for (Direction direction : Direction.values()) {
-            BlockState blockState = worldView.getBlockState(pos.offset(direction));
+            BlockState blockState = world.getBlockState(pos.offset(direction));
             i = Math.max(this.getBurnChance(blockState), i);
         }
         return i;
     }
 
-    public boolean isFlammable(BlockState blockState) {
-        return this.getBurnChance(blockState) > 0;
+    @Override
+    protected boolean isFlammable(BlockState state) {
+        return this.getBurnChance(state) > 0;
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
-        if (oldState.getBlock() == state.getBlock()) {
-            return;
-        }
-        if ((world.dimension.getType() == DimensionType.OVERWORLD || world.dimension.getType() == DimensionType.THE_NETHER) && ((NetherPortalBlock)Blocks.NETHER_PORTAL).createPortalAt(world, pos)) {
-            return;
-        }
-        if (!state.canPlaceAt(world, pos)) {
-            world.removeBlock(pos, false);
-            return;
-        }
-        world.getBlockTickScheduler().schedule(pos, this, this.getTickRate(world) + world.random.nextInt(10));
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        super.onBlockAdded(state, world, pos, oldState, notify);
+        world.getBlockTickScheduler().schedule(pos, this, FireBlock.method_26155(world.random));
     }
 
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
-        block12: {
-            double f;
-            double e;
-            double d;
-            int i;
-            block11: {
-                BlockPos blockPos;
-                BlockState blockState;
-                if (random.nextInt(24) == 0) {
-                    world.playSound((float)pos.getX() + 0.5f, (double)((float)pos.getY() + 0.5f), (double)((float)pos.getZ() + 0.5f), SoundEvents.BLOCK_FIRE_AMBIENT, SoundCategory.BLOCKS, 1.0f + random.nextFloat(), random.nextFloat() * 0.7f + 0.3f, false);
-                }
-                if (!this.isFlammable(blockState = world.getBlockState(blockPos = pos.down())) && !blockState.isSideSolidFullSquare(world, blockPos, Direction.UP)) break block11;
-                for (int i2 = 0; i2 < 3; ++i2) {
-                    double d2 = (double)pos.getX() + random.nextDouble();
-                    double e2 = (double)pos.getY() + random.nextDouble() * 0.5 + 0.5;
-                    double f2 = (double)pos.getZ() + random.nextDouble();
-                    world.addParticle(ParticleTypes.LARGE_SMOKE, d2, e2, f2, 0.0, 0.0, 0.0);
-                }
-                break block12;
-            }
-            if (this.isFlammable(world.getBlockState(pos.west()))) {
-                for (i = 0; i < 2; ++i) {
-                    d = (double)pos.getX() + random.nextDouble() * (double)0.1f;
-                    e = (double)pos.getY() + random.nextDouble();
-                    f = (double)pos.getZ() + random.nextDouble();
-                    world.addParticle(ParticleTypes.LARGE_SMOKE, d, e, f, 0.0, 0.0, 0.0);
-                }
-            }
-            if (this.isFlammable(world.getBlockState(pos.east()))) {
-                for (i = 0; i < 2; ++i) {
-                    d = (double)(pos.getX() + 1) - random.nextDouble() * (double)0.1f;
-                    e = (double)pos.getY() + random.nextDouble();
-                    f = (double)pos.getZ() + random.nextDouble();
-                    world.addParticle(ParticleTypes.LARGE_SMOKE, d, e, f, 0.0, 0.0, 0.0);
-                }
-            }
-            if (this.isFlammable(world.getBlockState(pos.north()))) {
-                for (i = 0; i < 2; ++i) {
-                    d = (double)pos.getX() + random.nextDouble();
-                    e = (double)pos.getY() + random.nextDouble();
-                    f = (double)pos.getZ() + random.nextDouble() * (double)0.1f;
-                    world.addParticle(ParticleTypes.LARGE_SMOKE, d, e, f, 0.0, 0.0, 0.0);
-                }
-            }
-            if (this.isFlammable(world.getBlockState(pos.south()))) {
-                for (i = 0; i < 2; ++i) {
-                    d = (double)pos.getX() + random.nextDouble();
-                    e = (double)pos.getY() + random.nextDouble();
-                    f = (double)(pos.getZ() + 1) - random.nextDouble() * (double)0.1f;
-                    world.addParticle(ParticleTypes.LARGE_SMOKE, d, e, f, 0.0, 0.0, 0.0);
-                }
-            }
-            if (!this.isFlammable(world.getBlockState(pos.up()))) break block12;
-            for (i = 0; i < 2; ++i) {
-                d = (double)pos.getX() + random.nextDouble();
-                e = (double)(pos.getY() + 1) - random.nextDouble() * (double)0.1f;
-                f = (double)pos.getZ() + random.nextDouble();
-                world.addParticle(ParticleTypes.LARGE_SMOKE, d, e, f, 0.0, 0.0, 0.0);
-            }
-        }
+    private static int method_26155(Random random) {
+        return 30 + random.nextInt(10);
     }
 
     @Override
@@ -319,7 +273,7 @@ extends Block {
         builder.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
     }
 
-    public void registerFlammableBlock(Block block, int burnChance, int spreadChance) {
+    private void registerFlammableBlock(Block block, int burnChance, int spreadChance) {
         this.burnChances.put((Object)block, burnChance);
         this.spreadChances.put((Object)block, spreadChance);
     }
@@ -429,6 +383,7 @@ extends Block {
         fireBlock.registerFlammableBlock(Blocks.VINE, 15, 100);
         fireBlock.registerFlammableBlock(Blocks.COAL_BLOCK, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.HAY_BLOCK, 60, 20);
+        fireBlock.registerFlammableBlock(Blocks.TARGET, 15, 20);
         fireBlock.registerFlammableBlock(Blocks.WHITE_CARPET, 60, 20);
         fireBlock.registerFlammableBlock(Blocks.ORANGE_CARPET, 60, 20);
         fireBlock.registerFlammableBlock(Blocks.MAGENTA_CARPET, 60, 20);

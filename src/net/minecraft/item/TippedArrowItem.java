@@ -20,7 +20,7 @@ import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
 import net.minecraft.text.Text;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -32,9 +32,8 @@ extends ArrowItem {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public ItemStack getStackForRender() {
-        return PotionUtil.setPotion(super.getStackForRender(), Potions.POISON);
+    public ItemStack getDefaultStack() {
+        return PotionUtil.setPotion(super.getDefaultStack(), Potions.POISON);
     }
 
     @Override

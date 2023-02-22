@@ -9,8 +9,8 @@ package net.minecraft.particle;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.particle.ParticleType;
-import net.minecraft.util.PacketByteBuf;
 
 public interface ParticleEffect {
     public ParticleType<?> getType();
@@ -19,6 +19,7 @@ public interface ParticleEffect {
 
     public String asString();
 
+    @Deprecated
     public static interface Factory<T extends ParticleEffect> {
         public T read(ParticleType<T> var1, StringReader var2) throws CommandSyntaxException;
 

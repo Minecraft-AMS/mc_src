@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.OpticFinder
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.Typed
@@ -12,6 +11,7 @@
  *  com.mojang.datafixers.types.Type
  *  com.mojang.datafixers.types.templates.List$ListType
  *  com.mojang.datafixers.types.templates.TaggedChoice$TaggedChoiceType
+ *  com.mojang.serialization.Dynamic
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  it.unimi.dsi.fastutil.ints.IntSet
  *  org.apache.logging.log4j.LogManager
@@ -22,7 +22,6 @@ package net.minecraft.datafixer.fix;
 
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.Typed;
@@ -30,6 +29,7 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.List;
 import com.mojang.datafixers.types.templates.TaggedChoice;
+import com.mojang.serialization.Dynamic;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.List;
@@ -77,9 +77,9 @@ extends DataFix {
             IntOpenHashSet intSet = new IntOpenHashSet();
             for (Typed typed2 : list) {
                 ListFixer listFixer = new ListFixer(typed2, this.getInputSchema());
-                if (listFixer.method_5079()) continue;
+                if (listFixer.isFixed()) continue;
                 for (int i = 0; i < 4096; ++i) {
-                    int j = listFixer.method_5075(i);
+                    int j = listFixer.needsFix(i);
                     if (!listFixer.isTarget(j)) continue;
                     intSet.add(listFixer.method_5077() << 12 | i);
                 }
@@ -122,8 +122,8 @@ extends DataFix {
         @Override
         protected boolean needsFix() {
             this.targets = new IntOpenHashSet();
-            for (int i = 0; i < this.data.size(); ++i) {
-                Dynamic dynamic = (Dynamic)this.data.get(i);
+            for (int i = 0; i < this.properties.size(); ++i) {
+                Dynamic dynamic = (Dynamic)this.properties.get(i);
                 String string = dynamic.get("Name").asString("");
                 if (!Objects.equals(string, "minecraft:trapped_chest")) continue;
                 this.targets.add(i);

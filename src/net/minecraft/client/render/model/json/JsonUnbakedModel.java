@@ -69,8 +69,8 @@ import net.minecraft.client.render.model.json.ItemModelGenerator;
 import net.minecraft.client.render.model.json.ModelElement;
 import net.minecraft.client.render.model.json.ModelElementFace;
 import net.minecraft.client.render.model.json.ModelElementTexture;
-import net.minecraft.client.render.model.json.ModelItemOverride;
-import net.minecraft.client.render.model.json.ModelItemPropertyOverrideList;
+import net.minecraft.client.render.model.json.ModelOverride;
+import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.render.model.json.Transformation;
 import net.minecraft.client.texture.MissingSprite;
@@ -90,13 +90,13 @@ implements UnbakedModel {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final BakedQuadFactory QUAD_FACTORY = new BakedQuadFactory();
     @VisibleForTesting
-    static final Gson GSON = new GsonBuilder().registerTypeAdapter(JsonUnbakedModel.class, (Object)new Deserializer()).registerTypeAdapter(ModelElement.class, (Object)new ModelElement.Deserializer()).registerTypeAdapter(ModelElementFace.class, (Object)new ModelElementFace.Deserializer()).registerTypeAdapter(ModelElementTexture.class, (Object)new ModelElementTexture.Deserializer()).registerTypeAdapter(Transformation.class, (Object)new Transformation.Deserializer()).registerTypeAdapter(ModelTransformation.class, (Object)new ModelTransformation.Deserializer()).registerTypeAdapter(ModelItemOverride.class, (Object)new ModelItemOverride.Deserializer()).create();
+    static final Gson GSON = new GsonBuilder().registerTypeAdapter(JsonUnbakedModel.class, (Object)new Deserializer()).registerTypeAdapter(ModelElement.class, (Object)new ModelElement.Deserializer()).registerTypeAdapter(ModelElementFace.class, (Object)new ModelElementFace.Deserializer()).registerTypeAdapter(ModelElementTexture.class, (Object)new ModelElementTexture.Deserializer()).registerTypeAdapter(Transformation.class, (Object)new Transformation.Deserializer()).registerTypeAdapter(ModelTransformation.class, (Object)new ModelTransformation.Deserializer()).registerTypeAdapter(ModelOverride.class, (Object)new ModelOverride.Deserializer()).create();
     private final List<ModelElement> elements;
     @Nullable
     private final GuiLight guiLight;
     private final boolean ambientOcclusion;
     private final ModelTransformation transformations;
-    private final List<ModelItemOverride> overrides;
+    private final List<ModelOverride> overrides;
     public String id = "";
     @VisibleForTesting
     protected final Map<String, Either<SpriteIdentifier, String>> textureMap;
@@ -113,7 +113,7 @@ implements UnbakedModel {
         return JsonUnbakedModel.deserialize(new StringReader(json));
     }
 
-    public JsonUnbakedModel(@Nullable Identifier parentId, List<ModelElement> elements, Map<String, Either<SpriteIdentifier, String>> textureMap, boolean ambientOcclusion, @Nullable GuiLight guiLight, ModelTransformation transformations, List<ModelItemOverride> overrides) {
+    public JsonUnbakedModel(@Nullable Identifier parentId, List<ModelElement> elements, Map<String, Either<SpriteIdentifier, String>> textureMap, boolean ambientOcclusion, @Nullable GuiLight guiLight, ModelTransformation transformations, List<ModelOverride> overrides) {
         this.elements = elements;
         this.ambientOcclusion = ambientOcclusion;
         this.guiLight = guiLight;
@@ -147,22 +147,22 @@ implements UnbakedModel {
         return GuiLight.field_21859;
     }
 
-    public List<ModelItemOverride> getOverrides() {
+    public List<ModelOverride> getOverrides() {
         return this.overrides;
     }
 
-    private ModelItemPropertyOverrideList compileOverrides(ModelLoader modelLoader, JsonUnbakedModel parent) {
+    private ModelOverrideList compileOverrides(ModelLoader modelLoader, JsonUnbakedModel parent) {
         if (this.overrides.isEmpty()) {
-            return ModelItemPropertyOverrideList.EMPTY;
+            return ModelOverrideList.EMPTY;
         }
-        return new ModelItemPropertyOverrideList(modelLoader, parent, modelLoader::getOrLoadModel, this.overrides);
+        return new ModelOverrideList(modelLoader, parent, modelLoader::getOrLoadModel, this.overrides);
     }
 
     @Override
     public Collection<Identifier> getModelDependencies() {
         HashSet set = Sets.newHashSet();
-        for (ModelItemOverride modelItemOverride : this.overrides) {
-            set.add(modelItemOverride.getModelId());
+        for (ModelOverride modelOverride : this.overrides) {
+            set.add(modelOverride.getModelId());
         }
         if (this.parentId != null) {
             set.add(this.parentId);
@@ -185,7 +185,7 @@ implements UnbakedModel {
                 unbakedModel = null;
             }
             if (unbakedModel == null) {
-                jsonUnbakedModel.parentId = ModelLoader.MISSING;
+                jsonUnbakedModel.parentId = ModelLoader.MISSING_ID;
                 unbakedModel = unbakedModelGetter.apply(jsonUnbakedModel.parentId);
             }
             if (!(unbakedModel instanceof JsonUnbakedModel)) {
@@ -204,8 +204,8 @@ implements UnbakedModel {
                 set2.add(spriteIdentifier);
             }
         }
-        this.overrides.forEach(modelItemOverride -> {
-            UnbakedModel unbakedModel = (UnbakedModel)unbakedModelGetter.apply(modelItemOverride.getModelId());
+        this.overrides.forEach(modelOverride -> {
+            UnbakedModel unbakedModel = (UnbakedModel)unbakedModelGetter.apply(modelOverride.getModelId());
             if (Objects.equals(unbakedModel, this)) {
                 return;
             }
@@ -261,7 +261,7 @@ implements UnbakedModel {
             spriteName = (String)either.right().get();
             if (list.contains(spriteName)) {
                 LOGGER.warn("Unable to resolve texture due to reference chain {}->{} in {}", (Object)Joiner.on((String)"->").join((Iterable)list), (Object)spriteName, (Object)this.id);
-                return new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEX, MissingSprite.getMissingSpriteId());
+                return new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, MissingSprite.getMissingSpriteId());
             }
             list.add(spriteName);
         }
@@ -277,7 +277,7 @@ implements UnbakedModel {
             }
             jsonUnbakedModel = jsonUnbakedModel.parent;
         }
-        return Either.left((Object)new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEX, MissingSprite.getMissingSpriteId()));
+        return Either.left((Object)new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, MissingSprite.getMissingSpriteId()));
     }
 
     private static boolean isTextureReference(String reference) {
@@ -338,18 +338,18 @@ implements UnbakedModel {
     @Environment(value=EnvType.CLIENT)
     public static class Deserializer
     implements JsonDeserializer<JsonUnbakedModel> {
-        public JsonUnbakedModel deserialize(JsonElement element, Type type, JsonDeserializationContext context) throws JsonParseException {
-            JsonObject jsonObject = element.getAsJsonObject();
-            List<ModelElement> list = this.deserializeElements(context, jsonObject);
+        public JsonUnbakedModel deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            List<ModelElement> list = this.deserializeElements(jsonDeserializationContext, jsonObject);
             String string = this.deserializeParent(jsonObject);
             Map<String, Either<SpriteIdentifier, String>> map = this.deserializeTextures(jsonObject);
             boolean bl = this.deserializeAmbientOcclusion(jsonObject);
             ModelTransformation modelTransformation = ModelTransformation.NONE;
             if (jsonObject.has("display")) {
                 JsonObject jsonObject2 = JsonHelper.getObject(jsonObject, "display");
-                modelTransformation = (ModelTransformation)context.deserialize((JsonElement)jsonObject2, ModelTransformation.class);
+                modelTransformation = (ModelTransformation)jsonDeserializationContext.deserialize((JsonElement)jsonObject2, ModelTransformation.class);
             }
-            List<ModelItemOverride> list2 = this.deserializeOverrides(context, jsonObject);
+            List<ModelOverride> list2 = this.deserializeOverrides(jsonDeserializationContext, jsonObject);
             GuiLight guiLight = null;
             if (jsonObject.has("gui_light")) {
                 guiLight = GuiLight.deserialize(JsonHelper.getString(jsonObject, "gui_light"));
@@ -358,19 +358,19 @@ implements UnbakedModel {
             return new JsonUnbakedModel(identifier, list, map, bl, guiLight, modelTransformation, list2);
         }
 
-        protected List<ModelItemOverride> deserializeOverrides(JsonDeserializationContext context, JsonObject object) {
+        protected List<ModelOverride> deserializeOverrides(JsonDeserializationContext context, JsonObject object) {
             ArrayList list = Lists.newArrayList();
             if (object.has("overrides")) {
                 JsonArray jsonArray = JsonHelper.getArray(object, "overrides");
                 for (JsonElement jsonElement : jsonArray) {
-                    list.add(context.deserialize(jsonElement, ModelItemOverride.class));
+                    list.add(context.deserialize(jsonElement, ModelOverride.class));
                 }
             }
             return list;
         }
 
         private Map<String, Either<SpriteIdentifier, String>> deserializeTextures(JsonObject object) {
-            Identifier identifier = SpriteAtlasTexture.BLOCK_ATLAS_TEX;
+            Identifier identifier = SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE;
             HashMap map = Maps.newHashMap();
             if (object.has("textures")) {
                 JsonObject jsonObject = JsonHelper.getObject(object, "textures");

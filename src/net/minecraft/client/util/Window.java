@@ -126,6 +126,7 @@ implements AutoCloseable {
         GLFW.glfwSetWindowPosCallback((long)this.handle, this::onWindowPosChanged);
         GLFW.glfwSetWindowSizeCallback((long)this.handle, this::onWindowSizeChanged);
         GLFW.glfwSetWindowFocusCallback((long)this.handle, this::onWindowFocusChanged);
+        GLFW.glfwSetCursorEnterCallback((long)this.handle, this::onCursorEnterChanged);
     }
 
     public int getRefreshRate() {
@@ -197,7 +198,7 @@ implements AutoCloseable {
         RenderSystem.assertThread(RenderSystem::isInInitPhase);
         ByteBuffer byteBuffer = null;
         try {
-            byteBuffer = TextureUtil.readResource(in);
+            byteBuffer = TextureUtil.readAllToByteBuffer(in);
             byteBuffer.rewind();
             ByteBuffer byteBuffer2 = STBImage.stbi_load_from_memory((ByteBuffer)byteBuffer, (IntBuffer)x, (IntBuffer)y, (IntBuffer)channels, (int)0);
             return byteBuffer2;
@@ -293,6 +294,12 @@ implements AutoCloseable {
     private void onWindowFocusChanged(long window, boolean focused) {
         if (window == this.handle) {
             this.eventHandler.onWindowFocusChanged(focused);
+        }
+    }
+
+    private void onCursorEnterChanged(long window, boolean entered) {
+        if (entered) {
+            this.eventHandler.onCursorEnterChanged();
         }
     }
 
@@ -399,8 +406,8 @@ implements AutoCloseable {
         this.scaledHeight = (double)this.framebufferHeight / scaleFactor > (double)j ? j + 1 : j;
     }
 
-    public void setTitle(String string) {
-        GLFW.glfwSetWindowTitle((long)this.handle, (CharSequence)string);
+    public void setTitle(String title) {
+        GLFW.glfwSetWindowTitle((long)this.handle, (CharSequence)title);
     }
 
     public long getHandle() {

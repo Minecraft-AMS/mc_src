@@ -13,7 +13,7 @@ import net.minecraft.client.render.VertexConsumer;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexConsumers {
-    public static VertexConsumer dual(VertexConsumer first, VertexConsumer second) {
+    public static VertexConsumer union(VertexConsumer first, VertexConsumer second) {
         return new Dual(first, second);
     }
 

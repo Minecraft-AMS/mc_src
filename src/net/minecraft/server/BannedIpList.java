@@ -20,8 +20,8 @@ extends ServerConfigList<String, BannedIpEntry> {
     }
 
     @Override
-    protected ServerConfigEntry<String> fromJson(JsonObject jsonObject) {
-        return new BannedIpEntry(jsonObject);
+    protected ServerConfigEntry<String> fromJson(JsonObject json) {
+        return new BannedIpEntry(json);
     }
 
     public boolean isBanned(SocketAddress ip) {
@@ -34,13 +34,13 @@ extends ServerConfigList<String, BannedIpEntry> {
     }
 
     @Override
-    public BannedIpEntry get(SocketAddress socketAddress) {
-        String string = this.stringifyAddress(socketAddress);
+    public BannedIpEntry get(SocketAddress address) {
+        String string = this.stringifyAddress(address);
         return (BannedIpEntry)this.get(string);
     }
 
-    private String stringifyAddress(SocketAddress socketAddress) {
-        String string = socketAddress.toString();
+    private String stringifyAddress(SocketAddress address) {
+        String string = address.toString();
         if (string.contains("/")) {
             string = string.substring(string.indexOf(47) + 1);
         }

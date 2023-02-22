@@ -10,6 +10,7 @@ import net.minecraft.recipe.CampfireCookingRecipe;
 import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.SmeltingRecipe;
+import net.minecraft.recipe.SmithingRecipe;
 import net.minecraft.recipe.SmokingRecipe;
 import net.minecraft.recipe.StonecuttingRecipe;
 import net.minecraft.util.Identifier;
@@ -23,12 +24,13 @@ public interface RecipeType<T extends Recipe<?>> {
     public static final RecipeType<SmokingRecipe> SMOKING = RecipeType.register("smoking");
     public static final RecipeType<CampfireCookingRecipe> CAMPFIRE_COOKING = RecipeType.register("campfire_cooking");
     public static final RecipeType<StonecuttingRecipe> STONECUTTING = RecipeType.register("stonecutting");
+    public static final RecipeType<SmithingRecipe> SMITHING = RecipeType.register("smithing");
 
-    public static <T extends Recipe<?>> RecipeType<T> register(final String string) {
-        return Registry.register(Registry.RECIPE_TYPE, new Identifier(string), new RecipeType<T>(){
+    public static <T extends Recipe<?>> RecipeType<T> register(final String id) {
+        return Registry.register(Registry.RECIPE_TYPE, new Identifier(id), new RecipeType<T>(){
 
             public String toString() {
-                return string;
+                return id;
             }
         });
     }

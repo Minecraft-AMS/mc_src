@@ -19,7 +19,8 @@ public enum DataFixTypes {
     STATS(TypeReferences.STATS),
     SAVED_DATA(TypeReferences.SAVED_DATA),
     ADVANCEMENTS(TypeReferences.ADVANCEMENTS),
-    POI_CHUNK(TypeReferences.POI_CHUNK);
+    POI_CHUNK(TypeReferences.POI_CHUNK),
+    WORLD_GEN_SETTINGS(TypeReferences.CHUNK_GENERATOR_SETTINGS);
 
     private final DSL.TypeReference typeReference;
 

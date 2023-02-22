@@ -13,10 +13,11 @@ import java.security.PublicKey;
 import javax.crypto.SecretKey;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.network.NetworkEncryptionUtils;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.encryption.NetworkEncryptionException;
+import net.minecraft.network.encryption.NetworkEncryptionUtils;
 import net.minecraft.network.listener.ServerLoginPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class LoginKeyC2SPacket
 implements Packet<ServerLoginPacketListener> {
@@ -27,9 +28,9 @@ implements Packet<ServerLoginPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public LoginKeyC2SPacket(SecretKey secretKey, PublicKey publicKey, byte[] bs) {
+    public LoginKeyC2SPacket(SecretKey secretKey, PublicKey publicKey, byte[] nonce) throws NetworkEncryptionException {
         this.encryptedSecretKey = NetworkEncryptionUtils.encrypt(publicKey, secretKey.getEncoded());
-        this.encryptedNonce = NetworkEncryptionUtils.encrypt(publicKey, bs);
+        this.encryptedNonce = NetworkEncryptionUtils.encrypt(publicKey, nonce);
     }
 
     @Override
@@ -49,14 +50,11 @@ implements Packet<ServerLoginPacketListener> {
         serverLoginPacketListener.onKey(this);
     }
 
-    public SecretKey decryptSecretKey(PrivateKey privateKey) {
+    public SecretKey decryptSecretKey(PrivateKey privateKey) throws NetworkEncryptionException {
         return NetworkEncryptionUtils.decryptSecretKey(privateKey, this.encryptedSecretKey);
     }
 
-    public byte[] decryptNonce(PrivateKey privateKey) {
-        if (privateKey == null) {
-            return this.encryptedNonce;
-        }
+    public byte[] decryptNonce(PrivateKey privateKey) throws NetworkEncryptionException {
         return NetworkEncryptionUtils.decrypt(privateKey, this.encryptedNonce);
     }
 }

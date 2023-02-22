@@ -23,21 +23,27 @@ import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.entry.LootEntry;
+import net.minecraft.loot.entry.LootPoolEntry;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.loot.function.LootFunction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.DefaultedList;
-import net.minecraft.util.Identifier;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.collection.DefaultedList;
 
 public class SetContentsLootFunction
 extends ConditionalLootFunction {
-    private final List<LootEntry> entries;
+    private final List<LootPoolEntry> entries;
 
-    private SetContentsLootFunction(LootCondition[] conditions, List<LootEntry> entries) {
+    private SetContentsLootFunction(LootCondition[] conditions, List<LootPoolEntry> entries) {
         super(conditions);
         this.entries = ImmutableList.copyOf(entries);
+    }
+
+    @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.SET_CONTENTS;
     }
 
     @Override
@@ -46,19 +52,19 @@ extends ConditionalLootFunction {
             return stack;
         }
         DefaultedList<ItemStack> defaultedList = DefaultedList.of();
-        this.entries.forEach(entry -> entry.expand(context, choice -> choice.drop(LootTable.limitedConsumer(defaultedList::add), context)));
-        CompoundTag compoundTag = new CompoundTag();
-        Inventories.toTag(compoundTag, defaultedList);
-        CompoundTag compoundTag2 = stack.getOrCreateTag();
-        compoundTag2.put("BlockEntityTag", compoundTag.copyFrom(compoundTag2.getCompound("BlockEntityTag")));
+        this.entries.forEach(entry -> entry.expand(context, choice -> choice.generateLoot(LootTable.processStacks(defaultedList::add), context)));
+        NbtCompound nbtCompound = new NbtCompound();
+        Inventories.writeNbt(nbtCompound, defaultedList);
+        NbtCompound nbtCompound2 = stack.getOrCreateTag();
+        nbtCompound2.put("BlockEntityTag", nbtCompound.copyFrom(nbtCompound2.getCompound("BlockEntityTag")));
         return stack;
     }
 
     @Override
-    public void check(LootTableReporter reporter) {
-        super.check(reporter);
+    public void validate(LootTableReporter reporter) {
+        super.validate(reporter);
         for (int i = 0; i < this.entries.size(); ++i) {
-            this.entries.get(i).check(reporter.makeChild(".entry[" + i + "]"));
+            this.entries.get(i).validate(reporter.makeChild(".entry[" + i + "]"));
         }
     }
 
@@ -66,12 +72,8 @@ extends ConditionalLootFunction {
         return new Builer();
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<SetContentsLootFunction> {
-        protected Factory() {
-            super(new Identifier("set_contents"), SetContentsLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<SetContentsLootFunction> {
         @Override
         public void toJson(JsonObject jsonObject, SetContentsLootFunction setContentsLootFunction, JsonSerializationContext jsonSerializationContext) {
             super.toJson(jsonObject, setContentsLootFunction, jsonSerializationContext);
@@ -80,8 +82,8 @@ extends ConditionalLootFunction {
 
         @Override
         public SetContentsLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
-            LootEntry[] lootEntrys = JsonHelper.deserialize(jsonObject, "entries", jsonDeserializationContext, LootEntry[].class);
-            return new SetContentsLootFunction(lootConditions, Arrays.asList(lootEntrys));
+            LootPoolEntry[] lootPoolEntrys = JsonHelper.deserialize(jsonObject, "entries", jsonDeserializationContext, LootPoolEntry[].class);
+            return new SetContentsLootFunction(lootConditions, Arrays.asList(lootPoolEntrys));
         }
 
         @Override
@@ -92,14 +94,14 @@ extends ConditionalLootFunction {
 
     public static class Builer
     extends ConditionalLootFunction.Builder<Builer> {
-        private final List<LootEntry> entries = Lists.newArrayList();
+        private final List<LootPoolEntry> entries = Lists.newArrayList();
 
         @Override
         protected Builer getThisBuilder() {
             return this;
         }
 
-        public Builer withEntry(LootEntry.Builder<?> entryBuilder) {
+        public Builer withEntry(LootPoolEntry.Builder<?> entryBuilder) {
             this.entries.add(entryBuilder.build());
             return this;
         }

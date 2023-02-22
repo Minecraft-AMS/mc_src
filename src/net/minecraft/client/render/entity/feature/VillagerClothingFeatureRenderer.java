@@ -30,7 +30,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.resource.ReloadableResourceManager;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SynchronousResourceReloadListener;
+import net.minecraft.resource.SynchronousResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -44,7 +44,7 @@ import net.minecraft.village.VillagerType;
 @Environment(value=EnvType.CLIENT)
 public class VillagerClothingFeatureRenderer<T extends LivingEntity, M extends EntityModel<T>>
 extends FeatureRenderer<T, M>
-implements SynchronousResourceReloadListener {
+implements SynchronousResourceReloader {
     private static final Int2ObjectMap<Identifier> LEVEL_TO_ID = (Int2ObjectMap)Util.make(new Int2ObjectOpenHashMap(), int2ObjectOpenHashMap -> {
         int2ObjectOpenHashMap.put(1, (Object)new Identifier("stone"));
         int2ObjectOpenHashMap.put(2, (Object)new Identifier("iron"));
@@ -57,11 +57,11 @@ implements SynchronousResourceReloadListener {
     private final ReloadableResourceManager resourceManager;
     private final String entityType;
 
-    public VillagerClothingFeatureRenderer(FeatureRendererContext<T, M> featureRendererContext, ReloadableResourceManager reloadableResourceManager, String string) {
-        super(featureRendererContext);
-        this.resourceManager = reloadableResourceManager;
-        this.entityType = string;
-        reloadableResourceManager.registerListener(this);
+    public VillagerClothingFeatureRenderer(FeatureRendererContext<T, M> context, ReloadableResourceManager resourceManager, String entityType) {
+        super(context);
+        this.resourceManager = resourceManager;
+        this.entityType = entityType;
+        resourceManager.registerReloader(this);
     }
 
     @Override
@@ -109,7 +109,7 @@ implements SynchronousResourceReloadListener {
     }
 
     @Override
-    public void apply(ResourceManager manager) {
+    public void reload(ResourceManager manager) {
         this.professionToHat.clear();
         this.villagerTypeToHat.clear();
     }

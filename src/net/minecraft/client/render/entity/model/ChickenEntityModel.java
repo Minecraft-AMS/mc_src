@@ -20,7 +20,7 @@ import net.minecraft.util.math.MathHelper;
 public class ChickenEntityModel<T extends Entity>
 extends AnimalModel<T> {
     private final ModelPart head;
-    private final ModelPart torso;
+    private final ModelPart body;
     private final ModelPart rightLeg;
     private final ModelPart leftLeg;
     private final ModelPart rightWing;
@@ -39,9 +39,9 @@ extends AnimalModel<T> {
         this.wattle = new ModelPart(this, 14, 4);
         this.wattle.addCuboid(-1.0f, -2.0f, -3.0f, 2.0f, 2.0f, 2.0f, 0.0f);
         this.wattle.setPivot(0.0f, 15.0f, -4.0f);
-        this.torso = new ModelPart(this, 0, 9);
-        this.torso.addCuboid(-3.0f, -4.0f, -3.0f, 6.0f, 8.0f, 6.0f, 0.0f);
-        this.torso.setPivot(0.0f, 16.0f, 0.0f);
+        this.body = new ModelPart(this, 0, 9);
+        this.body.addCuboid(-3.0f, -4.0f, -3.0f, 6.0f, 8.0f, 6.0f, 0.0f);
+        this.body.setPivot(0.0f, 16.0f, 0.0f);
         this.rightLeg = new ModelPart(this, 26, 0);
         this.rightLeg.addCuboid(-1.0f, 0.0f, -3.0f, 3.0f, 5.0f, 3.0f);
         this.rightLeg.setPivot(-2.0f, 19.0f, 1.0f);
@@ -63,22 +63,22 @@ extends AnimalModel<T> {
 
     @Override
     protected Iterable<ModelPart> getBodyParts() {
-        return ImmutableList.of((Object)this.torso, (Object)this.rightLeg, (Object)this.leftLeg, (Object)this.rightWing, (Object)this.leftWing);
+        return ImmutableList.of((Object)this.body, (Object)this.rightLeg, (Object)this.leftLeg, (Object)this.rightWing, (Object)this.leftWing);
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
+    public void setAngles(T entity, float limbAngle, float limbDistance, float animationProgress, float headYaw, float headPitch) {
         this.head.pitch = headPitch * ((float)Math.PI / 180);
         this.head.yaw = headYaw * ((float)Math.PI / 180);
         this.beak.pitch = this.head.pitch;
         this.beak.yaw = this.head.yaw;
         this.wattle.pitch = this.head.pitch;
         this.wattle.yaw = this.head.yaw;
-        this.torso.pitch = 1.5707964f;
+        this.body.pitch = 1.5707964f;
         this.rightLeg.pitch = MathHelper.cos(limbAngle * 0.6662f) * 1.4f * limbDistance;
         this.leftLeg.pitch = MathHelper.cos(limbAngle * 0.6662f + (float)Math.PI) * 1.4f * limbDistance;
-        this.rightWing.roll = customAngle;
-        this.leftWing.roll = -customAngle;
+        this.rightWing.roll = animationProgress;
+        this.leftWing.roll = -animationProgress;
     }
 }
 

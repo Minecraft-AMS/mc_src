@@ -6,11 +6,13 @@ package net.minecraft.entity.mob;
 import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -20,16 +22,17 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.LightType;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 
 public abstract class HostileEntity
-extends MobEntityWithAi
+extends PathAwareEntity
 implements Monster {
-    protected HostileEntity(EntityType<? extends HostileEntity> type, World world) {
-        super((EntityType<? extends MobEntityWithAi>)type, world);
+    protected HostileEntity(EntityType<? extends HostileEntity> entityType, World world) {
+        super((EntityType<? extends PathAwareEntity>)entityType, world);
         this.experiencePoints = 5;
     }
 
@@ -53,7 +56,7 @@ implements Monster {
     }
 
     @Override
-    protected boolean method_23734() {
+    protected boolean isDisallowedInPeaceful() {
         return true;
     }
 
@@ -94,34 +97,37 @@ implements Monster {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
-        return 0.5f - worldView.getBrightness(pos);
+    public float getPathfindingFavor(BlockPos pos, WorldView world) {
+        return 0.5f - world.getBrightness(pos);
     }
 
-    public static boolean isSpawnDark(IWorld world, BlockPos pos, Random random) {
+    public static boolean isSpawnDark(ServerWorldAccess world, BlockPos pos, Random random) {
         if (world.getLightLevel(LightType.SKY, pos) > random.nextInt(32)) {
             return false;
         }
-        int i = world.getWorld().isThundering() ? world.getLightLevel(pos, 10) : world.getLightLevel(pos);
+        int i = world.toServerWorld().isThundering() ? world.getLightLevel(pos, 10) : world.getLightLevel(pos);
         return i <= random.nextInt(8);
     }
 
-    public static boolean canSpawnInDark(EntityType<? extends HostileEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        return world.getDifficulty() != Difficulty.PEACEFUL && HostileEntity.isSpawnDark(world, pos, random) && HostileEntity.canMobSpawn(type, world, spawnType, pos, random);
+    public static boolean canSpawnInDark(EntityType<? extends HostileEntity> type, ServerWorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return world.getDifficulty() != Difficulty.PEACEFUL && HostileEntity.isSpawnDark(world, pos, random) && HostileEntity.canMobSpawn(type, world, spawnReason, pos, random);
     }
 
-    public static boolean canSpawnIgnoreLightLevel(EntityType<? extends HostileEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        return world.getDifficulty() != Difficulty.PEACEFUL && HostileEntity.canMobSpawn(type, world, spawnType, pos, random);
+    public static boolean canSpawnIgnoreLightLevel(EntityType<? extends HostileEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return world.getDifficulty() != Difficulty.PEACEFUL && HostileEntity.canMobSpawn(type, world, spawnReason, pos, random);
+    }
+
+    public static DefaultAttributeContainer.Builder createHostileAttributes() {
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_ATTACK_DAMAGE);
     }
 
     @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributes().register(EntityAttributes.ATTACK_DAMAGE);
+    protected boolean shouldDropXp() {
+        return true;
     }
 
     @Override
-    protected boolean canDropLootAndXp() {
+    protected boolean shouldDropLoot() {
         return true;
     }
 
@@ -130,11 +136,11 @@ implements Monster {
     }
 
     @Override
-    public ItemStack getArrowType(ItemStack itemStack) {
-        if (itemStack.getItem() instanceof RangedWeaponItem) {
-            Predicate<ItemStack> predicate = ((RangedWeaponItem)itemStack.getItem()).getHeldProjectiles();
-            ItemStack itemStack2 = RangedWeaponItem.getHeldProjectile(this, predicate);
-            return itemStack2.isEmpty() ? new ItemStack(Items.ARROW) : itemStack2;
+    public ItemStack getArrowType(ItemStack stack) {
+        if (stack.getItem() instanceof RangedWeaponItem) {
+            Predicate<ItemStack> predicate = ((RangedWeaponItem)stack.getItem()).getHeldProjectiles();
+            ItemStack itemStack = RangedWeaponItem.getHeldProjectile(this, predicate);
+            return itemStack.isEmpty() ? new ItemStack(Items.ARROW) : itemStack;
         }
         return ItemStack.EMPTY;
     }

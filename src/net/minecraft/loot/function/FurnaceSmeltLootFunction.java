@@ -12,14 +12,15 @@ package net.minecraft.loot.function;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import java.util.Optional;
-import net.minecraft.inventory.BasicInventory;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.function.ConditionalLootFunction;
+import net.minecraft.loot.function.LootFunctionType;
+import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.SmeltingRecipe;
-import net.minecraft.util.Identifier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,12 +33,17 @@ extends ConditionalLootFunction {
     }
 
     @Override
+    public LootFunctionType getType() {
+        return LootFunctionTypes.FURNACE_SMELT;
+    }
+
+    @Override
     public ItemStack process(ItemStack stack, LootContext context) {
         ItemStack itemStack;
         if (stack.isEmpty()) {
             return stack;
         }
-        Optional<SmeltingRecipe> optional = context.getWorld().getRecipeManager().getFirstMatch(RecipeType.SMELTING, new BasicInventory(stack), context.getWorld());
+        Optional<SmeltingRecipe> optional = context.getWorld().getRecipeManager().getFirstMatch(RecipeType.SMELTING, new SimpleInventory(stack), context.getWorld());
         if (optional.isPresent() && !(itemStack = optional.get().getOutput()).isEmpty()) {
             ItemStack itemStack2 = itemStack.copy();
             itemStack2.setCount(stack.getCount());
@@ -51,12 +57,8 @@ extends ConditionalLootFunction {
         return FurnaceSmeltLootFunction.builder(FurnaceSmeltLootFunction::new);
     }
 
-    public static class Factory
-    extends ConditionalLootFunction.Factory<FurnaceSmeltLootFunction> {
-        protected Factory() {
-            super(new Identifier("furnace_smelt"), FurnaceSmeltLootFunction.class);
-        }
-
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<FurnaceSmeltLootFunction> {
         @Override
         public FurnaceSmeltLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
             return new FurnaceSmeltLootFunction(lootConditions);

@@ -1,0 +1,57 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
+ */
+package net.minecraft.client.render.entity;
+
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.MobEntityRenderer;
+import net.minecraft.client.render.entity.feature.SaddleFeatureRenderer;
+import net.minecraft.client.render.entity.model.StriderEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.passive.StriderEntity;
+import net.minecraft.util.Identifier;
+
+@Environment(value=EnvType.CLIENT)
+public class StriderEntityRenderer
+extends MobEntityRenderer<StriderEntity, StriderEntityModel<StriderEntity>> {
+    private static final Identifier TEXTURE = new Identifier("textures/entity/strider/strider.png");
+    private static final Identifier COLD_TEXTURE = new Identifier("textures/entity/strider/strider_cold.png");
+
+    public StriderEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
+        super(entityRenderDispatcher, new StriderEntityModel(), 0.5f);
+        this.addFeature(new SaddleFeatureRenderer(this, new StriderEntityModel(), new Identifier("textures/entity/strider/strider_saddle.png")));
+    }
+
+    @Override
+    public Identifier getTexture(StriderEntity striderEntity) {
+        return striderEntity.isCold() ? COLD_TEXTURE : TEXTURE;
+    }
+
+    @Override
+    protected void scale(StriderEntity striderEntity, MatrixStack matrixStack, float f) {
+        if (striderEntity.isBaby()) {
+            matrixStack.scale(0.5f, 0.5f, 0.5f);
+            this.shadowRadius = 0.25f;
+        } else {
+            this.shadowRadius = 0.5f;
+        }
+    }
+
+    @Override
+    protected boolean isShaking(StriderEntity striderEntity) {
+        return striderEntity.isCold();
+    }
+
+    @Override
+    protected /* synthetic */ boolean isShaking(LivingEntity entity) {
+        return this.isShaking((StriderEntity)entity);
+    }
+}
+

@@ -5,12 +5,18 @@ package net.minecraft.util;
 
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.DirectionTransformation;
 
 public enum BlockMirror {
-    NONE,
-    LEFT_RIGHT,
-    FRONT_BACK;
+    NONE(DirectionTransformation.IDENTITY),
+    LEFT_RIGHT(DirectionTransformation.INVERT_Z),
+    FRONT_BACK(DirectionTransformation.INVERT_X);
 
+    private final DirectionTransformation directionTransformation;
+
+    private BlockMirror(DirectionTransformation directionTransformation) {
+        this.directionTransformation = directionTransformation;
+    }
 
     public int mirror(int rotation, int fullTurn) {
         int i = fullTurn / 2;
@@ -39,6 +45,10 @@ public enum BlockMirror {
             return direction.getOpposite();
         }
         return direction;
+    }
+
+    public DirectionTransformation getDirectionTransformation() {
+        return this.directionTransformation;
     }
 }
 

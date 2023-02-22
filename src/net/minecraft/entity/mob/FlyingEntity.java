@@ -8,14 +8,13 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public abstract class FlyingEntity
 extends MobEntity {
-    protected FlyingEntity(EntityType<? extends FlyingEntity> type, World world) {
-        super((EntityType<? extends MobEntity>)type, world);
+    protected FlyingEntity(EntityType<? extends FlyingEntity> entityType, World world) {
+        super((EntityType<? extends MobEntity>)entityType, world);
     }
 
     @Override
@@ -51,15 +50,7 @@ extends MobEntity {
             this.move(MovementType.SELF, this.getVelocity());
             this.setVelocity(this.getVelocity().multiply(f));
         }
-        this.lastLimbDistance = this.limbDistance;
-        double d = this.getX() - this.prevX;
-        double e = this.getZ() - this.prevZ;
-        float h = MathHelper.sqrt(d * d + e * e) * 4.0f;
-        if (h > 1.0f) {
-            h = 1.0f;
-        }
-        this.limbDistance += (h - this.limbDistance) * 0.4f;
-        this.limbAngle += this.limbDistance;
+        this.method_29242(this, false);
     }
 
     @Override

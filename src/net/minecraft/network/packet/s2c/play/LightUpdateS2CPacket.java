@@ -14,8 +14,8 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.LightType;
@@ -32,18 +32,20 @@ implements Packet<ClientPlayPacketListener> {
     private int filledBlockLightMask;
     private List<byte[]> skyLightUpdates;
     private List<byte[]> blockLightUpdates;
+    private boolean field_25659;
 
     public LightUpdateS2CPacket() {
     }
 
-    public LightUpdateS2CPacket(ChunkPos chunkPos, LightingProvider lightingProvider) {
+    public LightUpdateS2CPacket(ChunkPos chunkPos, LightingProvider lightingProvider, boolean bl) {
         this.chunkX = chunkPos.x;
         this.chunkZ = chunkPos.z;
+        this.field_25659 = bl;
         this.skyLightUpdates = Lists.newArrayList();
         this.blockLightUpdates = Lists.newArrayList();
         for (int i = 0; i < 18; ++i) {
-            ChunkNibbleArray chunkNibbleArray = lightingProvider.get(LightType.SKY).getLightArray(ChunkSectionPos.from(chunkPos, -1 + i));
-            ChunkNibbleArray chunkNibbleArray2 = lightingProvider.get(LightType.BLOCK).getLightArray(ChunkSectionPos.from(chunkPos, -1 + i));
+            ChunkNibbleArray chunkNibbleArray = lightingProvider.get(LightType.SKY).getLightSection(ChunkSectionPos.from(chunkPos, -1 + i));
+            ChunkNibbleArray chunkNibbleArray2 = lightingProvider.get(LightType.BLOCK).getLightSection(ChunkSectionPos.from(chunkPos, -1 + i));
             if (chunkNibbleArray != null) {
                 if (chunkNibbleArray.isUninitialized()) {
                     this.filledSkyLightMask |= 1 << i;
@@ -62,9 +64,10 @@ implements Packet<ClientPlayPacketListener> {
         }
     }
 
-    public LightUpdateS2CPacket(ChunkPos pos, LightingProvider lightProvider, int skyLightMask, int blockLightMask) {
+    public LightUpdateS2CPacket(ChunkPos pos, LightingProvider lightProvider, int skyLightMask, int blockLightMask, boolean bl) {
         this.chunkX = pos.x;
         this.chunkZ = pos.z;
+        this.field_25659 = bl;
         this.skyLightMask = skyLightMask;
         this.blockLightMask = blockLightMask;
         this.skyLightUpdates = Lists.newArrayList();
@@ -72,7 +75,7 @@ implements Packet<ClientPlayPacketListener> {
         for (int i = 0; i < 18; ++i) {
             ChunkNibbleArray chunkNibbleArray;
             if ((this.skyLightMask & 1 << i) != 0) {
-                chunkNibbleArray = lightProvider.get(LightType.SKY).getLightArray(ChunkSectionPos.from(pos, -1 + i));
+                chunkNibbleArray = lightProvider.get(LightType.SKY).getLightSection(ChunkSectionPos.from(pos, -1 + i));
                 if (chunkNibbleArray == null || chunkNibbleArray.isUninitialized()) {
                     this.skyLightMask &= ~(1 << i);
                     if (chunkNibbleArray != null) {
@@ -83,7 +86,7 @@ implements Packet<ClientPlayPacketListener> {
                 }
             }
             if ((this.blockLightMask & 1 << i) == 0) continue;
-            chunkNibbleArray = lightProvider.get(LightType.BLOCK).getLightArray(ChunkSectionPos.from(pos, -1 + i));
+            chunkNibbleArray = lightProvider.get(LightType.BLOCK).getLightSection(ChunkSectionPos.from(pos, -1 + i));
             if (chunkNibbleArray == null || chunkNibbleArray.isUninitialized()) {
                 this.blockLightMask &= ~(1 << i);
                 if (chunkNibbleArray == null) continue;
@@ -99,6 +102,7 @@ implements Packet<ClientPlayPacketListener> {
         int i;
         this.chunkX = buf.readVarInt();
         this.chunkZ = buf.readVarInt();
+        this.field_25659 = buf.readBoolean();
         this.skyLightMask = buf.readVarInt();
         this.blockLightMask = buf.readVarInt();
         this.filledSkyLightMask = buf.readVarInt();
@@ -119,6 +123,7 @@ implements Packet<ClientPlayPacketListener> {
     public void write(PacketByteBuf buf) throws IOException {
         buf.writeVarInt(this.chunkX);
         buf.writeVarInt(this.chunkZ);
+        buf.writeBoolean(this.field_25659);
         buf.writeVarInt(this.skyLightMask);
         buf.writeVarInt(this.blockLightMask);
         buf.writeVarInt(this.filledSkyLightMask);
@@ -174,6 +179,11 @@ implements Packet<ClientPlayPacketListener> {
     @Environment(value=EnvType.CLIENT)
     public List<byte[]> getBlockLightUpdates() {
         return this.blockLightUpdates;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public boolean method_30006() {
+        return this.field_25659;
     }
 }
 

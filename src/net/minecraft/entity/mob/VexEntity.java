@@ -12,7 +12,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.control.MoveControl;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
@@ -21,6 +21,7 @@ import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.TrackTargetGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
@@ -28,19 +29,19 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.raid.RaiderEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,8 +61,8 @@ extends HostileEntity {
     }
 
     @Override
-    public void move(MovementType type, Vec3d movement) {
-        super.move(type, movement);
+    public void move(MovementType movementType, Vec3d movement) {
+        super.move(movementType, movement);
         this.checkBlockCollision();
     }
 
@@ -90,11 +91,8 @@ extends HostileEntity {
         this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(14.0);
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(4.0);
+    public static DefaultAttributeContainer.Builder createVexAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 14.0).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 4.0);
     }
 
     @Override
@@ -104,26 +102,26 @@ extends HostileEntity {
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        if (tag.contains("BoundX")) {
-            this.bounds = new BlockPos(tag.getInt("BoundX"), tag.getInt("BoundY"), tag.getInt("BoundZ"));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("BoundX")) {
+            this.bounds = new BlockPos(nbt.getInt("BoundX"), nbt.getInt("BoundY"), nbt.getInt("BoundZ"));
         }
-        if (tag.contains("LifeTicks")) {
-            this.setLifeTicks(tag.getInt("LifeTicks"));
+        if (nbt.contains("LifeTicks")) {
+            this.setLifeTicks(nbt.getInt("LifeTicks"));
         }
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
         if (this.bounds != null) {
-            tag.putInt("BoundX", this.bounds.getX());
-            tag.putInt("BoundY", this.bounds.getY());
-            tag.putInt("BoundZ", this.bounds.getZ());
+            nbt.putInt("BoundX", this.bounds.getX());
+            nbt.putInt("BoundY", this.bounds.getY());
+            nbt.putInt("BoundZ", this.bounds.getZ());
         }
         if (this.alive) {
-            tag.putInt("LifeTicks", this.lifeTicks);
+            nbt.putInt("LifeTicks", this.lifeTicks);
         }
     }
 
@@ -190,10 +188,10 @@ extends HostileEntity {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         this.initEquipment(difficulty);
         this.updateEnchantments(difficulty);
-        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
+        return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     @Override
@@ -206,7 +204,7 @@ extends HostileEntity {
     extends TrackTargetGoal {
         private final TargetPredicate TRACK_OWNER_PREDICATE;
 
-        public TrackOwnerTargetGoal(MobEntityWithAi mob) {
+        public TrackOwnerTargetGoal(PathAwareEntity mob) {
             super(mob, false);
             this.TRACK_OWNER_PREDICATE = new TargetPredicate().includeHidden().ignoreDistanceScalingFactor();
         }
@@ -243,7 +241,7 @@ extends HostileEntity {
         public void tick() {
             BlockPos blockPos = VexEntity.this.getBounds();
             if (blockPos == null) {
-                blockPos = new BlockPos(VexEntity.this);
+                blockPos = VexEntity.this.getBlockPos();
             }
             for (int i = 0; i < 3; ++i) {
                 BlockPos blockPos2 = blockPos.add(VexEntity.this.random.nextInt(15) - 7, VexEntity.this.random.nextInt(11) - 5, VexEntity.this.random.nextInt(15) - 7);

@@ -11,8 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class QueryEntityNbtC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -23,9 +23,9 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public QueryEntityNbtC2SPacket(int i, int j) {
-        this.transactionId = i;
-        this.entityId = j;
+    public QueryEntityNbtC2SPacket(int transactionId, int entityId) {
+        this.transactionId = transactionId;
+        this.entityId = entityId;
     }
 
     @Override

@@ -17,11 +17,11 @@ import com.google.gson.JsonSyntaxException;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.predicate.StatePredicate;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.BlockTags;
+import net.minecraft.tag.ServerTagManagerHolder;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -64,7 +64,7 @@ public class BlockPredicate {
         if (!this.state.test(blockState)) {
             return false;
         }
-        return this.nbt == NbtPredicate.ANY || (blockEntity = world.getBlockEntity(pos)) != null && this.nbt.test(blockEntity.toTag(new CompoundTag()));
+        return this.nbt == NbtPredicate.ANY || (blockEntity = world.getBlockEntity(pos)) != null && this.nbt.test(blockEntity.writeNbt(new NbtCompound()));
     }
 
     public static BlockPredicate fromJson(@Nullable JsonElement json) {
@@ -81,7 +81,7 @@ public class BlockPredicate {
         Tag<Block> tag = null;
         if (jsonObject.has("tag")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "tag"));
-            tag = BlockTags.getContainer().get(identifier2);
+            tag = ServerTagManagerHolder.getTagManager().getBlocks().getTag(identifier2);
             if (tag == null) {
                 throw new JsonSyntaxException("Unknown block tag '" + identifier2 + "'");
             }
@@ -99,7 +99,7 @@ public class BlockPredicate {
             jsonObject.addProperty("block", Registry.BLOCK.getId(this.block).toString());
         }
         if (this.tag != null) {
-            jsonObject.addProperty("tag", this.tag.getId().toString());
+            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getBlocks().getTagId(this.tag).toString());
         }
         jsonObject.add("nbt", this.nbt.toJson());
         jsonObject.add("state", this.state.toJson());
@@ -121,8 +121,18 @@ public class BlockPredicate {
             return new Builder();
         }
 
-        public Builder tag(Tag<Block> tag) {
+        public Builder block(Block block) {
+            this.block = block;
+            return this;
+        }
+
+        public Builder method_29233(Tag<Block> tag) {
             this.tag = tag;
+            return this;
+        }
+
+        public Builder state(StatePredicate state) {
+            this.state = state;
             return this;
         }
 

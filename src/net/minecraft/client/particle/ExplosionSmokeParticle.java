@@ -14,18 +14,18 @@ import net.minecraft.client.particle.ParticleFactory;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
-import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
 public class ExplosionSmokeParticle
 extends SpriteBillboardParticle {
-    private final SpriteProvider field_17806;
+    private final SpriteProvider spriteProvider;
 
-    protected ExplosionSmokeParticle(World world, double x, double y, double z, double d, double e, double f, SpriteProvider spriteProvider) {
+    protected ExplosionSmokeParticle(ClientWorld world, double x, double y, double z, double d, double e, double f, SpriteProvider spriteProvider) {
         super(world, x, y, z);
         float g;
-        this.field_17806 = spriteProvider;
+        this.spriteProvider = spriteProvider;
         this.velocityX = d + (Math.random() * 2.0 - 1.0) * (double)0.05f;
         this.velocityY = e + (Math.random() * 2.0 - 1.0) * (double)0.05f;
         this.velocityZ = f + (Math.random() * 2.0 - 1.0) * (double)0.05f;
@@ -51,7 +51,7 @@ extends SpriteBillboardParticle {
             this.markDead();
             return;
         }
-        this.setSpriteForAge(this.field_17806);
+        this.setSpriteForAge(this.spriteProvider);
         this.velocityY += 0.004;
         this.move(this.velocityX, this.velocityY, this.velocityZ);
         this.velocityX *= (double)0.9f;
@@ -66,15 +66,15 @@ extends SpriteBillboardParticle {
     @Environment(value=EnvType.CLIENT)
     public static class Factory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_17807;
+        private final SpriteProvider spriteProvider;
 
         public Factory(SpriteProvider spriteProvider) {
-            this.field_17807 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            return new ExplosionSmokeParticle(world, d, e, f, g, h, i, this.field_17807);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return new ExplosionSmokeParticle(clientWorld, d, e, f, g, h, i, this.spriteProvider);
         }
     }
 }

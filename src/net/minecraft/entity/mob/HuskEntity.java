@@ -7,7 +7,7 @@ import java.util.Random;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -16,7 +16,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 
 public class HuskEntity
@@ -25,8 +25,8 @@ extends ZombieEntity {
         super((EntityType<? extends ZombieEntity>)entityType, world);
     }
 
-    public static boolean canSpawn(EntityType<HuskEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        return HuskEntity.canSpawnInDark(type, world, spawnType, pos, random) && (spawnType == SpawnType.SPAWNER || world.isSkyVisible(pos));
+    public static boolean canSpawn(EntityType<HuskEntity> type, ServerWorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return HuskEntity.canSpawnInDark(type, world, spawnReason, pos, random) && (spawnReason == SpawnReason.SPAWNER || world.isSkyVisible(pos));
     }
 
     @Override
@@ -58,7 +58,7 @@ extends ZombieEntity {
     public boolean tryAttack(Entity target) {
         boolean bl = super.tryAttack(target);
         if (bl && this.getMainHandStack().isEmpty() && target instanceof LivingEntity) {
-            float f = this.world.getLocalDifficulty(new BlockPos(this)).getLocalDifficulty();
+            float f = this.world.getLocalDifficulty(this.getBlockPos()).getLocalDifficulty();
             ((LivingEntity)target).addStatusEffect(new StatusEffectInstance(StatusEffects.HUNGER, 140 * (int)f));
         }
         return bl;
@@ -72,7 +72,9 @@ extends ZombieEntity {
     @Override
     protected void convertInWater() {
         this.convertTo(EntityType.ZOMBIE);
-        this.world.playLevelEvent(null, 1041, new BlockPos(this), 0);
+        if (!this.isSilent()) {
+            this.world.syncWorldEvent(null, 1041, this.getBlockPos(), 0);
+        }
     }
 
     @Override

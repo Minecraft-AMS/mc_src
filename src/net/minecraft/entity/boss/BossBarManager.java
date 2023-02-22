@@ -11,20 +11,14 @@ import com.google.common.collect.Maps;
 import java.util.Collection;
 import java.util.Map;
 import net.minecraft.entity.boss.CommandBossBar;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 public class BossBarManager {
-    private final MinecraftServer server;
     private final Map<Identifier, CommandBossBar> commandBossBars = Maps.newHashMap();
-
-    public BossBarManager(MinecraftServer server) {
-        this.server = server;
-    }
 
     @Nullable
     public CommandBossBar get(Identifier id) {
@@ -49,18 +43,18 @@ public class BossBarManager {
         return this.commandBossBars.values();
     }
 
-    public CompoundTag toTag() {
-        CompoundTag compoundTag = new CompoundTag();
+    public NbtCompound toNbt() {
+        NbtCompound nbtCompound = new NbtCompound();
         for (CommandBossBar commandBossBar : this.commandBossBars.values()) {
-            compoundTag.put(commandBossBar.getId().toString(), commandBossBar.toTag());
+            nbtCompound.put(commandBossBar.getId().toString(), commandBossBar.toNbt());
         }
-        return compoundTag;
+        return nbtCompound;
     }
 
-    public void fromTag(CompoundTag tag) {
-        for (String string : tag.getKeys()) {
+    public void readNbt(NbtCompound nbt) {
+        for (String string : nbt.getKeys()) {
             Identifier identifier = new Identifier(string);
-            this.commandBossBars.put(identifier, CommandBossBar.fromTag(tag.getCompound(string), identifier));
+            this.commandBossBars.put(identifier, CommandBossBar.fromNbt(nbt.getCompound(string), identifier));
         }
     }
 
@@ -70,7 +64,7 @@ public class BossBarManager {
         }
     }
 
-    public void onPlayerDisconnenct(ServerPlayerEntity player) {
+    public void onPlayerDisconnect(ServerPlayerEntity player) {
         for (CommandBossBar commandBossBar : this.commandBossBars.values()) {
             commandBossBar.onPlayerDisconnect(player);
         }

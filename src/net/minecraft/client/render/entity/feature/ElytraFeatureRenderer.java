@@ -11,6 +11,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.PlayerModelPart;
@@ -32,8 +33,8 @@ extends FeatureRenderer<T, M> {
     private static final Identifier SKIN = new Identifier("textures/entity/elytra.png");
     private final ElytraEntityModel<T> elytra = new ElytraEntityModel();
 
-    public ElytraFeatureRenderer(FeatureRendererContext<T, M> context) {
-        super(context);
+    public ElytraFeatureRenderer(FeatureRendererContext<T, M> featureRendererContext) {
+        super(featureRendererContext);
     }
 
     @Override
@@ -48,7 +49,7 @@ extends FeatureRenderer<T, M> {
         matrixStack.translate(0.0, 0.0, 0.125);
         ((EntityModel)this.getContextModel()).copyStateTo(this.elytra);
         this.elytra.setAngles(livingEntity, f, g, j, k, l);
-        VertexConsumer vertexConsumer = ItemRenderer.getArmorVertexConsumer(vertexConsumerProvider, this.elytra.getLayer(identifier), false, itemStack.hasEnchantmentGlint());
+        VertexConsumer vertexConsumer = ItemRenderer.getArmorGlintConsumer(vertexConsumerProvider, RenderLayer.getArmorCutoutNoCull(identifier), false, itemStack.hasGlint());
         this.elytra.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
         matrixStack.pop();
     }

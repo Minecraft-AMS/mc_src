@@ -33,7 +33,7 @@ extends MovingSoundInstance {
     public void tick() {
         ++this.tickCount;
         if (this.player.removed || this.tickCount > 20 && !this.player.isFallFlying()) {
-            this.done = true;
+            this.setDone();
             return;
         }
         this.x = (float)this.player.getX();

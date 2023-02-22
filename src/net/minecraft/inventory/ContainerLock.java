@@ -7,7 +7,7 @@
 package net.minecraft.inventory;
 
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import org.jetbrains.annotations.Unmodifiable;
 
 @Unmodifiable
@@ -23,15 +23,15 @@ public class ContainerLock {
         return this.key.isEmpty() || !stack.isEmpty() && stack.hasCustomName() && this.key.equals(stack.getName().getString());
     }
 
-    public void toTag(CompoundTag tag) {
+    public void writeNbt(NbtCompound nbt) {
         if (!this.key.isEmpty()) {
-            tag.putString("Lock", this.key);
+            nbt.putString("Lock", this.key);
         }
     }
 
-    public static ContainerLock fromTag(CompoundTag tag) {
-        if (tag.contains("Lock", 8)) {
-            return new ContainerLock(tag.getString("Lock"));
+    public static ContainerLock fromNbt(NbtCompound nbt) {
+        if (nbt.contains("Lock", 8)) {
+            return new ContainerLock(nbt.getString("Lock"));
         }
         return EMPTY;
     }

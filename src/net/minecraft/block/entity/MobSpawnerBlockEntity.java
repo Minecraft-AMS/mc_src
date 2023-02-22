@@ -10,7 +10,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.util.Tickable;
 import net.minecraft.util.math.BlockPos;
@@ -26,7 +26,7 @@ implements Tickable {
 
         @Override
         public void sendStatus(int status) {
-            MobSpawnerBlockEntity.this.world.addBlockAction(MobSpawnerBlockEntity.this.pos, Blocks.SPAWNER, status, 0);
+            MobSpawnerBlockEntity.this.world.addSyncedBlockEvent(MobSpawnerBlockEntity.this.pos, Blocks.SPAWNER, status, 0);
         }
 
         @Override
@@ -54,16 +54,16 @@ implements Tickable {
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.logic.deserialize(tag);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.logic.fromTag(tag);
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        this.logic.serialize(tag);
-        return tag;
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        this.logic.toTag(nbt);
+        return nbt;
     }
 
     @Override
@@ -74,26 +74,26 @@ implements Tickable {
     @Override
     @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 1, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 1, this.toInitialChunkDataNbt());
     }
 
     @Override
-    public CompoundTag toInitialChunkDataTag() {
-        CompoundTag compoundTag = this.toTag(new CompoundTag());
-        compoundTag.remove("SpawnPotentials");
-        return compoundTag;
+    public NbtCompound toInitialChunkDataNbt() {
+        NbtCompound nbtCompound = this.writeNbt(new NbtCompound());
+        nbtCompound.remove("SpawnPotentials");
+        return nbtCompound;
     }
 
     @Override
-    public boolean onBlockAction(int i, int j) {
-        if (this.logic.method_8275(i)) {
+    public boolean onSyncedBlockEvent(int type, int data) {
+        if (this.logic.method_8275(type)) {
             return true;
         }
-        return super.onBlockAction(i, j);
+        return super.onSyncedBlockEvent(type, data);
     }
 
     @Override
-    public boolean shouldNotCopyTagFromItem() {
+    public boolean copyItemDataRequiresOperator() {
         return true;
     }
 

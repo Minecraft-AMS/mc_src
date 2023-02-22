@@ -15,7 +15,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -58,29 +58,29 @@ public abstract class BlockEntity {
         return this.world != null;
     }
 
-    public void fromTag(CompoundTag tag) {
+    public void fromTag(BlockState state, NbtCompound tag) {
         this.pos = new BlockPos(tag.getInt("x"), tag.getInt("y"), tag.getInt("z"));
     }
 
-    public CompoundTag toTag(CompoundTag tag) {
-        return this.writeIdentifyingData(tag);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        return this.writeIdentifyingData(nbt);
     }
 
-    private CompoundTag writeIdentifyingData(CompoundTag compoundTag) {
+    private NbtCompound writeIdentifyingData(NbtCompound nbt) {
         Identifier identifier = BlockEntityType.getId(this.getType());
         if (identifier == null) {
             throw new RuntimeException(this.getClass() + " is missing a mapping! This is a bug!");
         }
-        compoundTag.putString("id", identifier.toString());
-        compoundTag.putInt("x", this.pos.getX());
-        compoundTag.putInt("y", this.pos.getY());
-        compoundTag.putInt("z", this.pos.getZ());
-        return compoundTag;
+        nbt.putString("id", identifier.toString());
+        nbt.putInt("x", this.pos.getX());
+        nbt.putInt("y", this.pos.getY());
+        nbt.putInt("z", this.pos.getZ());
+        return nbt;
     }
 
     @Nullable
-    public static BlockEntity createFromTag(CompoundTag compoundTag) {
-        String string = compoundTag.getString("id");
+    public static BlockEntity createFromTag(BlockState state, NbtCompound tag) {
+        String string = tag.getString("id");
         return Registry.BLOCK_ENTITY_TYPE.getOrEmpty(new Identifier(string)).map(blockEntityType -> {
             try {
                 return blockEntityType.instantiate();
@@ -91,7 +91,7 @@ public abstract class BlockEntity {
             }
         }).map(blockEntity -> {
             try {
-                blockEntity.fromTag(compoundTag);
+                blockEntity.fromTag(state, tag);
                 return blockEntity;
             }
             catch (Throwable throwable) {
@@ -109,22 +109,14 @@ public abstract class BlockEntity {
             this.cachedState = this.world.getBlockState(this.pos);
             this.world.markDirty(this.pos, this);
             if (!this.cachedState.isAir()) {
-                this.world.updateHorizontalAdjacent(this.pos, this.cachedState.getBlock());
+                this.world.updateComparators(this.pos, this.cachedState.getBlock());
             }
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    public double getSquaredDistance(double x, double y, double z) {
-        double d = (double)this.pos.getX() + 0.5 - x;
-        double e = (double)this.pos.getY() + 0.5 - y;
-        double f = (double)this.pos.getZ() + 0.5 - z;
-        return d * d + e * e + f * f;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public double getSquaredRenderDistance() {
-        return 4096.0;
+    public double getRenderDistance() {
+        return 64.0;
     }
 
     public BlockPos getPos() {
@@ -143,8 +135,8 @@ public abstract class BlockEntity {
         return null;
     }
 
-    public CompoundTag toInitialChunkDataTag() {
-        return this.writeIdentifyingData(new CompoundTag());
+    public NbtCompound toInitialChunkDataNbt() {
+        return this.writeIdentifyingData(new NbtCompound());
     }
 
     public boolean isRemoved() {
@@ -159,7 +151,7 @@ public abstract class BlockEntity {
         this.removed = false;
     }
 
-    public boolean onBlockAction(int i, int j) {
+    public boolean onSyncedBlockEvent(int type, int data) {
         return false;
     }
 
@@ -176,18 +168,18 @@ public abstract class BlockEntity {
         CrashReportSection.addBlockInfo(crashReportSection, this.pos, this.world.getBlockState(this.pos));
     }
 
-    public void setPos(BlockPos blockPos) {
-        this.pos = blockPos.toImmutable();
+    public void setPos(BlockPos pos) {
+        this.pos = pos.toImmutable();
     }
 
-    public boolean shouldNotCopyTagFromItem() {
+    public boolean copyItemDataRequiresOperator() {
         return false;
     }
 
-    public void applyRotation(BlockRotation blockRotation) {
+    public void applyRotation(BlockRotation rotation) {
     }
 
-    public void applyMirror(BlockMirror blockMirror) {
+    public void applyMirror(BlockMirror mirror) {
     }
 
     public BlockEntityType<?> getType() {

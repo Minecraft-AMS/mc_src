@@ -18,16 +18,16 @@ import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.raid.Raid;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.village.raid.Raid;
+import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.World;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -54,12 +54,18 @@ public class DebugInfoSender {
     }
 
     public static void sendPoiAddition(ServerWorld world, BlockPos pos) {
+        DebugInfoSender.method_24819(world, pos);
     }
 
     public static void sendPoiRemoval(ServerWorld world, BlockPos pos) {
+        DebugInfoSender.method_24819(world, pos);
     }
 
     public static void sendPointOfInterest(ServerWorld world, BlockPos pos) {
+        DebugInfoSender.method_24819(world, pos);
+    }
+
+    private static void method_24819(ServerWorld serverWorld, BlockPos blockPos) {
     }
 
     public static void sendPathfindingData(World world, MobEntity mob, @Nullable Path path, float nodeReachProximity) {
@@ -68,16 +74,19 @@ public class DebugInfoSender {
     public static void sendNeighborUpdate(World world, BlockPos pos) {
     }
 
-    public static void sendStructureStart(IWorld world, StructureStart structureStart) {
+    public static void sendStructureStart(StructureWorldAccess world, StructureStart<?> structureStart) {
     }
 
     public static void sendGoalSelector(World world, MobEntity mob, GoalSelector goalSelector) {
+        if (!(world instanceof ServerWorld)) {
+            return;
+        }
     }
 
     public static void sendRaids(ServerWorld server, Collection<Raid> raids) {
     }
 
-    public static void sendVillagerAiDebugData(LivingEntity living) {
+    public static void sendBrainDebugData(LivingEntity living) {
     }
 
     public static void sendBeeDebugData(BeeEntity bee) {
@@ -88,7 +97,7 @@ public class DebugInfoSender {
 
     private static void sendToAll(ServerWorld world, PacketByteBuf buf, Identifier channel) {
         CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(channel, buf);
-        for (PlayerEntity playerEntity : world.getWorld().getPlayers()) {
+        for (PlayerEntity playerEntity : world.toServerWorld().getPlayers()) {
             ((ServerPlayerEntity)playerEntity).networkHandler.sendPacket(packet);
         }
     }

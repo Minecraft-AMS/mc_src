@@ -5,8 +5,8 @@ package net.minecraft.network.packet.c2s.play;
 
 import java.io.IOException;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class ChatMessageC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -34,7 +34,7 @@ implements Packet<ServerPlayPacketListener> {
 
     @Override
     public void apply(ServerPlayPacketListener serverPlayPacketListener) {
-        serverPlayPacketListener.onChatMessage(this);
+        serverPlayPacketListener.onGameMessage(this);
     }
 
     public String getChatMessage() {

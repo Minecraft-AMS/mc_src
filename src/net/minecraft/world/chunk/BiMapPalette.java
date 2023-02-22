@@ -9,13 +9,14 @@
 package net.minecraft.world.chunk;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.util.IdList;
-import net.minecraft.util.Int2ObjectBiMap;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.collection.IdList;
+import net.minecraft.util.collection.Int2ObjectBiMap;
 import net.minecraft.world.chunk.Palette;
 import net.minecraft.world.chunk.PaletteResizeListener;
 import org.jetbrains.annotations.Nullable;
@@ -25,11 +26,11 @@ implements Palette<T> {
     private final IdList<T> idList;
     private final Int2ObjectBiMap<T> map;
     private final PaletteResizeListener<T> resizeHandler;
-    private final Function<CompoundTag, T> elementDeserializer;
-    private final Function<T, CompoundTag> elementSerializer;
+    private final Function<NbtCompound, T> elementDeserializer;
+    private final Function<T, NbtCompound> elementSerializer;
     private final int indexBits;
 
-    public BiMapPalette(IdList<T> idList, int indexBits, PaletteResizeListener<T> resizeHandler, Function<CompoundTag, T> elementDeserializer, Function<T, CompoundTag> elementSerializer) {
+    public BiMapPalette(IdList<T> idList, int indexBits, PaletteResizeListener<T> resizeHandler, Function<NbtCompound, T> elementDeserializer, Function<T, NbtCompound> elementSerializer) {
         this.idList = idList;
         this.indexBits = indexBits;
         this.resizeHandler = resizeHandler;
@@ -40,7 +41,7 @@ implements Palette<T> {
 
     @Override
     public int getIndex(T object) {
-        int i = this.map.getId(object);
+        int i = this.map.getRawId(object);
         if (i == -1 && (i = this.map.add(object)) >= 1 << this.indexBits) {
             i = this.resizeHandler.onResize(this.indexBits + 1, object);
         }
@@ -48,8 +49,12 @@ implements Palette<T> {
     }
 
     @Override
-    public boolean accepts(T object) {
-        return this.map.getId(object) != -1;
+    public boolean accepts(Predicate<T> predicate) {
+        for (int i = 0; i < this.getIndexBits(); ++i) {
+            if (!predicate.test(this.map.get(i))) continue;
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -73,15 +78,15 @@ implements Palette<T> {
         int i = this.getIndexBits();
         buf.writeVarInt(i);
         for (int j = 0; j < i; ++j) {
-            buf.writeVarInt(this.idList.getId(this.map.get(j)));
+            buf.writeVarInt(this.idList.getRawId(this.map.get(j)));
         }
     }
 
     @Override
     public int getPacketSize() {
-        int i = PacketByteBuf.getVarIntSizeBytes(this.getIndexBits());
+        int i = PacketByteBuf.getVarIntLength(this.getIndexBits());
         for (int j = 0; j < this.getIndexBits(); ++j) {
-            i += PacketByteBuf.getVarIntSizeBytes(this.idList.getId(this.map.get(j)));
+            i += PacketByteBuf.getVarIntLength(this.idList.getRawId(this.map.get(j)));
         }
         return i;
     }
@@ -91,16 +96,16 @@ implements Palette<T> {
     }
 
     @Override
-    public void fromTag(ListTag tag) {
+    public void readNbt(NbtList nbt) {
         this.map.clear();
-        for (int i = 0; i < tag.size(); ++i) {
-            this.map.add(this.elementDeserializer.apply(tag.getCompound(i)));
+        for (int i = 0; i < nbt.size(); ++i) {
+            this.map.add(this.elementDeserializer.apply(nbt.getCompound(i)));
         }
     }
 
-    public void toTag(ListTag tag) {
+    public void writeNbt(NbtList nbt) {
         for (int i = 0; i < this.getIndexBits(); ++i) {
-            tag.add(this.elementSerializer.apply(this.map.get(i)));
+            nbt.add(this.elementSerializer.apply(this.map.get(i)));
         }
     }
 }

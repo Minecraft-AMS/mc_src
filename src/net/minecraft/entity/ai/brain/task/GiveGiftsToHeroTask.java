@@ -77,7 +77,7 @@ extends Task<VillagerEntity> {
         this.done = false;
         this.startTime = l;
         PlayerEntity playerEntity = this.getNearestPlayerIfHero(villagerEntity).get();
-        villagerEntity.getBrain().putMemory(MemoryModuleType.INTERACTION_TARGET, playerEntity);
+        villagerEntity.getBrain().remember(MemoryModuleType.INTERACTION_TARGET, playerEntity);
         LookTargetUtil.lookAt(villagerEntity, playerEntity);
     }
 
@@ -96,7 +96,7 @@ extends Task<VillagerEntity> {
                 this.done = true;
             }
         } else {
-            LookTargetUtil.walkTowards(villagerEntity, playerEntity, 5);
+            LookTargetUtil.walkTowards((LivingEntity)villagerEntity, playerEntity, 0.5f, 5);
         }
     }
 
@@ -111,7 +111,7 @@ extends Task<VillagerEntity> {
     private void giveGifts(VillagerEntity villager, LivingEntity recipient) {
         List<ItemStack> list = this.getGifts(villager);
         for (ItemStack itemStack : list) {
-            LookTargetUtil.give(villager, itemStack, recipient);
+            LookTargetUtil.give(villager, itemStack, recipient.getPos());
         }
     }
 
@@ -121,9 +121,9 @@ extends Task<VillagerEntity> {
         }
         VillagerProfession villagerProfession = villager.getVillagerData().getProfession();
         if (GIFTS.containsKey(villagerProfession)) {
-            LootTable lootTable = villager.world.getServer().getLootManager().getSupplier(GIFTS.get(villagerProfession));
-            LootContext.Builder builder = new LootContext.Builder((ServerWorld)villager.world).put(LootContextParameters.POSITION, new BlockPos(villager)).put(LootContextParameters.THIS_ENTITY, villager).setRandom(villager.getRandom());
-            return lootTable.getDrops(builder.build(LootContextTypes.GIFT));
+            LootTable lootTable = villager.world.getServer().getLootManager().getTable(GIFTS.get(villagerProfession));
+            LootContext.Builder builder = new LootContext.Builder((ServerWorld)villager.world).parameter(LootContextParameters.ORIGIN, villager.getPos()).parameter(LootContextParameters.THIS_ENTITY, villager).random(villager.getRandom());
+            return lootTable.generateLoot(builder.build(LootContextTypes.GIFT));
         }
         return ImmutableList.of((Object)new ItemStack(Items.WHEAT_SEEDS));
     }
@@ -141,18 +141,13 @@ extends Task<VillagerEntity> {
     }
 
     private boolean isCloseEnough(VillagerEntity villager, PlayerEntity player) {
-        BlockPos blockPos = new BlockPos(player);
-        BlockPos blockPos2 = new BlockPos(villager);
+        BlockPos blockPos = player.getBlockPos();
+        BlockPos blockPos2 = villager.getBlockPos();
         return blockPos2.isWithinDistance(blockPos, 5.0);
     }
 
     private static int getNextGiftDelay(ServerWorld world) {
         return 600 + world.random.nextInt(6001);
-    }
-
-    @Override
-    protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
-        return this.shouldKeepRunning(world, (VillagerEntity)entity, time);
     }
 
     @Override

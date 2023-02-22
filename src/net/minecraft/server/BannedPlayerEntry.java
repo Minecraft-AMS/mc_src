@@ -28,18 +28,18 @@ extends BanEntry<GameProfile> {
         super(profile, created, source, expiry, reason);
     }
 
-    public BannedPlayerEntry(JsonObject jsonObject) {
-        super(BannedPlayerEntry.getProfileFromJson(jsonObject), jsonObject);
+    public BannedPlayerEntry(JsonObject json) {
+        super(BannedPlayerEntry.profileFromJson(json), json);
     }
 
     @Override
-    protected void serialize(JsonObject jsonObject) {
+    protected void fromJson(JsonObject json) {
         if (this.getKey() == null) {
             return;
         }
-        jsonObject.addProperty("uuid", ((GameProfile)this.getKey()).getId() == null ? "" : ((GameProfile)this.getKey()).getId().toString());
-        jsonObject.addProperty("name", ((GameProfile)this.getKey()).getName());
-        super.serialize(jsonObject);
+        json.addProperty("uuid", ((GameProfile)this.getKey()).getId() == null ? "" : ((GameProfile)this.getKey()).getId().toString());
+        json.addProperty("name", ((GameProfile)this.getKey()).getName());
+        super.fromJson(json);
     }
 
     @Override
@@ -48,7 +48,7 @@ extends BanEntry<GameProfile> {
         return new LiteralText(gameProfile.getName() != null ? gameProfile.getName() : Objects.toString(gameProfile.getId(), "(Unknown)"));
     }
 
-    private static GameProfile getProfileFromJson(JsonObject json) {
+    private static GameProfile profileFromJson(JsonObject json) {
         UUID uUID;
         if (!json.has("uuid") || !json.has("name")) {
             return null;

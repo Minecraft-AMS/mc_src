@@ -2,16 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
 import java.io.IOException;
-import java.util.function.BooleanSupplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -48,9 +43,6 @@ AutoCloseable {
 
     @Nullable
     public abstract Chunk getChunk(int var1, int var2, ChunkStatus var3, boolean var4);
-
-    @Environment(value=EnvType.CLIENT)
-    public abstract void tick(BooleanSupplier var1);
 
     public abstract String getDebugString();
 

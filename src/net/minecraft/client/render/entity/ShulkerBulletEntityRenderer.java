@@ -17,16 +17,17 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.model.ShulkerBulletEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.projectile.ShulkerBulletEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class ShulkerBulletEntityRenderer
 extends EntityRenderer<ShulkerBulletEntity> {
-    private static final Identifier SKIN = new Identifier("textures/entity/shulker/spark.png");
-    private static final RenderLayer field_21744 = RenderLayer.getEntityTranslucent(SKIN);
+    private static final Identifier TEXTURE = new Identifier("textures/entity/shulker/spark.png");
+    private static final RenderLayer LAYER = RenderLayer.getEntityTranslucent(TEXTURE);
     private final ShulkerBulletEntityModel<ShulkerBulletEntity> model = new ShulkerBulletEntityModel();
 
     public ShulkerBulletEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
@@ -34,7 +35,7 @@ extends EntityRenderer<ShulkerBulletEntity> {
     }
 
     @Override
-    protected int getBlockLight(ShulkerBulletEntity shulkerBulletEntity, float f) {
+    protected int getBlockLight(ShulkerBulletEntity shulkerBulletEntity, BlockPos blockPos) {
         return 15;
     }
 
@@ -45,15 +46,15 @@ extends EntityRenderer<ShulkerBulletEntity> {
         float j = MathHelper.lerp(g, shulkerBulletEntity.prevPitch, shulkerBulletEntity.pitch);
         float k = (float)shulkerBulletEntity.age + g;
         matrixStack.translate(0.0, 0.15f, 0.0);
-        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(MathHelper.sin(k * 0.1f) * 180.0f));
-        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(MathHelper.cos(k * 0.1f) * 180.0f));
-        matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.sin(k * 0.15f) * 360.0f));
+        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(MathHelper.sin(k * 0.1f) * 180.0f));
+        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(MathHelper.cos(k * 0.1f) * 180.0f));
+        matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.sin(k * 0.15f) * 360.0f));
         matrixStack.scale(-0.5f, -0.5f, 0.5f);
         this.model.setAngles(shulkerBulletEntity, 0.0f, 0.0f, 0.0f, h, j);
-        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(SKIN));
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(TEXTURE));
         this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
         matrixStack.scale(1.5f, 1.5f, 1.5f);
-        VertexConsumer vertexConsumer2 = vertexConsumerProvider.getBuffer(field_21744);
+        VertexConsumer vertexConsumer2 = vertexConsumerProvider.getBuffer(LAYER);
         this.model.render(matrixStack, vertexConsumer2, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 0.15f);
         matrixStack.pop();
         super.render(shulkerBulletEntity, f, g, matrixStack, vertexConsumerProvider, i);
@@ -61,7 +62,7 @@ extends EntityRenderer<ShulkerBulletEntity> {
 
     @Override
     public Identifier getTexture(ShulkerBulletEntity shulkerBulletEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 }
 

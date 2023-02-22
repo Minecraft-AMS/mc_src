@@ -23,6 +23,7 @@ import net.minecraft.client.gui.hud.spectator.SpectatorMenuCloseCallback;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommandGroup;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuState;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -33,6 +34,9 @@ public class SpectatorMenu {
     private static final SpectatorMenuCommand PREVIOUS_PAGE_COMMAND = new ChangePageSpectatorMenuCommand(-1, true);
     private static final SpectatorMenuCommand NEXT_PAGE_COMMAND = new ChangePageSpectatorMenuCommand(1, true);
     private static final SpectatorMenuCommand DISABLED_NEXT_PAGE_COMMAND = new ChangePageSpectatorMenuCommand(1, false);
+    private static final Text CLOSE_TEXT = new TranslatableText("spectatorMenu.close");
+    private static final Text PREVIOUS_PAGE_TEXT = new TranslatableText("spectatorMenu.previous_page");
+    private static final Text NEXT_PAGE_TEXT = new TranslatableText("spectatorMenu.next_page");
     public static final SpectatorMenuCommand BLANK_COMMAND = new SpectatorMenuCommand(){
 
         @Override
@@ -41,11 +45,11 @@ public class SpectatorMenu {
 
         @Override
         public Text getName() {
-            return new LiteralText("");
+            return LiteralText.EMPTY;
         }
 
         @Override
-        public void renderIcon(float brightness, int alpha) {
+        public void renderIcon(MatrixStack matrices, float f, int i) {
         }
 
         @Override
@@ -54,7 +58,6 @@ public class SpectatorMenu {
         }
     };
     private final SpectatorMenuCloseCallback closeCallback;
-    private final List<SpectatorMenuState> stateStack = Lists.newArrayList();
     private SpectatorMenuCommandGroup currentGroup = new RootSpectatorCommandGroup();
     private int selectedSlot = -1;
     private int page;
@@ -119,7 +122,6 @@ public class SpectatorMenu {
     }
 
     public void selectElement(SpectatorMenuCommandGroup group) {
-        this.stateStack.add(this.getCurrentState());
         this.currentGroup = group;
         this.selectedSlot = -1;
         this.page = 0;
@@ -147,19 +149,16 @@ public class SpectatorMenu {
 
         @Override
         public Text getName() {
-            if (this.direction < 0) {
-                return new TranslatableText("spectatorMenu.previous_page", new Object[0]);
-            }
-            return new TranslatableText("spectatorMenu.next_page", new Object[0]);
+            return this.direction < 0 ? PREVIOUS_PAGE_TEXT : NEXT_PAGE_TEXT;
         }
 
         @Override
-        public void renderIcon(float brightness, int alpha) {
-            MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEX);
+        public void renderIcon(MatrixStack matrices, float f, int i) {
+            MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEXTURE);
             if (this.direction < 0) {
-                DrawableHelper.blit(0, 0, 144.0f, 0.0f, 16, 16, 256, 256);
+                DrawableHelper.drawTexture(matrices, 0, 0, 144.0f, 0.0f, 16, 16, 256, 256);
             } else {
-                DrawableHelper.blit(0, 0, 160.0f, 0.0f, 16, 16, 256, 256);
+                DrawableHelper.drawTexture(matrices, 0, 0, 160.0f, 0.0f, 16, 16, 256, 256);
             }
         }
 
@@ -182,13 +181,13 @@ public class SpectatorMenu {
 
         @Override
         public Text getName() {
-            return new TranslatableText("spectatorMenu.close", new Object[0]);
+            return CLOSE_TEXT;
         }
 
         @Override
-        public void renderIcon(float brightness, int alpha) {
-            MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEX);
-            DrawableHelper.blit(0, 0, 128.0f, 0.0f, 16, 16, 256, 256);
+        public void renderIcon(MatrixStack matrices, float f, int i) {
+            MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEXTURE);
+            DrawableHelper.drawTexture(matrices, 0, 0, 128.0f, 0.0f, 16, 16, 256, 256);
         }
 
         @Override

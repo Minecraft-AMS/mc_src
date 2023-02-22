@@ -17,7 +17,7 @@ import net.minecraft.entity.mob.ShulkerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.loot.LootTables;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.structure.SimpleStructurePiece;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructureManager;
@@ -31,7 +31,7 @@ import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.ServerWorldAccess;
 
 public class EndCityGenerator {
     private static final StructurePlacementData PLACEMENT_DATA = new StructurePlacementData().setIgnoreEntities(true).addProcessor(BlockIgnoreStructureProcessor.IGNORE_STRUCTURE_BLOCKS);
@@ -113,7 +113,7 @@ public class EndCityGenerator {
             BlockRotation blockRotation = root.placementData.getRotation();
             int i = random.nextInt(4) + 1;
             Piece piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, root, new BlockPos(0, 0, -4), "bridge_piece", blockRotation, true));
-            piece.field_15316 = -1;
+            piece.chainLength = -1;
             int j = 0;
             for (int k = 0; k < i; ++k) {
                 if (random.nextBoolean()) {
@@ -133,7 +133,7 @@ public class EndCityGenerator {
                 this.shipGenerated = true;
             }
             piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, piece, new BlockPos(4, j, 0), "bridge_end", blockRotation.rotate(BlockRotation.CLOCKWISE_180), true));
-            piece.field_15316 = -1;
+            piece.chainLength = -1;
             return true;
         }
     };
@@ -164,7 +164,7 @@ public class EndCityGenerator {
 
     private static Piece createPiece(StructureManager structureManager, Piece lastPiece, BlockPos relativePosition, String template, BlockRotation rotation, boolean ignoreAir) {
         Piece piece = new Piece(structureManager, template, lastPiece.pos, rotation, ignoreAir);
-        BlockPos blockPos = lastPiece.structure.method_15180(lastPiece.placementData, relativePosition, piece.placementData, BlockPos.ORIGIN);
+        BlockPos blockPos = lastPiece.structure.transformBox(lastPiece.placementData, relativePosition, piece.placementData, BlockPos.ORIGIN);
         piece.translate(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         return piece;
     }
@@ -195,9 +195,9 @@ public class EndCityGenerator {
             boolean bl = false;
             int i = random.nextInt();
             for (StructurePiece structurePiece : list) {
-                structurePiece.field_15316 = i;
-                StructurePiece structurePiece2 = StructurePiece.method_14932(pieces, structurePiece.getBoundingBox());
-                if (structurePiece2 == null || structurePiece2.field_15316 == parent.field_15316) continue;
+                structurePiece.chainLength = i;
+                StructurePiece structurePiece2 = StructurePiece.getOverlappingPiece(pieces, structurePiece.getBoundingBox());
+                if (structurePiece2 == null || structurePiece2.chainLength == parent.chainLength) continue;
                 bl = true;
                 break;
             }
@@ -230,7 +230,7 @@ public class EndCityGenerator {
             this.initializeStructureData(manager);
         }
 
-        public Piece(StructureManager manager, CompoundTag tag) {
+        public Piece(StructureManager manager, NbtCompound tag) {
             super(StructurePieceType.END_CITY, tag);
             this.template = tag.getString("Template");
             this.rotation = BlockRotation.valueOf(tag.getString("Rot"));
@@ -245,7 +245,7 @@ public class EndCityGenerator {
         }
 
         @Override
-        protected void toNbt(CompoundTag tag) {
+        protected void toNbt(NbtCompound tag) {
             super.toNbt(tag);
             tag.putString("Template", this.template);
             tag.putString("Rot", this.rotation.name());
@@ -253,19 +253,19 @@ public class EndCityGenerator {
         }
 
         @Override
-        protected void handleMetadata(String metadata, BlockPos pos, IWorld world, Random random, BlockBox boundingBox) {
+        protected void handleMetadata(String metadata, BlockPos pos, ServerWorldAccess world, Random random, BlockBox boundingBox) {
             if (metadata.startsWith("Chest")) {
                 BlockPos blockPos = pos.down();
                 if (boundingBox.contains(blockPos)) {
                     LootableContainerBlockEntity.setLootTable(world, random, blockPos, LootTables.END_CITY_TREASURE_CHEST);
                 }
             } else if (metadata.startsWith("Sentry")) {
-                ShulkerEntity shulkerEntity = EntityType.SHULKER.create(world.getWorld());
-                shulkerEntity.updatePosition((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5);
+                ShulkerEntity shulkerEntity = EntityType.SHULKER.create(world.toServerWorld());
+                shulkerEntity.setPosition((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5);
                 shulkerEntity.setAttachedBlock(pos);
                 world.spawnEntity(shulkerEntity);
             } else if (metadata.startsWith("Elytra")) {
-                ItemFrameEntity itemFrameEntity = new ItemFrameEntity(world.getWorld(), pos, this.rotation.rotate(Direction.SOUTH));
+                ItemFrameEntity itemFrameEntity = new ItemFrameEntity(world.toServerWorld(), pos, this.rotation.rotate(Direction.SOUTH));
                 itemFrameEntity.setHeldItemStack(new ItemStack(Items.ELYTRA), false);
                 world.spawnEntity(itemFrameEntity);
             }

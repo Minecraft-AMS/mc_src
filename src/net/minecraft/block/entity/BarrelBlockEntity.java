@@ -9,19 +9,19 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
-import net.minecraft.container.Container;
-import net.minecraft.container.GenericContainer;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.Vec3i;
 
 public class BarrelBlockEntity
@@ -29,8 +29,8 @@ extends LootableContainerBlockEntity {
     private DefaultedList<ItemStack> inventory = DefaultedList.ofSize(27, ItemStack.EMPTY);
     private int viewerCount;
 
-    private BarrelBlockEntity(BlockEntityType<?> blockEntityType) {
-        super(blockEntityType);
+    private BarrelBlockEntity(BlockEntityType<?> type) {
+        super(type);
     }
 
     public BarrelBlockEntity() {
@@ -38,25 +38,25 @@ extends LootableContainerBlockEntity {
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        if (!this.serializeLootTable(tag)) {
-            Inventories.toTag(tag, this.inventory);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        if (!this.serializeLootTable(nbt)) {
+            Inventories.writeNbt(nbt, this.inventory);
         }
-        return tag;
+        return nbt;
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.inventory = DefaultedList.ofSize(this.getInvSize(), ItemStack.EMPTY);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
         if (!this.deserializeLootTable(tag)) {
-            Inventories.fromTag(tag, this.inventory);
+            Inventories.readNbt(tag, this.inventory);
         }
     }
 
     @Override
-    public int getInvSize() {
+    public int size() {
         return 27;
     }
 
@@ -72,16 +72,16 @@ extends LootableContainerBlockEntity {
 
     @Override
     protected Text getContainerName() {
-        return new TranslatableText("container.barrel", new Object[0]);
+        return new TranslatableText("container.barrel");
     }
 
     @Override
-    protected Container createContainer(int i, PlayerInventory playerInventory) {
-        return GenericContainer.createGeneric9x3(i, playerInventory, this);
+    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, this);
     }
 
     @Override
-    public void onInvOpen(PlayerEntity player) {
+    public void onOpen(PlayerEntity player) {
         if (!player.isSpectator()) {
             if (this.viewerCount < 0) {
                 this.viewerCount = 0;
@@ -110,7 +110,7 @@ extends LootableContainerBlockEntity {
             this.scheduleUpdate();
         } else {
             BlockState blockState = this.getCachedState();
-            if (blockState.getBlock() != Blocks.BARREL) {
+            if (!blockState.isOf(Blocks.BARREL)) {
                 this.markRemoved();
                 return;
             }
@@ -123,7 +123,7 @@ extends LootableContainerBlockEntity {
     }
 
     @Override
-    public void onInvClose(PlayerEntity player) {
+    public void onClose(PlayerEntity player) {
         if (!player.isSpectator()) {
             --this.viewerCount;
         }
@@ -133,8 +133,8 @@ extends LootableContainerBlockEntity {
         this.world.setBlockState(this.getPos(), (BlockState)state.with(BarrelBlock.OPEN, open), 3);
     }
 
-    private void playSound(BlockState blockState, SoundEvent soundEvent) {
-        Vec3i vec3i = blockState.get(BarrelBlock.FACING).getVector();
+    private void playSound(BlockState state, SoundEvent soundEvent) {
+        Vec3i vec3i = state.get(BarrelBlock.FACING).getVector();
         double d = (double)this.pos.getX() + 0.5 + (double)vec3i.getX() / 2.0;
         double e = (double)this.pos.getY() + 0.5 + (double)vec3i.getY() / 2.0;
         double f = (double)this.pos.getZ() + 0.5 + (double)vec3i.getZ() / 2.0;

@@ -2,100 +2,64 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
- *  com.mojang.datafixers.Dynamic
+ *  com.google.common.collect.ImmutableList
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.Lists;
-import com.mojang.datafixers.Dynamic;
+import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.Codec;
 import java.util.List;
-import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.entity.EntityType;
-import net.minecraft.structure.PillagerOutpostGenerator;
-import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.VillageStructureStart;
-import net.minecraft.util.math.BlockBox;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.SpawnSettings;
+import net.minecraft.world.biome.source.BiomeSource;
+import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.AbstractTempleFeature;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
-import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.chunk.StructureConfig;
+import net.minecraft.world.gen.feature.JigsawFeature;
 import net.minecraft.world.gen.feature.StructureFeature;
+import net.minecraft.world.gen.feature.StructurePoolFeatureConfig;
 
 public class PillagerOutpostFeature
-extends AbstractTempleFeature<DefaultFeatureConfig> {
-    private static final List<Biome.SpawnEntry> MONSTER_SPAWNS = Lists.newArrayList((Object[])new Biome.SpawnEntry[]{new Biome.SpawnEntry(EntityType.PILLAGER, 1, 1, 1)});
+extends JigsawFeature {
+    private static final List<SpawnSettings.SpawnEntry> MONSTER_SPAWNS = ImmutableList.of((Object)new SpawnSettings.SpawnEntry(EntityType.PILLAGER, 1, 1, 1));
 
-    public PillagerOutpostFeature(Function<Dynamic<?>, ? extends DefaultFeatureConfig> configFactory) {
-        super(configFactory);
+    public PillagerOutpostFeature(Codec<StructurePoolFeatureConfig> codec) {
+        super(codec, 0, true, true);
     }
 
     @Override
-    public String getName() {
-        return "Pillager_Outpost";
-    }
-
-    @Override
-    public int getRadius() {
-        return 3;
-    }
-
-    @Override
-    public List<Biome.SpawnEntry> getMonsterSpawns() {
+    public List<SpawnSettings.SpawnEntry> getMonsterSpawns() {
         return MONSTER_SPAWNS;
     }
 
     @Override
-    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
-        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkZ, i, 0, 0);
-        if (chunkZ == chunkPos.x && i == chunkPos.z) {
-            int j = chunkZ >> 4;
-            int k = i >> 4;
-            random.setSeed((long)(j ^ k << 4) ^ chunkGenerator.getSeed());
-            random.nextInt();
-            if (random.nextInt(5) != 0) {
-                return false;
-            }
-            if (chunkGenerator.hasStructure(biome, this)) {
-                for (int l = chunkZ - 10; l <= chunkZ + 10; ++l) {
-                    for (int m = i - 10; m <= i + 10; ++m) {
-                        if (!Feature.VILLAGE.shouldStartAt(biomeAccess, chunkGenerator, random, l, m, biomeAccess.getBiome(new BlockPos((l << 4) + 9, 0, (m << 4) + 9)))) continue;
-                        return false;
-                    }
-                }
+    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long l, ChunkRandom chunkRandom, int i, int j, Biome biome, ChunkPos chunkPos, StructurePoolFeatureConfig structurePoolFeatureConfig) {
+        int k = i >> 4;
+        int m = j >> 4;
+        chunkRandom.setSeed((long)(k ^ m << 4) ^ l);
+        chunkRandom.nextInt();
+        if (chunkRandom.nextInt(5) != 0) {
+            return false;
+        }
+        return !this.method_30845(chunkGenerator, l, chunkRandom, i, j);
+    }
+
+    private boolean method_30845(ChunkGenerator chunkGenerator, long l, ChunkRandom chunkRandom, int i, int j) {
+        StructureConfig structureConfig = chunkGenerator.getStructuresConfig().getForType(StructureFeature.VILLAGE);
+        if (structureConfig == null) {
+            return false;
+        }
+        for (int k = i - 10; k <= i + 10; ++k) {
+            for (int m = j - 10; m <= j + 10; ++m) {
+                ChunkPos chunkPos = StructureFeature.VILLAGE.getStartChunk(structureConfig, l, chunkRandom, k, m);
+                if (k != chunkPos.x || m != chunkPos.z) continue;
                 return true;
             }
         }
         return false;
-    }
-
-    @Override
-    public StructureFeature.StructureStartFactory getStructureStartFactory() {
-        return Start::new;
-    }
-
-    @Override
-    protected int getSeedModifier() {
-        return 165745296;
-    }
-
-    public static class Start
-    extends VillageStructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
-        }
-
-        @Override
-        public void initialize(ChunkGenerator<?> chunkGenerator, StructureManager structureManager, int x, int z, Biome biome) {
-            BlockPos blockPos = new BlockPos(x * 16, 90, z * 16);
-            PillagerOutpostGenerator.addPieces(chunkGenerator, structureManager, blockPos, this.children, this.random);
-            this.setBoundingBoxFromChildren();
-        }
     }
 }
 

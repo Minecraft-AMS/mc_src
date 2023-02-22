@@ -8,6 +8,7 @@
  */
 package net.minecraft.world.chunk;
 
+import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
@@ -15,7 +16,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.world.chunk.IdListPalette;
 import net.minecraft.world.chunk.Palette;
 import net.minecraft.world.chunk.PalettedContainer;
@@ -23,7 +24,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkSection {
-    private static final Palette<BlockState> palette = new IdListPalette<BlockState>(Block.STATE_IDS, Blocks.AIR.getDefaultState());
+    private static final Palette<BlockState> PALETTE = new IdListPalette<BlockState>(Block.STATE_IDS, Blocks.AIR.getDefaultState());
     private final int yOffset;
     private short nonEmptyBlockCount;
     private short randomTickableBlockCount;
@@ -39,7 +40,7 @@ public class ChunkSection {
         this.nonEmptyBlockCount = nonEmptyBlockCount;
         this.randomTickableBlockCount = randomTickableBlockCount;
         this.nonEmptyFluidCount = nonEmptyFluidCount;
-        this.container = new PalettedContainer<BlockState>(palette, Block.STATE_IDS, NbtHelper::toBlockState, NbtHelper::fromBlockState, Blocks.AIR.getDefaultState());
+        this.container = new PalettedContainer<BlockState>(PALETTE, Block.STATE_IDS, NbtHelper::toBlockState, NbtHelper::fromBlockState, Blocks.AIR.getDefaultState());
     }
 
     public BlockState getBlockState(int x, int y, int z) {
@@ -137,22 +138,22 @@ public class ChunkSection {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public void fromPacket(PacketByteBuf packetByteBuf) {
-        this.nonEmptyBlockCount = packetByteBuf.readShort();
-        this.container.fromPacket(packetByteBuf);
+    public void fromPacket(PacketByteBuf buf) {
+        this.nonEmptyBlockCount = buf.readShort();
+        this.container.fromPacket(buf);
     }
 
-    public void toPacket(PacketByteBuf packetByteBuf) {
-        packetByteBuf.writeShort(this.nonEmptyBlockCount);
-        this.container.toPacket(packetByteBuf);
+    public void toPacket(PacketByteBuf buf) {
+        buf.writeShort(this.nonEmptyBlockCount);
+        this.container.toPacket(buf);
     }
 
     public int getPacketSize() {
         return 2 + this.container.getPacketSize();
     }
 
-    public boolean method_19523(BlockState blockState) {
-        return this.container.method_19526(blockState);
+    public boolean hasAny(Predicate<BlockState> predicate) {
+        return this.container.hasAny(predicate);
     }
 }
 

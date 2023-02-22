@@ -14,6 +14,7 @@ import com.mojang.bridge.game.GameVersion;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.UUID;
+import net.minecraft.SharedConstants;
 import net.minecraft.util.JsonHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 public class MinecraftVersion
 implements GameVersion {
     private static final Logger LOGGER = LogManager.getLogger();
+    public static final GameVersion field_25319 = new MinecraftVersion();
     private final String id;
     private final String name;
     private final boolean stable;
@@ -30,18 +32,18 @@ implements GameVersion {
     private final Date buildTime;
     private final String releaseTarget;
 
-    public MinecraftVersion() {
+    private MinecraftVersion() {
         this.id = UUID.randomUUID().toString().replaceAll("-", "");
-        this.name = "1.15.2";
+        this.name = "1.16.5";
         this.stable = true;
-        this.worldVersion = 2230;
-        this.protocolVersion = 578;
-        this.packVersion = 5;
+        this.worldVersion = 2586;
+        this.protocolVersion = SharedConstants.method_31372();
+        this.packVersion = 6;
         this.buildTime = new Date();
-        this.releaseTarget = "1.15.2";
+        this.releaseTarget = "1.16.5";
     }
 
-    protected MinecraftVersion(JsonObject jsonObject) {
+    private MinecraftVersion(JsonObject jsonObject) {
         this.id = JsonHelper.getString(jsonObject, "id");
         this.name = JsonHelper.getString(jsonObject, "name");
         this.releaseTarget = JsonHelper.getString(jsonObject, "release_target");

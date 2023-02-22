@@ -89,7 +89,7 @@ extends AbstractFileResourcePack {
                 set.add(string2);
                 continue;
             }
-            this.warnNonLowercaseNamespace(string2);
+            this.warnNonLowerCaseNamespace(string2);
         }
         return set;
     }

@@ -7,19 +7,19 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.world.World;
 
 public class SpectralArrowEntity
-extends ProjectileEntity {
+extends PersistentProjectileEntity {
     private int duration = 200;
 
     public SpectralArrowEntity(EntityType<? extends SpectralArrowEntity> entityType, World world) {
-        super((EntityType<? extends ProjectileEntity>)entityType, world);
+        super((EntityType<? extends PersistentProjectileEntity>)entityType, world);
     }
 
     public SpectralArrowEntity(World world, LivingEntity owner) {
@@ -51,17 +51,17 @@ extends ProjectileEntity {
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        if (tag.contains("Duration")) {
-            this.duration = tag.getInt("Duration");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("Duration")) {
+            this.duration = nbt.getInt("Duration");
         }
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("Duration", this.duration);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("Duration", this.duration);
     }
 }
 

@@ -17,8 +17,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import java.util.Collection;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.IdentifierArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.network.packet.s2c.play.StopSoundS2CPacket;
 import net.minecraft.server.command.CommandManager;
@@ -52,7 +52,7 @@ public class StopSoundCommand {
         } else if (sound != null) {
             source.sendFeedback(new TranslatableText("commands.stopsound.success.sourceless.sound", sound), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.stopsound.success.sourceless.any", new Object[0]), true);
+            source.sendFeedback(new TranslatableText("commands.stopsound.success.sourceless.any"), true);
         }
         return targets.size();
     }

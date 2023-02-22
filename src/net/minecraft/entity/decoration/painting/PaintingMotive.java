@@ -35,8 +35,8 @@ public class PaintingMotive {
     private final int width;
     private final int height;
 
-    private static PaintingMotive register(String id, int width, int height) {
-        return Registry.register(Registry.PAINTING_MOTIVE, id, new PaintingMotive(width, height));
+    private static PaintingMotive register(String name, int width, int height) {
+        return Registry.register(Registry.PAINTING_MOTIVE, name, new PaintingMotive(width, height));
     }
 
     public PaintingMotive(int width, int height) {

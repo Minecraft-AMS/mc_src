@@ -40,27 +40,27 @@ public class SuffixArray<T> {
     private static final Logger LOGGER = LogManager.getLogger();
     protected final List<T> objects = Lists.newArrayList();
     private final IntList characters = new IntArrayList();
-    private final IntList suffixStarts = new IntArrayList();
+    private final IntList textStarts = new IntArrayList();
     private IntList suffixIndexToObjectIndex = new IntArrayList();
-    private IntList suffixSplits = new IntArrayList();
+    private IntList offsetInText = new IntArrayList();
     private int maxTextLength;
 
     public void add(T object, String text) {
         this.maxTextLength = Math.max(this.maxTextLength, text.length());
         int i = this.objects.size();
         this.objects.add(object);
-        this.suffixStarts.add(this.characters.size());
+        this.textStarts.add(this.characters.size());
         for (int j = 0; j < text.length(); ++j) {
             this.suffixIndexToObjectIndex.add(i);
-            this.suffixSplits.add(j);
+            this.offsetInText.add(j);
             this.characters.add((int)text.charAt(j));
         }
         this.suffixIndexToObjectIndex.add(i);
-        this.suffixSplits.add(text.length());
+        this.offsetInText.add(text.length());
         this.characters.add(-1);
     }
 
-    public void sort() {
+    public void build() {
         int j2;
         int i2 = this.characters.size();
         int[] is = new int[i2];
@@ -112,13 +112,13 @@ public class SuffixArray<T> {
             j2 *= 2;
         }
         IntList intList = this.suffixIndexToObjectIndex;
-        IntList intList2 = this.suffixSplits;
+        IntList intList2 = this.offsetInText;
         this.suffixIndexToObjectIndex = new IntArrayList(intList.size());
-        this.suffixSplits = new IntArrayList(intList2.size());
+        this.offsetInText = new IntArrayList(intList2.size());
         for (int m = 0; m < i2; ++m) {
             int n = ls[m];
             this.suffixIndexToObjectIndex.add(intList.getInt(n));
-            this.suffixSplits.add(intList2.getInt(n));
+            this.offsetInText.add(intList2.getInt(n));
         }
         if (PRINT_ARRAY) {
             this.printArray();
@@ -133,8 +133,8 @@ public class SuffixArray<T> {
     }
 
     private String getDebugString(int suffixIndex) {
-        int i = this.suffixSplits.getInt(suffixIndex);
-        int j = this.suffixStarts.getInt(this.suffixIndexToObjectIndex.getInt(suffixIndex));
+        int i = this.offsetInText.getInt(suffixIndex);
+        int j = this.textStarts.getInt(this.suffixIndexToObjectIndex.getInt(suffixIndex));
         StringBuilder stringBuilder = new StringBuilder();
         int k = 0;
         while (j + k < this.characters.size()) {
@@ -150,8 +150,8 @@ public class SuffixArray<T> {
     }
 
     private int compare(String string, int suffixIndex) {
-        int i = this.suffixStarts.getInt(this.suffixIndexToObjectIndex.getInt(suffixIndex));
-        int j = this.suffixSplits.getInt(suffixIndex);
+        int i = this.textStarts.getInt(this.suffixIndexToObjectIndex.getInt(suffixIndex));
+        int j = this.offsetInText.getInt(suffixIndex);
         for (int k = 0; k < string.length(); ++k) {
             char d;
             int l = this.characters.getInt(i + j + k);

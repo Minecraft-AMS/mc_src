@@ -30,14 +30,14 @@ import net.minecraft.block.StemBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.block.enums.ChestType;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.EightWayDirection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.PalettedContainer;
 import net.minecraft.world.chunk.WorldChunk;
@@ -56,14 +56,14 @@ public class UpgradeData {
     private UpgradeData() {
     }
 
-    public UpgradeData(CompoundTag tag) {
+    public UpgradeData(NbtCompound tag) {
         this();
         if (tag.contains("Indices", 10)) {
-            CompoundTag compoundTag = tag.getCompound("Indices");
+            NbtCompound nbtCompound = tag.getCompound("Indices");
             for (int i = 0; i < this.centerIndicesToUpgrade.length; ++i) {
                 String string = String.valueOf(i);
-                if (!compoundTag.contains(string, 11)) continue;
-                this.centerIndicesToUpgrade[i] = compoundTag.getIntArray(string);
+                if (!nbtCompound.contains(string, 11)) continue;
+                this.centerIndicesToUpgrade[i] = nbtCompound.getIntArray(string);
             }
         }
         int j = tag.getInt("Sides");
@@ -106,51 +106,50 @@ public class UpgradeData {
             BlockState blockState;
             BlockState blockState2 = blockState = world.getBlockState(blockPos);
             for (Direction direction : directions) {
-                mutable.set(blockPos).setOffset(direction);
+                mutable.set(blockPos, direction);
                 blockState2 = UpgradeData.applyAdjacentBlock(blockState2, direction, world, blockPos, mutable);
             }
-            Block.replaceBlock(blockState, blockState2, world, blockPos, 18);
+            Block.replace(blockState, blockState2, world, blockPos, 18);
         }
     }
 
-    private static BlockState applyAdjacentBlock(BlockState oldState, Direction dir, IWorld world, BlockPos currentPos, BlockPos otherPos) {
-        return BLOCK_TO_LOGIC.getOrDefault(oldState.getBlock(), BulitinLogic.DEFAULT).getUpdatedState(oldState, dir, world.getBlockState(otherPos), world, currentPos, otherPos);
+    private static BlockState applyAdjacentBlock(BlockState oldState, Direction dir, WorldAccess world, BlockPos currentPos, BlockPos otherPos) {
+        return BLOCK_TO_LOGIC.getOrDefault(oldState.getBlock(), BuiltinLogic.DEFAULT).getUpdatedState(oldState, dir, world.getBlockState(otherPos), world, currentPos, otherPos);
     }
 
     private void upgradeCenter(WorldChunk chunk) {
-        try (BlockPos.PooledMutable pooledMutable = BlockPos.PooledMutable.get();
-             BlockPos.PooledMutable pooledMutable2 = BlockPos.PooledMutable.get();){
-            int i;
-            ChunkPos chunkPos = chunk.getPos();
-            World iWorld = chunk.getWorld();
-            for (i = 0; i < 16; ++i) {
-                ChunkSection chunkSection = chunk.getSectionArray()[i];
-                int[] is = this.centerIndicesToUpgrade[i];
-                this.centerIndicesToUpgrade[i] = null;
-                if (chunkSection == null || is == null || is.length <= 0) continue;
-                Direction[] directions = Direction.values();
-                PalettedContainer<BlockState> palettedContainer = chunkSection.getContainer();
-                for (int j : is) {
-                    BlockState blockState;
-                    int k = j & 0xF;
-                    int l = j >> 8 & 0xF;
-                    int m = j >> 4 & 0xF;
-                    pooledMutable.set(chunkPos.getStartX() + k, (i << 4) + l, chunkPos.getStartZ() + m);
-                    BlockState blockState2 = blockState = palettedContainer.get(j);
-                    for (Direction direction : directions) {
-                        pooledMutable2.set(pooledMutable).setOffset(direction);
-                        if (pooledMutable.getX() >> 4 != chunkPos.x || pooledMutable.getZ() >> 4 != chunkPos.z) continue;
-                        blockState2 = UpgradeData.applyAdjacentBlock(blockState2, direction, iWorld, pooledMutable, pooledMutable2);
-                    }
-                    Block.replaceBlock(blockState, blockState2, iWorld, pooledMutable, 18);
+        int i;
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        BlockPos.Mutable mutable2 = new BlockPos.Mutable();
+        ChunkPos chunkPos = chunk.getPos();
+        World worldAccess = chunk.getWorld();
+        for (i = 0; i < 16; ++i) {
+            ChunkSection chunkSection = chunk.getSectionArray()[i];
+            int[] is = this.centerIndicesToUpgrade[i];
+            this.centerIndicesToUpgrade[i] = null;
+            if (chunkSection == null || is == null || is.length <= 0) continue;
+            Direction[] directions = Direction.values();
+            PalettedContainer<BlockState> palettedContainer = chunkSection.getContainer();
+            for (int j : is) {
+                BlockState blockState;
+                int k = j & 0xF;
+                int l = j >> 8 & 0xF;
+                int m = j >> 4 & 0xF;
+                mutable.set(chunkPos.getStartX() + k, (i << 4) + l, chunkPos.getStartZ() + m);
+                BlockState blockState2 = blockState = palettedContainer.get(j);
+                for (Direction direction : directions) {
+                    mutable2.set(mutable, direction);
+                    if (mutable.getX() >> 4 != chunkPos.x || mutable.getZ() >> 4 != chunkPos.z) continue;
+                    blockState2 = UpgradeData.applyAdjacentBlock(blockState2, direction, worldAccess, mutable, mutable2);
                 }
+                Block.replace(blockState, blockState2, worldAccess, mutable, 18);
             }
-            for (i = 0; i < this.centerIndicesToUpgrade.length; ++i) {
-                if (this.centerIndicesToUpgrade[i] != null) {
-                    LOGGER.warn("Discarding update data for section {} for chunk ({} {})", (Object)i, (Object)chunkPos.x, (Object)chunkPos.z);
-                }
-                this.centerIndicesToUpgrade[i] = null;
+        }
+        for (i = 0; i < this.centerIndicesToUpgrade.length; ++i) {
+            if (this.centerIndicesToUpgrade[i] != null) {
+                LOGGER.warn("Discarding update data for section {} for chunk ({} {})", (Object)i, (Object)chunkPos.x, (Object)chunkPos.z);
             }
+            this.centerIndicesToUpgrade[i] = null;
         }
     }
 
@@ -162,32 +161,32 @@ public class UpgradeData {
         return this.sidesToUpgrade.isEmpty();
     }
 
-    public CompoundTag toTag() {
+    public NbtCompound toNbt() {
         int i;
-        CompoundTag compoundTag = new CompoundTag();
-        CompoundTag compoundTag2 = new CompoundTag();
+        NbtCompound nbtCompound = new NbtCompound();
+        NbtCompound nbtCompound2 = new NbtCompound();
         for (i = 0; i < this.centerIndicesToUpgrade.length; ++i) {
             String string = String.valueOf(i);
             if (this.centerIndicesToUpgrade[i] == null || this.centerIndicesToUpgrade[i].length == 0) continue;
-            compoundTag2.putIntArray(string, this.centerIndicesToUpgrade[i]);
+            nbtCompound2.putIntArray(string, this.centerIndicesToUpgrade[i]);
         }
-        if (!compoundTag2.isEmpty()) {
-            compoundTag.put("Indices", compoundTag2);
+        if (!nbtCompound2.isEmpty()) {
+            nbtCompound.put("Indices", nbtCompound2);
         }
         i = 0;
         for (EightWayDirection eightWayDirection : this.sidesToUpgrade) {
             i |= 1 << eightWayDirection.ordinal();
         }
-        compoundTag.putByte("Sides", (byte)i);
-        return compoundTag;
+        nbtCompound.putByte("Sides", (byte)i);
+        return nbtCompound;
     }
 
-    static enum BulitinLogic implements Logic
+    static enum BuiltinLogic implements Logic
     {
         BLACKLIST(new Block[]{Blocks.OBSERVER, Blocks.NETHER_PORTAL, Blocks.WHITE_CONCRETE_POWDER, Blocks.ORANGE_CONCRETE_POWDER, Blocks.MAGENTA_CONCRETE_POWDER, Blocks.LIGHT_BLUE_CONCRETE_POWDER, Blocks.YELLOW_CONCRETE_POWDER, Blocks.LIME_CONCRETE_POWDER, Blocks.PINK_CONCRETE_POWDER, Blocks.GRAY_CONCRETE_POWDER, Blocks.LIGHT_GRAY_CONCRETE_POWDER, Blocks.CYAN_CONCRETE_POWDER, Blocks.PURPLE_CONCRETE_POWDER, Blocks.BLUE_CONCRETE_POWDER, Blocks.BROWN_CONCRETE_POWDER, Blocks.GREEN_CONCRETE_POWDER, Blocks.RED_CONCRETE_POWDER, Blocks.BLACK_CONCRETE_POWDER, Blocks.ANVIL, Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL, Blocks.DRAGON_EGG, Blocks.GRAVEL, Blocks.SAND, Blocks.RED_SAND, Blocks.OAK_SIGN, Blocks.SPRUCE_SIGN, Blocks.BIRCH_SIGN, Blocks.ACACIA_SIGN, Blocks.JUNGLE_SIGN, Blocks.DARK_OAK_SIGN, Blocks.OAK_WALL_SIGN, Blocks.SPRUCE_WALL_SIGN, Blocks.BIRCH_WALL_SIGN, Blocks.ACACIA_WALL_SIGN, Blocks.JUNGLE_WALL_SIGN, Blocks.DARK_OAK_WALL_SIGN}){
 
             @Override
-            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, IWorld iWorld, BlockPos blockPos, BlockPos blockPos2) {
+            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, WorldAccess worldAccess, BlockPos blockPos, BlockPos blockPos2) {
                 return blockState;
             }
         }
@@ -195,23 +194,23 @@ public class UpgradeData {
         DEFAULT(new Block[0]){
 
             @Override
-            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, IWorld iWorld, BlockPos blockPos, BlockPos blockPos2) {
-                return blockState.getStateForNeighborUpdate(direction, iWorld.getBlockState(blockPos2), iWorld, blockPos, blockPos2);
+            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, WorldAccess worldAccess, BlockPos blockPos, BlockPos blockPos2) {
+                return blockState.getStateForNeighborUpdate(direction, worldAccess.getBlockState(blockPos2), worldAccess, blockPos, blockPos2);
             }
         }
         ,
         CHEST(new Block[]{Blocks.CHEST, Blocks.TRAPPED_CHEST}){
 
             @Override
-            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, IWorld iWorld, BlockPos blockPos, BlockPos blockPos2) {
-                if (blockState2.getBlock() == blockState.getBlock() && direction.getAxis().isHorizontal() && blockState.get(ChestBlock.CHEST_TYPE) == ChestType.SINGLE && blockState2.get(ChestBlock.CHEST_TYPE) == ChestType.SINGLE) {
+            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, WorldAccess worldAccess, BlockPos blockPos, BlockPos blockPos2) {
+                if (blockState2.isOf(blockState.getBlock()) && direction.getAxis().isHorizontal() && blockState.get(ChestBlock.CHEST_TYPE) == ChestType.SINGLE && blockState2.get(ChestBlock.CHEST_TYPE) == ChestType.SINGLE) {
                     Direction direction2 = blockState.get(ChestBlock.FACING);
                     if (direction.getAxis() != direction2.getAxis() && direction2 == blockState2.get(ChestBlock.FACING)) {
                         ChestType chestType = direction == direction2.rotateYClockwise() ? ChestType.LEFT : ChestType.RIGHT;
-                        iWorld.setBlockState(blockPos2, (BlockState)blockState2.with(ChestBlock.CHEST_TYPE, chestType.getOpposite()), 18);
+                        worldAccess.setBlockState(blockPos2, (BlockState)blockState2.with(ChestBlock.CHEST_TYPE, chestType.getOpposite()), 18);
                         if (direction2 == Direction.NORTH || direction2 == Direction.EAST) {
-                            BlockEntity blockEntity = iWorld.getBlockEntity(blockPos);
-                            BlockEntity blockEntity2 = iWorld.getBlockEntity(blockPos2);
+                            BlockEntity blockEntity = worldAccess.getBlockEntity(blockPos);
+                            BlockEntity blockEntity2 = worldAccess.getBlockEntity(blockPos2);
                             if (blockEntity instanceof ChestBlockEntity && blockEntity2 instanceof ChestBlockEntity) {
                                 ChestBlockEntity.copyInventory((ChestBlockEntity)blockEntity, (ChestBlockEntity)blockEntity2);
                             }
@@ -227,8 +226,8 @@ public class UpgradeData {
             private final ThreadLocal<List<ObjectSet<BlockPos>>> distanceToPositions = ThreadLocal.withInitial(() -> Lists.newArrayListWithCapacity((int)7));
 
             @Override
-            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, IWorld iWorld, BlockPos blockPos, BlockPos blockPos2) {
-                BlockState blockState3 = blockState.getStateForNeighborUpdate(direction, iWorld.getBlockState(blockPos2), iWorld, blockPos, blockPos2);
+            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, WorldAccess worldAccess, BlockPos blockPos, BlockPos blockPos2) {
+                BlockState blockState3 = blockState.getStateForNeighborUpdate(direction, worldAccess.getBlockState(blockPos2), worldAccess, blockPos, blockPos2);
                 if (blockState != blockState3) {
                     int i = blockState3.get(Properties.DISTANCE_1_7);
                     List<ObjectSet<BlockPos>> list = this.distanceToPositions.get();
@@ -243,7 +242,7 @@ public class UpgradeData {
             }
 
             @Override
-            public void postUpdate(IWorld world) {
+            public void postUpdate(WorldAccess world) {
                 BlockPos.Mutable mutable = new BlockPos.Mutable();
                 List<ObjectSet<BlockPos>> list = this.distanceToPositions.get();
                 for (int i = 2; i < list.size(); ++i) {
@@ -256,7 +255,7 @@ public class UpgradeData {
                         world.setBlockState(blockPos, (BlockState)blockState.with(Properties.DISTANCE_1_7, j), 18);
                         if (i == 7) continue;
                         for (Direction direction : DIRECTIONS) {
-                            mutable.set(blockPos).setOffset(direction);
+                            mutable.set(blockPos, direction);
                             BlockState blockState2 = world.getBlockState(mutable);
                             if (!blockState2.contains(Properties.DISTANCE_1_7) || blockState.get(Properties.DISTANCE_1_7) <= i) continue;
                             objectSet2.add((Object)mutable.toImmutable());
@@ -270,12 +269,10 @@ public class UpgradeData {
         STEM_BLOCK(new Block[]{Blocks.MELON_STEM, Blocks.PUMPKIN_STEM}){
 
             @Override
-            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, IWorld iWorld, BlockPos blockPos, BlockPos blockPos2) {
-                if (blockState.get(StemBlock.AGE) == 7) {
-                    GourdBlock gourdBlock = ((StemBlock)blockState.getBlock()).getGourdBlock();
-                    if (blockState2.getBlock() == gourdBlock) {
-                        return (BlockState)gourdBlock.getAttachedStem().getDefaultState().with(HorizontalFacingBlock.FACING, direction);
-                    }
+            public BlockState getUpdatedState(BlockState blockState, Direction direction, BlockState blockState2, WorldAccess worldAccess, BlockPos blockPos, BlockPos blockPos2) {
+                GourdBlock gourdBlock;
+                if (blockState.get(StemBlock.AGE) == 7 && blockState2.isOf(gourdBlock = ((StemBlock)blockState.getBlock()).getGourdBlock())) {
+                    return (BlockState)gourdBlock.getAttachedStem().getDefaultState().with(HorizontalFacingBlock.FACING, direction);
                 }
                 return blockState;
             }
@@ -283,11 +280,11 @@ public class UpgradeData {
 
         public static final Direction[] DIRECTIONS;
 
-        private BulitinLogic(Block ... blocks) {
+        private BuiltinLogic(Block ... blocks) {
             this(false, blocks);
         }
 
-        private BulitinLogic(boolean bl, Block ... blocks) {
+        private BuiltinLogic(boolean bl, Block ... blocks) {
             for (Block block : blocks) {
                 BLOCK_TO_LOGIC.put(block, this);
             }
@@ -302,9 +299,9 @@ public class UpgradeData {
     }
 
     public static interface Logic {
-        public BlockState getUpdatedState(BlockState var1, Direction var2, BlockState var3, IWorld var4, BlockPos var5, BlockPos var6);
+        public BlockState getUpdatedState(BlockState var1, Direction var2, BlockState var3, WorldAccess var4, BlockPos var5, BlockPos var6);
 
-        default public void postUpdate(IWorld world) {
+        default public void postUpdate(WorldAccess world) {
         }
     }
 }

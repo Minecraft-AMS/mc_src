@@ -11,9 +11,8 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.text.Text;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 
 public class UpdateSignC2SPacket
@@ -25,9 +24,9 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public UpdateSignC2SPacket(BlockPos blockPos, Text text, Text text2, Text text3, Text text4) {
-        this.pos = blockPos;
-        this.text = new String[]{text.getString(), text2.getString(), text3.getString(), text4.getString()};
+    public UpdateSignC2SPacket(BlockPos pos, String line1, String line2, String line3, String line4) {
+        this.pos = pos;
+        this.text = new String[]{line1, line2, line3, line4};
     }
 
     @Override

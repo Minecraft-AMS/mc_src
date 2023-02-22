@@ -21,10 +21,10 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,14 +39,14 @@ implements Packet<ClientPlayPacketListener> {
     public PlayerListS2CPacket(Action action, ServerPlayerEntity ... players) {
         this.action = action;
         for (ServerPlayerEntity serverPlayerEntity : players) {
-            this.entries.add(new Entry(serverPlayerEntity.getGameProfile(), serverPlayerEntity.pingMilliseconds, serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.method_14206()));
+            this.entries.add(new Entry(serverPlayerEntity.getGameProfile(), serverPlayerEntity.pingMilliseconds, serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.getPlayerListName()));
         }
     }
 
     public PlayerListS2CPacket(Action action, Iterable<ServerPlayerEntity> iterable) {
         this.action = action;
         for (ServerPlayerEntity serverPlayerEntity : iterable) {
-            this.entries.add(new Entry(serverPlayerEntity.getGameProfile(), serverPlayerEntity.pingMilliseconds, serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.method_14206()));
+            this.entries.add(new Entry(serverPlayerEntity.getGameProfile(), serverPlayerEntity.pingMilliseconds, serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.getPlayerListName()));
         }
     }
 
@@ -184,11 +184,11 @@ implements Packet<ClientPlayPacketListener> {
         private final GameProfile profile;
         private final Text displayName;
 
-        public Entry(GameProfile gameProfile, @Nullable int i, @Nullable GameMode gameMode, Text text) {
-            this.profile = gameProfile;
-            this.latency = i;
+        public Entry(GameProfile profile, @Nullable int latency, @Nullable GameMode gameMode, Text displayName) {
+            this.profile = profile;
+            this.latency = latency;
             this.gameMode = gameMode;
-            this.displayName = text;
+            this.displayName = displayName;
         }
 
         public GameProfile getProfile() {

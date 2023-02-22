@@ -7,20 +7,22 @@
 package net.minecraft.block;
 
 import java.util.Random;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ChorusPlantBlock;
-import net.minecraft.entity.Entity;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.tag.EntityTypeTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +31,7 @@ extends Block {
     public static final IntProperty AGE = Properties.AGE_5;
     private final ChorusPlantBlock plantBlock;
 
-    protected ChorusFlowerBlock(ChorusPlantBlock plantBlock, Block.Settings settings) {
+    protected ChorusFlowerBlock(ChorusPlantBlock plantBlock, AbstractBlock.Settings settings) {
         super(settings);
         this.plantBlock = plantBlock;
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(AGE, 0));
@@ -37,11 +39,19 @@ extends Block {
 
     @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        int j;
         if (!state.canPlaceAt(world, pos)) {
             world.breakBlock(pos, true);
-            return;
         }
+    }
+
+    @Override
+    public boolean hasRandomTicks(BlockState state) {
+        return state.get(AGE) < 5;
+    }
+
+    @Override
+    public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        int j;
         BlockPos blockPos = pos.up();
         if (!world.isAir(blockPos) || blockPos.getY() >= 256) {
             return;
@@ -102,35 +112,34 @@ extends Block {
 
     private void grow(World world, BlockPos pos, int age) {
         world.setBlockState(pos, (BlockState)this.getDefaultState().with(AGE, age), 2);
-        world.playLevelEvent(1033, pos, 0);
+        world.syncWorldEvent(1033, pos, 0);
     }
 
     private void die(World world, BlockPos pos) {
         world.setBlockState(pos, (BlockState)this.getDefaultState().with(AGE, 5), 2);
-        world.playLevelEvent(1034, pos, 0);
+        world.syncWorldEvent(1034, pos, 0);
     }
 
-    private static boolean isSurroundedByAir(WorldView worldView, BlockPos pos, @Nullable Direction exceptDirection) {
+    private static boolean isSurroundedByAir(WorldView world, BlockPos pos, @Nullable Direction exceptDirection) {
         for (Direction direction : Direction.Type.HORIZONTAL) {
-            if (direction == exceptDirection || worldView.isAir(pos.offset(direction))) continue;
+            if (direction == exceptDirection || world.isAir(pos.offset(direction))) continue;
             return false;
         }
         return true;
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
-        if (facing != Direction.UP && !state.canPlaceAt(world, pos)) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        if (direction != Direction.UP && !state.canPlaceAt(world, pos)) {
             world.getBlockTickScheduler().schedule(pos, this, 1);
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.down());
-        Block block = blockState.getBlock();
-        if (block == this.plantBlock || block == Blocks.END_STONE) {
+        if (blockState.getBlock() == this.plantBlock || blockState.isOf(Blocks.END_STONE)) {
             return true;
         }
         if (!blockState.isAir()) {
@@ -139,7 +148,7 @@ extends Block {
         boolean bl = false;
         for (Direction direction : Direction.Type.HORIZONTAL) {
             BlockState blockState2 = world.getBlockState(pos.offset(direction));
-            if (blockState2.getBlock() == this.plantBlock) {
+            if (blockState2.isOf(this.plantBlock)) {
                 if (bl) {
                     return false;
                 }
@@ -157,12 +166,12 @@ extends Block {
         builder.add(AGE);
     }
 
-    public static void generate(IWorld world, BlockPos pos, Random random, int size) {
+    public static void generate(WorldAccess world, BlockPos pos, Random random, int size) {
         world.setBlockState(pos, ((ChorusPlantBlock)Blocks.CHORUS_PLANT).withConnectionProperties(world, pos), 2);
         ChorusFlowerBlock.generate(world, pos, random, pos, size, 0);
     }
 
-    private static void generate(IWorld world, BlockPos pos, Random random, BlockPos rootPos, int size, int layer) {
+    private static void generate(WorldAccess world, BlockPos pos, Random random, BlockPos rootPos, int size, int layer) {
         ChorusPlantBlock chorusPlantBlock = (ChorusPlantBlock)Blocks.CHORUS_PLANT;
         int i = random.nextInt(4) + 1;
         if (layer == 0) {
@@ -198,9 +207,11 @@ extends Block {
     }
 
     @Override
-    public void onProjectileHit(World world, BlockState state, BlockHitResult hitResult, Entity entity) {
-        BlockPos blockPos = hitResult.getBlockPos();
-        world.breakBlock(blockPos, true, entity);
+    public void onProjectileHit(World world, BlockState state, BlockHitResult hit, ProjectileEntity projectile) {
+        if (projectile.getType().isIn(EntityTypeTags.IMPACT_PROJECTILES)) {
+            BlockPos blockPos = hit.getBlockPos();
+            world.breakBlock(blockPos, true, projectile);
+        }
     }
 }
 

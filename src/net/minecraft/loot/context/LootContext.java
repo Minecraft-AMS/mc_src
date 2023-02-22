@@ -41,31 +41,31 @@ public class LootContext {
     private final Random random;
     private final float luck;
     private final ServerWorld world;
-    private final Function<Identifier, LootTable> supplierGetter;
-    private final Set<LootTable> suppliers = Sets.newLinkedHashSet();
+    private final Function<Identifier, LootTable> tableGetter;
+    private final Set<LootTable> activeTables = Sets.newLinkedHashSet();
     private final Function<Identifier, LootCondition> conditionGetter;
     private final Set<LootCondition> conditions = Sets.newLinkedHashSet();
     private final Map<LootContextParameter<?>, Object> parameters;
     private final Map<Identifier, Dropper> drops;
 
-    private LootContext(Random random, float f, ServerWorld serverWorld, Function<Identifier, LootTable> function, Function<Identifier, LootCondition> function2, Map<LootContextParameter<?>, Object> map, Map<Identifier, Dropper> map2) {
+    private LootContext(Random random, float luck, ServerWorld world, Function<Identifier, LootTable> tableGetter, Function<Identifier, LootCondition> conditionSetter, Map<LootContextParameter<?>, Object> parameters, Map<Identifier, Dropper> drops) {
         this.random = random;
-        this.luck = f;
-        this.world = serverWorld;
-        this.supplierGetter = function;
-        this.conditionGetter = function2;
-        this.parameters = ImmutableMap.copyOf(map);
-        this.drops = ImmutableMap.copyOf(map2);
+        this.luck = luck;
+        this.world = world;
+        this.tableGetter = tableGetter;
+        this.conditionGetter = conditionSetter;
+        this.parameters = ImmutableMap.copyOf(parameters);
+        this.drops = ImmutableMap.copyOf(drops);
     }
 
     public boolean hasParameter(LootContextParameter<?> parameter) {
         return this.parameters.containsKey(parameter);
     }
 
-    public void drop(Identifier id, Consumer<ItemStack> itemDropper) {
+    public void drop(Identifier id, Consumer<ItemStack> lootConsumer) {
         Dropper dropper = this.drops.get(id);
         if (dropper != null) {
-            dropper.add(this, itemDropper);
+            dropper.add(this, lootConsumer);
         }
     }
 
@@ -74,12 +74,12 @@ public class LootContext {
         return (T)this.parameters.get(parameter);
     }
 
-    public boolean addDrop(LootTable supplier) {
-        return this.suppliers.add(supplier);
+    public boolean markActive(LootTable table) {
+        return this.activeTables.add(table);
     }
 
-    public void removeDrop(LootTable supplier) {
-        this.suppliers.remove(supplier);
+    public void markInactive(LootTable table) {
+        this.activeTables.remove(table);
     }
 
     public boolean addCondition(LootCondition condition) {
@@ -91,7 +91,7 @@ public class LootContext {
     }
 
     public LootTable getSupplier(Identifier id) {
-        return this.supplierGetter.apply(id);
+        return this.tableGetter.apply(id);
     }
 
     public LootCondition getCondition(Identifier id) {
@@ -167,34 +167,34 @@ public class LootContext {
             this.world = world;
         }
 
-        public Builder setRandom(Random random) {
+        public Builder random(Random random) {
             this.random = random;
             return this;
         }
 
-        public Builder setRandom(long seed) {
+        public Builder random(long seed) {
             if (seed != 0L) {
                 this.random = new Random(seed);
             }
             return this;
         }
 
-        public Builder setRandom(long seed, Random random) {
+        public Builder random(long seed, Random random) {
             this.random = seed == 0L ? random : new Random(seed);
             return this;
         }
 
-        public Builder setLuck(float luck) {
+        public Builder luck(float luck) {
             this.luck = luck;
             return this;
         }
 
-        public <T> Builder put(LootContextParameter<T> key, T value) {
+        public <T> Builder parameter(LootContextParameter<T> key, T value) {
             this.parameters.put(key, value);
             return this;
         }
 
-        public <T> Builder putNullable(LootContextParameter<T> key, @Nullable T value) {
+        public <T> Builder optionalParameter(LootContextParameter<T> key, @Nullable T value) {
             if (value == null) {
                 this.parameters.remove(key);
             } else {
@@ -242,7 +242,7 @@ public class LootContext {
                 random = new Random();
             }
             MinecraftServer minecraftServer = this.world.getServer();
-            return new LootContext(random, this.luck, this.world, minecraftServer.getLootManager()::getSupplier, minecraftServer.getPredicateManager()::get, this.parameters, this.drops);
+            return new LootContext(random, this.luck, this.world, minecraftServer.getLootManager()::getTable, minecraftServer.getPredicateManager()::get, this.parameters, this.drops);
         }
     }
 

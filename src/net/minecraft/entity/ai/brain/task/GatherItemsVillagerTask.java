@@ -19,9 +19,10 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.LookTargetUtil;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.inventory.BasicInventory;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.village.VillagerProfession;
 
@@ -46,7 +47,7 @@ extends Task<VillagerEntity> {
     @Override
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         VillagerEntity villagerEntity2 = (VillagerEntity)villagerEntity.getBrain().getOptionalMemory(MemoryModuleType.INTERACTION_TARGET).get();
-        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2);
+        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2, 0.5f);
         this.items = GatherItemsVillagerTask.getGatherableItems(villagerEntity, villagerEntity2);
     }
 
@@ -56,12 +57,15 @@ extends Task<VillagerEntity> {
         if (villagerEntity.squaredDistanceTo(villagerEntity2) > 5.0) {
             return;
         }
-        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2);
-        villagerEntity.talkWithVillager(villagerEntity2, l);
+        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2, 0.5f);
+        villagerEntity.talkWithVillager(serverWorld, villagerEntity2, l);
         if (villagerEntity.wantsToStartBreeding() && (villagerEntity.getVillagerData().getProfession() == VillagerProfession.FARMER || villagerEntity2.canBreed())) {
             GatherItemsVillagerTask.giveHalfOfStack(villagerEntity, VillagerEntity.ITEM_FOOD_VALUES.keySet(), villagerEntity2);
         }
-        if (!this.items.isEmpty() && villagerEntity.getInventory().containsAnyInInv(this.items)) {
+        if (villagerEntity2.getVillagerData().getProfession() == VillagerProfession.FARMER && villagerEntity.getInventory().count(Items.WHEAT) > Items.WHEAT.getMaxCount() / 2) {
+            GatherItemsVillagerTask.giveHalfOfStack(villagerEntity, (Set<Item>)ImmutableSet.of((Object)Items.WHEAT), villagerEntity2);
+        }
+        if (!this.items.isEmpty() && villagerEntity.getInventory().containsAny(this.items)) {
             GatherItemsVillagerTask.giveHalfOfStack(villagerEntity, this.items, villagerEntity2);
         }
     }
@@ -78,12 +82,12 @@ extends Task<VillagerEntity> {
     }
 
     private static void giveHalfOfStack(VillagerEntity villager, Set<Item> validItems, LivingEntity target) {
-        BasicInventory basicInventory = villager.getInventory();
+        SimpleInventory simpleInventory = villager.getInventory();
         ItemStack itemStack = ItemStack.EMPTY;
-        for (int i = 0; i < basicInventory.getInvSize(); ++i) {
+        for (int i = 0; i < simpleInventory.size(); ++i) {
             int j;
             Item item;
-            ItemStack itemStack2 = basicInventory.getInvStack(i);
+            ItemStack itemStack2 = simpleInventory.getStack(i);
             if (itemStack2.isEmpty() || !validItems.contains(item = itemStack2.getItem())) continue;
             if (itemStack2.getCount() > itemStack2.getMaxCount() / 2) {
                 j = itemStack2.getCount() / 2;
@@ -96,7 +100,7 @@ extends Task<VillagerEntity> {
             break;
         }
         if (!itemStack.isEmpty()) {
-            LookTargetUtil.give(villager, itemStack, target);
+            LookTargetUtil.give(villager, itemStack, target.getPos());
         }
     }
 

@@ -4,17 +4,18 @@
 package net.minecraft.block.entity;
 
 import java.util.Random;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
-import net.minecraft.container.Container;
-import net.minecraft.container.Generic3x3Container;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.Generic3x3ContainerScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.util.collection.DefaultedList;
 
 public class DispenserBlockEntity
 extends LootableContainerBlockEntity {
@@ -30,7 +31,7 @@ extends LootableContainerBlockEntity {
     }
 
     @Override
-    public int getInvSize() {
+    public int size() {
         return 9;
     }
 
@@ -48,7 +49,7 @@ extends LootableContainerBlockEntity {
     public int addToFirstFreeSlot(ItemStack stack) {
         for (int i = 0; i < this.inventory.size(); ++i) {
             if (!this.inventory.get(i).isEmpty()) continue;
-            this.setInvStack(i, stack);
+            this.setStack(i, stack);
             return i;
         }
         return -1;
@@ -56,25 +57,25 @@ extends LootableContainerBlockEntity {
 
     @Override
     protected Text getContainerName() {
-        return new TranslatableText("container.dispenser", new Object[0]);
+        return new TranslatableText("container.dispenser");
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.inventory = DefaultedList.ofSize(this.getInvSize(), ItemStack.EMPTY);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
         if (!this.deserializeLootTable(tag)) {
-            Inventories.fromTag(tag, this.inventory);
+            Inventories.readNbt(tag, this.inventory);
         }
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        if (!this.serializeLootTable(tag)) {
-            Inventories.toTag(tag, this.inventory);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        if (!this.serializeLootTable(nbt)) {
+            Inventories.writeNbt(nbt, this.inventory);
         }
-        return tag;
+        return nbt;
     }
 
     @Override
@@ -88,8 +89,8 @@ extends LootableContainerBlockEntity {
     }
 
     @Override
-    protected Container createContainer(int i, PlayerInventory playerInventory) {
-        return new Generic3x3Container(i, playerInventory, this);
+    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return new Generic3x3ContainerScreenHandler(syncId, playerInventory, this);
     }
 }
 

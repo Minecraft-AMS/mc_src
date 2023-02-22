@@ -8,12 +8,14 @@ package net.minecraft.entity.damage;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.BadRespawnPointDamageSource;
 import net.minecraft.entity.damage.EntityDamageSource;
-import net.minecraft.entity.damage.NetherBedDamageSource;
 import net.minecraft.entity.damage.ProjectileDamageSource;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ExplosiveProjectileEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.AbstractFireballEntity;
+import net.minecraft.entity.projectile.FireworkRocketEntity;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
+import net.minecraft.entity.projectile.WitherSkullEntity;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.Vec3d;
@@ -21,7 +23,7 @@ import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
 
 public class DamageSource {
-    public static final DamageSource IN_FIRE = new DamageSource("inFire").setFire();
+    public static final DamageSource IN_FIRE = new DamageSource("inFire").setBypassesArmor().setFire();
     public static final DamageSource LIGHTNING_BOLT = new DamageSource("lightningBolt");
     public static final DamageSource ON_FIRE = new DamageSource("onFire").setBypassesArmor().setFire();
     public static final DamageSource LAVA = new DamageSource("lava").setFire();
@@ -40,7 +42,6 @@ public class DamageSource {
     public static final DamageSource ANVIL = new DamageSource("anvil");
     public static final DamageSource FALLING_BLOCK = new DamageSource("fallingBlock");
     public static final DamageSource DRAGON_BREATH = new DamageSource("dragonBreath").setBypassesArmor();
-    public static final DamageSource FIREWORKS = new DamageSource("fireworks").setExplosive();
     public static final DamageSource DRYOUT = new DamageSource("dryout");
     public static final DamageSource SWEET_BERRY_BUSH = new DamageSource("sweetBerryBush");
     private boolean bypassesArmor;
@@ -70,19 +71,27 @@ public class DamageSource {
         return new EntityDamageSource("player", attacker);
     }
 
-    public static DamageSource arrow(ProjectileEntity projectile, @Nullable Entity attacker) {
+    public static DamageSource arrow(PersistentProjectileEntity projectile, @Nullable Entity attacker) {
         return new ProjectileDamageSource("arrow", projectile, attacker).setProjectile();
     }
 
-    public static DamageSource trident(Entity entity, @Nullable Entity entity2) {
-        return new ProjectileDamageSource("trident", entity, entity2).setProjectile();
+    public static DamageSource trident(Entity trident, @Nullable Entity attacker) {
+        return new ProjectileDamageSource("trident", trident, attacker).setProjectile();
     }
 
-    public static DamageSource explosiveProjectile(ExplosiveProjectileEntity projectile, @Nullable Entity attacker) {
+    public static DamageSource firework(FireworkRocketEntity firework, @Nullable Entity attacker) {
+        return new ProjectileDamageSource("fireworks", firework, attacker).setExplosive();
+    }
+
+    public static DamageSource fireball(AbstractFireballEntity fireball, @Nullable Entity attacker) {
         if (attacker == null) {
-            return new ProjectileDamageSource("onFire", projectile, projectile).setFire().setProjectile();
+            return new ProjectileDamageSource("onFire", fireball, fireball).setFire().setProjectile();
         }
-        return new ProjectileDamageSource("fireball", projectile, attacker).setFire().setProjectile();
+        return new ProjectileDamageSource("fireball", fireball, attacker).setFire().setProjectile();
+    }
+
+    public static DamageSource witherSkull(WitherSkullEntity witherSkull, Entity attacker) {
+        return new ProjectileDamageSource("witherSkull", witherSkull, attacker).setProjectile();
     }
 
     public static DamageSource thrownProjectile(Entity projectile, @Nullable Entity attacker) {
@@ -94,14 +103,11 @@ public class DamageSource {
     }
 
     public static DamageSource thorns(Entity attacker) {
-        return new EntityDamageSource("thorns", attacker).method_5550().setUsesMagic();
+        return new EntityDamageSource("thorns", attacker).setThorns().setUsesMagic();
     }
 
     public static DamageSource explosion(@Nullable Explosion explosion) {
-        if (explosion != null && explosion.getCausingEntity() != null) {
-            return new EntityDamageSource("explosion.player", explosion.getCausingEntity()).setScaledWithDifficulty().setExplosive();
-        }
-        return new DamageSource("explosion").setScaledWithDifficulty().setExplosive();
+        return DamageSource.explosion(explosion != null ? explosion.getCausingEntity() : null);
     }
 
     public static DamageSource explosion(@Nullable LivingEntity attacker) {
@@ -111,8 +117,12 @@ public class DamageSource {
         return new DamageSource("explosion").setScaledWithDifficulty().setExplosive();
     }
 
-    public static DamageSource netherBed() {
-        return new NetherBedDamageSource();
+    public static DamageSource badRespawnPoint() {
+        return new BadRespawnPointDamageSource();
+    }
+
+    public String toString() {
+        return "DamageSource (" + this.name + ")";
     }
 
     public boolean isProjectile() {
@@ -185,14 +195,14 @@ public class DamageSource {
         return this;
     }
 
-    public Text getDeathMessage(LivingEntity livingEntity) {
-        LivingEntity livingEntity2 = livingEntity.getPrimeAdversary();
+    public Text getDeathMessage(LivingEntity entity) {
+        LivingEntity livingEntity = entity.getPrimeAdversary();
         String string = "death.attack." + this.name;
         String string2 = string + ".player";
-        if (livingEntity2 != null) {
-            return new TranslatableText(string2, livingEntity.getDisplayName(), livingEntity2.getDisplayName());
+        if (livingEntity != null) {
+            return new TranslatableText(string2, entity.getDisplayName(), livingEntity.getDisplayName());
         }
-        return new TranslatableText(string, livingEntity.getDisplayName());
+        return new TranslatableText(string, entity.getDisplayName());
     }
 
     public boolean isFire() {
@@ -212,7 +222,7 @@ public class DamageSource {
         return this.scaleWithDifficulty;
     }
 
-    public boolean getMagic() {
+    public boolean isMagic() {
         return this.magic;
     }
 

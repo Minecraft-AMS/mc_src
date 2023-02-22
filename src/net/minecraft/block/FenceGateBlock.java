@@ -3,11 +3,12 @@
  */
 package net.minecraft.block;
 
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.HorizontalFacingBlock;
-import net.minecraft.entity.EntityContext;
+import net.minecraft.block.ShapeContext;
+import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
@@ -22,8 +23,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 
 public class FenceGateBlock
 extends HorizontalFacingBlock {
@@ -41,13 +42,13 @@ extends HorizontalFacingBlock {
     protected static final VoxelShape IN_WALL_Z_AXIS_CULL_SHAPE = VoxelShapes.union(Block.createCuboidShape(0.0, 2.0, 7.0, 2.0, 13.0, 9.0), Block.createCuboidShape(14.0, 2.0, 7.0, 16.0, 13.0, 9.0));
     protected static final VoxelShape IN_WALL_X_AXIS_CULL_SHAPE = VoxelShapes.union(Block.createCuboidShape(7.0, 2.0, 0.0, 9.0, 13.0, 2.0), Block.createCuboidShape(7.0, 2.0, 14.0, 9.0, 13.0, 16.0));
 
-    public FenceGateBlock(Block.Settings settings) {
+    public FenceGateBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(OPEN, false)).with(POWERED, false)).with(IN_WALL, false));
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         if (state.get(IN_WALL).booleanValue()) {
             return state.get(FACING).getAxis() == Direction.Axis.X ? IN_WALL_X_AXIS_SHAPE : IN_WALL_Z_AXIS_SHAPE;
         }
@@ -55,17 +56,17 @@ extends HorizontalFacingBlock {
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
-        Direction.Axis axis = facing.getAxis();
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        Direction.Axis axis = direction.getAxis();
         if (state.get(FACING).rotateYClockwise().getAxis() == axis) {
-            boolean bl = this.isWall(neighborState) || this.isWall(world.getBlockState(pos.offset(facing.getOpposite())));
+            boolean bl = this.isWall(neighborState) || this.isWall(world.getBlockState(pos.offset(direction.getOpposite())));
             return (BlockState)state.with(IN_WALL, bl);
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
     @Override
-    public VoxelShape getCollisionShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         if (state.get(OPEN).booleanValue()) {
             return VoxelShapes.empty();
         }
@@ -73,7 +74,7 @@ extends HorizontalFacingBlock {
     }
 
     @Override
-    public VoxelShape getCullingShape(BlockState state, BlockView view, BlockPos pos) {
+    public VoxelShape getCullingShape(BlockState state, BlockView world, BlockPos pos) {
         if (state.get(IN_WALL).booleanValue()) {
             return state.get(FACING).getAxis() == Direction.Axis.X ? IN_WALL_X_AXIS_CULL_SHAPE : IN_WALL_Z_AXIS_CULL_SHAPE;
         }
@@ -81,16 +82,16 @@ extends HorizontalFacingBlock {
     }
 
     @Override
-    public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
-        switch (env) {
+    public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
+        switch (type) {
             case LAND: {
-                return world.get(OPEN);
+                return state.get(OPEN);
             }
             case WATER: {
                 return false;
             }
             case AIR: {
-                return world.get(OPEN);
+                return state.get(OPEN);
             }
         }
         return false;
@@ -108,7 +109,7 @@ extends HorizontalFacingBlock {
     }
 
     private boolean isWall(BlockState state) {
-        return state.getBlock().matches(BlockTags.WALLS);
+        return state.getBlock().isIn(BlockTags.WALLS);
     }
 
     @Override
@@ -124,12 +125,12 @@ extends HorizontalFacingBlock {
             state = (BlockState)state.with(OPEN, true);
             world.setBlockState(pos, state, 10);
         }
-        world.playLevelEvent(player, state.get(OPEN) != false ? 1008 : 1014, pos, 0);
-        return ActionResult.SUCCESS;
+        world.syncWorldEvent(player, state.get(OPEN) != false ? 1008 : 1014, pos, 0);
+        return ActionResult.success(world.isClient);
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos neighborPos, boolean moved) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
         if (world.isClient) {
             return;
         }
@@ -137,7 +138,7 @@ extends HorizontalFacingBlock {
         if (state.get(POWERED) != bl) {
             world.setBlockState(pos, (BlockState)((BlockState)state.with(POWERED, bl)).with(OPEN, bl), 2);
             if (state.get(OPEN) != bl) {
-                world.playLevelEvent(null, bl ? 1008 : 1014, pos, 0);
+                world.syncWorldEvent(null, bl ? 1008 : 1014, pos, 0);
             }
         }
     }

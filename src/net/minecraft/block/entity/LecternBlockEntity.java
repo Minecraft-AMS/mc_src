@@ -6,13 +6,10 @@
  */
 package net.minecraft.block.entity;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.block.LecternBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.container.Container;
-import net.minecraft.container.LecternContainer;
-import net.minecraft.container.NameableContainerFactory;
-import net.minecraft.container.PropertyDelegate;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -20,7 +17,11 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.WrittenBookItem;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.LecternScreenHandler;
+import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.screen.PropertyDelegate;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
@@ -36,26 +37,26 @@ import org.jetbrains.annotations.Nullable;
 public class LecternBlockEntity
 extends BlockEntity
 implements Clearable,
-NameableContainerFactory {
+NamedScreenHandlerFactory {
     private final Inventory inventory = new Inventory(){
 
         @Override
-        public int getInvSize() {
+        public int size() {
             return 1;
         }
 
         @Override
-        public boolean isInvEmpty() {
+        public boolean isEmpty() {
             return LecternBlockEntity.this.book.isEmpty();
         }
 
         @Override
-        public ItemStack getInvStack(int slot) {
+        public ItemStack getStack(int slot) {
             return slot == 0 ? LecternBlockEntity.this.book : ItemStack.EMPTY;
         }
 
         @Override
-        public ItemStack takeInvStack(int slot, int amount) {
+        public ItemStack removeStack(int slot, int amount) {
             if (slot == 0) {
                 ItemStack itemStack = LecternBlockEntity.this.book.split(amount);
                 if (LecternBlockEntity.this.book.isEmpty()) {
@@ -67,7 +68,7 @@ NameableContainerFactory {
         }
 
         @Override
-        public ItemStack removeInvStack(int slot) {
+        public ItemStack removeStack(int slot) {
             if (slot == 0) {
                 ItemStack itemStack = LecternBlockEntity.this.book;
                 LecternBlockEntity.this.book = ItemStack.EMPTY;
@@ -78,11 +79,11 @@ NameableContainerFactory {
         }
 
         @Override
-        public void setInvStack(int slot, ItemStack stack) {
+        public void setStack(int slot, ItemStack stack) {
         }
 
         @Override
-        public int getInvMaxStackAmount() {
+        public int getMaxCountPerStack() {
             return 1;
         }
 
@@ -92,7 +93,7 @@ NameableContainerFactory {
         }
 
         @Override
-        public boolean canPlayerUseInv(PlayerEntity player) {
+        public boolean canPlayerUse(PlayerEntity player) {
             if (LecternBlockEntity.this.world.getBlockEntity(LecternBlockEntity.this.pos) != LecternBlockEntity.this) {
                 return false;
             }
@@ -103,7 +104,7 @@ NameableContainerFactory {
         }
 
         @Override
-        public boolean isValidInvStack(int slot, ItemStack stack) {
+        public boolean isValid(int slot, ItemStack stack) {
             return false;
         }
 
@@ -199,31 +200,31 @@ NameableContainerFactory {
             string = player.getName().getString();
             text = player.getDisplayName();
         }
-        Vec3d vec3d = new Vec3d((double)this.pos.getX() + 0.5, (double)this.pos.getY() + 0.5, (double)this.pos.getZ() + 0.5);
+        Vec3d vec3d = Vec3d.ofCenter(this.pos);
         return new ServerCommandSource(CommandOutput.DUMMY, vec3d, Vec2f.ZERO, (ServerWorld)this.world, 2, string, text, this.world.getServer(), player);
     }
 
     @Override
-    public boolean shouldNotCopyTagFromItem() {
+    public boolean copyItemDataRequiresOperator() {
         return true;
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
-        this.book = tag.contains("Book", 10) ? this.resolveBook(ItemStack.fromTag(tag.getCompound("Book")), null) : ItemStack.EMPTY;
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
+        this.book = tag.contains("Book", 10) ? this.resolveBook(ItemStack.fromNbt(tag.getCompound("Book")), null) : ItemStack.EMPTY;
         this.pageCount = WrittenBookItem.getPageCount(this.book);
         this.currentPage = MathHelper.clamp(tag.getInt("Page"), 0, this.pageCount - 1);
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
         if (!this.getBook().isEmpty()) {
-            tag.put("Book", this.getBook().toTag(new CompoundTag()));
-            tag.putInt("Page", this.currentPage);
+            nbt.put("Book", this.getBook().writeNbt(new NbtCompound()));
+            nbt.putInt("Page", this.currentPage);
         }
-        return tag;
+        return nbt;
     }
 
     @Override
@@ -232,13 +233,13 @@ NameableContainerFactory {
     }
 
     @Override
-    public Container createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity playerEntity) {
-        return new LecternContainer(syncId, this.inventory, this.propertyDelegate);
+    public ScreenHandler createMenu(int i, PlayerInventory playerInventory, PlayerEntity playerEntity) {
+        return new LecternScreenHandler(i, this.inventory, this.propertyDelegate);
     }
 
     @Override
     public Text getDisplayName() {
-        return new TranslatableText("container.lectern", new Object[0]);
+        return new TranslatableText("container.lectern");
     }
 }
 

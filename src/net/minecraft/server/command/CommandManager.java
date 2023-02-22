@@ -36,16 +36,20 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.RootCommandNode;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import net.minecraft.SharedConstants;
 import net.minecraft.command.CommandException;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.network.packet.s2c.play.CommandTreeS2CPacket;
 import net.minecraft.server.command.AdvancementCommand;
+import net.minecraft.server.command.AttributeCommand;
 import net.minecraft.server.command.BossBarCommand;
 import net.minecraft.server.command.ClearCommand;
 import net.minecraft.server.command.CloneCommand;
-import net.minecraft.server.command.CommandSource;
 import net.minecraft.server.command.DataCommand;
 import net.minecraft.server.command.DatapackCommand;
 import net.minecraft.server.command.DebugCommand;
@@ -65,6 +69,7 @@ import net.minecraft.server.command.HelpCommand;
 import net.minecraft.server.command.KickCommand;
 import net.minecraft.server.command.KillCommand;
 import net.minecraft.server.command.ListCommand;
+import net.minecraft.server.command.LocateBiomeCommand;
 import net.minecraft.server.command.LocateCommand;
 import net.minecraft.server.command.LootCommand;
 import net.minecraft.server.command.MeCommand;
@@ -89,7 +94,7 @@ import net.minecraft.server.command.StopSoundCommand;
 import net.minecraft.server.command.SummonCommand;
 import net.minecraft.server.command.TagCommand;
 import net.minecraft.server.command.TeamCommand;
-import net.minecraft.server.command.TeammsgCommand;
+import net.minecraft.server.command.TeamMsgCommand;
 import net.minecraft.server.command.TeleportCommand;
 import net.minecraft.server.command.TellRawCommand;
 import net.minecraft.server.command.TestCommand;
@@ -115,7 +120,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Texts;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
@@ -128,8 +133,9 @@ public class CommandManager {
     private static final Logger LOGGER = LogManager.getLogger();
     private final CommandDispatcher<ServerCommandSource> dispatcher = new CommandDispatcher();
 
-    public CommandManager(boolean isDedicatedServer) {
+    public CommandManager(RegistrationEnvironment environment) {
         AdvancementCommand.register(this.dispatcher);
+        AttributeCommand.register(this.dispatcher);
         ExecuteCommand.register(this.dispatcher);
         BossBarCommand.register(this.dispatcher);
         ClearCommand.register(this.dispatcher);
@@ -154,18 +160,18 @@ public class CommandManager {
         KillCommand.register(this.dispatcher);
         ListCommand.register(this.dispatcher);
         LocateCommand.register(this.dispatcher);
+        LocateBiomeCommand.register(this.dispatcher);
         LootCommand.register(this.dispatcher);
         MessageCommand.register(this.dispatcher);
         ParticleCommand.register(this.dispatcher);
         PlaySoundCommand.register(this.dispatcher);
-        PublishCommand.register(this.dispatcher);
         ReloadCommand.register(this.dispatcher);
         RecipeCommand.register(this.dispatcher);
         ReplaceItemCommand.register(this.dispatcher);
         SayCommand.register(this.dispatcher);
         ScheduleCommand.register(this.dispatcher);
         ScoreboardCommand.register(this.dispatcher);
-        SeedCommand.register(this.dispatcher);
+        SeedCommand.register(this.dispatcher, environment != RegistrationEnvironment.INTEGRATED);
         SetBlockCommand.register(this.dispatcher);
         SpawnPointCommand.register(this.dispatcher);
         SetWorldSpawnCommand.register(this.dispatcher);
@@ -175,7 +181,7 @@ public class CommandManager {
         SummonCommand.register(this.dispatcher);
         TagCommand.register(this.dispatcher);
         TeamCommand.register(this.dispatcher);
-        TeammsgCommand.register(this.dispatcher);
+        TeamMsgCommand.register(this.dispatcher);
         TeleportCommand.register(this.dispatcher);
         TellRawCommand.register(this.dispatcher);
         TimeCommand.register(this.dispatcher);
@@ -186,7 +192,7 @@ public class CommandManager {
         if (SharedConstants.isDevelopment) {
             TestCommand.register(this.dispatcher);
         }
-        if (isDedicatedServer) {
+        if (environment.dedicated) {
             BanIpCommand.register(this.dispatcher);
             BanListCommand.register(this.dispatcher);
             BanCommand.register(this.dispatcher);
@@ -200,6 +206,9 @@ public class CommandManager {
             SetIdleTimeoutCommand.register(this.dispatcher);
             StopCommand.register(this.dispatcher);
             WhitelistCommand.register(this.dispatcher);
+        }
+        if (environment.integrated) {
+            PublishCommand.register(this.dispatcher);
         }
         this.dispatcher.findAmbiguities((commandNode, commandNode2, commandNode3, collection) -> LOGGER.warn("Ambiguity between arguments {} and {} with inputs: {}", (Object)this.dispatcher.getPath(commandNode2), (Object)this.dispatcher.getPath(commandNode3), (Object)collection));
         this.dispatcher.setConsumer((commandContext, bl, i) -> ((ServerCommandSource)commandContext.getSource()).onCommandComplete((CommandContext<ServerCommandSource>)commandContext, bl, i));
@@ -228,31 +237,31 @@ public class CommandManager {
             commandSource.sendError(Texts.toText(commandSyntaxException.getRawMessage()));
             if (commandSyntaxException.getInput() != null && commandSyntaxException.getCursor() >= 0) {
                 i = Math.min(commandSyntaxException.getInput().length(), commandSyntaxException.getCursor());
-                Text text = new LiteralText("").formatted(Formatting.GRAY).styled(style -> style.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command)));
+                MutableText mutableText = new LiteralText("").formatted(Formatting.GRAY).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command)));
                 if (i > 10) {
-                    text.append("...");
+                    mutableText.append("...");
                 }
-                text.append(commandSyntaxException.getInput().substring(Math.max(0, i - 10), i));
+                mutableText.append(commandSyntaxException.getInput().substring(Math.max(0, i - 10), i));
                 if (i < commandSyntaxException.getInput().length()) {
-                    Text text2 = new LiteralText(commandSyntaxException.getInput().substring(i)).formatted(Formatting.RED, Formatting.UNDERLINE);
-                    text.append(text2);
+                    MutableText text = new LiteralText(commandSyntaxException.getInput().substring(i)).formatted(Formatting.RED, Formatting.UNDERLINE);
+                    mutableText.append(text);
                 }
-                text.append(new TranslatableText("command.context.here", new Object[0]).formatted(Formatting.RED, Formatting.ITALIC));
-                commandSource.sendError(text);
+                mutableText.append(new TranslatableText("command.context.here").formatted(Formatting.RED, Formatting.ITALIC));
+                commandSource.sendError(mutableText);
             }
             i = 0;
             return i;
         }
         catch (Exception exception) {
-            LiteralText text3 = new LiteralText(exception.getMessage() == null ? exception.getClass().getName() : exception.getMessage());
+            LiteralText mutableText2 = new LiteralText(exception.getMessage() == null ? exception.getClass().getName() : exception.getMessage());
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.error("Command exception: {}", (Object)command, (Object)exception);
                 StackTraceElement[] stackTraceElements = exception.getStackTrace();
                 for (int j = 0; j < Math.min(stackTraceElements.length, 3); ++j) {
-                    text3.append("\n\n").append(stackTraceElements[j].getMethodName()).append("\n ").append(stackTraceElements[j].getFileName()).append(":").append(String.valueOf(stackTraceElements[j].getLineNumber()));
+                    mutableText2.append("\n\n").append(stackTraceElements[j].getMethodName()).append("\n ").append(stackTraceElements[j].getFileName()).append(":").append(String.valueOf(stackTraceElements[j].getLineNumber()));
                 }
             }
-            commandSource.sendError(new TranslatableText("command.failed", new Object[0]).styled(style -> style.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text3))));
+            commandSource.sendError(new TranslatableText("command.failed").styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, mutableText2))));
             if (SharedConstants.isDevelopment) {
                 commandSource.sendError(new LiteralText(Util.getInnermostMessage(exception)));
                 LOGGER.error("'" + command + "' threw an exception", (Throwable)exception);
@@ -296,18 +305,18 @@ public class CommandManager {
         }
     }
 
-    public static LiteralArgumentBuilder<ServerCommandSource> literal(String string) {
-        return LiteralArgumentBuilder.literal((String)string);
+    public static LiteralArgumentBuilder<ServerCommandSource> literal(String literal) {
+        return LiteralArgumentBuilder.literal((String)literal);
     }
 
     public static <T> RequiredArgumentBuilder<ServerCommandSource, T> argument(String name, ArgumentType<T> type) {
         return RequiredArgumentBuilder.argument((String)name, type);
     }
 
-    public static Predicate<String> getCommandValidator(CommandParser commandParser) {
+    public static Predicate<String> getCommandValidator(CommandParser parser) {
         return string -> {
             try {
-                commandParser.parse(new StringReader(string));
+                parser.parse(new StringReader(string));
                 return true;
             }
             catch (CommandSyntaxException commandSyntaxException) {
@@ -332,6 +341,30 @@ public class CommandManager {
             return CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().createWithContext(parse.getReader());
         }
         return CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().createWithContext(parse.getReader());
+    }
+
+    public static void checkMissing() {
+        RootCommandNode rootCommandNode = new CommandManager(RegistrationEnvironment.ALL).getDispatcher().getRoot();
+        Set<ArgumentType<?>> set = ArgumentTypes.getAllArgumentTypes(rootCommandNode);
+        Set set2 = set.stream().filter(argumentType -> !ArgumentTypes.hasClass(argumentType)).collect(Collectors.toSet());
+        if (!set2.isEmpty()) {
+            LOGGER.warn("Missing type registration for following arguments:\n {}", (Object)set2.stream().map(argumentType -> "\t" + argumentType).collect(Collectors.joining(",\n")));
+            throw new IllegalStateException("Unregistered argument types");
+        }
+    }
+
+    public static enum RegistrationEnvironment {
+        ALL(true, true),
+        DEDICATED(false, true),
+        INTEGRATED(true, false);
+
+        private final boolean integrated;
+        private final boolean dedicated;
+
+        private RegistrationEnvironment(boolean integrated, boolean dedicated) {
+            this.integrated = integrated;
+            this.dedicated = dedicated;
+        }
     }
 
     @FunctionalInterface

@@ -6,24 +6,24 @@
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DSL$TypeReference
  *  com.mojang.datafixers.DataFixUtils
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.schemas.Schema
- *  com.mojang.datafixers.types.DynamicOps
  *  com.mojang.datafixers.types.Type
  *  com.mojang.datafixers.types.templates.Hook$HookFunction
  *  com.mojang.datafixers.types.templates.TypeTemplate
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
  */
 package net.minecraft.datafixer.schema;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFixUtils;
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.datafixers.types.DynamicOps;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.Hook;
 import com.mojang.datafixers.types.templates.TypeTemplate;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -34,7 +34,7 @@ import net.minecraft.datafixer.schema.Schema99;
 
 public class Schema704
 extends Schema {
-    protected static final Map<String, String> field_5744 = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    protected static final Map<String, String> BLOCK_RENAMES = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         hashMap.put("minecraft:furnace", "minecraft:furnace");
         hashMap.put("minecraft:lit_furnace", "minecraft:furnace");
         hashMap.put("minecraft:chest", "minecraft:chest");
@@ -110,12 +110,12 @@ extends Schema {
     protected static final Hook.HookFunction field_5745 = new Hook.HookFunction(){
 
         public <T> T apply(DynamicOps<T> dynamicOps, T object) {
-            return Schema99.method_5359(new Dynamic(dynamicOps, object), field_5744, "ArmorStand");
+            return Schema99.method_5359(new Dynamic(dynamicOps, object), BLOCK_RENAMES, "ArmorStand");
         }
     };
 
-    public Schema704(int i, Schema schema) {
-        super(i, schema);
+    public Schema704(int versionKey, Schema parent) {
+        super(versionKey, parent);
     }
 
     protected static void method_5296(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
@@ -157,9 +157,9 @@ extends Schema {
         return map;
     }
 
-    public void registerTypes(Schema schema, Map<String, Supplier<TypeTemplate>> map, Map<String, Supplier<TypeTemplate>> map2) {
-        super.registerTypes(schema, map, map2);
-        schema.registerType(false, TypeReferences.BLOCK_ENTITY, () -> DSL.taggedChoiceLazy((String)"id", (Type)DSL.namespacedString(), (Map)map2));
+    public void registerTypes(Schema schema, Map<String, Supplier<TypeTemplate>> entityTypes, Map<String, Supplier<TypeTemplate>> blockEntityTypes) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        schema.registerType(false, TypeReferences.BLOCK_ENTITY, () -> DSL.taggedChoiceLazy((String)"id", IdentifierNormalizingSchema.getIdentifierType(), (Map)blockEntityTypes));
         schema.registerType(true, TypeReferences.ITEM_STACK, () -> DSL.hook((TypeTemplate)DSL.optionalFields((String)"id", (TypeTemplate)TypeReferences.ITEM_NAME.in(schema), (String)"tag", (TypeTemplate)DSL.optionalFields((String)"EntityTag", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema), (String)"BlockEntityTag", (TypeTemplate)TypeReferences.BLOCK_ENTITY.in(schema), (String)"CanDestroy", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)), (String)"CanPlaceOn", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)))), (Hook.HookFunction)field_5745, (Hook.HookFunction)Hook.HookFunction.IDENTITY));
     }
 }

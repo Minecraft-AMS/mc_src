@@ -13,8 +13,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 
 public class EntityTrackerUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -24,9 +24,9 @@ implements Packet<ClientPlayPacketListener> {
     public EntityTrackerUpdateS2CPacket() {
     }
 
-    public EntityTrackerUpdateS2CPacket(int id, DataTracker tracker, boolean bl) {
+    public EntityTrackerUpdateS2CPacket(int id, DataTracker tracker, boolean forceUpdateAll) {
         this.id = id;
-        if (bl) {
+        if (forceUpdateAll) {
             this.trackedValues = tracker.getAllEntries();
             tracker.clearDirty();
         } else {

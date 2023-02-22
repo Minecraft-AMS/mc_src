@@ -41,9 +41,9 @@ import net.minecraft.client.texture.TextureStitcherCannotFitException;
 import net.minecraft.client.texture.TextureTickListener;
 import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.client.util.PngFile;
-import net.minecraft.container.PlayerContainer;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
@@ -61,9 +61,9 @@ extends AbstractTexture
 implements TextureTickListener {
     private static final Logger LOGGER = LogManager.getLogger();
     @Deprecated
-    public static final Identifier BLOCK_ATLAS_TEX = PlayerContainer.BLOCK_ATLAS_TEXTURE;
+    public static final Identifier BLOCK_ATLAS_TEXTURE = PlayerScreenHandler.BLOCK_ATLAS_TEXTURE;
     @Deprecated
-    public static final Identifier PARTICLE_ATLAS_TEX = new Identifier("textures/atlas/particles.png");
+    public static final Identifier PARTICLE_ATLAS_TEXTURE = new Identifier("textures/atlas/particles.png");
     private final List<Sprite> animatedSprites = Lists.newArrayList();
     private final Set<Identifier> spritesToLoad = Sets.newHashSet();
     private final Map<Identifier, Sprite> sprites = Maps.newHashMap();
@@ -82,8 +82,8 @@ implements TextureTickListener {
     public void upload(Data data) {
         this.spritesToLoad.clear();
         this.spritesToLoad.addAll(data.spriteIds);
-        LOGGER.info("Created: {}x{}x{} {}-atlas", (Object)data.width, (Object)data.height, (Object)data.field_21795, (Object)this.id);
-        TextureUtil.prepareImage(this.getGlId(), data.field_21795, data.width, data.height);
+        LOGGER.info("Created: {}x{}x{} {}-atlas", (Object)data.width, (Object)data.height, (Object)data.maxLevel, (Object)this.id);
+        TextureUtil.allocate(this.getGlId(), data.maxLevel, data.width, data.height);
         this.clear();
         for (Sprite sprite : data.sprites) {
             this.sprites.put(sprite.getId(), sprite);
@@ -146,7 +146,7 @@ implements TextureTickListener {
             throw new CrashException(crashReport);
         }
         profiler.swap("loading");
-        List<Sprite> list = this.method_18161(resourceManager, textureStitcher, l);
+        List<Sprite> list = this.loadSprites(resourceManager, textureStitcher, l);
         profiler.pop();
         return new Data(set, textureStitcher.getWidth(), textureStitcher.getHeight(), l, list);
     }
@@ -177,26 +177,26 @@ implements TextureTickListener {
                     return;
                 }
                 concurrentLinkedQueue.add(info);
-            }, Util.getServerWorkerExecutor()));
+            }, Util.getMainWorkerExecutor()));
         }
         CompletableFuture.allOf(list.toArray(new CompletableFuture[0])).join();
         return concurrentLinkedQueue;
     }
 
-    private List<Sprite> method_18161(ResourceManager resourceManager, TextureStitcher textureStitcher, int i) {
+    private List<Sprite> loadSprites(ResourceManager resourceManager, TextureStitcher textureStitcher, int maxLevel) {
         ConcurrentLinkedQueue concurrentLinkedQueue = new ConcurrentLinkedQueue();
         ArrayList list = Lists.newArrayList();
-        textureStitcher.getStitchedSprites((info, j, k, l, m) -> {
+        textureStitcher.getStitchedSprites((info, atlasWidth, atlasHeight, x, y) -> {
             if (info == MissingSprite.getMissingInfo()) {
-                MissingSprite missingSprite = MissingSprite.getMissingSprite(this, i, j, k, l, m);
+                MissingSprite missingSprite = MissingSprite.getMissingSprite(this, maxLevel, atlasWidth, atlasHeight, x, y);
                 concurrentLinkedQueue.add(missingSprite);
             } else {
                 list.add(CompletableFuture.runAsync(() -> {
-                    Sprite sprite = this.loadSprite(resourceManager, info, j, k, i, l, m);
+                    Sprite sprite = this.loadSprite(resourceManager, info, atlasWidth, atlasHeight, maxLevel, x, y);
                     if (sprite != null) {
                         concurrentLinkedQueue.add(sprite);
                     }
-                }, Util.getServerWorkerExecutor()));
+                }, Util.getMainWorkerExecutor()));
             }
         });
         CompletableFuture.allOf(list.toArray(new CompletableFuture[0])).join();
@@ -209,11 +209,11 @@ implements TextureTickListener {
      * Enabled aggressive exception aggregation
      */
     @Nullable
-    private Sprite loadSprite(ResourceManager container, Sprite.Info info, int i, int j, int k, int l, int m) {
+    private Sprite loadSprite(ResourceManager container, Sprite.Info info, int atlasWidth, int atlasHeight, int maxLevel, int x, int y) {
         Identifier identifier = this.getTexturePath(info.getId());
         try (Resource resource = container.getResource(identifier);){
             NativeImage nativeImage = NativeImage.read(resource.getInputStream());
-            Sprite sprite = new Sprite(this, info, k, i, j, l, m, nativeImage);
+            Sprite sprite = new Sprite(this, info, maxLevel, atlasWidth, atlasHeight, x, y, nativeImage);
             return sprite;
         }
         catch (RuntimeException runtimeException) {
@@ -226,8 +226,8 @@ implements TextureTickListener {
         }
     }
 
-    private Identifier getTexturePath(Identifier identifier) {
-        return new Identifier(identifier.getNamespace(), String.format("textures/%s%s", identifier.getPath(), ".png"));
+    private Identifier getTexturePath(Identifier id) {
+        return new Identifier(id.getNamespace(), String.format("textures/%s%s", id.getPath(), ".png"));
     }
 
     public void tickAnimatedSprites() {
@@ -266,8 +266,8 @@ implements TextureTickListener {
         return this.id;
     }
 
-    public void method_24198(Data data) {
-        this.setFilter(false, data.field_21795 > 0);
+    public void applyTextureFilter(Data data) {
+        this.setFilter(false, data.maxLevel > 0);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -275,15 +275,15 @@ implements TextureTickListener {
         final Set<Identifier> spriteIds;
         final int width;
         final int height;
-        final int field_21795;
+        final int maxLevel;
         final List<Sprite> sprites;
 
-        public Data(Set<Identifier> spriteIds, int width, int height, int i, List<Sprite> list) {
+        public Data(Set<Identifier> spriteIds, int width, int height, int maxLevel, List<Sprite> sprites) {
             this.spriteIds = spriteIds;
             this.width = width;
             this.height = height;
-            this.field_21795 = i;
-            this.sprites = list;
+            this.maxLevel = maxLevel;
+            this.sprites = sprites;
         }
     }
 }

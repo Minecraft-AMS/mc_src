@@ -27,11 +27,11 @@ import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.SpriteIdentifier;
-import net.minecraft.client.util.Texts;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
-import net.minecraft.text.Text;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.StringVisitable;
 import net.minecraft.util.SignType;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class SignBlockEntityRenderer
@@ -51,12 +51,12 @@ extends BlockEntityRenderer<SignBlockEntity> {
         if (blockState.getBlock() instanceof SignBlock) {
             matrixStack.translate(0.5, 0.5, 0.5);
             h = -((float)(blockState.get(SignBlock.ROTATION) * 360) / 16.0f);
-            matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(h));
+            matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(h));
             this.model.foot.visible = true;
         } else {
             matrixStack.translate(0.5, 0.5, 0.5);
             h = -blockState.get(WallSignBlock.FACING).asRotation();
-            matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(h));
+            matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(h));
             matrixStack.translate(0.0, -0.3125, -0.4375);
             this.model.foot.visible = false;
         }
@@ -73,25 +73,26 @@ extends BlockEntityRenderer<SignBlockEntity> {
         matrixStack.scale(0.010416667f, -0.010416667f, 0.010416667f);
         int l = signBlockEntity.getTextColor().getSignColor();
         double d = 0.4;
-        int m = (int)((double)NativeImage.method_24033(l) * 0.4);
-        int n = (int)((double)NativeImage.method_24034(l) * 0.4);
-        int o = (int)((double)NativeImage.method_24035(l) * 0.4);
-        int p = NativeImage.method_24031(0, o, n, m);
-        for (int q = 0; q < 4; ++q) {
-            String string = signBlockEntity.getTextBeingEditedOnRow(q, text -> {
-                List<Text> list = Texts.wrapLines(text, 90, textRenderer, false, true);
-                return list.isEmpty() ? "" : list.get(0).asFormattedString();
+        int m = (int)((double)NativeImage.getRed(l) * 0.4);
+        int n = (int)((double)NativeImage.getGreen(l) * 0.4);
+        int o = (int)((double)NativeImage.getBlue(l) * 0.4);
+        int p = NativeImage.getAbgrColor(0, o, n, m);
+        int q = 20;
+        for (int r = 0; r < 4; ++r) {
+            OrderedText orderedText = signBlockEntity.getTextBeingEditedOnRow(r, text -> {
+                List<OrderedText> list = textRenderer.wrapLines((StringVisitable)text, 90);
+                return list.isEmpty() ? OrderedText.EMPTY : list.get(0);
             });
-            if (string == null) continue;
-            float r = -textRenderer.getStringWidth(string) / 2;
-            textRenderer.draw(string, r, q * 10 - signBlockEntity.text.length * 5, p, false, matrixStack.peek().getModel(), vertexConsumerProvider, false, 0, i);
+            if (orderedText == null) continue;
+            float s = -textRenderer.getWidth(orderedText) / 2;
+            textRenderer.draw(orderedText, s, (float)(r * 10 - 20), p, false, matrixStack.peek().getModel(), vertexConsumerProvider, false, 0, i);
         }
         matrixStack.pop();
     }
 
     public static SpriteIdentifier getModelTexture(Block block) {
         SignType signType = block instanceof AbstractSignBlock ? ((AbstractSignBlock)block).getSignType() : SignType.OAK;
-        return TexturedRenderLayers.getSignTextureId(signType);
+        return TexturedRenderLayers.createSignTextureId(signType);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -108,9 +109,9 @@ extends BlockEntityRenderer<SignBlockEntity> {
         }
 
         @Override
-        public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
-            this.field.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
-            this.foot.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
+        public void render(MatrixStack matrices, VertexConsumer vertices, int light, int overlay, float red, float green, float blue, float alpha) {
+            this.field.render(matrices, vertices, light, overlay, red, green, blue, alpha);
+            this.foot.render(matrices, vertices, light, overlay, red, green, blue, alpha);
         }
     }
 }

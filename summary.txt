@@ -1,4 +1,4 @@
-Summary for ./1.15.2.jar
+Summary for ./1.16.5.jar
 Decompiled with CFR 0.152
 
 
@@ -9,6 +9,34 @@ create()
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 4 blocks at once
 
 
+net.minecraft.nbt.NbtIo
+----------------------------
+
+read(java.io.File )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+net.minecraft.util.dynamic.RegistryOps
+----------------------------
+
+load(com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> net.minecraft.util.registry.RegistryKey<? extends net.minecraft.util.registry.Registry<E>> net.minecraft.util.registry.RegistryKey<E> com.mojang.serialization.Decoder<E> )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+net.minecraft.world.level.storage.SessionLock
+----------------------------
+
+isLocked(java.nio.file.Path )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+net.minecraft.world.PersistentStateManager
+----------------------------
+
+readNbt(java.lang.String int )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
 net.minecraft.client.texture.NativeImage
 ----------------------------
 
@@ -16,10 +44,24 @@ getBytes()
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
 
 
+net.minecraft.client.gui.screen.pack.PackScreen
+----------------------------
+
+loadPackIcon(net.minecraft.client.texture.TextureManager net.minecraft.resource.ResourcePackProfile )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
 net.minecraft.client.util.RawTextureDataLoader
 ----------------------------
 
 loadRawTextureData(net.minecraft.resource.ResourceManager net.minecraft.util.Identifier )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+net.minecraft.client.resource.SplashTextResourceSupplier
+----------------------------
+
+prepare(net.minecraft.resource.ResourceManager net.minecraft.util.profiler.Profiler )
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
 
 
@@ -35,11 +77,4 @@ cropLeftChestTexture(java.io.InputStream )
 cropRightChestTexture(java.io.InputStream )
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
 cropSingleChestTexture(java.io.InputStream )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-
-
-net.minecraft.client.resource.SplashTextResourceSupplier
-----------------------------
-
-prepare(net.minecraft.resource.ResourceManager net.minecraft.util.profiler.Profiler )
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once

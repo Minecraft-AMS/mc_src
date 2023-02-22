@@ -10,29 +10,33 @@ import com.google.common.collect.Lists;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.gen.ChunkRandom;
+import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.FeatureConfig;
+import net.minecraft.world.gen.feature.MineshaftFeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
 
-public abstract class StructureStart {
-    public static final StructureStart DEFAULT = new StructureStart((StructureFeature)Feature.MINESHAFT, 0, 0, BlockBox.empty(), 0, 0L){
+public abstract class StructureStart<C extends FeatureConfig> {
+    public static final StructureStart<?> DEFAULT = new StructureStart<MineshaftFeatureConfig>(StructureFeature.MINESHAFT, 0, 0, BlockBox.empty(), 0, 0L){
 
         @Override
-        public void initialize(ChunkGenerator<?> chunkGenerator, StructureManager structureManager, int x, int z, Biome biome) {
+        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, int i, int j, Biome biome, MineshaftFeatureConfig mineshaftFeatureConfig) {
         }
     };
-    private final StructureFeature<?> feature;
+    private final StructureFeature<C> feature;
     protected final List<StructurePiece> children = Lists.newArrayList();
     protected BlockBox boundingBox;
     private final int chunkX;
@@ -40,17 +44,17 @@ public abstract class StructureStart {
     private int references;
     protected final ChunkRandom random;
 
-    public StructureStart(StructureFeature<?> feature, int chunkX, int chunkZ, BlockBox box, int references, long l) {
+    public StructureStart(StructureFeature<C> feature, int chunkX, int chunkZ, BlockBox box, int references, long seed) {
         this.feature = feature;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
         this.references = references;
         this.random = new ChunkRandom();
-        this.random.setStructureSeed(l, chunkX, chunkZ);
+        this.random.setCarverSeed(seed, chunkX, chunkZ);
         this.boundingBox = box;
     }
 
-    public abstract void initialize(ChunkGenerator<?> var1, StructureManager var2, int var3, int var4, Biome var5);
+    public abstract void init(DynamicRegistryManager var1, ChunkGenerator var2, StructureManager var3, int var4, int var5, Biome var6, C var7);
 
     public BlockBox getBoundingBox() {
         return this.boundingBox;
@@ -63,13 +67,19 @@ public abstract class StructureStart {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public void generateStructure(IWorld world, ChunkGenerator<?> chunkGenerator, Random random, BlockBox blockBox, ChunkPos chunkPos) {
+    public void generateStructure(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox box, ChunkPos chunkPos) {
         List<StructurePiece> list = this.children;
         synchronized (list) {
+            if (this.children.isEmpty()) {
+                return;
+            }
+            BlockBox blockBox = this.children.get((int)0).boundingBox;
+            Vec3i vec3i = blockBox.getCenter();
+            BlockPos blockPos = new BlockPos(vec3i.getX(), blockBox.minY, vec3i.getZ());
             Iterator<StructurePiece> iterator = this.children.iterator();
             while (iterator.hasNext()) {
                 StructurePiece structurePiece = iterator.next();
-                if (!structurePiece.getBoundingBox().intersects(blockBox) || structurePiece.generate(world, chunkGenerator, random, blockBox, chunkPos)) continue;
+                if (!structurePiece.getBoundingBox().intersects(box) || structurePiece.generate(world, structureAccessor, chunkGenerator, random, box, chunkPos, blockPos)) continue;
                 iterator.remove();
             }
             this.setBoundingBoxFromChildren();
@@ -86,48 +96,48 @@ public abstract class StructureStart {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public CompoundTag toTag(int chunkX, int chunkZ) {
-        CompoundTag compoundTag = new CompoundTag();
+    public NbtCompound toTag(int chunkX, int chunkZ) {
+        NbtCompound nbtCompound = new NbtCompound();
         if (!this.hasChildren()) {
-            compoundTag.putString("id", "INVALID");
-            return compoundTag;
+            nbtCompound.putString("id", "INVALID");
+            return nbtCompound;
         }
-        compoundTag.putString("id", Registry.STRUCTURE_FEATURE.getId(this.getFeature()).toString());
-        compoundTag.putInt("ChunkX", chunkX);
-        compoundTag.putInt("ChunkZ", chunkZ);
-        compoundTag.putInt("references", this.references);
-        compoundTag.put("BB", this.boundingBox.toNbt());
-        ListTag listTag = new ListTag();
+        nbtCompound.putString("id", Registry.STRUCTURE_FEATURE.getId(this.getFeature()).toString());
+        nbtCompound.putInt("ChunkX", chunkX);
+        nbtCompound.putInt("ChunkZ", chunkZ);
+        nbtCompound.putInt("references", this.references);
+        nbtCompound.put("BB", this.boundingBox.toNbt());
+        NbtList nbtList = new NbtList();
         List<StructurePiece> list = this.children;
         synchronized (list) {
             for (StructurePiece structurePiece : this.children) {
-                listTag.add(structurePiece.getTag());
+                nbtList.add(structurePiece.getTag());
             }
         }
-        compoundTag.put("Children", listTag);
-        return compoundTag;
+        nbtCompound.put("Children", nbtList);
+        return nbtCompound;
     }
 
-    protected void method_14978(int i, Random random, int j) {
-        int k = i - j;
-        int l = this.boundingBox.getBlockCountY() + 1;
-        if (l < k) {
-            l += random.nextInt(k - l);
+    protected void randomUpwardTranslation(int seaLevel, Random random, int minSeaLevelDistance) {
+        int i = seaLevel - minSeaLevelDistance;
+        int j = this.boundingBox.getBlockCountY() + 1;
+        if (j < i) {
+            j += random.nextInt(i - j);
         }
-        int m = l - this.boundingBox.maxY;
-        this.boundingBox.offset(0, m, 0);
+        int k = j - this.boundingBox.maxY;
+        this.boundingBox.move(0, k, 0);
         for (StructurePiece structurePiece : this.children) {
-            structurePiece.translate(0, m, 0);
+            structurePiece.translate(0, k, 0);
         }
     }
 
-    protected void method_14976(Random random, int i, int j) {
-        int k = j - i + 1 - this.boundingBox.getBlockCountY();
-        int l = k > 1 ? i + random.nextInt(k) : i;
-        int m = l - this.boundingBox.minY;
-        this.boundingBox.offset(0, m, 0);
+    protected void randomUpwardTranslation(Random random, int minY, int maxY) {
+        int i = maxY - minY + 1 - this.boundingBox.getBlockCountY();
+        int j = i > 1 ? minY + random.nextInt(i) : minY;
+        int k = j - this.boundingBox.minY;
+        this.boundingBox.move(0, k, 0);
         for (StructurePiece structurePiece : this.children) {
-            structurePiece.translate(0, m, 0);
+            structurePiece.translate(0, k, 0);
         }
     }
 
@@ -143,7 +153,7 @@ public abstract class StructureStart {
         return this.chunkZ;
     }
 
-    public BlockPos getPos() {
+    public BlockPos getBlockPos() {
         return new BlockPos(this.chunkX << 4, 0, this.chunkZ << 4);
     }
 

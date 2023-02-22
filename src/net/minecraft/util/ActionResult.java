@@ -17,5 +17,9 @@ public enum ActionResult {
     public boolean shouldSwingHand() {
         return this == SUCCESS;
     }
+
+    public static ActionResult success(boolean swingHand) {
+        return swingHand ? SUCCESS : CONSUME;
+    }
 }
 

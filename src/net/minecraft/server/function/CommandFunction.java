@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.brigadier.CommandDispatcher
  *  com.mojang.brigadier.ParseResults
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
@@ -11,6 +12,7 @@
 package net.minecraft.server.function;
 
 import com.google.common.collect.Lists;
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -41,11 +43,11 @@ public class CommandFunction {
         return this.elements;
     }
 
-    public static CommandFunction create(Identifier id, CommandFunctionManager commandFunctionManager, List<String> fileLines) {
-        ArrayList list = Lists.newArrayListWithCapacity((int)fileLines.size());
-        for (int i = 0; i < fileLines.size(); ++i) {
+    public static CommandFunction create(Identifier id, CommandDispatcher<ServerCommandSource> dispatcher, ServerCommandSource source, List<String> lines) {
+        ArrayList list = Lists.newArrayListWithCapacity((int)lines.size());
+        for (int i = 0; i < lines.size(); ++i) {
             int j = i + 1;
-            String string = fileLines.get(i).trim();
+            String string = lines.get(i).trim();
             StringReader stringReader = new StringReader(string);
             if (!stringReader.canRead() || stringReader.peek() == '#') continue;
             if (stringReader.peek() == '/') {
@@ -57,7 +59,7 @@ public class CommandFunction {
                 throw new IllegalArgumentException("Unknown or invalid command '" + string + "' on line " + j + " (did you mean '" + string2 + "'? Do not use a preceding forwards slash.)");
             }
             try {
-                ParseResults parseResults = commandFunctionManager.getServer().getCommandManager().getDispatcher().parse(stringReader, (Object)commandFunctionManager.getCommandFunctionSource());
+                ParseResults parseResults = dispatcher.parse(stringReader, (Object)source);
                 if (parseResults.getReader().canRead()) {
                     throw CommandManager.getException(parseResults);
                 }

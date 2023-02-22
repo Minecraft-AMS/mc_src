@@ -13,14 +13,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.network.PacketByteBuf;
 
 @ChannelHandler.Sharable
 public class SizePrepender
 extends MessageToByteEncoder<ByteBuf> {
     protected void encode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, ByteBuf byteBuf2) throws Exception {
         int i = byteBuf.readableBytes();
-        int j = PacketByteBuf.getVarIntSizeBytes(i);
+        int j = PacketByteBuf.getVarIntLength(i);
         if (j > 3) {
             throw new IllegalArgumentException("unable to fit " + i + " into " + 3);
         }

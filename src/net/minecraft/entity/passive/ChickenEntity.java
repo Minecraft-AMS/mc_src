@@ -18,16 +18,19 @@ import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.TemptGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
 import net.minecraft.entity.ai.pathing.PathNodeType;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
@@ -38,11 +41,11 @@ import net.minecraft.world.World;
 public class ChickenEntity
 extends AnimalEntity {
     private static final Ingredient BREEDING_INGREDIENT = Ingredient.ofItems(Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS);
-    public float field_6741;
-    public float field_6743;
-    public float field_6738;
-    public float field_6736;
-    public float field_6737 = 1.0f;
+    public float flapProgress;
+    public float maxWingDeviation;
+    public float prevMaxWingDeviation;
+    public float prevFlapProgress;
+    public float flapSpeed = 1.0f;
     public int eggLayTime = this.random.nextInt(6000) + 6000;
     public boolean jockey;
 
@@ -56,7 +59,7 @@ extends AnimalEntity {
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(1, new EscapeDangerGoal(this, 1.4));
         this.goalSelector.add(2, new AnimalMateGoal(this, 1.0));
-        this.goalSelector.add(3, new TemptGoal((MobEntityWithAi)this, 1.0, false, BREEDING_INGREDIENT));
+        this.goalSelector.add(3, new TemptGoal((PathAwareEntity)this, 1.0, false, BREEDING_INGREDIENT));
         this.goalSelector.add(4, new FollowParentGoal(this, 1.1));
         this.goalSelector.add(5, new WanderAroundFarGoal(this, 1.0));
         this.goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
@@ -68,29 +71,26 @@ extends AnimalEntity {
         return this.isBaby() ? dimensions.height * 0.85f : dimensions.height * 0.92f;
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(4.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.25);
+    public static DefaultAttributeContainer.Builder createChickenAttributes() {
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 4.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25);
     }
 
     @Override
     public void tickMovement() {
         super.tickMovement();
-        this.field_6736 = this.field_6741;
-        this.field_6738 = this.field_6743;
-        this.field_6743 = (float)((double)this.field_6743 + (double)(this.onGround ? -1 : 4) * 0.3);
-        this.field_6743 = MathHelper.clamp(this.field_6743, 0.0f, 1.0f);
-        if (!this.onGround && this.field_6737 < 1.0f) {
-            this.field_6737 = 1.0f;
+        this.prevFlapProgress = this.flapProgress;
+        this.prevMaxWingDeviation = this.maxWingDeviation;
+        this.maxWingDeviation = (float)((double)this.maxWingDeviation + (double)(this.onGround ? -1 : 4) * 0.3);
+        this.maxWingDeviation = MathHelper.clamp(this.maxWingDeviation, 0.0f, 1.0f);
+        if (!this.onGround && this.flapSpeed < 1.0f) {
+            this.flapSpeed = 1.0f;
         }
-        this.field_6737 = (float)((double)this.field_6737 * 0.9);
+        this.flapSpeed = (float)((double)this.flapSpeed * 0.9);
         Vec3d vec3d = this.getVelocity();
         if (!this.onGround && vec3d.y < 0.0) {
             this.setVelocity(vec3d.multiply(1.0, 0.6, 1.0));
         }
-        this.field_6741 += this.field_6737 * 2.0f;
+        this.flapProgress += this.flapSpeed * 2.0f;
         if (!this.world.isClient && this.isAlive() && !this.isBaby() && !this.hasJockey() && --this.eggLayTime <= 0) {
             this.playSound(SoundEvents.ENTITY_CHICKEN_EGG, 1.0f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
             this.dropItem(Items.EGG);
@@ -124,8 +124,8 @@ extends AnimalEntity {
     }
 
     @Override
-    public ChickenEntity createChild(PassiveEntity passiveEntity) {
-        return EntityType.CHICKEN.create(this.world);
+    public ChickenEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
+        return EntityType.CHICKEN.create(serverWorld);
     }
 
     @Override
@@ -134,32 +134,32 @@ extends AnimalEntity {
     }
 
     @Override
-    protected int getCurrentExperience(PlayerEntity player) {
+    protected int getXpToDrop(PlayerEntity player) {
         if (this.hasJockey()) {
             return 10;
         }
-        return super.getCurrentExperience(player);
+        return super.getXpToDrop(player);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.jockey = tag.getBoolean("IsChickenJockey");
-        if (tag.contains("EggLayTime")) {
-            this.eggLayTime = tag.getInt("EggLayTime");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.jockey = nbt.getBoolean("IsChickenJockey");
+        if (nbt.contains("EggLayTime")) {
+            this.eggLayTime = nbt.getInt("EggLayTime");
         }
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putBoolean("IsChickenJockey", this.jockey);
-        tag.putInt("EggLayTime", this.eggLayTime);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putBoolean("IsChickenJockey", this.jockey);
+        nbt.putInt("EggLayTime", this.eggLayTime);
     }
 
     @Override
     public boolean canImmediatelyDespawn(double distanceSquared) {
-        return this.hasJockey() && !this.hasPassengers();
+        return this.hasJockey();
     }
 
     @Override
@@ -169,7 +169,7 @@ extends AnimalEntity {
         float g = MathHelper.cos(this.bodyYaw * ((float)Math.PI / 180));
         float h = 0.1f;
         float i = 0.0f;
-        passenger.updatePosition(this.getX() + (double)(0.1f * f), this.getBodyY(0.5) + passenger.getHeightOffset() + 0.0, this.getZ() - (double)(0.1f * g));
+        passenger.setPosition(this.getX() + (double)(0.1f * f), this.getBodyY(0.5) + passenger.getHeightOffset() + 0.0, this.getZ() - (double)(0.1f * g));
         if (passenger instanceof LivingEntity) {
             ((LivingEntity)passenger).bodyYaw = this.bodyYaw;
         }
@@ -184,8 +184,8 @@ extends AnimalEntity {
     }
 
     @Override
-    public /* synthetic */ PassiveEntity createChild(PassiveEntity mate) {
-        return this.createChild(mate);
+    public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        return this.createChild(world, entity);
     }
 }
 

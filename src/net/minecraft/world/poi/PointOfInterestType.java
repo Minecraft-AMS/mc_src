@@ -2,21 +2,25 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Suppliers
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
+ *  it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
  */
 package net.minecraft.world.poi;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import net.minecraft.block.BedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -28,7 +32,8 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.village.VillagerProfession;
 
 public class PointOfInterestType {
-    private static final Predicate<PointOfInterestType> IS_USED_BY_PROFESSION = pointOfInterestType -> Registry.VILLAGER_PROFESSION.stream().map(VillagerProfession::getWorkStation).collect(Collectors.toSet()).contains(pointOfInterestType);
+    private static final Supplier<Set<PointOfInterestType>> VILLAGER_WORKSTATIONS = Suppliers.memoize(() -> Registry.VILLAGER_PROFESSION.stream().map(VillagerProfession::getWorkStation).collect(Collectors.toSet()));
+    public static final Predicate<PointOfInterestType> IS_USED_BY_PROFESSION = pointOfInterestType -> VILLAGER_WORKSTATIONS.get().contains(pointOfInterestType);
     public static final Predicate<PointOfInterestType> ALWAYS_TRUE = pointOfInterestType -> true;
     private static final Set<BlockState> BED_STATES = (Set)ImmutableList.of((Object)Blocks.RED_BED, (Object)Blocks.BLACK_BED, (Object)Blocks.BLUE_BED, (Object)Blocks.BROWN_BED, (Object)Blocks.CYAN_BED, (Object)Blocks.GRAY_BED, (Object)Blocks.GREEN_BED, (Object)Blocks.LIGHT_BLUE_BED, (Object)Blocks.LIGHT_GRAY_BED, (Object)Blocks.LIME_BED, (Object)Blocks.MAGENTA_BED, (Object)Blocks.ORANGE_BED, (Object[])new Block[]{Blocks.PINK_BED, Blocks.PURPLE_BED, Blocks.WHITE_BED, Blocks.YELLOW_BED}).stream().flatMap(block -> block.getStateManager().getStates().stream()).filter(blockState -> blockState.get(BedBlock.PART) == BedPart.HEAD).collect(ImmutableSet.toImmutableSet());
     private static final Map<BlockState, PointOfInterestType> BLOCK_STATE_TO_POINT_OF_INTEREST_TYPE = Maps.newHashMap();
@@ -52,6 +57,8 @@ public class PointOfInterestType {
     public static final PointOfInterestType BEEHIVE = PointOfInterestType.register("beehive", PointOfInterestType.getAllStatesOf(Blocks.BEEHIVE), 0, 1);
     public static final PointOfInterestType BEE_NEST = PointOfInterestType.register("bee_nest", PointOfInterestType.getAllStatesOf(Blocks.BEE_NEST), 0, 1);
     public static final PointOfInterestType NETHER_PORTAL = PointOfInterestType.register("nether_portal", PointOfInterestType.getAllStatesOf(Blocks.NETHER_PORTAL), 0, 1);
+    public static final PointOfInterestType LODESTONE = PointOfInterestType.register("lodestone", PointOfInterestType.getAllStatesOf(Blocks.LODESTONE), 0, 1);
+    protected static final Set<BlockState> REGISTERED_STATES = new ObjectOpenHashSet(BLOCK_STATE_TO_POINT_OF_INTEREST_TYPE.keySet());
     private final String id;
     private final Set<BlockState> blockStates;
     private final int ticketCount;
@@ -95,29 +102,25 @@ public class PointOfInterestType {
     }
 
     private static PointOfInterestType register(String id, Set<BlockState> workStationStates, int ticketCount, int searchDistance) {
-        return PointOfInterestType.setup(Registry.POINT_OF_INTEREST_TYPE.add(new Identifier(id), new PointOfInterestType(id, workStationStates, ticketCount, searchDistance)));
+        return PointOfInterestType.setup(Registry.register(Registry.POINT_OF_INTEREST_TYPE, new Identifier(id), new PointOfInterestType(id, workStationStates, ticketCount, searchDistance)));
     }
 
     private static PointOfInterestType register(String id, Set<BlockState> workStationStates, int ticketCount, Predicate<PointOfInterestType> completionCondition, int searchDistance) {
-        return PointOfInterestType.setup(Registry.POINT_OF_INTEREST_TYPE.add(new Identifier(id), new PointOfInterestType(id, workStationStates, ticketCount, completionCondition, searchDistance)));
+        return PointOfInterestType.setup(Registry.register(Registry.POINT_OF_INTEREST_TYPE, new Identifier(id), new PointOfInterestType(id, workStationStates, ticketCount, completionCondition, searchDistance)));
     }
 
-    private static PointOfInterestType setup(PointOfInterestType pointOfInterestType) {
-        pointOfInterestType.blockStates.forEach(blockState -> {
-            PointOfInterestType pointOfInterestType2 = BLOCK_STATE_TO_POINT_OF_INTEREST_TYPE.put((BlockState)blockState, pointOfInterestType);
+    private static PointOfInterestType setup(PointOfInterestType poiType) {
+        poiType.blockStates.forEach(blockState -> {
+            PointOfInterestType pointOfInterestType2 = BLOCK_STATE_TO_POINT_OF_INTEREST_TYPE.put((BlockState)blockState, poiType);
             if (pointOfInterestType2 != null) {
                 throw Util.throwOrPause(new IllegalStateException(String.format("%s is defined in too many tags", blockState)));
             }
         });
-        return pointOfInterestType;
+        return poiType;
     }
 
     public static Optional<PointOfInterestType> from(BlockState state) {
         return Optional.ofNullable(BLOCK_STATE_TO_POINT_OF_INTEREST_TYPE.get(state));
-    }
-
-    public static Stream<BlockState> getAllAssociatedStates() {
-        return BLOCK_STATE_TO_POINT_OF_INTEREST_TYPE.keySet().stream();
     }
 }
 

@@ -16,7 +16,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.AbstractEntityAttributeContainer;
+import net.minecraft.entity.attribute.AttributeContainer;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
@@ -53,7 +53,7 @@ public class StatusEffect {
 
     public void applyUpdateEffect(LivingEntity entity, int amplifier) {
         if (this == StatusEffects.REGENERATION) {
-            if (entity.getHealth() < entity.getMaximumHealth()) {
+            if (entity.getHealth() < entity.getMaxHealth()) {
                 entity.heal(1.0f);
             }
         } else if (this == StatusEffects.POISON) {
@@ -132,7 +132,7 @@ public class StatusEffect {
     }
 
     public Text getName() {
-        return new TranslatableText(this.getTranslationKey(), new Object[0]);
+        return new TranslatableText(this.getTranslationKey());
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -155,26 +155,26 @@ public class StatusEffect {
         return this.attributeModifiers;
     }
 
-    public void onRemoved(LivingEntity entity, AbstractEntityAttributeContainer attributes, int amplifier) {
+    public void onRemoved(LivingEntity entity, AttributeContainer attributes, int amplifier) {
         for (Map.Entry<EntityAttribute, EntityAttributeModifier> entry : this.attributeModifiers.entrySet()) {
-            EntityAttributeInstance entityAttributeInstance = attributes.get(entry.getKey());
+            EntityAttributeInstance entityAttributeInstance = attributes.getCustomInstance(entry.getKey());
             if (entityAttributeInstance == null) continue;
             entityAttributeInstance.removeModifier(entry.getValue());
         }
     }
 
-    public void onApplied(LivingEntity entity, AbstractEntityAttributeContainer attributes, int amplifier) {
+    public void onApplied(LivingEntity entity, AttributeContainer attributes, int amplifier) {
         for (Map.Entry<EntityAttribute, EntityAttributeModifier> entry : this.attributeModifiers.entrySet()) {
-            EntityAttributeInstance entityAttributeInstance = attributes.get(entry.getKey());
+            EntityAttributeInstance entityAttributeInstance = attributes.getCustomInstance(entry.getKey());
             if (entityAttributeInstance == null) continue;
             EntityAttributeModifier entityAttributeModifier = entry.getValue();
             entityAttributeInstance.removeModifier(entityAttributeModifier);
-            entityAttributeInstance.addModifier(new EntityAttributeModifier(entityAttributeModifier.getId(), this.getTranslationKey() + " " + amplifier, this.adjustModifierAmount(amplifier, entityAttributeModifier), entityAttributeModifier.getOperation()));
+            entityAttributeInstance.addPersistentModifier(new EntityAttributeModifier(entityAttributeModifier.getId(), this.getTranslationKey() + " " + amplifier, this.adjustModifierAmount(amplifier, entityAttributeModifier), entityAttributeModifier.getOperation()));
         }
     }
 
     public double adjustModifierAmount(int amplifier, EntityAttributeModifier modifier) {
-        return modifier.getAmount() * (double)(amplifier + 1);
+        return modifier.getValue() * (double)(amplifier + 1);
     }
 
     @Environment(value=EnvType.CLIENT)

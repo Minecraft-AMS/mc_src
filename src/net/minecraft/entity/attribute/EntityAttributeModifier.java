@@ -3,6 +3,9 @@
  * 
  * Could not load the following classes:
  *  io.netty.util.internal.ThreadLocalRandom
+ *  org.apache.logging.log4j.LogManager
+ *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.attribute;
 
@@ -11,27 +14,31 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.function.Supplier;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.math.MathHelper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 public class EntityAttributeModifier {
-    private final double amount;
+    private static final Logger LOGGER = LogManager.getLogger();
+    private final double value;
     private final Operation operation;
     private final Supplier<String> nameGetter;
     private final UUID uuid;
-    private boolean serialize = true;
 
-    public EntityAttributeModifier(String name, double amount, Operation operation) {
-        this(MathHelper.randomUuid((Random)ThreadLocalRandom.current()), () -> name, amount, operation);
+    public EntityAttributeModifier(String name, double value, Operation operation) {
+        this(MathHelper.randomUuid((Random)ThreadLocalRandom.current()), () -> name, value, operation);
     }
 
-    public EntityAttributeModifier(UUID uuid, String name, double amount, Operation operation) {
-        this(uuid, () -> name, amount, operation);
+    public EntityAttributeModifier(UUID uuid, String name, double value, Operation operation) {
+        this(uuid, () -> name, value, operation);
     }
 
-    public EntityAttributeModifier(UUID uuid, Supplier<String> nameGetter, double amount, Operation operation) {
+    public EntityAttributeModifier(UUID uuid, Supplier<String> nameGetter, double value, Operation operation) {
         this.uuid = uuid;
         this.nameGetter = nameGetter;
-        this.amount = amount;
+        this.value = value;
         this.operation = operation;
     }
 
@@ -47,17 +54,8 @@ public class EntityAttributeModifier {
         return this.operation;
     }
 
-    public double getAmount() {
-        return this.amount;
-    }
-
-    public boolean shouldSerialize() {
-        return this.serialize;
-    }
-
-    public EntityAttributeModifier setSerialize(boolean serialize) {
-        this.serialize = serialize;
-        return this;
+    public double getValue() {
+        return this.value;
     }
 
     public boolean equals(Object o) {
@@ -72,11 +70,33 @@ public class EntityAttributeModifier {
     }
 
     public int hashCode() {
-        return this.uuid != null ? this.uuid.hashCode() : 0;
+        return this.uuid.hashCode();
     }
 
     public String toString() {
-        return "AttributeModifier{amount=" + this.amount + ", operation=" + (Object)((Object)this.operation) + ", name='" + this.nameGetter.get() + '\'' + ", id=" + this.uuid + ", serialize=" + this.serialize + '}';
+        return "AttributeModifier{amount=" + this.value + ", operation=" + (Object)((Object)this.operation) + ", name='" + this.nameGetter.get() + '\'' + ", id=" + this.uuid + '}';
+    }
+
+    public NbtCompound toNbt() {
+        NbtCompound nbtCompound = new NbtCompound();
+        nbtCompound.putString("Name", this.getName());
+        nbtCompound.putDouble("Amount", this.value);
+        nbtCompound.putInt("Operation", this.operation.getId());
+        nbtCompound.putUuid("UUID", this.uuid);
+        return nbtCompound;
+    }
+
+    @Nullable
+    public static EntityAttributeModifier fromNbt(NbtCompound nbt) {
+        try {
+            UUID uUID = nbt.getUuid("UUID");
+            Operation operation = Operation.fromId(nbt.getInt("Operation"));
+            return new EntityAttributeModifier(uUID, nbt.getString("Name"), nbt.getDouble("Amount"), operation);
+        }
+        catch (Exception exception) {
+            LOGGER.warn("Unable to create attribute: {}", (Object)exception.getMessage());
+            return null;
+        }
     }
 
     public static enum Operation {

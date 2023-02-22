@@ -2,11 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Lists
+ *  com.mojang.datafixers.util.Pair
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.server.network;
 
+import com.google.common.collect.Lists;
+import com.mojang.datafixers.util.Pair;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -15,13 +20,12 @@ import java.util.function.Consumer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.map.MapState;
@@ -75,7 +79,7 @@ public class EntityTrackerEntry {
         this.lastYaw = MathHelper.floor(entity.yaw * 256.0f / 360.0f);
         this.lastPitch = MathHelper.floor(entity.pitch * 256.0f / 360.0f);
         this.lastHeadPitch = MathHelper.floor(entity.getHeadYaw() * 256.0f / 360.0f);
-        this.lastOnGround = entity.onGround;
+        this.lastOnGround = entity.isOnGround();
     }
 
     public void tick() {
@@ -106,7 +110,7 @@ public class EntityTrackerEntry {
                 int j = MathHelper.floor(this.entity.pitch * 256.0f / 360.0f);
                 boolean bl2 = bl = Math.abs(i - this.lastYaw) >= 1 || Math.abs(j - this.lastPitch) >= 1;
                 if (bl) {
-                    this.receiver.accept(new EntityS2CPacket.Rotate(this.entity.getEntityId(), (byte)i, (byte)j, this.entity.onGround));
+                    this.receiver.accept(new EntityS2CPacket.Rotate(this.entity.getEntityId(), (byte)i, (byte)j, this.entity.isOnGround()));
                     this.lastYaw = i;
                     this.lastPitch = j;
                 }
@@ -125,22 +129,22 @@ public class EntityTrackerEntry {
                 Packet<ClientPlayPacketListener> packet2 = null;
                 boolean bl3 = bl2 || this.trackingTick % 60 == 0;
                 boolean bl = bl4 = Math.abs(i - this.lastYaw) >= 1 || Math.abs(j - this.lastPitch) >= 1;
-                if (this.trackingTick > 0 || this.entity instanceof ProjectileEntity) {
+                if (this.trackingTick > 0 || this.entity instanceof PersistentProjectileEntity) {
                     boolean bl5;
                     long l = EntityS2CPacket.encodePacketCoordinate(vec3d.x);
                     long m = EntityS2CPacket.encodePacketCoordinate(vec3d.y);
                     long n = EntityS2CPacket.encodePacketCoordinate(vec3d.z);
                     boolean bl6 = bl5 = l < -32768L || l > 32767L || m < -32768L || m > 32767L || n < -32768L || n > 32767L;
-                    if (bl5 || this.updatesWithoutVehicle > 400 || this.hadVehicle || this.lastOnGround != this.entity.onGround) {
-                        this.lastOnGround = this.entity.onGround;
+                    if (bl5 || this.updatesWithoutVehicle > 400 || this.hadVehicle || this.lastOnGround != this.entity.isOnGround()) {
+                        this.lastOnGround = this.entity.isOnGround();
                         this.updatesWithoutVehicle = 0;
                         packet2 = new EntityPositionS2CPacket(this.entity);
-                    } else if (bl3 && bl4 || this.entity instanceof ProjectileEntity) {
-                        packet2 = new EntityS2CPacket.RotateAndMoveRelative(this.entity.getEntityId(), (short)l, (short)m, (short)n, (byte)i, (byte)j, this.entity.onGround);
+                    } else if (bl3 && bl4 || this.entity instanceof PersistentProjectileEntity) {
+                        packet2 = new EntityS2CPacket.RotateAndMoveRelative(this.entity.getEntityId(), (short)l, (short)m, (short)n, (byte)i, (byte)j, this.entity.isOnGround());
                     } else if (bl3) {
-                        packet2 = new EntityS2CPacket.MoveRelative(this.entity.getEntityId(), (short)l, (short)m, (short)n, this.entity.onGround);
+                        packet2 = new EntityS2CPacket.MoveRelative(this.entity.getEntityId(), (short)l, (short)m, (short)n, this.entity.isOnGround());
                     } else if (bl4) {
-                        packet2 = new EntityS2CPacket.Rotate(this.entity.getEntityId(), (byte)i, (byte)j, this.entity.onGround);
+                        packet2 = new EntityS2CPacket.Rotate(this.entity.getEntityId(), (byte)i, (byte)j, this.entity.isOnGround());
                     }
                 }
                 if ((this.alwaysUpdateVelocity || this.entity.velocityDirty || this.entity instanceof LivingEntity && ((LivingEntity)this.entity).isFallFlying()) && this.trackingTick > 0 && ((d = (vec3d2 = this.entity.getVelocity()).squaredDistanceTo(this.velocity)) > 1.0E-7 || d > 0.0 && vec3d2.lengthSquared() == 0.0)) {
@@ -198,8 +202,7 @@ public class EntityTrackerEntry {
         }
         boolean bl = this.alwaysUpdateVelocity;
         if (this.entity instanceof LivingEntity) {
-            EquipmentSlot[] entityAttributeContainer = (EquipmentSlot[])((LivingEntity)this.entity).getAttributes();
-            Collection<EntityAttributeInstance> collection = entityAttributeContainer.buildTrackedAttributesCollection();
+            Collection<EntityAttributeInstance> collection = ((LivingEntity)this.entity).getAttributes().getAttributesToSend();
             if (!collection.isEmpty()) {
                 sender.accept(new EntityAttributesS2CPacket(this.entity.getEntityId(), collection));
             }
@@ -212,10 +215,14 @@ public class EntityTrackerEntry {
             sender.accept(new EntityVelocityUpdateS2CPacket(this.entity.getEntityId(), this.velocity));
         }
         if (this.entity instanceof LivingEntity) {
+            ArrayList list = Lists.newArrayList();
             for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
                 ItemStack itemStack = ((LivingEntity)this.entity).getEquippedStack(equipmentSlot);
                 if (itemStack.isEmpty()) continue;
-                sender.accept(new EntityEquipmentUpdateS2CPacket(this.entity.getEntityId(), equipmentSlot, itemStack));
+                list.add(Pair.of((Object)((Object)equipmentSlot), (Object)itemStack.copy()));
+            }
+            if (!list.isEmpty()) {
+                sender.accept(new EntityEquipmentUpdateS2CPacket(this.entity.getEntityId(), list));
             }
         }
         if (this.entity instanceof LivingEntity) {
@@ -241,8 +248,7 @@ public class EntityTrackerEntry {
             this.sendSyncPacket(new EntityTrackerUpdateS2CPacket(this.entity.getEntityId(), dataTracker, false));
         }
         if (this.entity instanceof LivingEntity) {
-            EntityAttributeContainer entityAttributeContainer = (EntityAttributeContainer)((LivingEntity)this.entity).getAttributes();
-            Set<EntityAttributeInstance> set = entityAttributeContainer.getTrackedAttributes();
+            Set<EntityAttributeInstance> set = ((LivingEntity)this.entity).getAttributes().getTracked();
             if (!set.isEmpty()) {
                 this.sendSyncPacket(new EntityAttributesS2CPacket(this.entity.getEntityId(), set));
             }

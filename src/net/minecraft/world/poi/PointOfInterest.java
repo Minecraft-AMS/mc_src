@@ -2,29 +2,31 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.poi;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import java.util.Map;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Objects;
-import net.minecraft.util.DynamicSerializable;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.poi.PointOfInterestType;
 
-public class PointOfInterest
-implements DynamicSerializable {
+public class PointOfInterest {
     private final BlockPos pos;
     private final PointOfInterestType type;
     private int freeTickets;
     private final Runnable updateListener;
+
+    public static Codec<PointOfInterest> createCodec(Runnable updateListener) {
+        return RecordCodecBuilder.create(instance -> instance.group((App)BlockPos.CODEC.fieldOf("pos").forGetter(pointOfInterest -> pointOfInterest.pos), (App)Registry.POINT_OF_INTEREST_TYPE.fieldOf("type").forGetter(pointOfInterest -> pointOfInterest.type), (App)Codec.INT.fieldOf("free_tickets").orElse((Object)0).forGetter(pointOfInterest -> pointOfInterest.freeTickets), (App)RecordCodecBuilder.point((Object)updateListener)).apply((Applicative)instance, PointOfInterest::new));
+    }
 
     private PointOfInterest(BlockPos pos, PointOfInterestType type, int freeTickets, Runnable updateListener) {
         this.pos = pos.toImmutable();
@@ -35,15 +37,6 @@ implements DynamicSerializable {
 
     public PointOfInterest(BlockPos pos, PointOfInterestType type, Runnable updateListener) {
         this(pos, type, type.getTicketCount(), updateListener);
-    }
-
-    public <T> PointOfInterest(Dynamic<T> dynamic, Runnable updateListener) {
-        this(dynamic.get("pos").map(BlockPos::deserialize).orElse(new BlockPos(0, 0, 0)), Registry.POINT_OF_INTEREST_TYPE.get(new Identifier(dynamic.get("type").asString(""))), dynamic.get("free_tickets").asInt(0), updateListener);
-    }
-
-    @Override
-    public <T> T serialize(DynamicOps<T> ops) {
-        return (T)ops.createMap((Map)ImmutableMap.of((Object)ops.createString("pos"), this.pos.serialize(ops), (Object)ops.createString("type"), (Object)ops.createString(Registry.POINT_OF_INTEREST_TYPE.getId(this.type).toString()), (Object)ops.createString("free_tickets"), (Object)ops.createInt(this.freeTickets)));
     }
 
     protected boolean reserveTicket() {
@@ -80,14 +73,14 @@ implements DynamicSerializable {
         return this.type;
     }
 
-    public boolean equals(Object obj) {
-        if (this == obj) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (obj == null || this.getClass() != obj.getClass()) {
+        if (o == null || this.getClass() != o.getClass()) {
             return false;
         }
-        return Objects.equals(this.pos, ((PointOfInterest)obj).pos);
+        return Objects.equals(this.pos, ((PointOfInterest)o).pos);
     }
 
     public int hashCode() {

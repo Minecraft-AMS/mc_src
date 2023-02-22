@@ -19,12 +19,12 @@ import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class ItemEntityRenderer
@@ -32,11 +32,11 @@ extends EntityRenderer<ItemEntity> {
     private final ItemRenderer itemRenderer;
     private final Random random = new Random();
 
-    public ItemEntityRenderer(EntityRenderDispatcher dispatcher, ItemRenderer renderer) {
+    public ItemEntityRenderer(EntityRenderDispatcher dispatcher, ItemRenderer itemRenderer) {
         super(dispatcher);
-        this.itemRenderer = renderer;
-        this.shadowSize = 0.15f;
-        this.shadowDarkness = 0.75f;
+        this.itemRenderer = itemRenderer;
+        this.shadowRadius = 0.15f;
+        this.shadowOpacity = 0.75f;
     }
 
     private int getRenderedAmount(ItemStack stack) {
@@ -65,11 +65,11 @@ extends EntityRenderer<ItemEntity> {
         boolean bl = bakedModel.hasDepth();
         int k = this.getRenderedAmount(itemStack);
         float h = 0.25f;
-        float l = MathHelper.sin(((float)itemEntity.getAge() + g) / 10.0f + itemEntity.hoverHeight) * 0.1f + 0.1f;
+        float l = MathHelper.sin(((float)itemEntity.getItemAge() + g) / 10.0f + itemEntity.uniqueOffset) * 0.1f + 0.1f;
         float m = bakedModel.getTransformation().getTransformation((ModelTransformation.Mode)ModelTransformation.Mode.GROUND).scale.getY();
         matrixStack.translate(0.0, l + 0.25f * m, 0.0);
-        float n = ((float)itemEntity.getAge() + g) / 20.0f + itemEntity.hoverHeight;
-        matrixStack.multiply(Vector3f.POSITIVE_Y.getRadialQuaternion(n));
+        float n = itemEntity.method_27314(g);
+        matrixStack.multiply(Vec3f.POSITIVE_Y.getRadialQuaternion(n));
         float o = bakedModel.getTransformation().ground.scale.getX();
         float p = bakedModel.getTransformation().ground.scale.getY();
         float q = bakedModel.getTransformation().ground.scale.getZ();
@@ -104,7 +104,7 @@ extends EntityRenderer<ItemEntity> {
 
     @Override
     public Identifier getTexture(ItemEntity itemEntity) {
-        return SpriteAtlasTexture.BLOCK_ATLAS_TEX;
+        return SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE;
     }
 }
 

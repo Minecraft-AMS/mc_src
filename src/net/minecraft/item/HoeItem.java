@@ -3,27 +3,23 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
- *  com.google.common.collect.Multimap
  */
 package net.minecraft.item;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
-import net.minecraft.item.ToolItem;
+import net.minecraft.item.MiningToolItem;
 import net.minecraft.item.ToolMaterial;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -33,13 +29,12 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 
 public class HoeItem
-extends ToolItem {
-    private final float attackSpeed;
+extends MiningToolItem {
+    private static final Set<Block> EFFECTIVE_BLOCKS = ImmutableSet.of((Object)Blocks.NETHER_WART_BLOCK, (Object)Blocks.WARPED_WART_BLOCK, (Object)Blocks.HAY_BLOCK, (Object)Blocks.DRIED_KELP_BLOCK, (Object)Blocks.TARGET, (Object)Blocks.SHROOMLIGHT, (Object[])new Block[]{Blocks.SPONGE, Blocks.WET_SPONGE, Blocks.JUNGLE_LEAVES, Blocks.OAK_LEAVES, Blocks.SPRUCE_LEAVES, Blocks.DARK_OAK_LEAVES, Blocks.ACACIA_LEAVES, Blocks.BIRCH_LEAVES});
     protected static final Map<Block, BlockState> TILLED_BLOCKS = Maps.newHashMap((Map)ImmutableMap.of((Object)Blocks.GRASS_BLOCK, (Object)Blocks.FARMLAND.getDefaultState(), (Object)Blocks.GRASS_PATH, (Object)Blocks.FARMLAND.getDefaultState(), (Object)Blocks.DIRT, (Object)Blocks.FARMLAND.getDefaultState(), (Object)Blocks.COARSE_DIRT, (Object)Blocks.DIRT.getDefaultState()));
 
-    public HoeItem(ToolMaterial material, float attackSpeed, Item.Settings settings) {
-        super(material, settings);
-        this.attackSpeed = attackSpeed;
+    protected HoeItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
+        super(attackDamage, attackSpeed, material, EFFECTIVE_BLOCKS, settings);
     }
 
     @Override
@@ -56,25 +51,9 @@ extends ToolItem {
                     context.getStack().damage(1, playerEntity, p -> p.sendToolBreakStatus(context.getHand()));
                 }
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         return ActionResult.PASS;
-    }
-
-    @Override
-    public boolean postHit(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        stack.damage(1, attacker, e -> e.sendEquipmentBreakStatus(EquipmentSlot.MAINHAND));
-        return true;
-    }
-
-    @Override
-    public Multimap<String, EntityAttributeModifier> getModifiers(EquipmentSlot slot) {
-        Multimap<String, EntityAttributeModifier> multimap = super.getModifiers(slot);
-        if (slot == EquipmentSlot.MAINHAND) {
-            multimap.put((Object)EntityAttributes.ATTACK_DAMAGE.getId(), (Object)new EntityAttributeModifier(ATTACK_DAMAGE_MODIFIER_UUID, "Weapon modifier", 0.0, EntityAttributeModifier.Operation.ADDITION));
-            multimap.put((Object)EntityAttributes.ATTACK_SPEED.getId(), (Object)new EntityAttributeModifier(ATTACK_SPEED_MODIFIER_UUID, "Weapon modifier", (double)this.attackSpeed, EntityAttributeModifier.Operation.ADDITION));
-        }
-        return multimap;
     }
 }
 

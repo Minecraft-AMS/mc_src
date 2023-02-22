@@ -6,13 +6,18 @@
  */
 package net.minecraft.world.chunk;
 
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
@@ -50,7 +55,7 @@ CollisionView {
         for (k = minPos.getX() >> 4; k <= maxPos.getX() >> 4; ++k) {
             for (l = minPos.getZ() >> 4; l <= maxPos.getZ() >> 4; ++l) {
                 Chunk chunk = this.chunks[k - this.minX][l - this.minZ];
-                if (chunk == null || chunk.method_12228(minPos.getY(), maxPos.getY())) continue;
+                if (chunk == null || chunk.areSectionsEmptyBetween(minPos.getY(), maxPos.getY())) continue;
                 this.empty = false;
                 return;
             }
@@ -77,7 +82,7 @@ CollisionView {
     }
 
     @Override
-    public BlockView getExistingChunk(int chunkX, int chunkZ) {
+    public BlockView getChunkAsView(int chunkX, int chunkZ) {
         return this.method_22353(chunkX, chunkZ);
     }
 
@@ -90,7 +95,7 @@ CollisionView {
 
     @Override
     public BlockState getBlockState(BlockPos pos) {
-        if (World.isHeightInvalid(pos)) {
+        if (World.isOutOfBuildLimitVertically(pos)) {
             return Blocks.AIR.getDefaultState();
         }
         Chunk chunk = this.method_22354(pos);
@@ -98,8 +103,18 @@ CollisionView {
     }
 
     @Override
+    public Stream<VoxelShape> getEntityCollisions(@Nullable Entity entity, Box box, Predicate<Entity> predicate) {
+        return Stream.empty();
+    }
+
+    @Override
+    public Stream<VoxelShape> getCollisions(@Nullable Entity entity, Box box, Predicate<Entity> predicate) {
+        return this.getBlockCollisions(entity, box);
+    }
+
+    @Override
     public FluidState getFluidState(BlockPos pos) {
-        if (World.isHeightInvalid(pos)) {
+        if (World.isOutOfBuildLimitVertically(pos)) {
             return Fluids.EMPTY.getDefaultState();
         }
         Chunk chunk = this.method_22354(pos);

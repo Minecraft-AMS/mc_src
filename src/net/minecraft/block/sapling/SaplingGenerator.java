@@ -9,35 +9,36 @@ package net.minecraft.block.sapling;
 import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.BranchedTreeFeatureConfig;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class SaplingGenerator {
     @Nullable
-    protected abstract ConfiguredFeature<BranchedTreeFeatureConfig, ?> createTreeFeature(Random var1, boolean var2);
+    protected abstract ConfiguredFeature<TreeFeatureConfig, ?> createTreeFeature(Random var1, boolean var2);
 
-    public boolean generate(IWorld iWorld, ChunkGenerator<?> chunkGenerator, BlockPos blockPos, BlockState blockState, Random random) {
-        ConfiguredFeature<BranchedTreeFeatureConfig, ?> configuredFeature = this.createTreeFeature(random, this.method_24282(iWorld, blockPos));
+    public boolean generate(ServerWorld world, ChunkGenerator chunkGenerator, BlockPos pos, BlockState state, Random random) {
+        ConfiguredFeature<TreeFeatureConfig, ?> configuredFeature = this.createTreeFeature(random, this.method_24282(world, pos));
         if (configuredFeature == null) {
             return false;
         }
-        iWorld.setBlockState(blockPos, Blocks.AIR.getDefaultState(), 4);
-        ((BranchedTreeFeatureConfig)configuredFeature.config).method_23916();
-        if (configuredFeature.generate(iWorld, chunkGenerator, random, blockPos)) {
+        world.setBlockState(pos, Blocks.AIR.getDefaultState(), 4);
+        ((TreeFeatureConfig)configuredFeature.config).ignoreFluidCheck();
+        if (configuredFeature.generate(world, chunkGenerator, random, pos)) {
             return true;
         }
-        iWorld.setBlockState(blockPos, blockState, 4);
+        world.setBlockState(pos, state, 4);
         return false;
     }
 
-    private boolean method_24282(IWorld iWorld, BlockPos blockPos) {
+    private boolean method_24282(WorldAccess worldAccess, BlockPos blockPos) {
         for (BlockPos blockPos2 : BlockPos.Mutable.iterate(blockPos.down().north(2).west(2), blockPos.up().south(2).east(2))) {
-            if (!iWorld.getBlockState(blockPos2).matches(BlockTags.FLOWERS)) continue;
+            if (!worldAccess.getBlockState(blockPos2).isIn(BlockTags.FLOWERS)) continue;
             return true;
         }
         return false;

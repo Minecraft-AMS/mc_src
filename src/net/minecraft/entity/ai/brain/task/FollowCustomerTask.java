@@ -10,7 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
-import net.minecraft.entity.ai.brain.EntityPosWrapper;
+import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -31,7 +31,7 @@ extends Task<VillagerEntity> {
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, VillagerEntity villagerEntity) {
         PlayerEntity playerEntity = villagerEntity.getCurrentCustomer();
-        return villagerEntity.isAlive() && playerEntity != null && !villagerEntity.isTouchingWater() && !villagerEntity.velocityModified && villagerEntity.squaredDistanceTo(playerEntity) <= 16.0 && playerEntity.container != null;
+        return villagerEntity.isAlive() && playerEntity != null && !villagerEntity.isTouchingWater() && !villagerEntity.velocityModified && villagerEntity.squaredDistanceTo(playerEntity) <= 16.0 && playerEntity.currentScreenHandler != null;
     }
 
     @Override
@@ -62,20 +62,14 @@ extends Task<VillagerEntity> {
     }
 
     private void update(VillagerEntity villager) {
-        EntityPosWrapper entityPosWrapper = new EntityPosWrapper(villager.getCurrentCustomer());
         Brain<VillagerEntity> brain = villager.getBrain();
-        brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(entityPosWrapper, this.speed, 2));
-        brain.putMemory(MemoryModuleType.LOOK_TARGET, entityPosWrapper);
+        brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityLookTarget(villager.getCurrentCustomer(), false), this.speed, 2));
+        brain.remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget(villager.getCurrentCustomer(), true));
     }
 
     @Override
     protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
         return this.shouldKeepRunning(world, (VillagerEntity)entity, time);
-    }
-
-    @Override
-    protected /* synthetic */ void finishRunning(ServerWorld world, LivingEntity entity, long time) {
-        this.finishRunning(world, (VillagerEntity)entity, time);
     }
 
     @Override

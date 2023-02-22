@@ -25,7 +25,7 @@ import net.minecraft.util.math.Vec3d;
 @Environment(value=EnvType.CLIENT)
 public class IllusionerEntityRenderer
 extends IllagerEntityRenderer<IllusionerEntity> {
-    private static final Identifier SKIN = new Identifier("textures/entity/illager/illusioner.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/illager/illusioner.png");
 
     public IllusionerEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new IllagerEntityModel(0.0f, 0.0f, 64, 64), 0.5f);
@@ -38,12 +38,12 @@ extends IllagerEntityRenderer<IllusionerEntity> {
                 }
             }
         });
-        ((IllagerEntityModel)this.model).method_2812().visible = true;
+        ((IllagerEntityModel)this.model).getHat().visible = true;
     }
 
     @Override
     public Identifier getTexture(IllusionerEntity illusionerEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 
     @Override
@@ -63,13 +63,13 @@ extends IllagerEntityRenderer<IllusionerEntity> {
     }
 
     @Override
-    protected boolean isFullyVisible(IllusionerEntity illusionerEntity) {
+    protected boolean isVisible(IllusionerEntity illusionerEntity) {
         return true;
     }
 
     @Override
-    protected /* synthetic */ boolean isFullyVisible(LivingEntity entity) {
-        return this.isFullyVisible((IllusionerEntity)entity);
+    protected /* synthetic */ boolean isVisible(LivingEntity entity) {
+        return this.isVisible((IllusionerEntity)entity);
     }
 }
 

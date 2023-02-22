@@ -9,7 +9,7 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnType;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
@@ -17,18 +17,19 @@ import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 
 public class EndermiteEntity
 extends HostileEntity {
@@ -53,15 +54,11 @@ extends HostileEntity {
 
     @Override
     protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
-        return 0.1f;
+        return 0.13f;
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(8.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.25);
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(2.0);
+    public static DefaultAttributeContainer.Builder createEndermiteAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 8.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 2.0);
     }
 
     @Override
@@ -90,17 +87,17 @@ extends HostileEntity {
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.lifeTime = tag.getInt("Lifetime");
-        this.playerSpawned = tag.getBoolean("PlayerSpawned");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.lifeTime = nbt.getInt("Lifetime");
+        this.playerSpawned = nbt.getBoolean("PlayerSpawned");
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("Lifetime", this.lifeTime);
-        tag.putBoolean("PlayerSpawned", this.playerSpawned);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("Lifetime", this.lifeTime);
+        nbt.putBoolean("PlayerSpawned", this.playerSpawned);
     }
 
     @Override
@@ -110,9 +107,9 @@ extends HostileEntity {
     }
 
     @Override
-    public void setYaw(float yaw) {
-        this.yaw = yaw;
-        super.setYaw(yaw);
+    public void setBodyYaw(float bodyYaw) {
+        this.yaw = bodyYaw;
+        super.setBodyYaw(bodyYaw);
     }
 
     @Override
@@ -145,8 +142,8 @@ extends HostileEntity {
         }
     }
 
-    public static boolean canSpawn(EntityType<EndermiteEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
-        if (EndermiteEntity.canSpawnIgnoreLightLevel(type, world, spawnType, pos, random)) {
+    public static boolean canSpawn(EntityType<EndermiteEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        if (EndermiteEntity.canSpawnIgnoreLightLevel(type, world, spawnReason, pos, random)) {
             PlayerEntity playerEntity = world.getClosestPlayer((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 5.0, true);
             return playerEntity == null;
         }

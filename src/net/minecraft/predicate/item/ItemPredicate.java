@@ -28,13 +28,13 @@ import net.minecraft.item.EnchantedBookItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.predicate.NumberRange;
 import net.minecraft.predicate.item.EnchantmentPredicate;
-import net.minecraft.tag.ItemTags;
+import net.minecraft.tag.ServerTagManagerHolder;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -101,14 +101,14 @@ public class ItemPredicate {
             return false;
         }
         if (this.enchantments.length > 0) {
-            map = EnchantmentHelper.getEnchantments(stack.getEnchantments());
+            map = EnchantmentHelper.fromNbt(stack.getEnchantments());
             for (EnchantmentPredicate enchantmentPredicate : this.enchantments) {
                 if (enchantmentPredicate.test(map)) continue;
                 return false;
             }
         }
         if (this.storedEnchantments.length > 0) {
-            map = EnchantmentHelper.getEnchantments(EnchantedBookItem.getEnchantmentTag(stack));
+            map = EnchantmentHelper.fromNbt(EnchantedBookItem.getEnchantmentNbt(stack));
             for (EnchantmentPredicate enchantmentPredicate : this.storedEnchantments) {
                 if (enchantmentPredicate.test(map)) continue;
                 return false;
@@ -132,12 +132,12 @@ public class ItemPredicate {
         Item item = null;
         if (jsonObject.has("item")) {
             Identifier identifier = new Identifier(JsonHelper.getString(jsonObject, "item"));
-            item = (Item)Registry.ITEM.getOrEmpty(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown item id '" + identifier + "'"));
+            item = Registry.ITEM.getOrEmpty(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown item id '" + identifier + "'"));
         }
         Tag<Item> tag = null;
         if (jsonObject.has("tag")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "tag"));
-            tag = ItemTags.getContainer().get(identifier2);
+            tag = ServerTagManagerHolder.getTagManager().getItems().getTag(identifier2);
             if (tag == null) {
                 throw new JsonSyntaxException("Unknown item tag '" + identifier2 + "'");
             }
@@ -145,7 +145,7 @@ public class ItemPredicate {
         Potion potion = null;
         if (jsonObject.has("potion")) {
             Identifier identifier3 = new Identifier(JsonHelper.getString(jsonObject, "potion"));
-            potion = (Potion)Registry.POTION.getOrEmpty(identifier3).orElseThrow(() -> new JsonSyntaxException("Unknown potion '" + identifier3 + "'"));
+            potion = Registry.POTION.getOrEmpty(identifier3).orElseThrow(() -> new JsonSyntaxException("Unknown potion '" + identifier3 + "'"));
         }
         EnchantmentPredicate[] enchantmentPredicates = EnchantmentPredicate.deserializeAll(jsonObject.get("enchantments"));
         EnchantmentPredicate[] enchantmentPredicates2 = EnchantmentPredicate.deserializeAll(jsonObject.get("stored_enchantments"));
@@ -162,7 +162,7 @@ public class ItemPredicate {
             jsonObject.addProperty("item", Registry.ITEM.getId(this.item).toString());
         }
         if (this.tag != null) {
-            jsonObject.addProperty("tag", this.tag.getId().toString());
+            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getItems().getTagId(this.tag).toString());
         }
         jsonObject.add("count", this.count.toJson());
         jsonObject.add("durability", this.durability.toJson());
@@ -219,8 +219,8 @@ public class ItemPredicate {
             return new Builder();
         }
 
-        public Builder item(ItemConvertible itemConvertible) {
-            this.item = itemConvertible.asItem();
+        public Builder item(ItemConvertible item) {
+            this.item = item.asItem();
             return this;
         }
 
@@ -229,7 +229,7 @@ public class ItemPredicate {
             return this;
         }
 
-        public Builder nbt(CompoundTag nbt) {
+        public Builder nbt(NbtCompound nbt) {
             this.nbt = new NbtPredicate(nbt);
             return this;
         }

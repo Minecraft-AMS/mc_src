@@ -11,7 +11,6 @@ import net.minecraft.entity.passive.TameableEntity;
 public class SitGoal
 extends Goal {
     private final TameableEntity tameable;
-    private boolean enabledWithOwner;
 
     public SitGoal(TameableEntity tameable) {
         this.tameable = tameable;
@@ -20,7 +19,7 @@ extends Goal {
 
     @Override
     public boolean shouldContinue() {
-        return this.enabledWithOwner;
+        return this.tameable.isSitting();
     }
 
     @Override
@@ -31,7 +30,7 @@ extends Goal {
         if (this.tameable.isInsideWaterOrBubbleColumn()) {
             return false;
         }
-        if (!this.tameable.onGround) {
+        if (!this.tameable.isOnGround()) {
             return false;
         }
         LivingEntity livingEntity = this.tameable.getOwner();
@@ -41,22 +40,18 @@ extends Goal {
         if (this.tameable.squaredDistanceTo(livingEntity) < 144.0 && livingEntity.getAttacker() != null) {
             return false;
         }
-        return this.enabledWithOwner;
+        return this.tameable.isSitting();
     }
 
     @Override
     public void start() {
         this.tameable.getNavigation().stop();
-        this.tameable.setSitting(true);
+        this.tameable.setInSittingPose(true);
     }
 
     @Override
     public void stop() {
-        this.tameable.setSitting(false);
-    }
-
-    public void setEnabledWithOwner(boolean enabledWithOwner) {
-        this.enabledWithOwner = enabledWithOwner;
+        this.tameable.setInSittingPose(false);
     }
 }
 

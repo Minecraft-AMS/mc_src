@@ -17,11 +17,12 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.CommandBlockExecutor;
@@ -46,21 +47,21 @@ extends AbstractMinecartEntity {
     protected void initDataTracker() {
         super.initDataTracker();
         this.getDataTracker().startTracking(COMMAND, "");
-        this.getDataTracker().startTracking(LAST_OUTPUT, new LiteralText(""));
+        this.getDataTracker().startTracking(LAST_OUTPUT, LiteralText.EMPTY);
     }
 
     @Override
-    protected void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.commandExecutor.deserialize(tag);
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.commandExecutor.readNbt(nbt);
         this.getDataTracker().set(COMMAND, this.getCommandExecutor().getCommand());
         this.getDataTracker().set(LAST_OUTPUT, this.getCommandExecutor().getLastOutput());
     }
 
     @Override
-    protected void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        this.commandExecutor.serialize(tag);
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        this.commandExecutor.writeNbt(nbt);
     }
 
     @Override
@@ -86,9 +87,8 @@ extends AbstractMinecartEntity {
     }
 
     @Override
-    public boolean interact(PlayerEntity player, Hand hand) {
-        this.commandExecutor.interact(player);
-        return true;
+    public ActionResult interact(PlayerEntity player, Hand hand) {
+        return this.commandExecutor.interact(player);
     }
 
     @Override

@@ -14,14 +14,14 @@ import net.minecraft.client.particle.ParticleFactory;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
 public class EmotionParticle
 extends SpriteBillboardParticle {
-    private EmotionParticle(World world, double x, double y, double z) {
+    private EmotionParticle(ClientWorld world, double x, double y, double z) {
         super(world, x, y, z, 0.0, 0.0, 0.0);
         this.velocityX *= (double)0.01f;
         this.velocityY *= (double)0.01f;
@@ -68,16 +68,16 @@ extends SpriteBillboardParticle {
     @Environment(value=EnvType.CLIENT)
     public static class AngryVillagerFactory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_17813;
+        private final SpriteProvider spriteProvider;
 
         public AngryVillagerFactory(SpriteProvider spriteProvider) {
-            this.field_17813 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            EmotionParticle emotionParticle = new EmotionParticle(world, d, e + 0.5, f);
-            emotionParticle.setSprite(this.field_17813);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            EmotionParticle emotionParticle = new EmotionParticle(clientWorld, d, e + 0.5, f);
+            emotionParticle.setSprite(this.spriteProvider);
             emotionParticle.setColor(1.0f, 1.0f, 1.0f);
             return emotionParticle;
         }
@@ -86,16 +86,16 @@ extends SpriteBillboardParticle {
     @Environment(value=EnvType.CLIENT)
     public static class HeartFactory
     implements ParticleFactory<DefaultParticleType> {
-        private final SpriteProvider field_17814;
+        private final SpriteProvider spriteProvider;
 
         public HeartFactory(SpriteProvider spriteProvider) {
-            this.field_17814 = spriteProvider;
+            this.spriteProvider = spriteProvider;
         }
 
         @Override
-        public Particle createParticle(DefaultParticleType defaultParticleType, World world, double d, double e, double f, double g, double h, double i) {
-            EmotionParticle emotionParticle = new EmotionParticle(world, d, e, f);
-            emotionParticle.setSprite(this.field_17814);
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            EmotionParticle emotionParticle = new EmotionParticle(clientWorld, d, e, f);
+            emotionParticle.setSprite(this.spriteProvider);
             return emotionParticle;
         }
     }

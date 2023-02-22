@@ -49,7 +49,7 @@ import org.jetbrains.annotations.Nullable;
 public class PlayerPredicate {
     public static final PlayerPredicate ANY = new Builder().build();
     private final NumberRange.IntRange experienceLevel;
-    private final GameMode gamemode;
+    private final GameMode gameMode;
     private final Map<Stat<?>, NumberRange.IntRange> stats;
     private final Object2BooleanMap<Identifier> recipes;
     private final Map<Identifier, AdvancementPredicate> advancements;
@@ -65,9 +65,9 @@ public class PlayerPredicate {
         return new AdvancementCriteriaPredicate((Object2BooleanMap<String>)object2BooleanMap);
     }
 
-    private PlayerPredicate(NumberRange.IntRange intRange, GameMode gamemode, Map<Stat<?>, NumberRange.IntRange> stats, Object2BooleanMap<Identifier> recipes, Map<Identifier, AdvancementPredicate> advancements) {
-        this.experienceLevel = intRange;
-        this.gamemode = gamemode;
+    private PlayerPredicate(NumberRange.IntRange experienceLevel, GameMode gameMode, Map<Stat<?>, NumberRange.IntRange> stats, Object2BooleanMap<Identifier> recipes, Map<Identifier, AdvancementPredicate> advancements) {
+        this.experienceLevel = experienceLevel;
+        this.gameMode = gameMode;
         this.stats = stats;
         this.recipes = recipes;
         this.advancements = advancements;
@@ -84,7 +84,7 @@ public class PlayerPredicate {
         if (!this.experienceLevel.test(serverPlayerEntity.experienceLevel)) {
             return false;
         }
-        if (this.gamemode != GameMode.NOT_SET && this.gamemode != serverPlayerEntity.interactionManager.getGameMode()) {
+        if (this.gameMode != GameMode.NOT_SET && this.gameMode != serverPlayerEntity.interactionManager.getGameMode()) {
             return false;
         }
         ServerStatHandler statHandler = serverPlayerEntity.getStatHandler();
@@ -171,8 +171,8 @@ public class PlayerPredicate {
         }
         JsonObject jsonObject = new JsonObject();
         jsonObject.add("level", this.experienceLevel.toJson());
-        if (this.gamemode != GameMode.NOT_SET) {
-            jsonObject.addProperty("gamemode", this.gamemode.getName());
+        if (this.gameMode != GameMode.NOT_SET) {
+            jsonObject.addProperty("gamemode", this.gameMode.getName());
         }
         if (!this.stats.isEmpty()) {
             JsonArray jsonArray = new JsonArray();

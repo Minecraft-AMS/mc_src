@@ -89,7 +89,7 @@ extends Task<MobEntity> {
     }
 
     private void setWalkTarget(MobEntity mob, BlockPos pos) {
-        mob.getBrain().putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(pos, this.walkSpeed, 0));
+        mob.getBrain().remember(MemoryModuleType.WALK_TARGET, new WalkTarget(pos, this.walkSpeed, 0));
     }
 
     private boolean shouldStartJumping(ServerWorld world, MobEntity mob) {
@@ -97,17 +97,17 @@ extends Task<MobEntity> {
     }
 
     private boolean isAboveBed(ServerWorld world, MobEntity mob) {
-        BlockPos blockPos = new BlockPos(mob);
+        BlockPos blockPos = mob.getBlockPos();
         BlockPos blockPos2 = blockPos.down();
         return this.isBedAt(world, blockPos) || this.isBedAt(world, blockPos2);
     }
 
     private boolean isOnBed(ServerWorld world, MobEntity mob) {
-        return this.isBedAt(world, new BlockPos(mob));
+        return this.isBedAt(world, mob.getBlockPos());
     }
 
     private boolean isBedAt(ServerWorld world, BlockPos pos) {
-        return world.getBlockState(pos).matches(BlockTags.BEDS);
+        return world.getBlockState(pos).isIn(BlockTags.BEDS);
     }
 
     private Optional<BlockPos> getNearestBed(MobEntity mob) {

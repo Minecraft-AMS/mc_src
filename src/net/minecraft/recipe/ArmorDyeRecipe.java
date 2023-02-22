@@ -32,8 +32,8 @@ extends SpecialCraftingRecipe {
     public boolean matches(CraftingInventory craftingInventory, World world) {
         ItemStack itemStack = ItemStack.EMPTY;
         ArrayList list = Lists.newArrayList();
-        for (int i = 0; i < craftingInventory.getInvSize(); ++i) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size(); ++i) {
+            ItemStack itemStack2 = craftingInventory.getStack(i);
             if (itemStack2.isEmpty()) continue;
             if (itemStack2.getItem() instanceof DyeableItem) {
                 if (!itemStack.isEmpty()) {
@@ -55,8 +55,8 @@ extends SpecialCraftingRecipe {
     public ItemStack craft(CraftingInventory craftingInventory) {
         ArrayList list = Lists.newArrayList();
         ItemStack itemStack = ItemStack.EMPTY;
-        for (int i = 0; i < craftingInventory.getInvSize(); ++i) {
-            ItemStack itemStack2 = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size(); ++i) {
+            ItemStack itemStack2 = craftingInventory.getStack(i);
             if (itemStack2.isEmpty()) continue;
             Item item = itemStack2.getItem();
             if (item instanceof DyeableItem) {

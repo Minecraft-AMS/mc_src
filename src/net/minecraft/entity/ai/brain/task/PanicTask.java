@@ -39,14 +39,14 @@ extends Task<VillagerEntity> {
                 brain.forget(MemoryModuleType.BREED_TARGET);
                 brain.forget(MemoryModuleType.INTERACTION_TARGET);
             }
-            brain.resetPossibleActivities(Activity.PANIC);
+            brain.doExclusively(Activity.PANIC);
         }
     }
 
     @Override
     protected void keepRunning(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         if (l % 100L == 0L) {
-            villagerEntity.summonGolem(l, 3);
+            villagerEntity.summonGolem(serverWorld, l, 3);
         }
     }
 

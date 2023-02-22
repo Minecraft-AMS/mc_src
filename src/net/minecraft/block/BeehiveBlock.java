@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -38,7 +39,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameters;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -50,6 +51,7 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -58,17 +60,17 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class BeehiveBlock
 extends BlockWithEntity {
-    public static final Direction[] GENERATE_DIRECTIONS = new Direction[]{Direction.WEST, Direction.EAST, Direction.SOUTH};
+    private static final Direction[] GENERATE_DIRECTIONS = new Direction[]{Direction.WEST, Direction.EAST, Direction.SOUTH};
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final IntProperty HONEY_LEVEL = Properties.HONEY_LEVEL;
 
-    public BeehiveBlock(Block.Settings settings) {
+    public BeehiveBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(HONEY_LEVEL, 0)).with(FACING, Direction.NORTH));
     }
@@ -90,10 +92,10 @@ extends BlockWithEntity {
             BeehiveBlockEntity beehiveBlockEntity = (BeehiveBlockEntity)blockEntity;
             if (EnchantmentHelper.getLevel(Enchantments.SILK_TOUCH, stack) == 0) {
                 beehiveBlockEntity.angerBees(player, state, BeehiveBlockEntity.BeeState.EMERGENCY);
-                world.updateHorizontalAdjacent(pos, this);
+                world.updateComparators(pos, this);
                 this.angerNearbyBees(world, pos);
             }
-            Criterions.BEE_NEST_DESTROYED.test((ServerPlayerEntity)player, state.getBlock(), stack, beehiveBlockEntity.getBeeCount());
+            Criteria.BEE_NEST_DESTROYED.test((ServerPlayerEntity)player, state.getBlock(), stack, beehiveBlockEntity.getBeeCount());
         }
     }
 
@@ -104,7 +106,7 @@ extends BlockWithEntity {
             int i = list2.size();
             for (BeeEntity beeEntity : list) {
                 if (beeEntity.getTarget() != null) continue;
-                beeEntity.setBeeAttacker(list2.get(world.random.nextInt(i)));
+                beeEntity.setTarget(list2.get(world.random.nextInt(i)));
             }
         }
     }
@@ -116,7 +118,6 @@ extends BlockWithEntity {
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player2, Hand hand, BlockHitResult hit) {
         ItemStack itemStack = player2.getStackInHand(hand);
-        ItemStack itemStack2 = itemStack.copy();
         int i = state.get(HONEY_LEVEL);
         boolean bl = false;
         if (i >= 5) {
@@ -137,18 +138,15 @@ extends BlockWithEntity {
             }
         }
         if (bl) {
-            if (!CampfireBlock.isLitCampfireInRange(world, pos, 5)) {
+            if (!CampfireBlock.isLitCampfireInRange(world, pos)) {
                 if (this.hasBees(world, pos)) {
                     this.angerNearbyBees(world, pos);
                 }
                 this.takeHoney(world, state, pos, player2, BeehiveBlockEntity.BeeState.EMERGENCY);
             } else {
                 this.takeHoney(world, state, pos);
-                if (player2 instanceof ServerPlayerEntity) {
-                    Criterions.SAFELY_HARVEST_HONEY.test((ServerPlayerEntity)player2, pos, itemStack2);
-                }
             }
-            return ActionResult.SUCCESS;
+            return ActionResult.success(world.isClient);
         }
         return super.onUse(state, world, pos, player2, hand, hit);
     }
@@ -191,16 +189,16 @@ extends BlockWithEntity {
             return;
         }
         VoxelShape voxelShape = state.getCollisionShape(world, pos);
-        double d = voxelShape.getMaximum(Direction.Axis.Y);
-        if (d >= 1.0 && !state.matches(BlockTags.IMPERMEABLE)) {
-            double e = voxelShape.getMinimum(Direction.Axis.Y);
+        double d = voxelShape.getMax(Direction.Axis.Y);
+        if (d >= 1.0 && !state.isIn(BlockTags.IMPERMEABLE)) {
+            double e = voxelShape.getMin(Direction.Axis.Y);
             if (e > 0.0) {
                 this.addHoneyParticle(world, pos, voxelShape, (double)pos.getY() + e - 0.05);
             } else {
                 BlockPos blockPos = pos.down();
                 BlockState blockState = world.getBlockState(blockPos);
                 VoxelShape voxelShape2 = blockState.getCollisionShape(world, blockPos);
-                double f = voxelShape2.getMaximum(Direction.Axis.Y);
+                double f = voxelShape2.getMax(Direction.Axis.Y);
                 if ((f < 1.0 || !blockState.isFullCube(world, blockPos)) && blockState.getFluidState().isEmpty()) {
                     this.addHoneyParticle(world, pos, voxelShape, (double)pos.getY() - 0.05);
                 }
@@ -210,7 +208,7 @@ extends BlockWithEntity {
 
     @Environment(value=EnvType.CLIENT)
     private void addHoneyParticle(World world, BlockPos pos, VoxelShape shape, double height) {
-        this.addHoneyParticle(world, (double)pos.getX() + shape.getMinimum(Direction.Axis.X), (double)pos.getX() + shape.getMaximum(Direction.Axis.X), (double)pos.getZ() + shape.getMinimum(Direction.Axis.Z), (double)pos.getZ() + shape.getMaximum(Direction.Axis.Z), height);
+        this.addHoneyParticle(world, (double)pos.getX() + shape.getMin(Direction.Axis.X), (double)pos.getX() + shape.getMax(Direction.Axis.X), (double)pos.getZ() + shape.getMin(Direction.Axis.Z), (double)pos.getZ() + shape.getMax(Direction.Axis.Z), height);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -235,7 +233,7 @@ extends BlockWithEntity {
 
     @Override
     @Nullable
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new BeehiveBlockEntity();
     }
 
@@ -243,7 +241,7 @@ extends BlockWithEntity {
     public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
         BlockEntity blockEntity;
         if (!world.isClient && player.isCreative() && world.getGameRules().getBoolean(GameRules.DO_TILE_DROPS) && (blockEntity = world.getBlockEntity(pos)) instanceof BeehiveBlockEntity) {
-            CompoundTag compoundTag;
+            NbtCompound nbtCompound;
             boolean bl;
             BeehiveBlockEntity beehiveBlockEntity = (BeehiveBlockEntity)blockEntity;
             ItemStack itemStack = new ItemStack(this);
@@ -253,13 +251,13 @@ extends BlockWithEntity {
                 return;
             }
             if (bl) {
-                compoundTag = new CompoundTag();
-                compoundTag.put("Bees", beehiveBlockEntity.getBees());
-                itemStack.putSubTag("BlockEntityTag", compoundTag);
+                nbtCompound = new NbtCompound();
+                nbtCompound.put("Bees", beehiveBlockEntity.getBees());
+                itemStack.putSubTag("BlockEntityTag", nbtCompound);
             }
-            compoundTag = new CompoundTag();
-            compoundTag.putInt("honey_level", i);
-            itemStack.putSubTag("BlockStateTag", compoundTag);
+            nbtCompound = new NbtCompound();
+            nbtCompound.putInt("honey_level", i);
+            itemStack.putSubTag("BlockStateTag", nbtCompound);
             ItemEntity itemEntity = new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), itemStack);
             itemEntity.setToDefaultPickupDelay();
             world.spawnEntity(itemEntity);
@@ -279,13 +277,17 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         BlockEntity blockEntity;
         if (world.getBlockState(neighborPos).getBlock() instanceof FireBlock && (blockEntity = world.getBlockEntity(pos)) instanceof BeehiveBlockEntity) {
             BeehiveBlockEntity beehiveBlockEntity = (BeehiveBlockEntity)blockEntity;
             beehiveBlockEntity.angerBees(null, state, BeehiveBlockEntity.BeeState.EMERGENCY);
         }
-        return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
+        return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+    }
+
+    public static Direction getRandomGenerationDirection(Random random) {
+        return Util.getRandom(GENERATE_DIRECTIONS, random);
     }
 }
 

@@ -41,12 +41,12 @@ implements DataProvider {
     private final DataGenerator root;
     private final List<Consumer<Consumer<Advancement>>> tabGenerators = ImmutableList.of((Object)new EndTabAdvancementGenerator(), (Object)new HusbandryTabAdvancementGenerator(), (Object)new AdventureTabAdvancementGenerator(), (Object)new NetherTabAdvancementGenerator(), (Object)new StoryTabAdvancementGenerator());
 
-    public AdvancementsProvider(DataGenerator dataGenerator) {
-        this.root = dataGenerator;
+    public AdvancementsProvider(DataGenerator root) {
+        this.root = root;
     }
 
     @Override
-    public void run(DataCache dataCache) throws IOException {
+    public void run(DataCache cache) throws IOException {
         Path path = this.root.getOutput();
         HashSet set = Sets.newHashSet();
         Consumer<Advancement> consumer = advancement -> {
@@ -55,7 +55,7 @@ implements DataProvider {
             }
             Path path2 = AdvancementsProvider.getOutput(path, advancement);
             try {
-                DataProvider.writeToPath(GSON, dataCache, (JsonElement)advancement.createTask().toJson(), path2);
+                DataProvider.writeToPath(GSON, cache, (JsonElement)advancement.createTask().toJson(), path2);
             }
             catch (IOException iOException) {
                 LOGGER.error("Couldn't save advancement {}", (Object)path2, (Object)iOException);

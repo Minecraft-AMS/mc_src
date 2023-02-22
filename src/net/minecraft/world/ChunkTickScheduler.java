@@ -9,12 +9,10 @@ package net.minecraft.world;
 import it.unimi.dsi.fastutil.shorts.ShortList;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.ChunkSerializer;
-import net.minecraft.world.ScheduledTick;
 import net.minecraft.world.TickPriority;
 import net.minecraft.world.TickScheduler;
 import net.minecraft.world.chunk.Chunk;
@@ -26,22 +24,22 @@ implements TickScheduler<T> {
     private final ChunkPos pos;
     private final ShortList[] scheduledPositions = new ShortList[16];
 
-    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos chunkPos) {
-        this(shouldExclude, chunkPos, new ListTag());
+    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos pos) {
+        this(shouldExclude, pos, new NbtList());
     }
 
-    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos chunkPos, ListTag listTag) {
+    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos pos, NbtList tag) {
         this.shouldExclude = shouldExclude;
-        this.pos = chunkPos;
-        for (int i = 0; i < listTag.size(); ++i) {
-            ListTag listTag2 = listTag.getList(i);
-            for (int j = 0; j < listTag2.size(); ++j) {
-                Chunk.getList(this.scheduledPositions, i).add(listTag2.getShort(j));
+        this.pos = pos;
+        for (int i = 0; i < tag.size(); ++i) {
+            NbtList nbtList = tag.getList(i);
+            for (int j = 0; j < nbtList.size(); ++j) {
+                Chunk.getList(this.scheduledPositions, i).add(nbtList.getShort(j));
             }
         }
     }
 
-    public ListTag toNbt() {
+    public NbtList toNbt() {
         return ChunkSerializer.toNbt(this.scheduledPositions);
     }
 
@@ -69,11 +67,6 @@ implements TickScheduler<T> {
     @Override
     public boolean isTicking(BlockPos pos, T object) {
         return false;
-    }
-
-    @Override
-    public void scheduleAll(Stream<ScheduledTick<T>> stream) {
-        stream.forEach(scheduledTick -> this.schedule(scheduledTick.pos, scheduledTick.getObject(), 0, scheduledTick.priority));
     }
 }
 

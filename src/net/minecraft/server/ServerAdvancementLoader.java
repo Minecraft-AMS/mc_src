@@ -8,7 +8,6 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
- *  com.google.gson.TypeAdapterFactory
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -21,21 +20,18 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.TypeAdapterFactory;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementManager;
 import net.minecraft.advancement.AdvancementPositioner;
-import net.minecraft.advancement.AdvancementRewards;
+import net.minecraft.loot.condition.LootConditionManager;
+import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
 import net.minecraft.resource.JsonDataLoader;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.util.LowercaseEnumTypeAdapterFactory;
 import net.minecraft.util.profiler.Profiler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,22 +40,22 @@ import org.jetbrains.annotations.Nullable;
 public class ServerAdvancementLoader
 extends JsonDataLoader {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Gson GSON = new GsonBuilder().registerTypeHierarchyAdapter(Advancement.Task.class, (jsonElement, type, jsonDeserializationContext) -> {
-        JsonObject jsonObject = JsonHelper.asObject(jsonElement, "advancement");
-        return Advancement.Task.fromJson(jsonObject, jsonDeserializationContext);
-    }).registerTypeAdapter(AdvancementRewards.class, (Object)new AdvancementRewards.Deserializer()).registerTypeHierarchyAdapter(Text.class, (Object)new Text.Serializer()).registerTypeHierarchyAdapter(Style.class, (Object)new Style.Serializer()).registerTypeAdapterFactory((TypeAdapterFactory)new LowercaseEnumTypeAdapterFactory()).create();
+    private static final Gson GSON = new GsonBuilder().create();
     private AdvancementManager manager = new AdvancementManager();
+    private final LootConditionManager conditionManager;
 
-    public ServerAdvancementLoader() {
+    public ServerAdvancementLoader(LootConditionManager conditionManager) {
         super(GSON, "advancements");
+        this.conditionManager = conditionManager;
     }
 
     @Override
-    protected void apply(Map<Identifier, JsonObject> map, ResourceManager resourceManager, Profiler profiler) {
+    protected void apply(Map<Identifier, JsonElement> map, ResourceManager resourceManager, Profiler profiler) {
         HashMap map2 = Maps.newHashMap();
-        map.forEach((identifier, jsonObject) -> {
+        map.forEach((identifier, jsonElement) -> {
             try {
-                Advancement.Task task = (Advancement.Task)GSON.fromJson((JsonElement)jsonObject, Advancement.Task.class);
+                JsonObject jsonObject = JsonHelper.asObject(jsonElement, "advancement");
+                Advancement.Task task = Advancement.Task.fromJson(jsonObject, new AdvancementEntityPredicateDeserializer((Identifier)identifier, this.conditionManager));
                 map2.put(identifier, task);
             }
             catch (JsonParseException | IllegalArgumentException runtimeException) {
@@ -76,8 +72,8 @@ extends JsonDataLoader {
     }
 
     @Nullable
-    public Advancement get(Identifier identifier) {
-        return this.manager.get(identifier);
+    public Advancement get(Identifier id) {
+        return this.manager.get(id);
     }
 
     public Collection<Advancement> getAdvancements() {

@@ -2,38 +2,36 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import java.util.Map;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class RandomBooleanFeatureConfig
 implements FeatureConfig {
-    public final ConfiguredFeature<?, ?> featureTrue;
-    public final ConfiguredFeature<?, ?> featureFalse;
+    public static final Codec<RandomBooleanFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)ConfiguredFeature.REGISTRY_CODEC.fieldOf("feature_true").forGetter(randomBooleanFeatureConfig -> randomBooleanFeatureConfig.featureTrue), (App)ConfiguredFeature.REGISTRY_CODEC.fieldOf("feature_false").forGetter(randomBooleanFeatureConfig -> randomBooleanFeatureConfig.featureFalse)).apply((Applicative)instance, RandomBooleanFeatureConfig::new));
+    public final Supplier<ConfiguredFeature<?, ?>> featureTrue;
+    public final Supplier<ConfiguredFeature<?, ?>> featureFalse;
 
-    public RandomBooleanFeatureConfig(ConfiguredFeature<?, ?> configuredFeature, ConfiguredFeature<?, ?> configuredFeature2) {
-        this.featureTrue = configuredFeature;
-        this.featureFalse = configuredFeature2;
+    public RandomBooleanFeatureConfig(Supplier<ConfiguredFeature<?, ?>> featureTrue, Supplier<ConfiguredFeature<?, ?>> featureFalse) {
+        this.featureTrue = featureTrue;
+        this.featureFalse = featureFalse;
     }
 
     @Override
-    public <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        return new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString("feature_true"), (Object)this.featureTrue.serialize(ops).getValue(), (Object)ops.createString("feature_false"), (Object)this.featureFalse.serialize(ops).getValue())));
-    }
-
-    public static <T> RandomBooleanFeatureConfig deserialize(Dynamic<T> dynamic) {
-        ConfiguredFeature<?, ?> configuredFeature = ConfiguredFeature.deserialize(dynamic.get("feature_true").orElseEmptyMap());
-        ConfiguredFeature<?, ?> configuredFeature2 = ConfiguredFeature.deserialize(dynamic.get("feature_false").orElseEmptyMap());
-        return new RandomBooleanFeatureConfig(configuredFeature, configuredFeature2);
+    public Stream<ConfiguredFeature<?, ?>> method_30649() {
+        return Stream.concat(this.featureTrue.get().method_30648(), this.featureFalse.get().method_30648());
     }
 }
 

@@ -2,22 +2,24 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.pathing;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.ai.pathing.PathMinHeap;
 import net.minecraft.entity.ai.pathing.PathNode;
@@ -29,11 +31,10 @@ import net.minecraft.world.chunk.ChunkCache;
 import org.jetbrains.annotations.Nullable;
 
 public class PathNodeNavigator {
-    private final PathMinHeap minHeap = new PathMinHeap();
-    private final Set<PathNode> field_59 = Sets.newHashSet();
     private final PathNode[] successors = new PathNode[32];
     private final int range;
     private final PathNodeMaker pathNodeMaker;
+    private final PathMinHeap minHeap = new PathMinHeap();
 
     public PathNodeNavigator(PathNodeMaker pathNodeMaker, int range) {
         this.pathNodeMaker = pathNodeMaker;
@@ -53,21 +54,25 @@ public class PathNodeNavigator {
 
     @Nullable
     private Path findPathToAny(PathNode startNode, Map<TargetPathNode, BlockPos> positions, float followRange, int distance, float rangeMultiplier) {
-        Stream<Path> stream;
         Optional<Path> optional;
         Set<TargetPathNode> set = positions.keySet();
         startNode.penalizedPathLength = 0.0f;
         startNode.heapWeight = startNode.distanceToNearestTarget = this.calculateDistances(startNode, set);
         this.minHeap.clear();
-        this.field_59.clear();
         this.minHeap.push(startNode);
+        ImmutableSet set2 = ImmutableSet.of();
         int i = 0;
+        HashSet set3 = Sets.newHashSetWithExpectedSize((int)set.size());
         int j = (int)((float)this.range * rangeMultiplier);
         while (!this.minHeap.isEmpty() && ++i < j) {
             PathNode pathNode = this.minHeap.pop();
             pathNode.visited = true;
-            set.stream().filter(targetPathNode -> pathNode.getManhattanDistance((PathNode)targetPathNode) <= (float)distance).forEach(TargetPathNode::markReached);
-            if (set.stream().anyMatch(TargetPathNode::isReached)) break;
+            for (TargetPathNode targetPathNode2 : set) {
+                if (!(pathNode.getManhattanDistance(targetPathNode2) <= (float)distance)) continue;
+                targetPathNode2.markReached();
+                set3.add(targetPathNode2);
+            }
+            if (!set3.isEmpty()) break;
             if (pathNode.getDistance(startNode) >= followRange) continue;
             int k = this.pathNodeMaker.getSuccessors(this.successors, pathNode);
             for (int l = 0; l < k; ++l) {
@@ -87,7 +92,8 @@ public class PathNodeNavigator {
                 this.minHeap.push(pathNode2);
             }
         }
-        if (!(optional = (stream = set.stream().anyMatch(TargetPathNode::isReached) ? set.stream().filter(TargetPathNode::isReached).map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), true)).sorted(Comparator.comparingInt(Path::getLength)) : set.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), false)).sorted(Comparator.comparingDouble(Path::getManhattanDistanceFromTarget).thenComparingInt(Path::getLength))).findFirst()).isPresent()) {
+        Optional<Path> optional2 = optional = !set3.isEmpty() ? set3.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), true)).min(Comparator.comparingInt(Path::getLength)) : set.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), false)).min(Comparator.comparingDouble(Path::getManhattanDistanceFromTarget).thenComparingInt(Path::getLength));
+        if (!optional.isPresent()) {
             return null;
         }
         Path path = optional.get();

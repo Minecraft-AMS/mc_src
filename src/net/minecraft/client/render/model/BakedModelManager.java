@@ -5,6 +5,7 @@
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.model;
 
@@ -23,27 +24,29 @@ import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.ModelIdentifier;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SinglePreparationResourceReloadListener;
+import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.profiler.Profiler;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class BakedModelManager
-extends SinglePreparationResourceReloadListener<ModelLoader>
+extends SinglePreparationResourceReloader<ModelLoader>
 implements AutoCloseable {
     private Map<Identifier, BakedModel> models;
+    @Nullable
     private SpriteAtlasManager atlasManager;
     private final BlockModels blockModelCache;
     private final TextureManager textureManager;
     private final BlockColors colorMap;
-    private int mipmap;
+    private int mipmapLevels;
     private BakedModel missingModel;
     private Object2IntMap<BlockState> stateLookup;
 
     public BakedModelManager(TextureManager textureManager, BlockColors colorMap, int mipmap) {
         this.textureManager = textureManager;
         this.colorMap = colorMap;
-        this.mipmap = mipmap;
+        this.mipmapLevels = mipmap;
         this.blockModelCache = new BlockModels(this);
     }
 
@@ -62,7 +65,7 @@ implements AutoCloseable {
     @Override
     protected ModelLoader prepare(ResourceManager resourceManager, Profiler profiler) {
         profiler.startTick();
-        ModelLoader modelLoader = new ModelLoader(resourceManager, this.colorMap, profiler, this.mipmap);
+        ModelLoader modelLoader = new ModelLoader(resourceManager, this.colorMap, profiler, this.mipmapLevels);
         profiler.endTick();
         return modelLoader;
     }
@@ -77,7 +80,7 @@ implements AutoCloseable {
         this.atlasManager = modelLoader.upload(this.textureManager, profiler);
         this.models = modelLoader.getBakedModelMap();
         this.stateLookup = modelLoader.getStateLookup();
-        this.missingModel = this.models.get(ModelLoader.MISSING);
+        this.missingModel = this.models.get(ModelLoader.MISSING_ID);
         profiler.swap("cache");
         this.blockModelCache.reload();
         profiler.pop();
@@ -104,11 +107,13 @@ implements AutoCloseable {
 
     @Override
     public void close() {
-        this.atlasManager.close();
+        if (this.atlasManager != null) {
+            this.atlasManager.close();
+        }
     }
 
-    public void resetMipmapLevels(int i) {
-        this.mipmap = i;
+    public void setMipmapLevels(int mipmapLevels) {
+        this.mipmapLevels = mipmapLevels;
     }
 
     @Override

@@ -7,7 +7,9 @@
  *  com.mojang.brigadier.CommandDispatcher
  *  com.mojang.brigadier.arguments.BoolArgumentType
  *  com.mojang.brigadier.arguments.FloatArgumentType
+ *  com.mojang.brigadier.arguments.IntegerArgumentType
  *  com.mojang.brigadier.builder.LiteralArgumentBuilder
+ *  com.mojang.brigadier.builder.RequiredArgumentBuilder
  *  com.mojang.brigadier.context.CommandContext
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.brigadier.exceptions.Dynamic4CommandExceptionType
@@ -19,7 +21,9 @@ import com.google.common.collect.Sets;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.Dynamic4CommandExceptionType;
@@ -30,8 +34,8 @@ import java.util.Locale;
 import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Material;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.Vec2ArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.argument.Vec2ArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.scoreboard.AbstractTeam;
@@ -40,6 +44,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.world.BlockView;
@@ -49,18 +54,18 @@ public class SpreadPlayersCommand {
     private static final Dynamic4CommandExceptionType FAILED_ENTITIES_EXCEPTION = new Dynamic4CommandExceptionType((object, object2, object3, object4) -> new TranslatableText("commands.spreadplayers.failed.entities", object, object2, object3, object4));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("spreadplayers").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("center", Vec2ArgumentType.vec2()).then(CommandManager.argument("spreadDistance", FloatArgumentType.floatArg((float)0.0f)).then(CommandManager.argument("maxRange", FloatArgumentType.floatArg((float)1.0f)).then(CommandManager.argument("respectTeams", BoolArgumentType.bool()).then(CommandManager.argument("targets", EntityArgumentType.entities()).executes(commandContext -> SpreadPlayersCommand.execute((ServerCommandSource)commandContext.getSource(), Vec2ArgumentType.getVec2((CommandContext<ServerCommandSource>)commandContext, "center"), FloatArgumentType.getFloat((CommandContext)commandContext, (String)"spreadDistance"), FloatArgumentType.getFloat((CommandContext)commandContext, (String)"maxRange"), BoolArgumentType.getBool((CommandContext)commandContext, (String)"respectTeams"), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets")))))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("spreadplayers").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("center", Vec2ArgumentType.vec2()).then(CommandManager.argument("spreadDistance", FloatArgumentType.floatArg((float)0.0f)).then(((RequiredArgumentBuilder)CommandManager.argument("maxRange", FloatArgumentType.floatArg((float)1.0f)).then(CommandManager.argument("respectTeams", BoolArgumentType.bool()).then(CommandManager.argument("targets", EntityArgumentType.entities()).executes(commandContext -> SpreadPlayersCommand.execute((ServerCommandSource)commandContext.getSource(), Vec2ArgumentType.getVec2((CommandContext<ServerCommandSource>)commandContext, "center"), FloatArgumentType.getFloat((CommandContext)commandContext, (String)"spreadDistance"), FloatArgumentType.getFloat((CommandContext)commandContext, (String)"maxRange"), 256, BoolArgumentType.getBool((CommandContext)commandContext, (String)"respectTeams"), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets")))))).then(CommandManager.literal("under").then(CommandManager.argument("maxHeight", IntegerArgumentType.integer((int)0)).then(CommandManager.argument("respectTeams", BoolArgumentType.bool()).then(CommandManager.argument("targets", EntityArgumentType.entities()).executes(commandContext -> SpreadPlayersCommand.execute((ServerCommandSource)commandContext.getSource(), Vec2ArgumentType.getVec2((CommandContext<ServerCommandSource>)commandContext, "center"), FloatArgumentType.getFloat((CommandContext)commandContext, (String)"spreadDistance"), FloatArgumentType.getFloat((CommandContext)commandContext, (String)"maxRange"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"maxHeight"), BoolArgumentType.getBool((CommandContext)commandContext, (String)"respectTeams"), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)commandContext, "targets")))))))))));
     }
 
-    private static int execute(ServerCommandSource source, Vec2f center, float spreadDistance, float maxRange, boolean respectTeams, Collection<? extends Entity> targets) throws CommandSyntaxException {
+    private static int execute(ServerCommandSource source, Vec2f center, float spreadDistance, float maxRange, int maxY, boolean respectTeams, Collection<? extends Entity> players) throws CommandSyntaxException {
         Random random = new Random();
         double d = center.x - maxRange;
         double e = center.y - maxRange;
         double f = center.x + maxRange;
         double g = center.y + maxRange;
-        Pile[] piles = SpreadPlayersCommand.makePiles(random, respectTeams ? SpreadPlayersCommand.getPileCountRespectingTeams(targets) : targets.size(), d, e, f, g);
-        SpreadPlayersCommand.spread(center, spreadDistance, source.getWorld(), random, d, e, f, g, piles, respectTeams);
-        double h = SpreadPlayersCommand.getMinimumDistance(targets, source.getWorld(), piles, respectTeams);
+        Pile[] piles = SpreadPlayersCommand.makePiles(random, respectTeams ? SpreadPlayersCommand.getPileCountRespectingTeams(players) : players.size(), d, e, f, g);
+        SpreadPlayersCommand.spread(center, spreadDistance, source.getWorld(), random, d, e, f, g, maxY, piles, respectTeams);
+        double h = SpreadPlayersCommand.getMinDistance(players, source.getWorld(), piles, maxY, respectTeams);
         source.sendFeedback(new TranslatableText("commands.spreadplayers.success." + (respectTeams ? "teams" : "entities"), piles.length, Float.valueOf(center.x), Float.valueOf(center.y), String.format(Locale.ROOT, "%.2f", h)), true);
         return piles.length;
     }
@@ -77,7 +82,7 @@ public class SpreadPlayersCommand {
         return set.size();
     }
 
-    private static void spread(Vec2f center, double spreadDistance, ServerWorld world, Random random, double minX, double minZ, double maxX, double maxZ, Pile[] piles, boolean respectTeams) throws CommandSyntaxException {
+    private static void spread(Vec2f center, double spreadDistance, ServerWorld world, Random random, double minX, double minZ, double maxX, double maxZ, int maxY, Pile[] piles, boolean respectTeams) throws CommandSyntaxException {
         int i;
         boolean bl = true;
         double d = 3.4028234663852886E38;
@@ -115,7 +120,7 @@ public class SpreadPlayersCommand {
             }
             if (bl) continue;
             for (Pile pile2 : piles) {
-                if (pile2.isSafe(world)) continue;
+                if (pile2.isSafe(world, maxY)) continue;
                 pile2.setPileLocation(random, minX, minZ, maxX, maxZ);
                 bl = true;
             }
@@ -131,13 +136,13 @@ public class SpreadPlayersCommand {
         }
     }
 
-    private static double getMinimumDistance(Collection<? extends Entity> entities, ServerWorld world, Pile[] piles, boolean betweenTeams) {
+    private static double getMinDistance(Collection<? extends Entity> entities, ServerWorld world, Pile[] piles, int maxY, boolean respectTeams) {
         double d = 0.0;
         int i = 0;
         HashMap map = Maps.newHashMap();
         for (Entity entity : entities) {
             Pile pile;
-            if (betweenTeams) {
+            if (respectTeams) {
                 AbstractTeam abstractTeam;
                 AbstractTeam abstractTeam2 = abstractTeam = entity instanceof PlayerEntity ? entity.getScoreboardTeam() : null;
                 if (!map.containsKey(abstractTeam)) {
@@ -147,7 +152,7 @@ public class SpreadPlayersCommand {
             } else {
                 pile = piles[i++];
             }
-            entity.teleport((float)MathHelper.floor(pile.x) + 0.5f, pile.getY(world), (double)MathHelper.floor(pile.z) + 0.5);
+            entity.teleport((double)MathHelper.floor(pile.x) + 0.5, pile.getY(world, maxY), (double)MathHelper.floor(pile.z) + 0.5);
             double e = Double.MAX_VALUE;
             for (Pile pile2 : piles) {
                 if (pile == pile2) continue;
@@ -219,24 +224,28 @@ public class SpreadPlayersCommand {
             return bl;
         }
 
-        public int getY(BlockView blockView) {
-            BlockPos blockPos = new BlockPos(this.x, 256.0, this.z);
-            while (blockPos.getY() > 0) {
-                if (blockView.getBlockState(blockPos = blockPos.down()).isAir()) continue;
-                return blockPos.getY() + 1;
+        public int getY(BlockView blockView, int i) {
+            BlockPos.Mutable mutable = new BlockPos.Mutable(this.x, (double)(i + 1), this.z);
+            boolean bl = blockView.getBlockState(mutable).isAir();
+            mutable.move(Direction.DOWN);
+            boolean bl2 = blockView.getBlockState(mutable).isAir();
+            while (mutable.getY() > 0) {
+                mutable.move(Direction.DOWN);
+                boolean bl3 = blockView.getBlockState(mutable).isAir();
+                if (!bl3 && bl2 && bl) {
+                    return mutable.getY() + 1;
+                }
+                bl = bl2;
+                bl2 = bl3;
             }
-            return 257;
+            return i + 1;
         }
 
-        public boolean isSafe(BlockView world) {
-            BlockPos blockPos = new BlockPos(this.x, 256.0, this.z);
-            while (blockPos.getY() > 0) {
-                BlockState blockState = world.getBlockState(blockPos = blockPos.down());
-                if (blockState.isAir()) continue;
-                Material material = blockState.getMaterial();
-                return !material.isLiquid() && material != Material.FIRE;
-            }
-            return false;
+        public boolean isSafe(BlockView world, int i) {
+            BlockPos blockPos = new BlockPos(this.x, (double)(this.getY(world, i) - 1), this.z);
+            BlockState blockState = world.getBlockState(blockPos);
+            Material material = blockState.getMaterial();
+            return blockPos.getY() < i && !material.isLiquid() && material != Material.FIRE;
         }
 
         public void setPileLocation(Random random, double minX, double minZ, double maxX, double maxZ) {

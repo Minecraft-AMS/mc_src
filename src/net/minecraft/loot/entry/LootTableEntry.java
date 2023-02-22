@@ -18,6 +18,8 @@ import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.entry.LeafEntry;
+import net.minecraft.loot.entry.LootPoolEntryType;
+import net.minecraft.loot.entry.LootPoolEntryTypes;
 import net.minecraft.loot.function.LootFunction;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -32,23 +34,28 @@ extends LeafEntry {
     }
 
     @Override
-    public void drop(Consumer<ItemStack> itemDropper, LootContext context) {
-        LootTable lootTable = context.getSupplier(this.id);
-        lootTable.drop(context, itemDropper);
+    public LootPoolEntryType getType() {
+        return LootPoolEntryTypes.LOOT_TABLE;
     }
 
     @Override
-    public void check(LootTableReporter lootTableReporter) {
-        if (lootTableReporter.hasSupplier(this.id)) {
-            lootTableReporter.report("Table " + this.id + " is recursively called");
+    public void generateLoot(Consumer<ItemStack> lootConsumer, LootContext context) {
+        LootTable lootTable = context.getSupplier(this.id);
+        lootTable.generateUnprocessedLoot(context, lootConsumer);
+    }
+
+    @Override
+    public void validate(LootTableReporter reporter) {
+        if (reporter.hasTable(this.id)) {
+            reporter.report("Table " + this.id + " is recursively called");
             return;
         }
-        super.check(lootTableReporter);
-        LootTable lootTable = lootTableReporter.getSupplier(this.id);
+        super.validate(reporter);
+        LootTable lootTable = reporter.getTable(this.id);
         if (lootTable == null) {
-            lootTableReporter.report("Unknown loot table called " + this.id);
+            reporter.report("Unknown loot table called " + this.id);
         } else {
-            lootTable.check(lootTableReporter.withSupplier("->{" + this.id + "}", this.id));
+            lootTable.validate(reporter.withTable("->{" + this.id + "}", this.id));
         }
     }
 
@@ -58,13 +65,9 @@ extends LeafEntry {
 
     public static class Serializer
     extends LeafEntry.Serializer<LootTableEntry> {
-        public Serializer() {
-            super(new Identifier("loot_table"), LootTableEntry.class);
-        }
-
         @Override
-        public void toJson(JsonObject jsonObject, LootTableEntry lootTableEntry, JsonSerializationContext jsonSerializationContext) {
-            super.toJson(jsonObject, lootTableEntry, jsonSerializationContext);
+        public void addEntryFields(JsonObject jsonObject, LootTableEntry lootTableEntry, JsonSerializationContext jsonSerializationContext) {
+            super.addEntryFields(jsonObject, lootTableEntry, jsonSerializationContext);
             jsonObject.addProperty("name", lootTableEntry.id.toString());
         }
 

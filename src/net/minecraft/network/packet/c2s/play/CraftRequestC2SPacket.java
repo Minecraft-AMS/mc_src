@@ -11,10 +11,10 @@ import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.PacketByteBuf;
 
 public class CraftRequestC2SPacket
 implements Packet<ServerPlayPacketListener> {
@@ -26,10 +26,10 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public CraftRequestC2SPacket(int syncId, Recipe<?> recipe, boolean bl) {
+    public CraftRequestC2SPacket(int syncId, Recipe<?> recipe, boolean craftAll) {
         this.syncId = syncId;
         this.recipe = recipe.getId();
-        this.craftAll = bl;
+        this.craftAll = craftAll;
     }
 
     @Override

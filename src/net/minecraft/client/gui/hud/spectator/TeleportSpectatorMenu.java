@@ -25,6 +25,7 @@ import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommandGroup;
 import net.minecraft.client.gui.hud.spectator.TeleportToSpecificPlayerSpectatorCommand;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.world.GameMode;
@@ -34,6 +35,8 @@ public class TeleportSpectatorMenu
 implements SpectatorMenuCommandGroup,
 SpectatorMenuCommand {
     private static final Ordering<PlayerListEntry> ORDERING = Ordering.from((playerListEntry, playerListEntry2) -> ComparisonChain.start().compare((Comparable)playerListEntry.getProfile().getId(), (Comparable)playerListEntry2.getProfile().getId()).result());
+    private static final Text TELEPORT_TEXT = new TranslatableText("spectatorMenu.teleport");
+    private static final Text PROMPT_TEXT = new TranslatableText("spectatorMenu.teleport.prompt");
     private final List<SpectatorMenuCommand> elements = Lists.newArrayList();
 
     public TeleportSpectatorMenu() {
@@ -54,7 +57,7 @@ SpectatorMenuCommand {
 
     @Override
     public Text getPrompt() {
-        return new TranslatableText("spectatorMenu.teleport.prompt", new Object[0]);
+        return PROMPT_TEXT;
     }
 
     @Override
@@ -64,13 +67,13 @@ SpectatorMenuCommand {
 
     @Override
     public Text getName() {
-        return new TranslatableText("spectatorMenu.teleport", new Object[0]);
+        return TELEPORT_TEXT;
     }
 
     @Override
-    public void renderIcon(float brightness, int alpha) {
-        MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEX);
-        DrawableHelper.blit(0, 0, 0.0f, 0.0f, 16, 16, 256, 256);
+    public void renderIcon(MatrixStack matrices, float f, int i) {
+        MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEXTURE);
+        DrawableHelper.drawTexture(matrices, 0, 0, 0.0f, 0.0f, 16, 16, 256, 256);
     }
 
     @Override

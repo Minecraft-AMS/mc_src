@@ -85,9 +85,9 @@ public abstract class LevelPropagator {
         this.hasPendingUpdates = this.minPendingLevel < this.levelCount;
     }
 
-    public void method_24206(LongPredicate longPredicate) {
+    public void removePendingUpdateIf(LongPredicate predicate) {
         LongArrayList longList = new LongArrayList();
-        this.pendingUpdates.keySet().forEach(arg_0 -> LevelPropagator.method_24207(longPredicate, (LongList)longList, arg_0));
+        this.pendingUpdates.keySet().forEach(arg_0 -> LevelPropagator.method_24207(predicate, (LongList)longList, arg_0));
         longList.forEach(this::removePendingUpdate);
     }
 
@@ -196,7 +196,7 @@ public abstract class LevelPropagator {
         return maxSteps;
     }
 
-    public int method_24208() {
+    public int getPendingUpdateCount() {
         return this.pendingUpdates.size();
     }
 

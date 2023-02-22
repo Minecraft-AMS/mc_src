@@ -28,17 +28,17 @@ import java.util.concurrent.Executors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.ProgressListener;
-import net.minecraft.util.UncaughtExceptionLogger;
+import net.minecraft.util.logging.UncaughtExceptionLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class NetworkUtils {
     private static final Logger LOGGER = LogManager.getLogger();
-    public static final ListeningExecutorService downloadExecutor = MoreExecutors.listeningDecorator((ExecutorService)Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).setUncaughtExceptionHandler((Thread.UncaughtExceptionHandler)new UncaughtExceptionLogger(LOGGER)).setNameFormat("Downloader %d").build()));
+    public static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator((ExecutorService)Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).setUncaughtExceptionHandler((Thread.UncaughtExceptionHandler)new UncaughtExceptionLogger(LOGGER)).setNameFormat("Downloader %d").build()));
 
     @Environment(value=EnvType.CLIENT)
-    public static CompletableFuture<?> download(File file, String string, Map<String, String> map, int i, @Nullable ProgressListener progressListener, Proxy proxy) {
+    public static CompletableFuture<?> downloadResourcePack(File file, String string, Map<String, String> map, int i, @Nullable ProgressListener progressListener, Proxy proxy) {
         return CompletableFuture.supplyAsync(() -> {
             /*
              * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
@@ -60,7 +60,7 @@ public class NetworkUtils {
              *     at org.benf.cfr.reader.Main.main(Main.java:54)
              */
             throw new IllegalStateException("Decompilation failed");
-        }, (Executor)downloadExecutor);
+        }, (Executor)EXECUTOR);
     }
 
     /*

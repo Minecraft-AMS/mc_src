@@ -18,6 +18,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.entry.LeafEntry;
+import net.minecraft.loot.entry.LootPoolEntryType;
+import net.minecraft.loot.entry.LootPoolEntryTypes;
 import net.minecraft.loot.function.LootFunction;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -33,23 +35,24 @@ extends LeafEntry {
     }
 
     @Override
-    public void drop(Consumer<ItemStack> itemDropper, LootContext context) {
-        itemDropper.accept(new ItemStack(this.item));
+    public LootPoolEntryType getType() {
+        return LootPoolEntryTypes.ITEM;
     }
 
-    public static LeafEntry.Builder<?> builder(ItemConvertible itemProvider) {
-        return ItemEntry.builder((int weight, int quality, LootCondition[] conditions, LootFunction[] functions) -> new ItemEntry(itemProvider.asItem(), weight, quality, conditions, functions));
+    @Override
+    public void generateLoot(Consumer<ItemStack> lootConsumer, LootContext context) {
+        lootConsumer.accept(new ItemStack(this.item));
+    }
+
+    public static LeafEntry.Builder<?> builder(ItemConvertible drop) {
+        return ItemEntry.builder((int weight, int quality, LootCondition[] conditions, LootFunction[] functions) -> new ItemEntry(drop.asItem(), weight, quality, conditions, functions));
     }
 
     public static class Serializer
     extends LeafEntry.Serializer<ItemEntry> {
-        public Serializer() {
-            super(new Identifier("item"), ItemEntry.class);
-        }
-
         @Override
-        public void toJson(JsonObject jsonObject, ItemEntry itemEntry, JsonSerializationContext jsonSerializationContext) {
-            super.toJson(jsonObject, itemEntry, jsonSerializationContext);
+        public void addEntryFields(JsonObject jsonObject, ItemEntry itemEntry, JsonSerializationContext jsonSerializationContext) {
+            super.addEntryFields(jsonObject, itemEntry, jsonSerializationContext);
             Identifier identifier = Registry.ITEM.getId(itemEntry.item);
             if (identifier == null) {
                 throw new IllegalArgumentException("Can't serialize unknown item " + itemEntry.item);

@@ -21,7 +21,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -48,6 +48,10 @@ public class Path {
         ++this.currentNodeIndex;
     }
 
+    public boolean method_30849() {
+        return this.currentNodeIndex <= 0;
+    }
+
     public boolean isFinished() {
         return this.currentNodeIndex >= this.nodes.size();
     }
@@ -62,10 +66,6 @@ public class Path {
 
     public PathNode getNode(int index) {
         return this.nodes.get(index);
-    }
-
-    public List<PathNode> getNodes() {
-        return this.nodes;
     }
 
     public void setLength(int length) {
@@ -98,25 +98,37 @@ public class Path {
         return new Vec3d(d, e, f);
     }
 
+    public BlockPos method_31031(int i) {
+        return this.nodes.get(i).getBlockPos();
+    }
+
     public Vec3d getNodePosition(Entity entity) {
         return this.getNodePosition(entity, this.currentNodeIndex);
     }
 
-    public Vec3d getCurrentPosition() {
-        PathNode pathNode = this.nodes.get(this.currentNodeIndex);
-        return new Vec3d(pathNode.x, pathNode.y, pathNode.z);
+    public BlockPos method_31032() {
+        return this.nodes.get(this.currentNodeIndex).getBlockPos();
     }
 
-    public boolean equalsPath(@Nullable Path path) {
-        if (path == null) {
+    public PathNode method_29301() {
+        return this.nodes.get(this.currentNodeIndex);
+    }
+
+    @Nullable
+    public PathNode method_30850() {
+        return this.currentNodeIndex > 0 ? this.nodes.get(this.currentNodeIndex - 1) : null;
+    }
+
+    public boolean equalsPath(@Nullable Path o) {
+        if (o == null) {
             return false;
         }
-        if (path.nodes.size() != this.nodes.size()) {
+        if (o.nodes.size() != this.nodes.size()) {
             return false;
         }
         for (int i = 0; i < this.nodes.size(); ++i) {
             PathNode pathNode = this.nodes.get(i);
-            PathNode pathNode2 = path.nodes.get(i);
+            PathNode pathNode2 = o.nodes.get(i);
             if (pathNode.x == pathNode2.x && pathNode.y == pathNode2.y && pathNode.z == pathNode2.z) continue;
             return false;
         }
@@ -150,15 +162,15 @@ public class Path {
         ArrayList list = Lists.newArrayList();
         int l = buffer.readInt();
         for (int m = 0; m < l; ++m) {
-            list.add(PathNode.fromBuffer(buffer));
+            list.add(PathNode.readBuf(buffer));
         }
         PathNode[] pathNodes = new PathNode[buffer.readInt()];
         for (int n = 0; n < pathNodes.length; ++n) {
-            pathNodes[n] = PathNode.fromBuffer(buffer);
+            pathNodes[n] = PathNode.readBuf(buffer);
         }
         PathNode[] pathNodes2 = new PathNode[buffer.readInt()];
         for (int o = 0; o < pathNodes2.length; ++o) {
-            pathNodes2[o] = PathNode.fromBuffer(buffer);
+            pathNodes2[o] = PathNode.readBuf(buffer);
         }
         Path path = new Path(list, blockPos, bl);
         path.field_57 = pathNodes;

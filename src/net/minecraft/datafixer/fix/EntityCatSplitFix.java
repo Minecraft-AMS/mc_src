@@ -2,15 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.util.Pair
+ *  com.mojang.serialization.Dynamic
  */
 package net.minecraft.datafixer.fix;
 
-import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Dynamic;
 import java.util.Objects;
 import net.minecraft.datafixer.fix.EntitySimpleTransformFix;
 
@@ -21,22 +21,22 @@ extends EntitySimpleTransformFix {
     }
 
     @Override
-    protected Pair<String, Dynamic<?>> transform(String choice, Dynamic<?> tag) {
+    protected Pair<String, Dynamic<?>> transform(String choice, Dynamic<?> dynamic) {
         if (Objects.equals("minecraft:ocelot", choice)) {
-            int i = tag.get("CatType").asInt(0);
+            int i = dynamic.get("CatType").asInt(0);
             if (i == 0) {
-                String string = tag.get("Owner").asString("");
-                String string2 = tag.get("OwnerUUID").asString("");
+                String string = dynamic.get("Owner").asString("");
+                String string2 = dynamic.get("OwnerUUID").asString("");
                 if (string.length() > 0 || string2.length() > 0) {
-                    tag.set("Trusting", tag.createBoolean(true));
+                    dynamic.set("Trusting", dynamic.createBoolean(true));
                 }
             } else if (i > 0 && i < 4) {
-                tag = tag.set("CatType", tag.createInt(i));
-                tag = tag.set("OwnerUUID", tag.createString(tag.get("OwnerUUID").asString("")));
-                return Pair.of((Object)"minecraft:cat", (Object)tag);
+                dynamic = dynamic.set("CatType", dynamic.createInt(i));
+                dynamic = dynamic.set("OwnerUUID", dynamic.createString(dynamic.get("OwnerUUID").asString("")));
+                return Pair.of((Object)"minecraft:cat", (Object)dynamic);
             }
         }
-        return Pair.of((Object)choice, tag);
+        return Pair.of((Object)choice, dynamic);
     }
 }
 

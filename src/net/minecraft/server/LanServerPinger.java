@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.UncaughtExceptionLogger;
+import net.minecraft.util.logging.UncaughtExceptionLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -28,7 +28,7 @@ extends Thread {
     private static final Logger LOGGER = LogManager.getLogger();
     private final String motd;
     private final DatagramSocket socket;
-    private boolean isRunning = true;
+    private boolean running = true;
     private final String addressPort;
 
     public LanServerPinger(String motd, String addressPort) throws IOException {
@@ -44,7 +44,7 @@ extends Thread {
     public void run() {
         String string = LanServerPinger.createAnnouncement(this.motd, this.addressPort);
         byte[] bs = string.getBytes(StandardCharsets.UTF_8);
-        while (!this.isInterrupted() && this.isRunning) {
+        while (!this.isInterrupted() && this.running) {
             try {
                 InetAddress inetAddress = InetAddress.getByName("224.0.2.60");
                 DatagramPacket datagramPacket = new DatagramPacket(bs, bs.length, inetAddress, 4445);
@@ -64,7 +64,7 @@ extends Thread {
     @Override
     public void interrupt() {
         super.interrupt();
-        this.isRunning = false;
+        this.running = false;
     }
 
     public static String createAnnouncement(String motd, String addressPort) {

@@ -8,8 +8,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.Hopper;
 import net.minecraft.block.entity.HopperBlockEntity;
-import net.minecraft.container.Container;
-import net.minecraft.container.HopperContainer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
@@ -17,8 +15,10 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.entity.vehicle.StorageMinecartEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.screen.HopperScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
@@ -54,7 +54,7 @@ implements Hopper {
     }
 
     @Override
-    public int getInvSize() {
+    public int size() {
         return 5;
     }
 
@@ -99,7 +99,7 @@ implements Hopper {
     public void tick() {
         super.tick();
         if (!this.world.isClient && this.isAlive() && this.isEnabled()) {
-            BlockPos blockPos = new BlockPos(this);
+            BlockPos blockPos = this.getBlockPos();
             if (blockPos.equals(this.currentBlockPos)) {
                 --this.transferCooldown;
             } else {
@@ -119,7 +119,7 @@ implements Hopper {
         if (HopperBlockEntity.extract(this)) {
             return true;
         }
-        List<Entity> list = this.world.getEntities(ItemEntity.class, this.getBoundingBox().expand(0.25, 0.0, 0.25), EntityPredicates.VALID_ENTITY);
+        List<Entity> list = this.world.getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.25, 0.0, 0.25), EntityPredicates.VALID_ENTITY);
         if (!list.isEmpty()) {
             HopperBlockEntity.extract(this, (ItemEntity)list.get(0));
         }
@@ -135,17 +135,17 @@ implements Hopper {
     }
 
     @Override
-    protected void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("TransferCooldown", this.transferCooldown);
-        tag.putBoolean("Enabled", this.enabled);
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("TransferCooldown", this.transferCooldown);
+        nbt.putBoolean("Enabled", this.enabled);
     }
 
     @Override
-    protected void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.transferCooldown = tag.getInt("TransferCooldown");
-        this.enabled = tag.contains("Enabled") ? tag.getBoolean("Enabled") : true;
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.transferCooldown = nbt.getInt("TransferCooldown");
+        this.enabled = nbt.contains("Enabled") ? nbt.getBoolean("Enabled") : true;
     }
 
     public void setTransferCooldown(int cooldown) {
@@ -157,8 +157,8 @@ implements Hopper {
     }
 
     @Override
-    public Container getContainer(int syncId, PlayerInventory playerInventory) {
-        return new HopperContainer(syncId, playerInventory, this);
+    public ScreenHandler getScreenHandler(int syncId, PlayerInventory playerInventory) {
+        return new HopperScreenHandler(syncId, playerInventory, this);
     }
 }
 

@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
+ *  com.mojang.serialization.Codec
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
@@ -11,14 +12,15 @@ package net.minecraft.particle;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.serialization.Codec;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.command.arguments.ItemStackArgument;
-import net.minecraft.command.arguments.ItemStringReader;
+import net.minecraft.command.argument.ItemStackArgument;
+import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.registry.Registry;
 
 public class ItemStackParticleEffect
@@ -29,7 +31,7 @@ implements ParticleEffect {
         public ItemStackParticleEffect read(ParticleType<ItemStackParticleEffect> particleType, StringReader stringReader) throws CommandSyntaxException {
             stringReader.expect(' ');
             ItemStringReader itemStringReader = new ItemStringReader(stringReader, false).consume();
-            ItemStack itemStack = new ItemStackArgument(itemStringReader.getItem(), itemStringReader.getTag()).createStack(1, false);
+            ItemStack itemStack = new ItemStackArgument(itemStringReader.getItem(), itemStringReader.getNbt()).createStack(1, false);
             return new ItemStackParticleEffect(particleType, itemStack);
         }
 
@@ -50,6 +52,10 @@ implements ParticleEffect {
     };
     private final ParticleType<ItemStackParticleEffect> type;
     private final ItemStack stack;
+
+    public static Codec<ItemStackParticleEffect> method_29136(ParticleType<ItemStackParticleEffect> particleType) {
+        return ItemStack.CODEC.xmap(itemStack -> new ItemStackParticleEffect(particleType, (ItemStack)itemStack), itemStackParticleEffect -> itemStackParticleEffect.stack);
+    }
 
     public ItemStackParticleEffect(ParticleType<ItemStackParticleEffect> type, ItemStack stack) {
         this.type = type;

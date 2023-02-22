@@ -2,104 +2,91 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Random;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import net.minecraft.structure.MineshaftGenerator;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructureStart;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockBox;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.MineshaftFeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class MineshaftFeature
 extends StructureFeature<MineshaftFeatureConfig> {
-    public MineshaftFeature(Function<Dynamic<?>, ? extends MineshaftFeatureConfig> configFactory) {
-        super(configFactory);
+    public MineshaftFeature(Codec<MineshaftFeatureConfig> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
-        ((ChunkRandom)random).setStructureSeed(chunkGenerator.getSeed(), chunkZ, i);
-        if (chunkGenerator.hasStructure(biome, this)) {
-            MineshaftFeatureConfig mineshaftFeatureConfig = chunkGenerator.getStructureConfig(biome, this);
-            double d = mineshaftFeatureConfig.probability;
-            return random.nextDouble() < d;
-        }
-        return false;
+    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long l, ChunkRandom chunkRandom, int i, int j, Biome biome, ChunkPos chunkPos, MineshaftFeatureConfig mineshaftFeatureConfig) {
+        chunkRandom.setCarverSeed(l, i, j);
+        double d = mineshaftFeatureConfig.probability;
+        return chunkRandom.nextDouble() < d;
     }
 
     @Override
-    public StructureFeature.StructureStartFactory getStructureStartFactory() {
+    public StructureFeature.StructureStartFactory<MineshaftFeatureConfig> getStructureStartFactory() {
         return Start::new;
     }
 
-    @Override
-    public String getName() {
-        return "Mineshaft";
-    }
-
-    @Override
-    public int getRadius() {
-        return 8;
-    }
-
     public static class Start
-    extends StructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
+    extends StructureStart<MineshaftFeatureConfig> {
+        public Start(StructureFeature<MineshaftFeatureConfig> structureFeature, int i, int j, BlockBox blockBox, int k, long l) {
+            super(structureFeature, i, j, blockBox, k, l);
         }
 
         @Override
-        public void initialize(ChunkGenerator<?> chunkGenerator, StructureManager structureManager, int x, int z, Biome biome) {
-            MineshaftFeatureConfig mineshaftFeatureConfig = chunkGenerator.getStructureConfig(biome, Feature.MINESHAFT);
-            MineshaftGenerator.MineshaftRoom mineshaftRoom = new MineshaftGenerator.MineshaftRoom(0, this.random, (x << 4) + 2, (z << 4) + 2, mineshaftFeatureConfig.type);
+        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, int i, int j, Biome biome, MineshaftFeatureConfig mineshaftFeatureConfig) {
+            MineshaftGenerator.MineshaftRoom mineshaftRoom = new MineshaftGenerator.MineshaftRoom(0, this.random, (i << 4) + 2, (j << 4) + 2, mineshaftFeatureConfig.type);
             this.children.add(mineshaftRoom);
-            mineshaftRoom.method_14918(mineshaftRoom, this.children, this.random);
+            mineshaftRoom.fillOpenings(mineshaftRoom, this.children, this.random);
             this.setBoundingBoxFromChildren();
             if (mineshaftFeatureConfig.type == Type.MESA) {
-                int i = -5;
-                int j = chunkGenerator.getSeaLevel() - this.boundingBox.maxY + this.boundingBox.getBlockCountY() / 2 - -5;
-                this.boundingBox.offset(0, j, 0);
+                int k = -5;
+                int l = chunkGenerator.getSeaLevel() - this.boundingBox.maxY + this.boundingBox.getBlockCountY() / 2 - -5;
+                this.boundingBox.move(0, l, 0);
                 for (StructurePiece structurePiece : this.children) {
-                    structurePiece.translate(0, j, 0);
+                    structurePiece.translate(0, l, 0);
                 }
             } else {
-                this.method_14978(chunkGenerator.getSeaLevel(), this.random, 10);
+                this.randomUpwardTranslation(chunkGenerator.getSeaLevel(), this.random, 10);
             }
         }
     }
 
-    public static enum Type {
+    public static enum Type implements StringIdentifiable
+    {
         NORMAL("normal"),
         MESA("mesa");
 
-        private static final Map<String, Type> nameMap;
+        public static final Codec<Type> CODEC;
+        private static final Map<String, Type> BY_NAME;
         private final String name;
 
-        private Type(String string2) {
-            this.name = string2;
+        private Type(String name) {
+            this.name = name;
         }
 
         public String getName() {
             return this.name;
         }
 
-        public static Type byName(String nam) {
-            return nameMap.get(nam);
+        private static Type byName(String name) {
+            return BY_NAME.get(name);
         }
 
         public static Type byIndex(int index) {
@@ -109,8 +96,14 @@ extends StructureFeature<MineshaftFeatureConfig> {
             return Type.values()[index];
         }
 
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
         static {
-            nameMap = Arrays.stream(Type.values()).collect(Collectors.toMap(Type::getName, type -> type));
+            CODEC = StringIdentifiable.createCodec(Type::values, Type::byName);
+            BY_NAME = Arrays.stream(Type.values()).collect(Collectors.toMap(Type::getName, type -> type));
         }
     }
 }

@@ -14,11 +14,11 @@ import net.minecraft.util.math.Vec3d;
 public class SittingScanningPhase
 extends AbstractSittingPhase {
     private static final TargetPredicate PLAYER_WITHIN_RANGE_PREDICATE = new TargetPredicate().setBaseMaxDistance(150.0);
-    private final TargetPredicate CLOSE_PLAYER_PREDICATE = new TargetPredicate().setBaseMaxDistance(20.0).setPredicate(livingEntity -> Math.abs(livingEntity.getY() - dragon.getY()) <= 10.0);
+    private final TargetPredicate CLOSE_PLAYER_PREDICATE = new TargetPredicate().setBaseMaxDistance(20.0).setPredicate(livingEntity -> Math.abs(livingEntity.getY() - enderDragonEntity.getY()) <= 10.0);
     private int ticks;
 
-    public SittingScanningPhase(EnderDragonEntity dragon) {
-        super(dragon);
+    public SittingScanningPhase(EnderDragonEntity enderDragonEntity) {
+        super(enderDragonEntity);
     }
 
     @Override
@@ -35,8 +35,8 @@ extends AbstractSittingPhase {
                 float g = (float)(Math.acos(f) * 57.2957763671875) + 0.5f;
                 if (g < 0.0f || g > 10.0f) {
                     float i;
-                    double d = livingEntity.getX() - this.dragon.partHead.getX();
-                    double e = livingEntity.getZ() - this.dragon.partHead.getZ();
+                    double d = livingEntity.getX() - this.dragon.head.getX();
+                    double e = livingEntity.getZ() - this.dragon.head.getZ();
                     double h = MathHelper.clamp(MathHelper.wrapDegrees(180.0 - MathHelper.atan2(d, e) * 57.2957763671875 - (double)this.dragon.yaw), -100.0, 100.0);
                     this.dragon.field_20865 *= 0.8f;
                     float j = i = MathHelper.sqrt(d * d + e * e) + 1.0f;
@@ -52,7 +52,7 @@ extends AbstractSittingPhase {
             this.dragon.getPhaseManager().setPhase(PhaseType.TAKEOFF);
             if (livingEntity != null) {
                 this.dragon.getPhaseManager().setPhase(PhaseType.CHARGING_PLAYER);
-                this.dragon.getPhaseManager().create(PhaseType.CHARGING_PLAYER).setTarget(new Vec3d(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ()));
+                this.dragon.getPhaseManager().create(PhaseType.CHARGING_PLAYER).setPathTarget(new Vec3d(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ()));
             }
         }
     }

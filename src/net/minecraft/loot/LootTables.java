@@ -51,6 +51,11 @@ public class LootTables {
     public static final Identifier SHIPWRECK_SUPPLY_CHEST = LootTables.register("chests/shipwreck_supply");
     public static final Identifier SHIPWRECK_TREASURE_CHEST = LootTables.register("chests/shipwreck_treasure");
     public static final Identifier PILLAGER_OUTPOST_CHEST = LootTables.register("chests/pillager_outpost");
+    public static final Identifier BASTION_TREASURE_CHEST = LootTables.register("chests/bastion_treasure");
+    public static final Identifier BASTION_OTHER_CHEST = LootTables.register("chests/bastion_other");
+    public static final Identifier BASTION_BRIDGE_CHEST = LootTables.register("chests/bastion_bridge");
+    public static final Identifier BASTION_HOGLIN_STABLE_CHEST = LootTables.register("chests/bastion_hoglin_stable");
+    public static final Identifier RUINED_PORTAL_CHEST = LootTables.register("chests/ruined_portal");
     public static final Identifier WHITE_SHEEP_ENTITY = LootTables.register("entities/sheep/white");
     public static final Identifier ORANGE_SHEEP_ENTITY = LootTables.register("entities/sheep/orange");
     public static final Identifier MAGENTA_SHEEP_ENTITY = LootTables.register("entities/sheep/magenta");
@@ -85,6 +90,7 @@ public class LootTables {
     public static final Identifier HERO_OF_THE_VILLAGE_SHEPHERD_GIFT_GAMEPLAY = LootTables.register("gameplay/hero_of_the_village/shepherd_gift");
     public static final Identifier HERO_OF_THE_VILLAGE_TOOLSMITH_GIFT_GAMEPLAY = LootTables.register("gameplay/hero_of_the_village/toolsmith_gift");
     public static final Identifier HERO_OF_THE_VILLAGE_WEAPONSMITH_GIFT_GAMEPLAY = LootTables.register("gameplay/hero_of_the_village/weaponsmith_gift");
+    public static final Identifier PIGLIN_BARTERING_GAMEPLAY = LootTables.register("gameplay/piglin_bartering");
 
     private static Identifier register(String id) {
         return LootTables.registerLootTable(new Identifier(id));

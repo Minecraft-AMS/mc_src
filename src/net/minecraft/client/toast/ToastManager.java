@@ -18,6 +18,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.toast.Toast;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -33,13 +34,13 @@ extends DrawableHelper {
         this.client = client;
     }
 
-    public void draw() {
+    public void draw(MatrixStack matrices) {
         if (this.client.options.hudHidden) {
             return;
         }
         for (int i = 0; i < this.visibleEntries.length; ++i) {
             Entry<?> entry = this.visibleEntries[i];
-            if (entry != null && entry.draw(this.client.getWindow().getScaledWidth(), i)) {
+            if (entry != null && entry.draw(this.client.getWindow().getScaledWidth(), i, matrices)) {
                 this.visibleEntries[i] = null;
             }
             if (this.visibleEntries[i] != null || this.toastQueue.isEmpty()) continue;
@@ -90,7 +91,7 @@ extends DrawableHelper {
             return this.instance;
         }
 
-        private float getDissapearProgress(long time) {
+        private float getDisappearProgress(long time) {
             float f = MathHelper.clamp((float)(time - this.field_2243) / 600.0f, 0.0f, 1.0f);
             f *= f;
             if (this.visibility == Toast.Visibility.HIDE) {
@@ -99,7 +100,7 @@ extends DrawableHelper {
             return f;
         }
 
-        public boolean draw(int x, int y) {
+        public boolean draw(int x, int y, MatrixStack matrices) {
             long l = Util.getMeasuringTimeMs();
             if (this.field_2243 == -1L) {
                 this.field_2243 = l;
@@ -109,11 +110,11 @@ extends DrawableHelper {
                 this.field_2242 = l;
             }
             RenderSystem.pushMatrix();
-            RenderSystem.translatef((float)x - 160.0f * this.getDissapearProgress(l), y * 32, 800 + y);
-            Toast.Visibility visibility = this.instance.draw(this.field_2245, l - this.field_2242);
+            RenderSystem.translatef((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), y * this.instance.getHeight(), 800 + y);
+            Toast.Visibility visibility = this.instance.draw(matrices, this.field_2245, l - this.field_2242);
             RenderSystem.popMatrix();
             if (visibility != this.visibility) {
-                this.field_2243 = l - (long)((int)((1.0f - this.getDissapearProgress(l)) * 600.0f));
+                this.field_2243 = l - (long)((int)((1.0f - this.getDisappearProgress(l)) * 600.0f));
                 this.visibility = visibility;
                 this.visibility.playSound(this.field_2245.client.getSoundManager());
             }

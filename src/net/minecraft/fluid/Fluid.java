@@ -13,12 +13,11 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.FluidStateImpl;
 import net.minecraft.item.Item;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.state.StateManager;
 import net.minecraft.tag.Tag;
-import net.minecraft.util.IdList;
+import net.minecraft.util.collection.IdList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
@@ -36,7 +35,7 @@ public abstract class Fluid {
     protected Fluid() {
         StateManager.Builder<Fluid, FluidState> builder = new StateManager.Builder<Fluid, FluidState>(this);
         this.appendProperties(builder);
-        this.stateManager = builder.build(FluidStateImpl::new);
+        this.stateManager = builder.build(Fluid::getDefaultState, FluidState::new);
         this.setDefaultState(this.stateManager.getDefaultState());
     }
 
@@ -103,7 +102,7 @@ public abstract class Fluid {
         return fluid == this;
     }
 
-    public boolean matches(Tag<Fluid> tag) {
+    public boolean isIn(Tag<Fluid> tag) {
         return tag.contains(this);
     }
 

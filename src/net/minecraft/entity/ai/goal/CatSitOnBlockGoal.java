@@ -4,7 +4,6 @@
 package net.minecraft.entity.ai.goal;
 
 import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FurnaceBlock;
@@ -33,24 +32,19 @@ extends MoveToTargetPosGoal {
     @Override
     public void start() {
         super.start();
-        this.cat.getSitGoal().setEnabledWithOwner(false);
+        this.cat.setInSittingPose(false);
     }
 
     @Override
     public void stop() {
         super.stop();
-        this.cat.setSitting(false);
+        this.cat.setInSittingPose(false);
     }
 
     @Override
     public void tick() {
         super.tick();
-        this.cat.getSitGoal().setEnabledWithOwner(false);
-        if (!this.hasReached()) {
-            this.cat.setSitting(false);
-        } else if (!this.cat.isSitting()) {
-            this.cat.setSitting(true);
-        }
+        this.cat.setInSittingPose(this.hasReached());
     }
 
     @Override
@@ -59,14 +53,13 @@ extends MoveToTargetPosGoal {
             return false;
         }
         BlockState blockState = world.getBlockState(pos);
-        Block block = blockState.getBlock();
-        if (block == Blocks.CHEST) {
+        if (blockState.isOf(Blocks.CHEST)) {
             return ChestBlockEntity.getPlayersLookingInChestCount(world, pos) < 1;
         }
-        if (block == Blocks.FURNACE && blockState.get(FurnaceBlock.LIT).booleanValue()) {
+        if (blockState.isOf(Blocks.FURNACE) && blockState.get(FurnaceBlock.LIT).booleanValue()) {
             return true;
         }
-        return block.matches(BlockTags.BEDS) && blockState.get(BedBlock.PART) != BedPart.HEAD;
+        return blockState.method_27851(BlockTags.BEDS, abstractBlockState -> abstractBlockState.getOrEmpty(BedBlock.PART).map(bedPart -> bedPart != BedPart.HEAD).orElse(true));
     }
 }
 

@@ -39,7 +39,7 @@ public interface Element {
         return false;
     }
 
-    default public boolean charTyped(char chr, int keyCode) {
+    default public boolean charTyped(char chr, int modifiers) {
         return false;
     }
 

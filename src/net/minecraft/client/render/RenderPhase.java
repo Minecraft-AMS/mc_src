@@ -45,7 +45,7 @@ public abstract class RenderPhase {
     });
     protected static final Transparency GLINT_TRANSPARENCY = new Transparency("glint_transparency", () -> {
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_COLOR, GlStateManager.DstFactor.ONE);
+        RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_COLOR, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE);
     }, () -> {
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
@@ -59,15 +59,18 @@ public abstract class RenderPhase {
     });
     protected static final Transparency TRANSLUCENT_TRANSPARENCY = new Transparency("translucent_transparency", () -> {
         RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
+    }, () -> {
+        RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
-    }, () -> RenderSystem.disableBlend());
+    });
     protected static final Alpha ZERO_ALPHA = new Alpha(0.0f);
     protected static final Alpha ONE_TENTH_ALPHA = new Alpha(0.003921569f);
     protected static final Alpha HALF_ALPHA = new Alpha(0.5f);
     protected static final ShadeModel SHADE_MODEL = new ShadeModel(false);
     protected static final ShadeModel SMOOTH_SHADE_MODEL = new ShadeModel(true);
-    protected static final Texture MIPMAP_BLOCK_ATLAS_TEXTURE = new Texture(SpriteAtlasTexture.BLOCK_ATLAS_TEX, false, true);
-    protected static final Texture BLOCK_ATLAS_TEXTURE = new Texture(SpriteAtlasTexture.BLOCK_ATLAS_TEX, false, false);
+    protected static final Texture MIPMAP_BLOCK_ATLAS_TEXTURE = new Texture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, false, true);
+    protected static final Texture BLOCK_ATLAS_TEXTURE = new Texture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, false, false);
     protected static final Texture NO_TEXTURE = new Texture();
     protected static final Texturing DEFAULT_TEXTURING = new Texturing("default_texturing", () -> {}, () -> {});
     protected static final Texturing OUTLINE_TEXTURING = new Texturing("outline_texturing", () -> RenderSystem.setupOutline(), () -> RenderSystem.teardownOutline());
@@ -89,9 +92,9 @@ public abstract class RenderPhase {
     protected static final DiffuseLighting DISABLE_DIFFUSE_LIGHTING = new DiffuseLighting(false);
     protected static final Cull ENABLE_CULLING = new Cull(true);
     protected static final Cull DISABLE_CULLING = new Cull(false);
-    protected static final DepthTest ALWAYS_DEPTH_TEST = new DepthTest(519);
-    protected static final DepthTest EQUAL_DEPTH_TEST = new DepthTest(514);
-    protected static final DepthTest LEQUAL_DEPTH_TEST = new DepthTest(515);
+    protected static final DepthTest ALWAYS_DEPTH_TEST = new DepthTest("always", 519);
+    protected static final DepthTest EQUAL_DEPTH_TEST = new DepthTest("==", 514);
+    protected static final DepthTest LEQUAL_DEPTH_TEST = new DepthTest("<=", 515);
     protected static final WriteMaskState ALL_MASK = new WriteMaskState(true, true);
     protected static final WriteMaskState COLOR_MASK = new WriteMaskState(true, false);
     protected static final WriteMaskState DEPTH_MASK = new WriteMaskState(false, true);
@@ -103,16 +106,10 @@ public abstract class RenderPhase {
         RenderSystem.polygonOffset(0.0f, 0.0f);
         RenderSystem.disablePolygonOffset();
     });
-    protected static final Layering PROJECTION_LAYERING = new Layering("projection_layering", () -> {
-        RenderSystem.matrixMode(5889);
+    protected static final Layering VIEW_OFFSET_Z_LAYERING = new Layering("view_offset_z_layering", () -> {
         RenderSystem.pushMatrix();
-        RenderSystem.scalef(1.0f, 1.0f, 0.999f);
-        RenderSystem.matrixMode(5888);
-    }, () -> {
-        RenderSystem.matrixMode(5889);
-        RenderSystem.popMatrix();
-        RenderSystem.matrixMode(5888);
-    });
+        RenderSystem.scalef(0.99975586f, 0.99975586f, 0.99975586f);
+    }, RenderSystem::popMatrix);
     protected static final Fog NO_FOG = new Fog("no_fog", () -> {}, () -> {});
     protected static final Fog FOG = new Fog("fog", () -> {
         BackgroundRenderer.setFogBlack();
@@ -127,7 +124,52 @@ public abstract class RenderPhase {
     });
     protected static final Target MAIN_TARGET = new Target("main_target", () -> {}, () -> {});
     protected static final Target OUTLINE_TARGET = new Target("outline_target", () -> MinecraftClient.getInstance().worldRenderer.getEntityOutlinesFramebuffer().beginWrite(false), () -> MinecraftClient.getInstance().getFramebuffer().beginWrite(false));
-    protected static final LineWidth FULL_LINEWIDTH = new LineWidth(OptionalDouble.of(1.0));
+    protected static final Target TRANSLUCENT_TARGET = new Target("translucent_target", () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().worldRenderer.getTranslucentFramebuffer().beginWrite(false);
+        }
+    }, () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+    });
+    protected static final Target PARTICLES_TARGET = new Target("particles_target", () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().worldRenderer.getParticlesFramebuffer().beginWrite(false);
+        }
+    }, () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+    });
+    protected static final Target WEATHER_TARGET = new Target("weather_target", () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().worldRenderer.getWeatherFramebuffer().beginWrite(false);
+        }
+    }, () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+    });
+    protected static final Target CLOUDS_TARGET = new Target("clouds_target", () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().worldRenderer.getCloudsFramebuffer().beginWrite(false);
+        }
+    }, () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+    });
+    protected static final Target ITEM_TARGET = new Target("item_entity_target", () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().worldRenderer.getEntityFramebuffer().beginWrite(false);
+        }
+    }, () -> {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+    });
+    protected static final LineWidth FULL_LINE_WIDTH = new LineWidth(OptionalDouble.of(1.0));
 
     public RenderPhase(String name, Runnable beginAction, Runnable endAction) {
         this.name = name;
@@ -158,6 +200,10 @@ public abstract class RenderPhase {
         return this.name.hashCode();
     }
 
+    public String toString() {
+        return this.name;
+    }
+
     private static void setupGlintTexturing(float scale) {
         RenderSystem.matrixMode(5890);
         RenderSystem.pushMatrix();
@@ -177,7 +223,7 @@ public abstract class RenderPhase {
         private final OptionalDouble width;
 
         public LineWidth(OptionalDouble optionalDouble) {
-            super("alpha", () -> {
+            super("line_width", () -> {
                 if (!Objects.equals(optionalDouble, OptionalDouble.of(1.0))) {
                     if (optionalDouble.isPresent()) {
                         RenderSystem.lineWidth((float)optionalDouble.getAsDouble());
@@ -210,6 +256,11 @@ public abstract class RenderPhase {
         @Override
         public int hashCode() {
             return Objects.hash(super.hashCode(), this.width);
+        }
+
+        @Override
+        public String toString() {
+            return this.name + '[' + (this.width.isPresent() ? Double.valueOf(this.width.getAsDouble()) : "window_scale") + ']';
         }
     }
 
@@ -279,26 +330,33 @@ public abstract class RenderPhase {
         public int hashCode() {
             return Objects.hash(this.color, this.depth);
         }
+
+        @Override
+        public String toString() {
+            return this.name + "[writeColor=" + this.color + ", writeDepth=" + this.depth + ']';
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class DepthTest
     extends RenderPhase {
+        private final String depthFunction;
         private final int func;
 
-        public DepthTest(int func) {
+        public DepthTest(String string, int i) {
             super("depth_test", () -> {
-                if (func != 519) {
+                if (i != 519) {
                     RenderSystem.enableDepthTest();
-                    RenderSystem.depthFunc(func);
+                    RenderSystem.depthFunc(i);
                 }
             }, () -> {
-                if (func != 519) {
+                if (i != 519) {
                     RenderSystem.disableDepthTest();
                     RenderSystem.depthFunc(515);
                 }
             });
-            this.func = func;
+            this.depthFunction = string;
+            this.func = i;
         }
 
         @Override
@@ -317,6 +375,11 @@ public abstract class RenderPhase {
         public int hashCode() {
             return Integer.hashCode(this.func);
         }
+
+        @Override
+        public String toString() {
+            return this.name + '[' + this.depthFunction + ']';
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -324,12 +387,12 @@ public abstract class RenderPhase {
     extends Toggleable {
         public Cull(boolean culling) {
             super("cull", () -> {
-                if (culling) {
-                    RenderSystem.enableCull();
+                if (!culling) {
+                    RenderSystem.disableCull();
                 }
             }, () -> {
-                if (culling) {
-                    RenderSystem.disableCull();
+                if (!culling) {
+                    RenderSystem.enableCull();
                 }
             }, culling);
         }
@@ -408,6 +471,11 @@ public abstract class RenderPhase {
         @Override
         public int hashCode() {
             return Boolean.hashCode(this.enabled);
+        }
+
+        @Override
+        public String toString() {
+            return this.name + '[' + this.enabled + ']';
         }
     }
 
@@ -547,6 +615,11 @@ public abstract class RenderPhase {
             return this.id.hashCode();
         }
 
+        @Override
+        public String toString() {
+            return this.name + '[' + this.id + "(blur=" + this.bilinear + ", mipmap=" + this.mipmap + ")]";
+        }
+
         protected Optional<Identifier> getId() {
             return this.id;
         }
@@ -577,6 +650,11 @@ public abstract class RenderPhase {
         @Override
         public int hashCode() {
             return Boolean.hashCode(this.smooth);
+        }
+
+        @Override
+        public String toString() {
+            return this.name + '[' + (this.smooth ? "smooth" : "flat") + ']';
         }
     }
 
@@ -617,6 +695,11 @@ public abstract class RenderPhase {
         @Override
         public int hashCode() {
             return Objects.hash(super.hashCode(), Float.valueOf(this.alpha));
+        }
+
+        @Override
+        public String toString() {
+            return this.name + '[' + this.alpha + ']';
         }
     }
 

@@ -12,38 +12,37 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
-import net.minecraft.util.Hand;
-import net.minecraft.util.PacketByteBuf;
 
 public class BookUpdateC2SPacket
 implements Packet<ServerPlayPacketListener> {
     private ItemStack book;
     private boolean signed;
-    private Hand hand;
+    private int slot;
 
     public BookUpdateC2SPacket() {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public BookUpdateC2SPacket(ItemStack book, boolean signed, Hand hand) {
+    public BookUpdateC2SPacket(ItemStack book, boolean signed, int slot) {
         this.book = book.copy();
         this.signed = signed;
-        this.hand = hand;
+        this.slot = slot;
     }
 
     @Override
     public void read(PacketByteBuf buf) throws IOException {
         this.book = buf.readItemStack();
         this.signed = buf.readBoolean();
-        this.hand = buf.readEnumConstant(Hand.class);
+        this.slot = buf.readVarInt();
     }
 
     @Override
     public void write(PacketByteBuf buf) throws IOException {
         buf.writeItemStack(this.book);
         buf.writeBoolean(this.signed);
-        buf.writeEnumConstant(this.hand);
+        buf.writeVarInt(this.slot);
     }
 
     @Override
@@ -59,8 +58,8 @@ implements Packet<ServerPlayPacketListener> {
         return this.signed;
     }
 
-    public Hand getHand() {
-        return this.hand;
+    public int getSlot() {
+        return this.slot;
     }
 }
 

@@ -17,31 +17,26 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.recipe.book.RecipeBookOptions;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.PacketByteBuf;
 
 public class UnlockRecipesS2CPacket
 implements Packet<ClientPlayPacketListener> {
     private Action action;
     private List<Identifier> recipeIdsToChange;
     private List<Identifier> recipeIdsToInit;
-    private boolean guiOpen;
-    private boolean filteringCraftable;
-    private boolean furnaceGuiOpen;
-    private boolean furnaceFilteringCraftable;
+    private RecipeBookOptions options;
 
     public UnlockRecipesS2CPacket() {
     }
 
-    public UnlockRecipesS2CPacket(Action action, Collection<Identifier> recipeIdsToChange, Collection<Identifier> recipeIdsToInit, boolean guiOpen, boolean filteringCraftable, boolean furnaceGuiOpen, boolean furnaceFilteringCraftable) {
+    public UnlockRecipesS2CPacket(Action action, Collection<Identifier> recipeIdsToChange, Collection<Identifier> recipeIdsToInit, RecipeBookOptions options) {
         this.action = action;
         this.recipeIdsToChange = ImmutableList.copyOf(recipeIdsToChange);
         this.recipeIdsToInit = ImmutableList.copyOf(recipeIdsToInit);
-        this.guiOpen = guiOpen;
-        this.filteringCraftable = filteringCraftable;
-        this.furnaceGuiOpen = furnaceGuiOpen;
-        this.furnaceFilteringCraftable = furnaceFilteringCraftable;
+        this.options = options;
     }
 
     @Override
@@ -53,10 +48,7 @@ implements Packet<ClientPlayPacketListener> {
     public void read(PacketByteBuf buf) throws IOException {
         int j;
         this.action = buf.readEnumConstant(Action.class);
-        this.guiOpen = buf.readBoolean();
-        this.filteringCraftable = buf.readBoolean();
-        this.furnaceGuiOpen = buf.readBoolean();
-        this.furnaceFilteringCraftable = buf.readBoolean();
+        this.options = RecipeBookOptions.fromPacket(buf);
         int i = buf.readVarInt();
         this.recipeIdsToChange = Lists.newArrayList();
         for (j = 0; j < i; ++j) {
@@ -74,10 +66,7 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void write(PacketByteBuf buf) throws IOException {
         buf.writeEnumConstant(this.action);
-        buf.writeBoolean(this.guiOpen);
-        buf.writeBoolean(this.filteringCraftable);
-        buf.writeBoolean(this.furnaceGuiOpen);
-        buf.writeBoolean(this.furnaceFilteringCraftable);
+        this.options.toPacket(buf);
         buf.writeVarInt(this.recipeIdsToChange.size());
         for (Identifier identifier : this.recipeIdsToChange) {
             buf.writeIdentifier(identifier);
@@ -101,23 +90,8 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isGuiOpen() {
-        return this.guiOpen;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean isFilteringCraftable() {
-        return this.filteringCraftable;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean isFurnaceGuiOpen() {
-        return this.furnaceGuiOpen;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean isFurnaceFilteringCraftable() {
-        return this.furnaceFilteringCraftable;
+    public RecipeBookOptions getOptions() {
+        return this.options;
     }
 
     @Environment(value=EnvType.CLIENT)

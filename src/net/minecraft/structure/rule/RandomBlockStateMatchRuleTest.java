@@ -2,16 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.structure.rule;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import java.util.Map;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.structure.rule.RuleTest;
@@ -19,6 +20,7 @@ import net.minecraft.structure.rule.RuleTestType;
 
 public class RandomBlockStateMatchRuleTest
 extends RuleTest {
+    public static final Codec<RandomBlockStateMatchRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BlockState.CODEC.fieldOf("block_state").forGetter(randomBlockStateMatchRuleTest -> randomBlockStateMatchRuleTest.blockState), (App)Codec.FLOAT.fieldOf("probability").forGetter(randomBlockStateMatchRuleTest -> Float.valueOf(randomBlockStateMatchRuleTest.probability))).apply((Applicative)instance, RandomBlockStateMatchRuleTest::new));
     private final BlockState blockState;
     private final float probability;
 
@@ -27,23 +29,14 @@ extends RuleTest {
         this.probability = probability;
     }
 
-    public <T> RandomBlockStateMatchRuleTest(Dynamic<T> dynamic) {
-        this(BlockState.deserialize(dynamic.get("blockstate").orElseEmptyMap()), dynamic.get("probability").asFloat(1.0f));
-    }
-
     @Override
     public boolean test(BlockState state, Random random) {
         return state == this.blockState && random.nextFloat() < this.probability;
     }
 
     @Override
-    protected RuleTestType getType() {
+    protected RuleTestType<?> getType() {
         return RuleTestType.RANDOM_BLOCKSTATE_MATCH;
-    }
-
-    @Override
-    protected <T> Dynamic<T> serialize(DynamicOps<T> ops) {
-        return new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString("blockstate"), (Object)BlockState.serialize(ops, this.blockState).getValue(), (Object)ops.createString("probability"), (Object)ops.createFloat(this.probability))));
     }
 }
 

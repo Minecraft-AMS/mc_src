@@ -20,9 +20,10 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.Biomes;
+import net.minecraft.world.biome.BuiltinBiomes;
 import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
@@ -30,10 +31,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class EmptyChunk
 extends WorldChunk {
-    private static final Biome[] BIOMES = Util.make(new Biome[BiomeArray.DEFAULT_LENGTH], biomes -> Arrays.fill(biomes, Biomes.PLAINS));
+    private static final Biome[] BIOMES = Util.make(new Biome[BiomeArray.DEFAULT_LENGTH], biomes -> Arrays.fill(biomes, BuiltinBiomes.PLAINS));
 
-    public EmptyChunk(World world, ChunkPos chunkPos) {
-        super(world, chunkPos, new BiomeArray(BIOMES));
+    public EmptyChunk(World world, ChunkPos pos) {
+        super(world, pos, new BiomeArray(world.getRegistryManager().get(Registry.BIOME_KEY), BIOMES));
     }
 
     @Override
@@ -43,7 +44,7 @@ extends WorldChunk {
 
     @Override
     @Nullable
-    public BlockState setBlockState(BlockPos pos, BlockState state, boolean bl) {
+    public BlockState setBlockState(BlockPos pos, BlockState state, boolean moved) {
         return null;
     }
 
@@ -72,7 +73,7 @@ extends WorldChunk {
     }
 
     @Override
-    public void remove(Entity entity, int i) {
+    public void remove(Entity entity, int section) {
     }
 
     @Override
@@ -90,7 +91,7 @@ extends WorldChunk {
     }
 
     @Override
-    public void removeBlockEntity(BlockPos blockPos) {
+    public void removeBlockEntity(BlockPos pos) {
     }
 
     @Override
@@ -98,11 +99,11 @@ extends WorldChunk {
     }
 
     @Override
-    public void getEntities(@Nullable Entity except, Box box, List<Entity> entityList, Predicate<? super Entity> predicate) {
+    public void collectOtherEntities(@Nullable Entity except, Box box, List<Entity> entityList, Predicate<? super Entity> predicate) {
     }
 
     @Override
-    public <T extends Entity> void getEntities(Class<? extends T> entityClass, Box box, List<T> result, Predicate<? super T> predicate) {
+    public <T extends Entity> void collectEntitiesByClass(Class<? extends T> entityClass, Box box, List<T> result, Predicate<? super T> predicate) {
     }
 
     @Override
@@ -111,7 +112,7 @@ extends WorldChunk {
     }
 
     @Override
-    public boolean method_12228(int i, int j) {
+    public boolean areSectionsEmptyBetween(int lowerHeight, int upperHeight) {
         return true;
     }
 

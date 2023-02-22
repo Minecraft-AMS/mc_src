@@ -11,12 +11,12 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ai.goal.EscapeDangerGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
-import net.minecraft.entity.ai.goal.GoToEntityGoal;
 import net.minecraft.entity.ai.goal.GoToWalkTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.HoldInHandsGoal;
 import net.minecraft.entity.ai.goal.LookAtCustomerGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
+import net.minecraft.entity.ai.goal.StopAndLookAtEntityGoal;
 import net.minecraft.entity.ai.goal.StopFollowingCustomerGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
@@ -27,44 +27,47 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PillagerEntity;
 import net.minecraft.entity.mob.VexEntity;
 import net.minecraft.entity.mob.VindicatorEntity;
+import net.minecraft.entity.mob.ZoglinEntity;
 import net.minecraft.entity.mob.ZombieEntity;
-import net.minecraft.entity.passive.AbstractTraderEntity;
+import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.village.TradeOffer;
+import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.TradeOffers;
-import net.minecraft.village.TraderOfferList;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class WanderingTraderEntity
-extends AbstractTraderEntity {
+extends MerchantEntity {
     @Nullable
     private BlockPos wanderTarget;
     private int despawnDelay;
 
     public WanderingTraderEntity(EntityType<? extends WanderingTraderEntity> entityType, World world) {
-        super((EntityType<? extends AbstractTraderEntity>)entityType, world);
+        super((EntityType<? extends MerchantEntity>)entityType, world);
         this.teleporting = true;
     }
 
     @Override
     protected void initGoals() {
         this.goalSelector.add(0, new SwimGoal(this));
-        this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.INVISIBILITY), SoundEvents.ENTITY_WANDERING_TRADER_DISAPPEARED, wanderingTraderEntity -> !this.world.isDay() && !wanderingTraderEntity.isInvisible()));
+        this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.INVISIBILITY), SoundEvents.ENTITY_WANDERING_TRADER_DISAPPEARED, wanderingTraderEntity -> this.world.isNight() && !wanderingTraderEntity.isInvisible()));
         this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, new ItemStack(Items.MILK_BUCKET), SoundEvents.ENTITY_WANDERING_TRADER_REAPPEARED, wanderingTraderEntity -> this.world.isDay() && wanderingTraderEntity.isInvisible()));
         this.goalSelector.add(1, new StopFollowingCustomerGoal(this));
         this.goalSelector.add(1, new FleeEntityGoal<ZombieEntity>(this, ZombieEntity.class, 8.0f, 0.5, 0.5));
@@ -73,47 +76,42 @@ extends AbstractTraderEntity {
         this.goalSelector.add(1, new FleeEntityGoal<VexEntity>(this, VexEntity.class, 8.0f, 0.5, 0.5));
         this.goalSelector.add(1, new FleeEntityGoal<PillagerEntity>(this, PillagerEntity.class, 15.0f, 0.5, 0.5));
         this.goalSelector.add(1, new FleeEntityGoal<IllusionerEntity>(this, IllusionerEntity.class, 12.0f, 0.5, 0.5));
+        this.goalSelector.add(1, new FleeEntityGoal<ZoglinEntity>(this, ZoglinEntity.class, 10.0f, 0.5, 0.5));
         this.goalSelector.add(1, new EscapeDangerGoal(this, 0.5));
         this.goalSelector.add(1, new LookAtCustomerGoal(this));
         this.goalSelector.add(2, new WanderToTargetGoal(this, 2.0, 0.35));
         this.goalSelector.add(4, new GoToWalkTargetGoal(this, 0.35));
         this.goalSelector.add(8, new WanderAroundFarGoal(this, 0.35));
-        this.goalSelector.add(9, new GoToEntityGoal(this, PlayerEntity.class, 3.0f, 1.0f));
+        this.goalSelector.add(9, new StopAndLookAtEntityGoal(this, PlayerEntity.class, 3.0f, 1.0f));
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 8.0f));
     }
 
     @Override
     @Nullable
-    public PassiveEntity createChild(PassiveEntity mate) {
+    public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return null;
     }
 
     @Override
-    public boolean isLevelledTrader() {
+    public boolean isLeveledMerchant() {
         return false;
     }
 
     @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
-        boolean bl;
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        boolean bl2 = bl = itemStack.getItem() == Items.NAME_TAG;
-        if (bl) {
-            itemStack.useOnEntity(player, this, hand);
-            return true;
-        }
         if (itemStack.getItem() != Items.VILLAGER_SPAWN_EGG && this.isAlive() && !this.hasCustomer() && !this.isBaby()) {
             if (hand == Hand.MAIN_HAND) {
                 player.incrementStat(Stats.TALKED_TO_VILLAGER);
             }
             if (this.getOffers().isEmpty()) {
-                return super.interactMob(player, hand);
+                return ActionResult.success(this.world.isClient);
             }
             if (!this.world.isClient) {
                 this.setCurrentCustomer(player);
                 this.sendOffers(player, this.getDisplayName(), 1);
             }
-            return true;
+            return ActionResult.success(this.world.isClient);
         }
         return super.interactMob(player, hand);
     }
@@ -125,33 +123,33 @@ extends AbstractTraderEntity {
         if (factorys == null || factorys2 == null) {
             return;
         }
-        TraderOfferList traderOfferList = this.getOffers();
-        this.fillRecipesFromPool(traderOfferList, factorys, 5);
+        TradeOfferList tradeOfferList = this.getOffers();
+        this.fillRecipesFromPool(tradeOfferList, factorys, 5);
         int i = this.random.nextInt(factorys2.length);
         TradeOffers.Factory factory = factorys2[i];
         TradeOffer tradeOffer = factory.create(this, this.random);
         if (tradeOffer != null) {
-            traderOfferList.add(tradeOffer);
+            tradeOfferList.add(tradeOffer);
         }
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putInt("DespawnDelay", this.despawnDelay);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putInt("DespawnDelay", this.despawnDelay);
         if (this.wanderTarget != null) {
-            tag.put("WanderTarget", NbtHelper.fromBlockPos(this.wanderTarget));
+            nbt.put("WanderTarget", NbtHelper.fromBlockPos(this.wanderTarget));
         }
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        if (tag.contains("DespawnDelay", 99)) {
-            this.despawnDelay = tag.getInt("DespawnDelay");
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("DespawnDelay", 99)) {
+            this.despawnDelay = nbt.getInt("DespawnDelay");
         }
-        if (tag.contains("WanderTarget")) {
-            this.wanderTarget = NbtHelper.toBlockPos(tag.getCompound("WanderTarget"));
+        if (nbt.contains("WanderTarget")) {
+            this.wanderTarget = NbtHelper.toBlockPos(nbt.getCompound("WanderTarget"));
         }
         this.setBreedingAge(Math.max(0, this.getBreedingAge()));
     }

@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -10,6 +11,7 @@
 package net.minecraft.potion;
 
 import com.google.common.collect.Lists;
+import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -22,20 +24,22 @@ import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffectUtil;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.Potions;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Pair;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class PotionUtil {
+    private static final MutableText field_25817 = new TranslatableText("effect.none").formatted(Formatting.GRAY);
+
     public static List<StatusEffectInstance> getPotionEffects(ItemStack stack) {
         return PotionUtil.getPotionEffects(stack.getTag());
     }
@@ -47,10 +51,10 @@ public class PotionUtil {
         return list;
     }
 
-    public static List<StatusEffectInstance> getPotionEffects(@Nullable CompoundTag tag) {
+    public static List<StatusEffectInstance> getPotionEffects(@Nullable NbtCompound nbt) {
         ArrayList list = Lists.newArrayList();
-        list.addAll(PotionUtil.getPotion(tag).getEffects());
-        PotionUtil.getCustomPotionEffects(tag, list);
+        list.addAll(PotionUtil.getPotion(nbt).getEffects());
+        PotionUtil.getCustomPotionEffects(nbt, list);
         return list;
     }
 
@@ -58,18 +62,18 @@ public class PotionUtil {
         return PotionUtil.getCustomPotionEffects(stack.getTag());
     }
 
-    public static List<StatusEffectInstance> getCustomPotionEffects(@Nullable CompoundTag tag) {
+    public static List<StatusEffectInstance> getCustomPotionEffects(@Nullable NbtCompound nbt) {
         ArrayList list = Lists.newArrayList();
-        PotionUtil.getCustomPotionEffects(tag, list);
+        PotionUtil.getCustomPotionEffects(nbt, list);
         return list;
     }
 
-    public static void getCustomPotionEffects(@Nullable CompoundTag tag, List<StatusEffectInstance> list) {
-        if (tag != null && tag.contains("CustomPotionEffects", 9)) {
-            ListTag listTag = tag.getList("CustomPotionEffects", 10);
-            for (int i = 0; i < listTag.size(); ++i) {
-                CompoundTag compoundTag = listTag.getCompound(i);
-                StatusEffectInstance statusEffectInstance = StatusEffectInstance.fromTag(compoundTag);
+    public static void getCustomPotionEffects(@Nullable NbtCompound nbt, List<StatusEffectInstance> list) {
+        if (nbt != null && nbt.contains("CustomPotionEffects", 9)) {
+            NbtList nbtList = nbt.getList("CustomPotionEffects", 10);
+            for (int i = 0; i < nbtList.size(); ++i) {
+                NbtCompound nbtCompound = nbtList.getCompound(i);
+                StatusEffectInstance statusEffectInstance = StatusEffectInstance.fromNbt(nbtCompound);
                 if (statusEffectInstance == null) continue;
                 list.add(statusEffectInstance);
             }
@@ -77,9 +81,9 @@ public class PotionUtil {
     }
 
     public static int getColor(ItemStack stack) {
-        CompoundTag compoundTag = stack.getTag();
-        if (compoundTag != null && compoundTag.contains("CustomPotionColor", 99)) {
-            return compoundTag.getInt("CustomPotionColor");
+        NbtCompound nbtCompound = stack.getTag();
+        if (nbtCompound != null && nbtCompound.contains("CustomPotionColor", 99)) {
+            return nbtCompound.getInt("CustomPotionColor");
         }
         return PotionUtil.getPotion(stack) == Potions.EMPTY ? 0xF800F8 : PotionUtil.getColor(PotionUtil.getPotionEffects(stack));
     }
@@ -119,7 +123,7 @@ public class PotionUtil {
         return PotionUtil.getPotion(stack.getTag());
     }
 
-    public static Potion getPotion(@Nullable CompoundTag compound) {
+    public static Potion getPotion(@Nullable NbtCompound compound) {
         if (compound == null) {
             return Potions.EMPTY;
         }
@@ -140,12 +144,12 @@ public class PotionUtil {
         if (effects.isEmpty()) {
             return stack;
         }
-        CompoundTag compoundTag = stack.getOrCreateTag();
-        ListTag listTag = compoundTag.getList("CustomPotionEffects", 9);
+        NbtCompound nbtCompound = stack.getOrCreateTag();
+        NbtList nbtList = nbtCompound.getList("CustomPotionEffects", 9);
         for (StatusEffectInstance statusEffectInstance : effects) {
-            listTag.add(statusEffectInstance.toTag(new CompoundTag()));
+            nbtList.add(statusEffectInstance.writeNbt(new NbtCompound()));
         }
-        compoundTag.put("CustomPotionEffects", listTag);
+        nbtCompound.put("CustomPotionEffects", nbtList);
         return stack;
     }
 
@@ -154,41 +158,41 @@ public class PotionUtil {
         List<StatusEffectInstance> list2 = PotionUtil.getPotionEffects(stack);
         ArrayList list3 = Lists.newArrayList();
         if (list2.isEmpty()) {
-            list.add(new TranslatableText("effect.none", new Object[0]).formatted(Formatting.GRAY));
+            list.add(field_25817);
         } else {
             for (StatusEffectInstance statusEffectInstance : list2) {
-                TranslatableText text = new TranslatableText(statusEffectInstance.getTranslationKey(), new Object[0]);
+                TranslatableText mutableText = new TranslatableText(statusEffectInstance.getTranslationKey());
                 StatusEffect statusEffect = statusEffectInstance.getEffectType();
                 Map<EntityAttribute, EntityAttributeModifier> map = statusEffect.getAttributeModifiers();
                 if (!map.isEmpty()) {
                     for (Map.Entry<EntityAttribute, EntityAttributeModifier> entry : map.entrySet()) {
                         EntityAttributeModifier entityAttributeModifier = entry.getValue();
                         EntityAttributeModifier entityAttributeModifier2 = new EntityAttributeModifier(entityAttributeModifier.getName(), statusEffect.adjustModifierAmount(statusEffectInstance.getAmplifier(), entityAttributeModifier), entityAttributeModifier.getOperation());
-                        list3.add(new Pair<String, EntityAttributeModifier>(entry.getKey().getId(), entityAttributeModifier2));
+                        list3.add(new Pair((Object)entry.getKey(), (Object)entityAttributeModifier2));
                     }
                 }
                 if (statusEffectInstance.getAmplifier() > 0) {
-                    text.append(" ").append(new TranslatableText("potion.potency." + statusEffectInstance.getAmplifier(), new Object[0]));
+                    mutableText = new TranslatableText("potion.withAmplifier", mutableText, new TranslatableText("potion.potency." + statusEffectInstance.getAmplifier()));
                 }
                 if (statusEffectInstance.getDuration() > 20) {
-                    text.append(" (").append(StatusEffectUtil.durationToString(statusEffectInstance, f)).append(")");
+                    mutableText = new TranslatableText("potion.withDuration", mutableText, StatusEffectUtil.durationToString(statusEffectInstance, f));
                 }
-                list.add(text.formatted(statusEffect.getType().getFormatting()));
+                list.add(mutableText.formatted(statusEffect.getType().getFormatting()));
             }
         }
         if (!list3.isEmpty()) {
-            list.add(new LiteralText(""));
-            list.add(new TranslatableText("potion.whenDrank", new Object[0]).formatted(Formatting.DARK_PURPLE));
+            list.add(LiteralText.EMPTY);
+            list.add(new TranslatableText("potion.whenDrank").formatted(Formatting.DARK_PURPLE));
             for (Pair pair : list3) {
-                EntityAttributeModifier entityAttributeModifier3 = (EntityAttributeModifier)pair.getRight();
-                double d = entityAttributeModifier3.getAmount();
-                double e = entityAttributeModifier3.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_BASE || entityAttributeModifier3.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_TOTAL ? entityAttributeModifier3.getAmount() * 100.0 : entityAttributeModifier3.getAmount();
+                EntityAttributeModifier entityAttributeModifier3 = (EntityAttributeModifier)pair.getSecond();
+                double d = entityAttributeModifier3.getValue();
+                double e = entityAttributeModifier3.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_BASE || entityAttributeModifier3.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_TOTAL ? entityAttributeModifier3.getValue() * 100.0 : entityAttributeModifier3.getValue();
                 if (d > 0.0) {
-                    list.add(new TranslatableText("attribute.modifier.plus." + entityAttributeModifier3.getOperation().getId(), ItemStack.MODIFIER_FORMAT.format(e), new TranslatableText("attribute.name." + (String)pair.getLeft(), new Object[0])).formatted(Formatting.BLUE));
+                    list.add(new TranslatableText("attribute.modifier.plus." + entityAttributeModifier3.getOperation().getId(), ItemStack.MODIFIER_FORMAT.format(e), new TranslatableText(((EntityAttribute)pair.getFirst()).getTranslationKey())).formatted(Formatting.BLUE));
                     continue;
                 }
                 if (!(d < 0.0)) continue;
-                list.add(new TranslatableText("attribute.modifier.take." + entityAttributeModifier3.getOperation().getId(), ItemStack.MODIFIER_FORMAT.format(e *= -1.0), new TranslatableText("attribute.name." + (String)pair.getLeft(), new Object[0])).formatted(Formatting.RED));
+                list.add(new TranslatableText("attribute.modifier.take." + entityAttributeModifier3.getOperation().getId(), ItemStack.MODIFIER_FORMAT.format(e *= -1.0), new TranslatableText(((EntityAttribute)pair.getFirst()).getTranslationKey())).formatted(Formatting.RED));
             }
         }
     }

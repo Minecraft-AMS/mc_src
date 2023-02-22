@@ -17,10 +17,11 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.LookTargetUtil;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.ai.pathing.Path;
+import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.GlobalPos;
+import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.poi.PointOfInterestType;
 
@@ -44,9 +45,9 @@ extends Task<VillagerEntity> {
 
     @Override
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
-        VillagerEntity villagerEntity2 = this.getBreedTarget(villagerEntity);
-        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2);
-        serverWorld.sendEntityStatus(villagerEntity2, (byte)18);
+        PassiveEntity passiveEntity = villagerEntity.getBrain().getOptionalMemory(MemoryModuleType.BREED_TARGET).get();
+        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, passiveEntity, 0.5f);
+        serverWorld.sendEntityStatus(passiveEntity, (byte)18);
         serverWorld.sendEntityStatus(villagerEntity, (byte)18);
         int i = 275 + villagerEntity.getRandom().nextInt(50);
         this.breedEndTime = l + (long)i;
@@ -54,11 +55,11 @@ extends Task<VillagerEntity> {
 
     @Override
     protected void keepRunning(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
-        VillagerEntity villagerEntity2 = this.getBreedTarget(villagerEntity);
+        VillagerEntity villagerEntity2 = (VillagerEntity)villagerEntity.getBrain().getOptionalMemory(MemoryModuleType.BREED_TARGET).get();
         if (villagerEntity.squaredDistanceTo(villagerEntity2) > 5.0) {
             return;
         }
-        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2);
+        LookTargetUtil.lookAtAndWalkTowardsEachOther(villagerEntity, villagerEntity2, 0.5f);
         if (l >= this.breedEndTime) {
             villagerEntity.eatForBreeding();
             villagerEntity2.eatForBreeding();
@@ -75,7 +76,7 @@ extends Task<VillagerEntity> {
             world.sendEntityStatus(second, (byte)13);
             world.sendEntityStatus(first, (byte)13);
         } else {
-            Optional<VillagerEntity> optional2 = this.createChild(first, second);
+            Optional<VillagerEntity> optional2 = this.createChild(world, first, second);
             if (optional2.isPresent()) {
                 this.setChildHome(world, optional2.get(), optional.get());
             } else {
@@ -90,21 +91,17 @@ extends Task<VillagerEntity> {
         villagerEntity.getBrain().forget(MemoryModuleType.BREED_TARGET);
     }
 
-    private VillagerEntity getBreedTarget(VillagerEntity villager) {
-        return villager.getBrain().getOptionalMemory(MemoryModuleType.BREED_TARGET).get();
-    }
-
     private boolean isReadyToBreed(VillagerEntity villager) {
         Brain<VillagerEntity> brain = villager.getBrain();
-        if (!brain.getOptionalMemory(MemoryModuleType.BREED_TARGET).isPresent()) {
+        Optional<PassiveEntity> optional = brain.getOptionalMemory(MemoryModuleType.BREED_TARGET).filter(passiveEntity -> passiveEntity.getType() == EntityType.VILLAGER);
+        if (!optional.isPresent()) {
             return false;
         }
-        VillagerEntity villagerEntity = this.getBreedTarget(villager);
-        return LookTargetUtil.canSee(brain, MemoryModuleType.BREED_TARGET, EntityType.VILLAGER) && villager.isReadyToBreed() && villagerEntity.isReadyToBreed();
+        return LookTargetUtil.canSee(brain, MemoryModuleType.BREED_TARGET, EntityType.VILLAGER) && villager.isReadyToBreed() && optional.get().isReadyToBreed();
     }
 
     private Optional<BlockPos> getReachableHome(ServerWorld world, VillagerEntity villager) {
-        return world.getPointOfInterestStorage().getPosition(PointOfInterestType.HOME.getCompletionCondition(), blockPos -> this.canReachHome(villager, (BlockPos)blockPos), new BlockPos(villager), 48);
+        return world.getPointOfInterestStorage().getPosition(PointOfInterestType.HOME.getCompletionCondition(), blockPos -> this.canReachHome(villager, (BlockPos)blockPos), villager.getBlockPos(), 48);
     }
 
     private boolean canReachHome(VillagerEntity villager, BlockPos pos) {
@@ -112,23 +109,23 @@ extends Task<VillagerEntity> {
         return path != null && path.reachesTarget();
     }
 
-    private Optional<VillagerEntity> createChild(VillagerEntity first, VillagerEntity second) {
-        VillagerEntity villagerEntity = first.createChild(second);
+    private Optional<VillagerEntity> createChild(ServerWorld world, VillagerEntity parent, VillagerEntity partner) {
+        VillagerEntity villagerEntity = parent.createChild(world, partner);
         if (villagerEntity == null) {
             return Optional.empty();
         }
-        first.setBreedingAge(6000);
-        second.setBreedingAge(6000);
+        parent.setBreedingAge(6000);
+        partner.setBreedingAge(6000);
         villagerEntity.setBreedingAge(-24000);
-        villagerEntity.refreshPositionAndAngles(first.getX(), first.getY(), first.getZ(), 0.0f, 0.0f);
-        first.world.spawnEntity(villagerEntity);
-        first.world.sendEntityStatus(villagerEntity, (byte)12);
+        villagerEntity.refreshPositionAndAngles(parent.getX(), parent.getY(), parent.getZ(), 0.0f, 0.0f);
+        world.spawnEntityAndPassengers(villagerEntity);
+        world.sendEntityStatus(villagerEntity, (byte)12);
         return Optional.of(villagerEntity);
     }
 
     private void setChildHome(ServerWorld world, VillagerEntity child, BlockPos pos) {
-        GlobalPos globalPos = GlobalPos.create(world.getDimension().getType(), pos);
-        child.getBrain().putMemory(MemoryModuleType.HOME, globalPos);
+        GlobalPos globalPos = GlobalPos.create(world.getRegistryKey(), pos);
+        child.getBrain().remember(MemoryModuleType.HOME, globalPos);
     }
 
     @Override

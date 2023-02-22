@@ -21,13 +21,13 @@ extends ServerConfigList<GameProfile, BannedPlayerEntry> {
     }
 
     @Override
-    protected ServerConfigEntry<GameProfile> fromJson(JsonObject jsonObject) {
-        return new BannedPlayerEntry(jsonObject);
+    protected ServerConfigEntry<GameProfile> fromJson(JsonObject json) {
+        return new BannedPlayerEntry(json);
     }
 
     @Override
-    public boolean contains(GameProfile gameProfile) {
-        return this.contains(gameProfile);
+    public boolean contains(GameProfile profile) {
+        return this.contains(profile);
     }
 
     @Override

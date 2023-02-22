@@ -2,8 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  it.unimi.dsi.fastutil.chars.CharArraySet
- *  it.unimi.dsi.fastutil.chars.CharSet
+ *  it.unimi.dsi.fastutil.ints.IntArraySet
+ *  it.unimi.dsi.fastutil.ints.IntCollection
+ *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
+ *  it.unimi.dsi.fastutil.ints.IntSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -14,11 +16,14 @@
  */
 package net.minecraft.client.font;
 
-import it.unimi.dsi.fastutil.chars.CharArraySet;
-import it.unimi.dsi.fastutil.chars.CharSet;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntCollection;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.stream.IntStream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.Font;
@@ -36,19 +41,19 @@ implements Font {
     private final ByteBuffer field_21839;
     private final STBTTFontinfo info;
     private final float oversample;
-    private final CharSet excludedCharacters = new CharArraySet();
+    private final IntSet excludedCharacters = new IntArraySet();
     private final float shiftX;
     private final float shiftY;
     private final float scaleFactor;
     private final float ascent;
 
-    public TrueTypeFont(ByteBuffer byteBuffer, STBTTFontinfo sTBTTFontinfo, float f, float g, float h, float i2, String string) {
+    public TrueTypeFont(ByteBuffer byteBuffer, STBTTFontinfo sTBTTFontinfo, float f, float g, float h, float i, String string) {
         this.field_21839 = byteBuffer;
         this.info = sTBTTFontinfo;
         this.oversample = g;
-        string.chars().forEach(i -> this.excludedCharacters.add((char)(i & 0xFFFF)));
+        string.codePoints().forEach(arg_0 -> ((IntSet)this.excludedCharacters).add(arg_0));
         this.shiftX = h * g;
-        this.shiftY = i2 * g;
+        this.shiftY = i * g;
         this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)sTBTTFontinfo, (float)(f * g));
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             IntBuffer intBuffer = memoryStack.mallocInt(1);
@@ -61,8 +66,8 @@ implements Font {
 
     @Override
     @Nullable
-    public TtfGlyph getGlyph(char c) {
-        if (this.excludedCharacters.contains(c)) {
+    public TtfGlyph getGlyph(int i) {
+        if (this.excludedCharacters.contains(i)) {
             return null;
         }
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
@@ -70,22 +75,22 @@ implements Font {
             IntBuffer intBuffer2 = memoryStack.mallocInt(1);
             IntBuffer intBuffer3 = memoryStack.mallocInt(1);
             IntBuffer intBuffer4 = memoryStack.mallocInt(1);
-            int i = STBTruetype.stbtt_FindGlyphIndex((STBTTFontinfo)this.info, (int)c);
-            if (i == 0) {
+            int j = STBTruetype.stbtt_FindGlyphIndex((STBTTFontinfo)this.info, (int)i);
+            if (j == 0) {
                 TtfGlyph ttfGlyph = null;
                 return ttfGlyph;
             }
-            STBTruetype.stbtt_GetGlyphBitmapBoxSubpixel((STBTTFontinfo)this.info, (int)i, (float)this.scaleFactor, (float)this.scaleFactor, (float)this.shiftX, (float)this.shiftY, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3, (IntBuffer)intBuffer4);
-            int j = intBuffer3.get(0) - intBuffer.get(0);
-            int k = intBuffer4.get(0) - intBuffer2.get(0);
-            if (j == 0 || k == 0) {
+            STBTruetype.stbtt_GetGlyphBitmapBoxSubpixel((STBTTFontinfo)this.info, (int)j, (float)this.scaleFactor, (float)this.scaleFactor, (float)this.shiftX, (float)this.shiftY, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3, (IntBuffer)intBuffer4);
+            int k = intBuffer3.get(0) - intBuffer.get(0);
+            int l = intBuffer4.get(0) - intBuffer2.get(0);
+            if (k == 0 || l == 0) {
                 TtfGlyph ttfGlyph = null;
                 return ttfGlyph;
             }
             IntBuffer intBuffer5 = memoryStack.mallocInt(1);
             IntBuffer intBuffer6 = memoryStack.mallocInt(1);
-            STBTruetype.stbtt_GetGlyphHMetrics((STBTTFontinfo)this.info, (int)i, (IntBuffer)intBuffer5, (IntBuffer)intBuffer6);
-            TtfGlyph ttfGlyph = new TtfGlyph(intBuffer.get(0), intBuffer3.get(0), -intBuffer2.get(0), -intBuffer4.get(0), (float)intBuffer5.get(0) * this.scaleFactor, (float)intBuffer6.get(0) * this.scaleFactor, i);
+            STBTruetype.stbtt_GetGlyphHMetrics((STBTTFontinfo)this.info, (int)j, (IntBuffer)intBuffer5, (IntBuffer)intBuffer6);
+            TtfGlyph ttfGlyph = new TtfGlyph(intBuffer.get(0), intBuffer3.get(0), -intBuffer2.get(0), -intBuffer4.get(0), (float)intBuffer5.get(0) * this.scaleFactor, (float)intBuffer6.get(0) * this.scaleFactor, j);
             return ttfGlyph;
         }
     }
@@ -97,9 +102,14 @@ implements Font {
     }
 
     @Override
+    public IntSet getProvidedGlyphs() {
+        return (IntSet)IntStream.range(0, 65535).filter(i -> !this.excludedCharacters.contains(i)).collect(IntOpenHashSet::new, IntCollection::add, IntCollection::addAll);
+    }
+
+    @Override
     @Nullable
-    public /* synthetic */ RenderableGlyph getGlyph(char character) {
-        return this.getGlyph(character);
+    public /* synthetic */ RenderableGlyph getGlyph(int codePoint) {
+        return this.getGlyph(codePoint);
     }
 
     @Environment(value=EnvType.CLIENT)

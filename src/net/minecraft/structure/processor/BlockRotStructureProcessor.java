@@ -2,17 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.structure.processor;
 
-import com.google.common.collect.ImmutableMap;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
-import java.util.Map;
+import com.mojang.serialization.Codec;
 import java.util.Random;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
@@ -24,20 +19,17 @@ import org.jetbrains.annotations.Nullable;
 
 public class BlockRotStructureProcessor
 extends StructureProcessor {
+    public static final Codec<BlockRotStructureProcessor> CODEC = Codec.FLOAT.fieldOf("integrity").orElse((Object)Float.valueOf(1.0f)).xmap(BlockRotStructureProcessor::new, blockRotStructureProcessor -> Float.valueOf(blockRotStructureProcessor.integrity)).codec();
     private final float integrity;
 
     public BlockRotStructureProcessor(float integrity) {
         this.integrity = integrity;
     }
 
-    public BlockRotStructureProcessor(Dynamic<?> dynamic) {
-        this(dynamic.get("integrity").asFloat(1.0f));
-    }
-
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(WorldView worldView, BlockPos pos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData placementData) {
-        Random random = placementData.getRandom(structureBlockInfo2.pos);
+    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos blockPos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData structurePlacementData) {
+        Random random = structurePlacementData.getRandom(structureBlockInfo2.pos);
         if (this.integrity >= 1.0f || random.nextFloat() <= this.integrity) {
             return structureBlockInfo2;
         }
@@ -45,13 +37,8 @@ extends StructureProcessor {
     }
 
     @Override
-    protected StructureProcessorType getType() {
+    protected StructureProcessorType<?> getType() {
         return StructureProcessorType.BLOCK_ROT;
-    }
-
-    @Override
-    protected <T> Dynamic<T> method_16666(DynamicOps<T> dynamicOps) {
-        return new Dynamic(dynamicOps, dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString("integrity"), (Object)dynamicOps.createFloat(this.integrity))));
     }
 }
 

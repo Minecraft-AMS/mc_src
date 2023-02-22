@@ -16,14 +16,14 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.model.EvokerFangsEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.mob.EvokerFangsEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class EvokerFangsEntityRenderer
 extends EntityRenderer<EvokerFangsEntity> {
-    private static final Identifier SKIN = new Identifier("textures/entity/illager/evoker_fangs.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/illager/evoker_fangs.png");
     private final EvokerFangsEntityModel<EvokerFangsEntity> model = new EvokerFangsEntityModel();
 
     public EvokerFangsEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
@@ -31,8 +31,8 @@ extends EntityRenderer<EvokerFangsEntity> {
     }
 
     @Override
-    public void render(EvokerFangsEntity model, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
-        float h = model.getAnimationProgress(g);
+    public void render(EvokerFangsEntity evokerFangsEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        float h = evokerFangsEntity.getAnimationProgress(g);
         if (h == 0.0f) {
             return;
         }
@@ -41,21 +41,21 @@ extends EntityRenderer<EvokerFangsEntity> {
             j = (float)((double)j * ((1.0 - (double)h) / (double)0.1f));
         }
         matrixStack.push();
-        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(90.0f - model.yaw));
+        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(90.0f - evokerFangsEntity.yaw));
         matrixStack.scale(-j, -j, j);
         float k = 0.03125f;
         matrixStack.translate(0.0, -0.626f, 0.0);
         matrixStack.scale(0.5f, 0.5f, 0.5f);
-        this.model.setAngles(model, h, 0.0f, 0.0f, model.yaw, model.pitch);
-        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(SKIN));
+        this.model.setAngles(evokerFangsEntity, h, 0.0f, 0.0f, evokerFangsEntity.yaw, evokerFangsEntity.pitch);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(TEXTURE));
         this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
         matrixStack.pop();
-        super.render(model, f, g, matrixStack, vertexConsumerProvider, i);
+        super.render(evokerFangsEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
     @Override
     public Identifier getTexture(EvokerFangsEntity evokerFangsEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 }
 

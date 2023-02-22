@@ -22,6 +22,7 @@ import net.minecraft.text.TranslatableText;
 @Environment(value=EnvType.CLIENT)
 public class RootSpectatorCommandGroup
 implements SpectatorMenuCommandGroup {
+    private static final Text PROMPT_TEXT = new TranslatableText("spectatorMenu.root.prompt");
     private final List<SpectatorMenuCommand> elements = Lists.newArrayList();
 
     public RootSpectatorCommandGroup() {
@@ -36,7 +37,7 @@ implements SpectatorMenuCommandGroup {
 
     @Override
     public Text getPrompt() {
-        return new TranslatableText("spectatorMenu.root.prompt", new Object[0]);
+        return PROMPT_TEXT;
     }
 }
 

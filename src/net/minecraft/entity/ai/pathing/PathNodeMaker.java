@@ -13,33 +13,38 @@ import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.chunk.ChunkCache;
 
 public abstract class PathNodeMaker {
-    protected ChunkCache field_20622;
+    protected ChunkCache cachedWorld;
     protected MobEntity entity;
     protected final Int2ObjectMap<PathNode> pathNodeCache = new Int2ObjectOpenHashMap();
-    protected int field_31;
-    protected int field_30;
-    protected int field_28;
+    protected int entityBlockXSize;
+    protected int entityBlockYSize;
+    protected int entityBlockZSize;
     protected boolean canEnterOpenDoors;
     protected boolean canOpenDoors;
     protected boolean canSwim;
 
-    public void init(ChunkCache chunkCache, MobEntity mobEntity) {
-        this.field_20622 = chunkCache;
-        this.entity = mobEntity;
+    public void init(ChunkCache cachedWorld, MobEntity entity) {
+        this.cachedWorld = cachedWorld;
+        this.entity = entity;
         this.pathNodeCache.clear();
-        this.field_31 = MathHelper.floor(mobEntity.getWidth() + 1.0f);
-        this.field_30 = MathHelper.floor(mobEntity.getHeight() + 1.0f);
-        this.field_28 = MathHelper.floor(mobEntity.getWidth() + 1.0f);
+        this.entityBlockXSize = MathHelper.floor(entity.getWidth() + 1.0f);
+        this.entityBlockYSize = MathHelper.floor(entity.getHeight() + 1.0f);
+        this.entityBlockZSize = MathHelper.floor(entity.getWidth() + 1.0f);
     }
 
     public void clear() {
-        this.field_20622 = null;
+        this.cachedWorld = null;
         this.entity = null;
+    }
+
+    protected PathNode method_27137(BlockPos blockPos) {
+        return this.getNode(blockPos.getX(), blockPos.getY(), blockPos.getZ());
     }
 
     protected PathNode getNode(int x, int y, int z) {
@@ -54,7 +59,7 @@ public abstract class PathNodeMaker {
 
     public abstract PathNodeType getNodeType(BlockView var1, int var2, int var3, int var4, MobEntity var5, int var6, int var7, int var8, boolean var9, boolean var10);
 
-    public abstract PathNodeType getNodeType(BlockView var1, int var2, int var3, int var4);
+    public abstract PathNodeType getDefaultNodeType(BlockView var1, int var2, int var3, int var4);
 
     public void setCanEnterOpenDoors(boolean canEnterOpenDoors) {
         this.canEnterOpenDoors = canEnterOpenDoors;

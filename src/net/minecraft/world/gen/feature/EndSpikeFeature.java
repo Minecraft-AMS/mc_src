@@ -5,41 +5,40 @@
  *  com.google.common.cache.CacheBuilder
  *  com.google.common.cache.CacheLoader
  *  com.google.common.cache.LoadingCache
- *  com.google.common.collect.ImmutableMap
- *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.Lists
- *  com.mojang.datafixers.Dynamic
- *  com.mojang.datafixers.types.DynamicOps
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.gen.feature;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.mojang.datafixers.Dynamic;
-import com.mojang.datafixers.types.DynamicOps;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.PaneBlock;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.decoration.EnderCrystalEntity;
+import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.ServerWorldAccess;
+import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.EndSpikeFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 
@@ -47,30 +46,30 @@ public class EndSpikeFeature
 extends Feature<EndSpikeFeatureConfig> {
     private static final LoadingCache<Long, List<Spike>> CACHE = CacheBuilder.newBuilder().expireAfterWrite(5L, TimeUnit.MINUTES).build((CacheLoader)new SpikeCache());
 
-    public EndSpikeFeature(Function<Dynamic<?>, ? extends EndSpikeFeatureConfig> configFactory) {
-        super(configFactory);
+    public EndSpikeFeature(Codec<EndSpikeFeatureConfig> codec) {
+        super(codec);
     }
 
-    public static List<Spike> getSpikes(IWorld iWorld) {
-        Random random = new Random(iWorld.getSeed());
+    public static List<Spike> getSpikes(StructureWorldAccess world) {
+        Random random = new Random(world.getSeed());
         long l = random.nextLong() & 0xFFFFL;
         return (List)CACHE.getUnchecked((Object)l);
     }
 
     @Override
-    public boolean generate(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, BlockPos blockPos, EndSpikeFeatureConfig endSpikeFeatureConfig) {
+    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, EndSpikeFeatureConfig endSpikeFeatureConfig) {
         List<Spike> list = endSpikeFeatureConfig.getSpikes();
         if (list.isEmpty()) {
-            list = EndSpikeFeature.getSpikes(iWorld);
+            list = EndSpikeFeature.getSpikes(structureWorldAccess);
         }
         for (Spike spike : list) {
             if (!spike.isInChunk(blockPos)) continue;
-            this.generateSpike(iWorld, random, endSpikeFeatureConfig, spike);
+            this.generateSpike(structureWorldAccess, random, endSpikeFeatureConfig, spike);
         }
         return true;
     }
 
-    private void generateSpike(IWorld world, Random random, EndSpikeFeatureConfig config, Spike spike) {
+    private void generateSpike(ServerWorldAccess world, Random random, EndSpikeFeatureConfig config, Spike spike) {
         int i = spike.getRadius();
         for (BlockPos blockPos : BlockPos.iterate(new BlockPos(spike.getCenterX() - i, 0, spike.getCenterZ() - i), new BlockPos(spike.getCenterX() + i, spike.getHeight() + 10, spike.getCenterZ() + i))) {
             if (blockPos.getSquaredDistance(spike.getCenterX(), blockPos.getY(), spike.getCenterZ(), false) <= (double)(i * i + 1) && blockPos.getY() < spike.getHeight()) {
@@ -101,11 +100,11 @@ extends Feature<EndSpikeFeatureConfig> {
                 }
             }
         }
-        EnderCrystalEntity enderCrystalEntity = EntityType.END_CRYSTAL.create(world.getWorld());
-        enderCrystalEntity.setBeamTarget(config.getPos());
-        enderCrystalEntity.setInvulnerable(config.isCrystalInvulerable());
-        enderCrystalEntity.refreshPositionAndAngles((float)spike.getCenterX() + 0.5f, spike.getHeight() + 1, (float)spike.getCenterZ() + 0.5f, random.nextFloat() * 360.0f, 0.0f);
-        world.spawnEntity(enderCrystalEntity);
+        EndCrystalEntity endCrystalEntity = EntityType.END_CRYSTAL.create(world.toServerWorld());
+        endCrystalEntity.setBeamTarget(config.getPos());
+        endCrystalEntity.setInvulnerable(config.isCrystalInvulnerable());
+        endCrystalEntity.refreshPositionAndAngles((double)spike.getCenterX() + 0.5, spike.getHeight() + 1, (double)spike.getCenterZ() + 0.5, random.nextFloat() * 360.0f, 0.0f);
+        world.spawnEntity(endCrystalEntity);
         this.setBlockState(world, new BlockPos(spike.getCenterX(), spike.getHeight(), spike.getCenterZ()), Blocks.BEDROCK.getDefaultState());
     }
 
@@ -136,6 +135,7 @@ extends Feature<EndSpikeFeatureConfig> {
     }
 
     public static class Spike {
+        public static final Codec<Spike> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("centerX").orElse((Object)0).forGetter(spike -> spike.centerX), (App)Codec.INT.fieldOf("centerZ").orElse((Object)0).forGetter(spike -> spike.centerZ), (App)Codec.INT.fieldOf("radius").orElse((Object)0).forGetter(spike -> spike.radius), (App)Codec.INT.fieldOf("height").orElse((Object)0).forGetter(spike -> spike.height), (App)Codec.BOOL.fieldOf("guarded").orElse((Object)false).forGetter(spike -> spike.guarded)).apply((Applicative)instance, Spike::new));
         private final int centerX;
         private final int centerZ;
         private final int radius;
@@ -143,12 +143,12 @@ extends Feature<EndSpikeFeatureConfig> {
         private final boolean guarded;
         private final Box boundingBox;
 
-        public Spike(int centerX, int centerZ, int radius, int height, boolean bl) {
+        public Spike(int centerX, int centerZ, int radius, int height, boolean guarded) {
             this.centerX = centerX;
             this.centerZ = centerZ;
             this.radius = radius;
             this.height = height;
-            this.guarded = bl;
+            this.guarded = guarded;
             this.boundingBox = new Box(centerX - radius, 0.0, centerZ - radius, centerX + radius, 256.0, centerZ + radius);
         }
 
@@ -178,20 +178,6 @@ extends Feature<EndSpikeFeatureConfig> {
 
         public Box getBoundingBox() {
             return this.boundingBox;
-        }
-
-        public <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
-            ImmutableMap.Builder builder = ImmutableMap.builder();
-            builder.put(dynamicOps.createString("centerX"), dynamicOps.createInt(this.centerX));
-            builder.put(dynamicOps.createString("centerZ"), dynamicOps.createInt(this.centerZ));
-            builder.put(dynamicOps.createString("radius"), dynamicOps.createInt(this.radius));
-            builder.put(dynamicOps.createString("height"), dynamicOps.createInt(this.height));
-            builder.put(dynamicOps.createString("guarded"), dynamicOps.createBoolean(this.guarded));
-            return new Dynamic(dynamicOps, dynamicOps.createMap((Map)builder.build()));
-        }
-
-        public static <T> Spike deserialize(Dynamic<T> dynamic) {
-            return new Spike(dynamic.get("centerX").asInt(0), dynamic.get("centerZ").asInt(0), dynamic.get("radius").asInt(0), dynamic.get("height").asInt(0), dynamic.get("guarded").asBoolean(false));
         }
     }
 }

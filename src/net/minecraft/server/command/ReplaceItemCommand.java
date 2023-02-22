@@ -30,10 +30,10 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import java.util.ArrayList;
 import java.util.Collection;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.command.arguments.BlockPosArgumentType;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.ItemSlotArgumentType;
-import net.minecraft.command.arguments.ItemStackArgumentType;
+import net.minecraft.command.argument.BlockPosArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.argument.ItemSlotArgumentType;
+import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -44,7 +44,7 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.BlockPos;
 
 public class ReplaceItemCommand {
-    public static final SimpleCommandExceptionType BLOCK_FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.replaceitem.block.failed", new Object[0]));
+    public static final SimpleCommandExceptionType BLOCK_FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.replaceitem.block.failed"));
     public static final DynamicCommandExceptionType SLOT_INAPPLICABLE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.replaceitem.slot.inapplicable", object));
     public static final Dynamic2CommandExceptionType ENTITY_FAILED_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("commands.replaceitem.entity.failed", object, object2));
 
@@ -58,10 +58,10 @@ public class ReplaceItemCommand {
             throw BLOCK_FAILED_EXCEPTION.create();
         }
         Inventory inventory = (Inventory)((Object)blockEntity);
-        if (slot < 0 || slot >= inventory.getInvSize()) {
+        if (slot < 0 || slot >= inventory.size()) {
             throw SLOT_INAPPLICABLE_EXCEPTION.create((Object)slot);
         }
-        inventory.setInvStack(slot, item);
+        inventory.setStack(slot, item);
         source.sendFeedback(new TranslatableText("commands.replaceitem.block.success", pos.getX(), pos.getY(), pos.getZ(), item.toHoverableText()), true);
         return 1;
     }
@@ -70,12 +70,12 @@ public class ReplaceItemCommand {
         ArrayList list = Lists.newArrayListWithCapacity((int)targets.size());
         for (Entity entity : targets) {
             if (entity instanceof ServerPlayerEntity) {
-                ((ServerPlayerEntity)entity).playerContainer.sendContentUpdates();
+                ((ServerPlayerEntity)entity).playerScreenHandler.sendContentUpdates();
             }
             if (!entity.equip(slot, item.copy())) continue;
             list.add(entity);
             if (!(entity instanceof ServerPlayerEntity)) continue;
-            ((ServerPlayerEntity)entity).playerContainer.sendContentUpdates();
+            ((ServerPlayerEntity)entity).playerScreenHandler.sendContentUpdates();
         }
         if (list.isEmpty()) {
             throw ENTITY_FAILED_EXCEPTION.create((Object)item.toHoverableText(), (Object)slot);

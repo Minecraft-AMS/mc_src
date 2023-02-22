@@ -11,11 +11,12 @@ package net.minecraft.entity.mob;
 
 import com.google.common.collect.Maps;
 import java.util.HashMap;
+import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.util.math.Vector3f;
+import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.CrossbowUser;
@@ -26,56 +27,51 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ProjectileUtil;
-import net.minecraft.entity.SpawnType;
-import net.minecraft.entity.ai.RangedAttackMob;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.goal.CrossbowAttackGoal;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WanderAroundGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.IllagerEntity;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.AbstractTraderEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.Projectile;
-import net.minecraft.entity.raid.Raid;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.raid.RaiderEntity;
-import net.minecraft.inventory.BasicInventory;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.BannerItem;
-import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
+import net.minecraft.item.RangedWeaponItem;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Quaternion;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.village.raid.Raid;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class PillagerEntity
 extends IllagerEntity
-implements CrossbowUser,
-RangedAttackMob {
+implements CrossbowUser {
     private static final TrackedData<Boolean> CHARGING = DataTracker.registerData(PillagerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private final BasicInventory inventory = new BasicInventory(5);
+    private final SimpleInventory inventory = new SimpleInventory(5);
 
     public PillagerEntity(EntityType<? extends PillagerEntity> entityType, World world) {
         super((EntityType<? extends IllagerEntity>)entityType, world);
@@ -92,23 +88,23 @@ RangedAttackMob {
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 15.0f));
         this.targetSelector.add(1, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
         this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
-        this.targetSelector.add(3, new FollowTargetGoal<AbstractTraderEntity>((MobEntity)this, AbstractTraderEntity.class, false));
+        this.targetSelector.add(3, new FollowTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, false));
         this.targetSelector.add(3, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.35f);
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(24.0);
-        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(5.0);
-        this.getAttributeInstance(EntityAttributes.FOLLOW_RANGE).setBaseValue(32.0);
+    public static DefaultAttributeContainer.Builder createPillagerAttributes() {
+        return HostileEntity.createHostileAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.35f).add(EntityAttributes.GENERIC_MAX_HEALTH, 24.0).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 5.0).add(EntityAttributes.GENERIC_FOLLOW_RANGE, 32.0);
     }
 
     @Override
     protected void initDataTracker() {
         super.initDataTracker();
         this.dataTracker.startTracking(CHARGING, false);
+    }
+
+    @Override
+    public boolean canUseRangedWeapon(RangedWeaponItem weapon) {
+        return weapon == Items.CROSSBOW;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -122,15 +118,20 @@ RangedAttackMob {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        ListTag listTag = new ListTag();
-        for (int i = 0; i < this.inventory.getInvSize(); ++i) {
-            ItemStack itemStack = this.inventory.getInvStack(i);
+    public void postShoot() {
+        this.despawnCounter = 0;
+    }
+
+    @Override
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        NbtList nbtList = new NbtList();
+        for (int i = 0; i < this.inventory.size(); ++i) {
+            ItemStack itemStack = this.inventory.getStack(i);
             if (itemStack.isEmpty()) continue;
-            listTag.add(itemStack.toTag(new CompoundTag()));
+            nbtList.add(itemStack.writeNbt(new NbtCompound()));
         }
-        tag.put("Inventory", listTag);
+        nbt.put("Inventory", nbtList);
     }
 
     @Override
@@ -149,24 +150,24 @@ RangedAttackMob {
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        ListTag listTag = tag.getList("Inventory", 10);
-        for (int i = 0; i < listTag.size(); ++i) {
-            ItemStack itemStack = ItemStack.fromTag(listTag.getCompound(i));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        NbtList nbtList = nbt.getList("Inventory", 10);
+        for (int i = 0; i < nbtList.size(); ++i) {
+            ItemStack itemStack = ItemStack.fromNbt(nbtList.getCompound(i));
             if (itemStack.isEmpty()) continue;
-            this.inventory.add(itemStack);
+            this.inventory.addStack(itemStack);
         }
         this.setCanPickUpLoot(true);
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
-        Block block = worldView.getBlockState(pos.down()).getBlock();
-        if (block == Blocks.GRASS_BLOCK || block == Blocks.SAND) {
+    public float getPathfindingFavor(BlockPos pos, WorldView world) {
+        BlockState blockState = world.getBlockState(pos.down());
+        if (blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isOf(Blocks.SAND)) {
             return 10.0f;
         }
-        return 0.5f - worldView.getBrightness(pos);
+        return 0.5f - world.getBrightness(pos);
     }
 
     @Override
@@ -176,21 +177,27 @@ RangedAttackMob {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
+    public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         this.initEquipment(difficulty);
         this.updateEnchantments(difficulty);
-        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
+        return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     @Override
     protected void initEquipment(LocalDifficulty difficulty) {
-        ItemStack itemStack = new ItemStack(Items.CROSSBOW);
-        if (this.random.nextInt(300) == 0) {
-            HashMap map = Maps.newHashMap();
-            map.put(Enchantments.PIERCING, 1);
+        this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
+    }
+
+    @Override
+    protected void method_30759(float f) {
+        ItemStack itemStack;
+        super.method_30759(f);
+        if (this.random.nextInt(300) == 0 && (itemStack = this.getMainHandStack()).getItem() == Items.CROSSBOW) {
+            Map<Enchantment, Integer> map = EnchantmentHelper.get(itemStack);
+            map.putIfAbsent(Enchantments.PIERCING, 1);
             EnchantmentHelper.set(map, itemStack);
+            this.equipStack(EquipmentSlot.MAINHAND, itemStack);
         }
-        this.equipStack(EquipmentSlot.MAINHAND, itemStack);
     }
 
     @Override
@@ -220,40 +227,13 @@ RangedAttackMob {
     }
 
     @Override
-    public void attack(LivingEntity target, float f) {
-        Hand hand = ProjectileUtil.getHandPossiblyHolding(this, Items.CROSSBOW);
-        ItemStack itemStack = this.getStackInHand(hand);
-        if (this.isHolding(Items.CROSSBOW)) {
-            CrossbowItem.shootAll(this.world, this, hand, itemStack, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
-        }
-        this.despawnCounter = 0;
+    public void attack(LivingEntity target, float pullProgress) {
+        this.shoot(this, 1.6f);
     }
 
     @Override
-    public void shoot(LivingEntity target, ItemStack crossbow, Projectile projectile, float multiShotSpray) {
-        Entity entity = (Entity)((Object)projectile);
-        double d = target.getX() - this.getX();
-        double e = target.getZ() - this.getZ();
-        double f = MathHelper.sqrt(d * d + e * e);
-        double g = target.getBodyY(0.3333333333333333) - entity.getY() + f * (double)0.2f;
-        Vector3f vector3f = this.getProjectileVelocity(new Vec3d(d, g, e), multiShotSpray);
-        projectile.setVelocity(vector3f.getX(), vector3f.getY(), vector3f.getZ(), 1.6f, 14 - this.world.getDifficulty().getId() * 4);
-        this.playSound(SoundEvents.ITEM_CROSSBOW_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-    }
-
-    private Vector3f getProjectileVelocity(Vec3d vec3d, float f) {
-        Vec3d vec3d2 = vec3d.normalize();
-        Vec3d vec3d3 = vec3d2.crossProduct(new Vec3d(0.0, 1.0, 0.0));
-        if (vec3d3.lengthSquared() <= 1.0E-7) {
-            vec3d3 = vec3d2.crossProduct(this.getOppositeRotationVector(1.0f));
-        }
-        Quaternion quaternion = new Quaternion(new Vector3f(vec3d3), 90.0f, true);
-        Vector3f vector3f = new Vector3f(vec3d2);
-        vector3f.rotate(quaternion);
-        Quaternion quaternion2 = new Quaternion(vector3f, f, true);
-        Vector3f vector3f2 = new Vector3f(vec3d2);
-        vector3f2.rotate(quaternion2);
-        return vector3f2;
+    public void shoot(LivingEntity target, ItemStack crossbow, ProjectileEntity projectile, float multiShotSpray) {
+        this.shoot(this, target, projectile, multiShotSpray, 1.6f);
     }
 
     @Override
@@ -264,7 +244,8 @@ RangedAttackMob {
         } else {
             Item item2 = itemStack.getItem();
             if (this.method_7111(item2)) {
-                ItemStack itemStack2 = this.inventory.add(itemStack);
+                this.method_29499(item);
+                ItemStack itemStack2 = this.inventory.addStack(itemStack);
                 if (itemStack2.isEmpty()) {
                     item.remove();
                 } else {
@@ -284,8 +265,8 @@ RangedAttackMob {
             return true;
         }
         int i = slot - 300;
-        if (i >= 0 && i < this.inventory.getInvSize()) {
-            this.inventory.setInvStack(i, item);
+        if (i >= 0 && i < this.inventory.size()) {
+            this.inventory.setStack(i, item);
             return true;
         }
         return false;

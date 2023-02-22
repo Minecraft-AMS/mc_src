@@ -32,7 +32,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandler;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.util.PacketByteBuf;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
@@ -43,15 +43,15 @@ import org.jetbrains.annotations.Nullable;
 
 public class DataTracker {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Map<Class<? extends Entity>, Integer> trackedEntities = Maps.newHashMap();
+    private static final Map<Class<? extends Entity>, Integer> TRACKED_ENTITIES = Maps.newHashMap();
     private final Entity trackedEntity;
     private final Map<Integer, Entry<?>> entries = Maps.newHashMap();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private boolean empty = true;
     private boolean dirty;
 
-    public DataTracker(Entity entity) {
-        this.trackedEntity = entity;
+    public DataTracker(Entity trackedEntity) {
+        this.trackedEntity = trackedEntity;
     }
 
     public static <T> TrackedData<T> registerData(Class<? extends Entity> entityClass, TrackedDataHandler<T> dataHandler) {
@@ -67,14 +67,14 @@ public class DataTracker {
                 // empty catch block
             }
         }
-        if (trackedEntities.containsKey(entityClass)) {
-            i = trackedEntities.get(entityClass) + 1;
+        if (TRACKED_ENTITIES.containsKey(entityClass)) {
+            i = TRACKED_ENTITIES.get(entityClass) + 1;
         } else {
             int j = 0;
             Class<? extends Entity> class2 = entityClass;
             while (class2 != Entity.class) {
-                if (!trackedEntities.containsKey(class2 = class2.getSuperclass())) continue;
-                j = trackedEntities.get(class2) + 1;
+                if (!TRACKED_ENTITIES.containsKey(class2 = class2.getSuperclass())) continue;
+                j = TRACKED_ENTITIES.get(class2) + 1;
                 break;
             }
             i = j;
@@ -82,7 +82,7 @@ public class DataTracker {
         if (i > 254) {
             throw new IllegalArgumentException("Data value id is too big with " + i + "! (Max is " + 254 + ")");
         }
-        trackedEntities.put(entityClass, i);
+        TRACKED_ENTITIES.put(entityClass, i);
         return dataHandler.create(i);
     }
 
@@ -126,14 +126,14 @@ public class DataTracker {
         return entry;
     }
 
-    public <T> T get(TrackedData<T> trackedData) {
-        return this.getEntry(trackedData).get();
+    public <T> T get(TrackedData<T> data) {
+        return this.getEntry(data).get();
     }
 
-    public <T> void set(TrackedData<T> key, T object) {
+    public <T> void set(TrackedData<T> key, T value) {
         Entry<T> entry = this.getEntry(key);
-        if (ObjectUtils.notEqual(object, entry.get())) {
-            entry.set(object);
+        if (ObjectUtils.notEqual(value, entry.get())) {
+            entry.set(value);
             this.trackedEntity.onTrackedDataSet(key);
             entry.setDirty(true);
             this.dirty = true;
@@ -187,37 +187,37 @@ public class DataTracker {
         return list;
     }
 
-    private static <T> void writeEntryToPacket(PacketByteBuf packetByteBuf, Entry<T> entry) throws IOException {
+    private static <T> void writeEntryToPacket(PacketByteBuf buf, Entry<T> entry) throws IOException {
         TrackedData<T> trackedData = entry.getData();
         int i = TrackedDataHandlerRegistry.getId(trackedData.getType());
         if (i < 0) {
             throw new EncoderException("Unknown serializer type " + trackedData.getType());
         }
-        packetByteBuf.writeByte(trackedData.getId());
-        packetByteBuf.writeVarInt(i);
-        trackedData.getType().write(packetByteBuf, entry.get());
+        buf.writeByte(trackedData.getId());
+        buf.writeVarInt(i);
+        trackedData.getType().write(buf, entry.get());
     }
 
     @Nullable
-    public static List<Entry<?>> deserializePacket(PacketByteBuf packetByteBuf) throws IOException {
+    public static List<Entry<?>> deserializePacket(PacketByteBuf buf) throws IOException {
         short i;
         ArrayList list = null;
-        while ((i = packetByteBuf.readUnsignedByte()) != 255) {
+        while ((i = buf.readUnsignedByte()) != 255) {
             int j;
             TrackedDataHandler<?> trackedDataHandler;
             if (list == null) {
                 list = Lists.newArrayList();
             }
-            if ((trackedDataHandler = TrackedDataHandlerRegistry.get(j = packetByteBuf.readVarInt())) == null) {
+            if ((trackedDataHandler = TrackedDataHandlerRegistry.get(j = buf.readVarInt())) == null) {
                 throw new DecoderException("Unknown serializer type " + j);
             }
-            list.add(DataTracker.entryFromPacket(packetByteBuf, i, trackedDataHandler));
+            list.add(DataTracker.entryFromPacket(buf, i, trackedDataHandler));
         }
         return list;
     }
 
-    private static <T> Entry<T> entryFromPacket(PacketByteBuf packetByteBuf, int i, TrackedDataHandler<T> trackedDataHandler) {
-        return new Entry<T>(trackedDataHandler.create(i), trackedDataHandler.read(packetByteBuf));
+    private static <T> Entry<T> entryFromPacket(PacketByteBuf buf, int i, TrackedDataHandler<T> trackedDataHandler) {
+        return new Entry<T>(trackedDataHandler.create(i), trackedDataHandler.read(buf));
     }
 
     @Environment(value=EnvType.CLIENT)

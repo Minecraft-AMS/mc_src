@@ -17,7 +17,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
@@ -86,7 +88,7 @@ public abstract class ItemGroup {
         public ItemStack createIcon() {
             return new ItemStack(Items.IRON_AXE);
         }
-    }.setEnchantments(EnchantmentTarget.ALL, EnchantmentTarget.DIGGER, EnchantmentTarget.FISHING_ROD, EnchantmentTarget.BREAKABLE);
+    }.setEnchantments(EnchantmentTarget.VANISHABLE, EnchantmentTarget.DIGGER, EnchantmentTarget.FISHING_ROD, EnchantmentTarget.BREAKABLE);
     public static final ItemGroup COMBAT = new ItemGroup(9, "combat"){
 
         @Override
@@ -94,7 +96,7 @@ public abstract class ItemGroup {
         public ItemStack createIcon() {
             return new ItemStack(Items.GOLDEN_SWORD);
         }
-    }.setEnchantments(EnchantmentTarget.ALL, EnchantmentTarget.ARMOR, EnchantmentTarget.ARMOR_FEET, EnchantmentTarget.ARMOR_HEAD, EnchantmentTarget.ARMOR_LEGS, EnchantmentTarget.ARMOR_CHEST, EnchantmentTarget.BOW, EnchantmentTarget.WEAPON, EnchantmentTarget.WEARABLE, EnchantmentTarget.BREAKABLE, EnchantmentTarget.TRIDENT, EnchantmentTarget.CROSSBOW);
+    }.setEnchantments(EnchantmentTarget.VANISHABLE, EnchantmentTarget.ARMOR, EnchantmentTarget.ARMOR_FEET, EnchantmentTarget.ARMOR_HEAD, EnchantmentTarget.ARMOR_LEGS, EnchantmentTarget.ARMOR_CHEST, EnchantmentTarget.BOW, EnchantmentTarget.WEAPON, EnchantmentTarget.WEARABLE, EnchantmentTarget.BREAKABLE, EnchantmentTarget.TRIDENT, EnchantmentTarget.CROSSBOW);
     public static final ItemGroup BREWING = new ItemGroup(10, "brewing"){
 
         @Override
@@ -131,19 +133,21 @@ public abstract class ItemGroup {
         public ItemStack createIcon() {
             return new ItemStack(Blocks.CHEST);
         }
-    }.setTexture("inventory.png").setNoScrollbar().setNoTooltip();
+    }.setTexture("inventory.png").setNoScrollbar().hideName();
     private final int index;
     private final String id;
+    private final Text translationKey;
     private String name;
     private String texture = "items.png";
     private boolean scrollbar = true;
-    private boolean tooltip = true;
+    private boolean renderName = true;
     private EnchantmentTarget[] enchantments = new EnchantmentTarget[0];
     private ItemStack icon;
 
     public ItemGroup(int index, String id) {
         this.index = index;
         this.id = id;
+        this.translationKey = new TranslatableText("itemGroup." + id);
         this.icon = ItemStack.EMPTY;
         ItemGroup.GROUPS[index] = this;
     }
@@ -153,18 +157,13 @@ public abstract class ItemGroup {
         return this.index;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public String getId() {
-        return this.id;
-    }
-
     public String getName() {
         return this.name == null ? this.id : this.name;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public String getTranslationKey() {
-        return "itemGroup." + this.getId();
+    public Text getTranslationKey() {
+        return this.translationKey;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -194,12 +193,12 @@ public abstract class ItemGroup {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean hasTooltip() {
-        return this.tooltip;
+    public boolean shouldRenderName() {
+        return this.renderName;
     }
 
-    public ItemGroup setNoTooltip() {
-        this.tooltip = false;
+    public ItemGroup hideName() {
+        this.renderName = false;
         return this;
     }
 

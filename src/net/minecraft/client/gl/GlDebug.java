@@ -50,9 +50,9 @@ import org.lwjgl.opengl.KHRDebug;
 @Environment(value=EnvType.CLIENT)
 public class GlDebug {
     private static final Logger LOGGER = LogManager.getLogger();
-    protected static final ByteBuffer field_4924 = GlAllocationUtils.allocateByteBuffer(64);
-    protected static final FloatBuffer field_4916 = field_4924.asFloatBuffer();
-    protected static final IntBuffer field_4917 = field_4924.asIntBuffer();
+    protected static final ByteBuffer byteBuffer = GlAllocationUtils.allocateByteBuffer(64);
+    protected static final FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
+    protected static final IntBuffer intBuffer = byteBuffer.asIntBuffer();
     private static final Joiner NEWLINE_JOINER = Joiner.on((char)'\n');
     private static final Joiner SEMICOLON_JOINER = Joiner.on((String)"; ");
     private static final Map<Integer, String> CONSTANTS = Maps.newHashMap();
@@ -133,8 +133,8 @@ public class GlDebug {
         return GlDebug.unknown(opcode);
     }
 
-    private static void info(int source, int type, int id, int severity, int i, long l, long m) {
-        LOGGER.info("OpenGL debug message, id={}, source={}, type={}, severity={}, message={}", (Object)id, (Object)GlDebug.getSource(source), (Object)GlDebug.getType(type), (Object)GlDebug.getSeverity(severity), (Object)GLDebugMessageCallback.getMessage((int)i, (long)l));
+    private static void info(int source, int type, int id, int severity, int messageLength, long message, long l) {
+        LOGGER.info("OpenGL debug message, id={}, source={}, type={}, severity={}, message={}", (Object)id, (Object)GlDebug.getSource(source), (Object)GlDebug.getType(type), (Object)GlDebug.getSeverity(severity), (Object)GLDebugMessageCallback.getMessage((int)messageLength, (long)message));
     }
 
     private static void registerConstant(int constant, String description) {

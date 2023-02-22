@@ -30,63 +30,58 @@ public class MathHelper {
     private static final double[] ARCSINE_TABLE = new double[257];
     private static final double[] COSINE_TABLE = new double[257];
 
-    public static float sin(float f) {
-        return SINE_TABLE[(int)(f * 10430.378f) & 0xFFFF];
+    public static float sin(float value) {
+        return SINE_TABLE[(int)(value * 10430.378f) & 0xFFFF];
     }
 
-    public static float cos(float f) {
-        return SINE_TABLE[(int)(f * 10430.378f + 16384.0f) & 0xFFFF];
+    public static float cos(float value) {
+        return SINE_TABLE[(int)(value * 10430.378f + 16384.0f) & 0xFFFF];
     }
 
-    public static float sqrt(float f) {
-        return (float)Math.sqrt(f);
+    public static float sqrt(float value) {
+        return (float)Math.sqrt(value);
     }
 
-    public static float sqrt(double d) {
-        return (float)Math.sqrt(d);
+    public static float sqrt(double value) {
+        return (float)Math.sqrt(value);
     }
 
-    public static int floor(float f) {
-        int i = (int)f;
-        return f < (float)i ? i - 1 : i;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static int fastFloor(double d) {
-        return (int)(d + 1024.0) - 1024;
-    }
-
-    public static int floor(double d) {
-        int i = (int)d;
-        return d < (double)i ? i - 1 : i;
-    }
-
-    public static long lfloor(double d) {
-        long l = (long)d;
-        return d < (double)l ? l - 1L : l;
+    public static int floor(float value) {
+        int i = (int)value;
+        return value < (float)i ? i - 1 : i;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static int absFloor(double d) {
-        return (int)(d >= 0.0 ? d : -d + 1.0);
+    public static int fastFloor(double value) {
+        return (int)(value + 1024.0) - 1024;
     }
 
-    public static float abs(float f) {
-        return Math.abs(f);
+    public static int floor(double value) {
+        int i = (int)value;
+        return value < (double)i ? i - 1 : i;
     }
 
-    public static int abs(int i) {
-        return Math.abs(i);
+    public static long lfloor(double value) {
+        long l = (long)value;
+        return value < (double)l ? l - 1L : l;
     }
 
-    public static int ceil(float f) {
-        int i = (int)f;
-        return f > (float)i ? i + 1 : i;
+    public static float abs(float value) {
+        return Math.abs(value);
     }
 
-    public static int ceil(double d) {
-        int i = (int)d;
-        return d > (double)i ? i + 1 : i;
+    public static int abs(int value) {
+        return Math.abs(value);
+    }
+
+    public static int ceil(float value) {
+        int i = (int)value;
+        return value > (float)i ? i + 1 : i;
+    }
+
+    public static int ceil(double value) {
+        int i = (int)value;
+        return value > (double)i ? i + 1 : i;
     }
 
     public static int clamp(int value, int min, int max) {
@@ -130,28 +125,28 @@ public class MathHelper {
         return value;
     }
 
-    public static double clampedLerp(double first, double second, double delta) {
+    public static double clampedLerp(double start, double end, double delta) {
         if (delta < 0.0) {
-            return first;
+            return start;
         }
         if (delta > 1.0) {
-            return second;
+            return end;
         }
-        return MathHelper.lerp(delta, first, second);
+        return MathHelper.lerp(delta, start, end);
     }
 
-    public static double absMax(double d, double e) {
-        if (d < 0.0) {
-            d = -d;
+    public static double absMax(double a, double b) {
+        if (a < 0.0) {
+            a = -a;
         }
-        if (e < 0.0) {
-            e = -e;
+        if (b < 0.0) {
+            b = -b;
         }
-        return d > e ? d : e;
+        return a > b ? a : b;
     }
 
-    public static int floorDiv(int i, int j) {
-        return Math.floorDiv(i, j);
+    public static int floorDiv(int dividend, int divisor) {
+        return Math.floorDiv(dividend, divisor);
     }
 
     public static int nextInt(Random random, int min, int max) {
@@ -192,52 +187,52 @@ public class MathHelper {
         return Math.abs(b - a) < (double)1.0E-5f;
     }
 
-    public static int floorMod(int i, int j) {
-        return Math.floorMod(i, j);
+    public static int floorMod(int dividend, int divisor) {
+        return Math.floorMod(dividend, divisor);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static float floorMod(float f, float g) {
-        return (f % g + g) % g;
+    public static float floorMod(float dividend, float divisor) {
+        return (dividend % divisor + divisor) % divisor;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static double floorMod(double d, double e) {
-        return (d % e + e) % e;
+    public static double floorMod(double dividend, double divisor) {
+        return (dividend % divisor + divisor) % divisor;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static int wrapDegrees(int i) {
-        int j = i % 360;
-        if (j >= 180) {
-            j -= 360;
+    public static int wrapDegrees(int degrees) {
+        int i = degrees % 360;
+        if (i >= 180) {
+            i -= 360;
         }
-        if (j < -180) {
-            j += 360;
+        if (i < -180) {
+            i += 360;
         }
-        return j;
+        return i;
     }
 
-    public static float wrapDegrees(float f) {
-        float g = f % 360.0f;
-        if (g >= 180.0f) {
-            g -= 360.0f;
+    public static float wrapDegrees(float degrees) {
+        float f = degrees % 360.0f;
+        if (f >= 180.0f) {
+            f -= 360.0f;
         }
-        if (g < -180.0f) {
-            g += 360.0f;
+        if (f < -180.0f) {
+            f += 360.0f;
         }
-        return g;
+        return f;
     }
 
-    public static double wrapDegrees(double d) {
-        double e = d % 360.0;
-        if (e >= 180.0) {
-            e -= 360.0;
+    public static double wrapDegrees(double degrees) {
+        double d = degrees % 360.0;
+        if (d >= 180.0) {
+            d -= 360.0;
         }
-        if (e < -180.0) {
-            e += 360.0;
+        if (d < -180.0) {
+            d += 360.0;
         }
-        return e;
+        return d;
     }
 
     public static float subtractAngles(float start, float end) {
@@ -248,48 +243,28 @@ public class MathHelper {
         return MathHelper.abs(MathHelper.subtractAngles(first, second));
     }
 
-    public static float capRotation(float start, float end, float speed) {
-        float f = MathHelper.subtractAngles(start, end);
-        float g = MathHelper.clamp(f, -speed, speed);
-        return end - g;
+    public static float stepAngleTowards(float from, float to, float step) {
+        float f = MathHelper.subtractAngles(from, to);
+        float g = MathHelper.clamp(f, -step, step);
+        return to - g;
     }
 
-    public static float method_15348(float f, float g, float h) {
-        h = MathHelper.abs(h);
-        if (f < g) {
-            return MathHelper.clamp(f + h, f, g);
+    public static float stepTowards(float from, float to, float step) {
+        step = MathHelper.abs(step);
+        if (from < to) {
+            return MathHelper.clamp(from + step, from, to);
         }
-        return MathHelper.clamp(f - h, g, f);
+        return MathHelper.clamp(from - step, to, from);
     }
 
-    public static float method_15388(float f, float g, float h) {
-        float i = MathHelper.subtractAngles(f, g);
-        return MathHelper.method_15348(f, f + i, h);
+    public static float stepUnwrappedAngleTowards(float from, float to, float step) {
+        float f = MathHelper.subtractAngles(from, to);
+        return MathHelper.stepTowards(from, from + f, step);
     }
 
     @Environment(value=EnvType.CLIENT)
     public static int parseInt(String string, int fallback) {
         return NumberUtils.toInt((String)string, (int)fallback);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static int parseInt(String string, int fallback, int minimum) {
-        return Math.max(minimum, MathHelper.parseInt(string, fallback));
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static double parseDouble(String string, double fallback) {
-        try {
-            return Double.parseDouble(string);
-        }
-        catch (Throwable throwable) {
-            return fallback;
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static double parseDouble(String string, double fallback, double d) {
-        return Math.max(d, MathHelper.parseDouble(string, fallback));
     }
 
     public static int smallestEncompassingPowerOfTwo(int value) {
@@ -302,34 +277,34 @@ public class MathHelper {
         return i + 1;
     }
 
-    private static boolean isPowerOfTwo(int i) {
-        return i != 0 && (i & i - 1) == 0;
+    public static boolean isPowerOfTwo(int value) {
+        return value != 0 && (value & value - 1) == 0;
     }
 
-    public static int log2DeBruijn(int i) {
-        i = MathHelper.isPowerOfTwo(i) ? i : MathHelper.smallestEncompassingPowerOfTwo(i);
-        return MULTIPLY_DE_BRUIJN_BIT_POSITION[(int)((long)i * 125613361L >> 27) & 0x1F];
+    public static int log2DeBruijn(int value) {
+        value = MathHelper.isPowerOfTwo(value) ? value : MathHelper.smallestEncompassingPowerOfTwo(value);
+        return MULTIPLY_DE_BRUIJN_BIT_POSITION[(int)((long)value * 125613361L >> 27) & 0x1F];
     }
 
-    public static int log2(int i) {
-        return MathHelper.log2DeBruijn(i) - (MathHelper.isPowerOfTwo(i) ? 0 : 1);
+    public static int log2(int value) {
+        return MathHelper.log2DeBruijn(value) - (MathHelper.isPowerOfTwo(value) ? 0 : 1);
     }
 
-    public static int roundUp(int i, int j) {
-        int k;
-        if (j == 0) {
+    public static int roundUpToMultiple(int value, int divisor) {
+        int i;
+        if (divisor == 0) {
             return 0;
         }
-        if (i == 0) {
-            return j;
+        if (value == 0) {
+            return divisor;
         }
-        if (i < 0) {
-            j *= -1;
+        if (value < 0) {
+            divisor *= -1;
         }
-        if ((k = i % j) == 0) {
-            return i;
+        if ((i = value % divisor) == 0) {
+            return value;
         }
-        return i + j - k;
+        return value + divisor - i;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -345,7 +320,6 @@ public class MathHelper {
         return i;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static float fractionalPart(float value) {
         return value - (float)MathHelper.floor(value);
     }
@@ -370,57 +344,57 @@ public class MathHelper {
         return new UUID(l, m);
     }
 
-    public static UUID randomUUID() {
+    public static UUID randomUuid() {
         return MathHelper.randomUuid(RANDOM);
     }
 
-    public static double minusDiv(double numerator, double delta, double denominator) {
-        return (numerator - delta) / (denominator - delta);
+    public static double getLerpProgress(double value, double start, double end) {
+        return (value - start) / (end - start);
     }
 
-    public static double atan2(double d, double e) {
-        double g;
+    public static double atan2(double y, double x) {
+        double e;
         boolean bl3;
         boolean bl2;
         boolean bl;
-        double f = e * e + d * d;
-        if (Double.isNaN(f)) {
+        double d = x * x + y * y;
+        if (Double.isNaN(d)) {
             return Double.NaN;
         }
-        boolean bl4 = bl = d < 0.0;
+        boolean bl4 = bl = y < 0.0;
         if (bl) {
-            d = -d;
+            y = -y;
         }
-        boolean bl5 = bl2 = e < 0.0;
+        boolean bl5 = bl2 = x < 0.0;
         if (bl2) {
-            e = -e;
+            x = -x;
         }
-        boolean bl6 = bl3 = d > e;
+        boolean bl6 = bl3 = y > x;
         if (bl3) {
-            g = e;
-            e = d;
-            d = g;
+            e = x;
+            x = y;
+            y = e;
         }
-        g = MathHelper.fastInverseSqrt(f);
-        e *= g;
-        double h = SMALLEST_FRACTION_FREE_DOUBLE + (d *= g);
-        int i = (int)Double.doubleToRawLongBits(h);
-        double j = ARCSINE_TABLE[i];
-        double k = COSINE_TABLE[i];
-        double l = h - SMALLEST_FRACTION_FREE_DOUBLE;
-        double m = d * k - e * l;
-        double n = (6.0 + m * m) * m * 0.16666666666666666;
-        double o = j + n;
+        e = MathHelper.fastInverseSqrt(d);
+        x *= e;
+        double f = SMALLEST_FRACTION_FREE_DOUBLE + (y *= e);
+        int i = (int)Double.doubleToRawLongBits(f);
+        double g = ARCSINE_TABLE[i];
+        double h = COSINE_TABLE[i];
+        double j = f - SMALLEST_FRACTION_FREE_DOUBLE;
+        double k = y * h - x * j;
+        double l = (6.0 + k * k) * k * 0.16666666666666666;
+        double m = g + l;
         if (bl3) {
-            o = 1.5707963267948966 - o;
+            m = 1.5707963267948966 - m;
         }
         if (bl2) {
-            o = Math.PI - o;
+            m = Math.PI - m;
         }
         if (bl) {
-            o = -o;
+            m = -m;
         }
-        return o;
+        return m;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -508,13 +482,13 @@ public class MathHelper {
         return n << 16 | o << 8 | p;
     }
 
-    public static int idealHash(int i) {
-        i ^= i >>> 16;
-        i *= -2048144789;
-        i ^= i >>> 13;
-        i *= -1028477387;
-        i ^= i >>> 16;
-        return i;
+    public static int idealHash(int value) {
+        value ^= value >>> 16;
+        value *= -2048144789;
+        value ^= value >>> 13;
+        value *= -1028477387;
+        value ^= value >>> 16;
+        return value;
     }
 
     public static int binarySearch(int start, int end, IntPredicate leftPredicate) {
@@ -532,36 +506,36 @@ public class MathHelper {
         return start;
     }
 
-    public static float lerp(float delta, float first, float second) {
-        return first + delta * (second - first);
+    public static float lerp(float delta, float start, float end) {
+        return start + delta * (end - start);
     }
 
-    public static double lerp(double delta, double first, double second) {
-        return first + delta * (second - first);
+    public static double lerp(double delta, double start, double end) {
+        return start + delta * (end - start);
     }
 
-    public static double lerp2(double deltaX, double deltaY, double d, double e, double f, double g) {
-        return MathHelper.lerp(deltaY, MathHelper.lerp(deltaX, d, e), MathHelper.lerp(deltaX, f, g));
+    public static double lerp2(double deltaX, double deltaY, double x0y0, double x1y0, double x0y1, double x1y1) {
+        return MathHelper.lerp(deltaY, MathHelper.lerp(deltaX, x0y0, x1y0), MathHelper.lerp(deltaX, x0y1, x1y1));
     }
 
-    public static double lerp3(double deltaX, double deltaY, double deltaZ, double d, double e, double f, double g, double h, double i, double j, double k) {
-        return MathHelper.lerp(deltaZ, MathHelper.lerp2(deltaX, deltaY, d, e, f, g), MathHelper.lerp2(deltaX, deltaY, h, i, j, k));
+    public static double lerp3(double deltaX, double deltaY, double deltaZ, double x0y0z0, double x1y0z0, double x0y1z0, double x1y1z0, double x0y0z1, double x1y0z1, double x0y1z1, double x1y1z1) {
+        return MathHelper.lerp(deltaZ, MathHelper.lerp2(deltaX, deltaY, x0y0z0, x1y0z0, x0y1z0, x1y1z0), MathHelper.lerp2(deltaX, deltaY, x0y0z1, x1y0z1, x0y1z1, x1y1z1));
     }
 
-    public static double perlinFade(double d) {
-        return d * d * d * (d * (d * 6.0 - 15.0) + 10.0);
+    public static double perlinFade(double value) {
+        return value * value * value * (value * (value * 6.0 - 15.0) + 10.0);
     }
 
-    public static int sign(double d) {
-        if (d == 0.0) {
+    public static int sign(double value) {
+        if (value == 0.0) {
             return 0;
         }
-        return d > 0.0 ? 1 : -1;
+        return value > 0.0 ? 1 : -1;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static float lerpAngleDegrees(float delta, float first, float second) {
-        return first + delta * MathHelper.wrapDegrees(second - first);
+    public static float lerpAngleDegrees(float delta, float start, float end) {
+        return start + delta * MathHelper.wrapDegrees(end - start);
     }
 
     @Deprecated
@@ -577,14 +551,23 @@ public class MathHelper {
 
     @Deprecated
     @Environment(value=EnvType.CLIENT)
-    public static float method_22860(double d) {
-        while (d >= 180.0) {
-            d -= 360.0;
+    public static float fwrapDegrees(double degrees) {
+        while (degrees >= 180.0) {
+            degrees -= 360.0;
         }
-        while (d < -180.0) {
-            d += 360.0;
+        while (degrees < -180.0) {
+            degrees += 360.0;
         }
-        return (float)d;
+        return (float)degrees;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static float method_24504(float f, float g) {
+        return (Math.abs(f % g - g * 0.5f) - g * 0.25f) / (g * 0.25f);
+    }
+
+    public static float square(float n) {
+        return n * n;
     }
 
     static {

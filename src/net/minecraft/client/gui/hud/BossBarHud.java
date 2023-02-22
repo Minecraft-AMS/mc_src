@@ -17,14 +17,16 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.hud.ClientBossBar;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.network.packet.s2c.play.BossBarS2CPacket;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
 public class BossBarHud
 extends DrawableHelper {
-    private static final Identifier BAR_TEX = new Identifier("textures/gui/bars.png");
+    private static final Identifier BARS_TEXTURE = new Identifier("textures/gui/bars.png");
     private final MinecraftClient client;
     private final Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
 
@@ -32,7 +34,7 @@ extends DrawableHelper {
         this.client = client;
     }
 
-    public void render() {
+    public void render(MatrixStack matrices) {
         if (this.bossBars.isEmpty()) {
             return;
         }
@@ -42,28 +44,28 @@ extends DrawableHelper {
             int k = i / 2 - 91;
             int l = j;
             RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-            this.client.getTextureManager().bindTexture(BAR_TEX);
-            this.renderBossBar(k, l, clientBossBar);
-            String string = clientBossBar.getName().asFormattedString();
-            int m = this.client.textRenderer.getStringWidth(string);
+            this.client.getTextureManager().bindTexture(BARS_TEXTURE);
+            this.renderBossBar(matrices, k, l, clientBossBar);
+            Text text = clientBossBar.getName();
+            int m = this.client.textRenderer.getWidth(text);
             int n = i / 2 - m / 2;
             int o = l - 9;
-            this.client.textRenderer.drawWithShadow(string, n, o, 0xFFFFFF);
+            this.client.textRenderer.drawWithShadow(matrices, text, (float)n, (float)o, 0xFFFFFF);
             if ((j += 10 + this.client.textRenderer.fontHeight) < this.client.getWindow().getScaledHeight() / 3) continue;
             break;
         }
     }
 
-    private void renderBossBar(int x, int y, BossBar bossBar) {
+    private void renderBossBar(MatrixStack matrices, int x, int y, BossBar bossBar) {
         int i;
-        this.blit(x, y, 0, bossBar.getColor().ordinal() * 5 * 2, 182, 5);
-        if (bossBar.getOverlay() != BossBar.Style.PROGRESS) {
-            this.blit(x, y, 0, 80 + (bossBar.getOverlay().ordinal() - 1) * 5 * 2, 182, 5);
+        this.drawTexture(matrices, x, y, 0, bossBar.getColor().ordinal() * 5 * 2, 182, 5);
+        if (bossBar.getStyle() != BossBar.Style.PROGRESS) {
+            this.drawTexture(matrices, x, y, 0, 80 + (bossBar.getStyle().ordinal() - 1) * 5 * 2, 182, 5);
         }
         if ((i = (int)(bossBar.getPercent() * 183.0f)) > 0) {
-            this.blit(x, y, 0, bossBar.getColor().ordinal() * 5 * 2 + 5, i, 5);
-            if (bossBar.getOverlay() != BossBar.Style.PROGRESS) {
-                this.blit(x, y, 0, 80 + (bossBar.getOverlay().ordinal() - 1) * 5 * 2 + 5, i, 5);
+            this.drawTexture(matrices, x, y, 0, bossBar.getColor().ordinal() * 5 * 2 + 5, i, 5);
+            if (bossBar.getStyle() != BossBar.Style.PROGRESS) {
+                this.drawTexture(matrices, x, y, 0, 80 + (bossBar.getStyle().ordinal() - 1) * 5 * 2 + 5, i, 5);
             }
         }
     }
@@ -95,7 +97,7 @@ extends DrawableHelper {
     public boolean shouldDarkenSky() {
         if (!this.bossBars.isEmpty()) {
             for (BossBar bossBar : this.bossBars.values()) {
-                if (!bossBar.getDarkenSky()) continue;
+                if (!bossBar.shouldDarkenSky()) continue;
                 return true;
             }
         }
@@ -105,7 +107,7 @@ extends DrawableHelper {
     public boolean shouldThickenFog() {
         if (!this.bossBars.isEmpty()) {
             for (BossBar bossBar : this.bossBars.values()) {
-                if (!bossBar.getThickenFog()) continue;
+                if (!bossBar.shouldThickenFog()) continue;
                 return true;
             }
         }

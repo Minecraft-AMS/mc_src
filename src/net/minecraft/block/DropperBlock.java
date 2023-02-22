@@ -3,7 +3,7 @@
  */
 package net.minecraft.block;
 
-import net.minecraft.block.Block;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.DispenserBlock;
 import net.minecraft.block.dispenser.DispenserBehavior;
 import net.minecraft.block.dispenser.ItemDispenserBehavior;
@@ -13,17 +13,17 @@ import net.minecraft.block.entity.DropperBlockEntity;
 import net.minecraft.block.entity.HopperBlockEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPointerImpl;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
 
 public class DropperBlock
 extends DispenserBlock {
     private static final DispenserBehavior BEHAVIOR = new ItemDispenserBehavior();
 
-    public DropperBlock(Block.Settings settings) {
+    public DropperBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
@@ -33,21 +33,21 @@ extends DispenserBlock {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView view) {
+    public BlockEntity createBlockEntity(BlockView world) {
         return new DropperBlockEntity();
     }
 
     @Override
-    protected void dispense(World world, BlockPos pos) {
+    protected void dispense(ServerWorld world, BlockPos pos) {
         ItemStack itemStack2;
         BlockPointerImpl blockPointerImpl = new BlockPointerImpl(world, pos);
         DispenserBlockEntity dispenserBlockEntity = (DispenserBlockEntity)blockPointerImpl.getBlockEntity();
         int i = dispenserBlockEntity.chooseNonEmptySlot();
         if (i < 0) {
-            world.playLevelEvent(1001, pos, 0);
+            world.syncWorldEvent(1001, pos, 0);
             return;
         }
-        ItemStack itemStack = dispenserBlockEntity.getInvStack(i);
+        ItemStack itemStack = dispenserBlockEntity.getStack(i);
         if (itemStack.isEmpty()) {
             return;
         }
@@ -64,7 +64,7 @@ extends DispenserBlock {
                 itemStack2 = itemStack.copy();
             }
         }
-        dispenserBlockEntity.setInvStack(i, itemStack2);
+        dispenserBlockEntity.setStack(i, itemStack2);
     }
 }
 

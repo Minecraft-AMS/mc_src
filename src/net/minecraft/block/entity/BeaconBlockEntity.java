@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.advancement.criterion.Criterions;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -26,23 +26,24 @@ import net.minecraft.block.Stainable;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.LockableContainerBlockEntity;
-import net.minecraft.container.BeaconContainer;
-import net.minecraft.container.BlockContext;
-import net.minecraft.container.Container;
-import net.minecraft.container.NameableContainerFactory;
-import net.minecraft.container.PropertyDelegate;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.ContainerLock;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.screen.BeaconScreenHandler;
+import net.minecraft.screen.NamedScreenHandlerFactory;
+import net.minecraft.screen.PropertyDelegate;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Tickable;
@@ -53,7 +54,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class BeaconBlockEntity
 extends BlockEntity
-implements NameableContainerFactory,
+implements NamedScreenHandlerFactory,
 Tickable {
     public static final StatusEffect[][] EFFECTS_BY_LEVEL = new StatusEffect[][]{{StatusEffects.SPEED, StatusEffects.HASTE}, {StatusEffects.RESISTANCE, StatusEffects.JUMP_BOOST}, {StatusEffects.STRENGTH}, {StatusEffects.REGENERATION}};
     private static final Set<StatusEffect> EFFECTS = Arrays.stream(EFFECTS_BY_LEVEL).flatMap(Arrays::stream).collect(Collectors.toSet());
@@ -188,7 +189,7 @@ Tickable {
                 if (!bl && bl2) {
                     this.playSound(SoundEvents.BLOCK_BEACON_ACTIVATE);
                     for (ServerPlayerEntity serverPlayerEntity : this.world.getNonSpectatingEntities(ServerPlayerEntity.class, new Box(i, j, k, i, j - 4, k).expand(10.0, 5.0, 10.0))) {
-                        Criterions.CONSTRUCT_BEACON.trigger(serverPlayerEntity, this);
+                        Criteria.CONSTRUCT_BEACON.trigger(serverPlayerEntity, this);
                     }
                 } else if (bl && !bl2) {
                     this.playSound(SoundEvents.BLOCK_BEACON_DEACTIVATE);
@@ -205,8 +206,7 @@ Tickable {
             boolean bl = true;
             block1: for (int k = x - i; k <= x + i && bl; ++k) {
                 for (int l = z - i; l <= z + i; ++l) {
-                    Block block = this.world.getBlockState(new BlockPos(k, j, l)).getBlock();
-                    if (block == Blocks.EMERALD_BLOCK || block == Blocks.GOLD_BLOCK || block == Blocks.DIAMOND_BLOCK || block == Blocks.IRON_BLOCK) continue;
+                    if (this.world.getBlockState(new BlockPos(k, j, l)).isIn(BlockTags.BEACON_BASE_BLOCKS)) continue;
                     bl = false;
                     continue block1;
                 }
@@ -260,18 +260,18 @@ Tickable {
     @Override
     @Nullable
     public BlockEntityUpdateS2CPacket toUpdatePacket() {
-        return new BlockEntityUpdateS2CPacket(this.pos, 3, this.toInitialChunkDataTag());
+        return new BlockEntityUpdateS2CPacket(this.pos, 3, this.toInitialChunkDataNbt());
     }
 
     @Override
-    public CompoundTag toInitialChunkDataTag() {
-        return this.toTag(new CompoundTag());
+    public NbtCompound toInitialChunkDataNbt() {
+        return this.writeNbt(new NbtCompound());
     }
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public double getSquaredRenderDistance() {
-        return 65536.0;
+    public double getRenderDistance() {
+        return 256.0;
     }
 
     @Nullable
@@ -281,45 +281,45 @@ Tickable {
     }
 
     @Override
-    public void fromTag(CompoundTag tag) {
-        super.fromTag(tag);
+    public void fromTag(BlockState state, NbtCompound tag) {
+        super.fromTag(state, tag);
         this.primary = BeaconBlockEntity.getPotionEffectById(tag.getInt("Primary"));
         this.secondary = BeaconBlockEntity.getPotionEffectById(tag.getInt("Secondary"));
         if (tag.contains("CustomName", 8)) {
             this.customName = Text.Serializer.fromJson(tag.getString("CustomName"));
         }
-        this.lock = ContainerLock.fromTag(tag);
+        this.lock = ContainerLock.fromNbt(tag);
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
-        super.toTag(tag);
-        tag.putInt("Primary", StatusEffect.getRawId(this.primary));
-        tag.putInt("Secondary", StatusEffect.getRawId(this.secondary));
-        tag.putInt("Levels", this.level);
+    public NbtCompound writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        nbt.putInt("Primary", StatusEffect.getRawId(this.primary));
+        nbt.putInt("Secondary", StatusEffect.getRawId(this.secondary));
+        nbt.putInt("Levels", this.level);
         if (this.customName != null) {
-            tag.putString("CustomName", Text.Serializer.toJson(this.customName));
+            nbt.putString("CustomName", Text.Serializer.toJson(this.customName));
         }
-        this.lock.toTag(tag);
-        return tag;
+        this.lock.writeNbt(nbt);
+        return nbt;
     }
 
-    public void setCustomName(@Nullable Text text) {
-        this.customName = text;
+    public void setCustomName(@Nullable Text customName) {
+        this.customName = customName;
     }
 
     @Override
     @Nullable
-    public Container createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity playerEntity) {
+    public ScreenHandler createMenu(int i, PlayerInventory playerInventory, PlayerEntity playerEntity) {
         if (LockableContainerBlockEntity.checkUnlocked(playerEntity, this.lock, this.getDisplayName())) {
-            return new BeaconContainer(syncId, playerInventory, this.propertyDelegate, BlockContext.create(this.world, this.getPos()));
+            return new BeaconScreenHandler(i, playerInventory, this.propertyDelegate, ScreenHandlerContext.create(this.world, this.getPos()));
         }
         return null;
     }
 
     @Override
     public Text getDisplayName() {
-        return this.customName != null ? this.customName : new TranslatableText("container.beacon", new Object[0]);
+        return this.customName != null ? this.customName : new TranslatableText("container.beacon");
     }
 
     public static class BeamSegment {

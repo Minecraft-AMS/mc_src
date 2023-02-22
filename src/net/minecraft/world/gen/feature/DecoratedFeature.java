@@ -2,30 +2,37 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
+ *  org.apache.commons.lang3.mutable.MutableBoolean
  */
 package net.minecraft.world.gen.feature;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
+import net.minecraft.world.gen.decorator.DecoratorContext;
 import net.minecraft.world.gen.feature.DecoratedFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 
 public class DecoratedFeature
 extends Feature<DecoratedFeatureConfig> {
-    public DecoratedFeature(Function<Dynamic<?>, ? extends DecoratedFeatureConfig> configFactory) {
-        super(configFactory);
+    public DecoratedFeature(Codec<DecoratedFeatureConfig> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean generate(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, BlockPos blockPos, DecoratedFeatureConfig decoratedFeatureConfig) {
-        return decoratedFeatureConfig.decorator.generate(iWorld, chunkGenerator, random, blockPos, decoratedFeatureConfig.feature);
+    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos2, DecoratedFeatureConfig decoratedFeatureConfig) {
+        MutableBoolean mutableBoolean = new MutableBoolean();
+        decoratedFeatureConfig.decorator.getPositions(new DecoratorContext(structureWorldAccess, chunkGenerator), random, blockPos2).forEach(blockPos -> {
+            if (decoratedFeatureConfig.feature.get().generate(structureWorldAccess, chunkGenerator, random, (BlockPos)blockPos)) {
+                mutableBoolean.setTrue();
+            }
+        });
+        return mutableBoolean.isTrue();
     }
 
     public String toString() {

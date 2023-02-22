@@ -26,7 +26,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class BellBlockEntityRenderer
 extends BlockEntityRenderer<BellBlockEntity> {
-    public static final SpriteIdentifier BELL_BODY_TEXTURE = new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEX, new Identifier("entity/bell/bell_body"));
+    public static final SpriteIdentifier BELL_BODY_TEXTURE = new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, new Identifier("entity/bell/bell_body"));
     private final ModelPart field_20816 = new ModelPart(32, 32, 0, 0);
 
     public BellBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
@@ -44,7 +44,7 @@ extends BlockEntityRenderer<BellBlockEntity> {
         float g = (float)bellBlockEntity.ringTicks + f;
         float h = 0.0f;
         float k = 0.0f;
-        if (bellBlockEntity.isRinging) {
+        if (bellBlockEntity.ringing) {
             float l = MathHelper.sin(g / (float)Math.PI) / (4.0f + g / 3.0f);
             if (bellBlockEntity.lastSideHit == Direction.NORTH) {
                 h = -l;

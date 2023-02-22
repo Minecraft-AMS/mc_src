@@ -10,7 +10,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.boss.dragon.phase.Phase;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.decoration.EnderCrystalEntity;
+import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -26,7 +26,7 @@ implements Phase {
     }
 
     @Override
-    public boolean method_6848() {
+    public boolean isSittingOrHovering() {
         return false;
     }
 
@@ -39,7 +39,7 @@ implements Phase {
     }
 
     @Override
-    public void crystalDestroyed(EnderCrystalEntity crystal, BlockPos pos, DamageSource source, @Nullable PlayerEntity player) {
+    public void crystalDestroyed(EndCrystalEntity crystal, BlockPos pos, DamageSource source, @Nullable PlayerEntity player) {
     }
 
     @Override
@@ -51,19 +51,19 @@ implements Phase {
     }
 
     @Override
-    public float method_6846() {
+    public float getMaxYAcceleration() {
         return 0.6f;
     }
 
     @Override
     @Nullable
-    public Vec3d getTarget() {
+    public Vec3d getPathTarget() {
         return null;
     }
 
     @Override
-    public float modifyDamageTaken(DamageSource damageSource, float f) {
-        return f;
+    public float modifyDamageTaken(DamageSource damageSource, float damage) {
+        return damage;
     }
 
     @Override

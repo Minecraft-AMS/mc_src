@@ -20,22 +20,22 @@ import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.MinecartEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class MinecartEntityRenderer<T extends AbstractMinecartEntity>
 extends EntityRenderer<T> {
-    private static final Identifier SKIN = new Identifier("textures/entity/minecart.png");
+    private static final Identifier TEXTURE = new Identifier("textures/entity/minecart.png");
     protected final EntityModel<T> model = new MinecartEntityModel();
 
     public MinecartEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher);
-        this.shadowSize = 0.7f;
+        this.shadowRadius = 0.7f;
     }
 
     @Override
@@ -52,11 +52,11 @@ extends EntityRenderer<T> {
         double e = MathHelper.lerp((double)g, ((AbstractMinecartEntity)abstractMinecartEntity).lastRenderY, ((Entity)abstractMinecartEntity).getY());
         double m = MathHelper.lerp((double)g, ((AbstractMinecartEntity)abstractMinecartEntity).lastRenderZ, ((Entity)abstractMinecartEntity).getZ());
         double n = 0.3f;
-        Vec3d vec3d = ((AbstractMinecartEntity)abstractMinecartEntity).method_7508(d, e, m);
+        Vec3d vec3d = ((AbstractMinecartEntity)abstractMinecartEntity).snapPositionToRail(d, e, m);
         float o = MathHelper.lerp(g, ((AbstractMinecartEntity)abstractMinecartEntity).prevPitch, ((AbstractMinecartEntity)abstractMinecartEntity).pitch);
         if (vec3d != null) {
-            Vec3d vec3d2 = ((AbstractMinecartEntity)abstractMinecartEntity).method_7505(d, e, m, 0.3f);
-            Vec3d vec3d3 = ((AbstractMinecartEntity)abstractMinecartEntity).method_7505(d, e, m, -0.3f);
+            Vec3d vec3d2 = ((AbstractMinecartEntity)abstractMinecartEntity).snapPositionToRailWithOffset(d, e, m, 0.3f);
+            Vec3d vec3d3 = ((AbstractMinecartEntity)abstractMinecartEntity).snapPositionToRailWithOffset(d, e, m, -0.3f);
             if (vec3d2 == null) {
                 vec3d2 = vec3d;
             }
@@ -72,15 +72,15 @@ extends EntityRenderer<T> {
             }
         }
         matrixStack.translate(0.0, 0.375, 0.0);
-        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f - f));
-        matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(-o));
+        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f - f));
+        matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-o));
         float p = (float)((AbstractMinecartEntity)abstractMinecartEntity).getDamageWobbleTicks() - g;
         float q = ((AbstractMinecartEntity)abstractMinecartEntity).getDamageWobbleStrength() - g;
         if (q < 0.0f) {
             q = 0.0f;
         }
         if (p > 0.0f) {
-            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(MathHelper.sin(p) * p * q / 10.0f * (float)((AbstractMinecartEntity)abstractMinecartEntity).getDamageWobbleSide()));
+            matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(MathHelper.sin(p) * p * q / 10.0f * (float)((AbstractMinecartEntity)abstractMinecartEntity).getDamageWobbleSide()));
         }
         int r = ((AbstractMinecartEntity)abstractMinecartEntity).getBlockOffset();
         BlockState blockState = ((AbstractMinecartEntity)abstractMinecartEntity).getContainedBlock();
@@ -89,7 +89,7 @@ extends EntityRenderer<T> {
             float s = 0.75f;
             matrixStack.scale(0.75f, 0.75f, 0.75f);
             matrixStack.translate(-0.5, (float)(r - 8) / 16.0f, 0.5);
-            matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(90.0f));
+            matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(90.0f));
             this.renderBlock(abstractMinecartEntity, g, blockState, matrixStack, vertexConsumerProvider, i);
             matrixStack.pop();
         }
@@ -102,11 +102,11 @@ extends EntityRenderer<T> {
 
     @Override
     public Identifier getTexture(T abstractMinecartEntity) {
-        return SKIN;
+        return TEXTURE;
     }
 
-    protected void renderBlock(T abstractMinecartEntity, float delta, BlockState state, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
-        MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(state, matrixStack, vertexConsumerProvider, i, OverlayTexture.DEFAULT_UV);
+    protected void renderBlock(T entity, float delta, BlockState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+        MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(state, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
     }
 }
 

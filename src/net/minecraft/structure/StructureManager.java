@@ -12,7 +12,6 @@ package net.minecraft.structure;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -25,34 +24,32 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Map;
 import net.minecraft.datafixer.DataFixTypes;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SynchronousResourceReloadListener;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.structure.Structure;
 import net.minecraft.util.FileNameUtil;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.InvalidIdentifierException;
+import net.minecraft.util.WorldSavePath;
+import net.minecraft.world.level.storage.LevelStorage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
-public class StructureManager
-implements SynchronousResourceReloadListener {
+public class StructureManager {
     private static final Logger LOGGER = LogManager.getLogger();
     private final Map<Identifier, Structure> structures = Maps.newHashMap();
     private final DataFixer dataFixer;
-    private final MinecraftServer server;
+    private ResourceManager field_25189;
     private final Path generatedPath;
 
-    public StructureManager(MinecraftServer server, File worldDir, DataFixer dataFixer) {
-        this.server = server;
+    public StructureManager(ResourceManager resourceManager, LevelStorage.Session session, DataFixer dataFixer) {
+        this.field_25189 = resourceManager;
         this.dataFixer = dataFixer;
-        this.generatedPath = worldDir.toPath().resolve("generated").normalize();
-        server.getDataManager().registerListener(this);
+        this.generatedPath = session.getDirectory(WorldSavePath.GENERATED).normalize();
     }
 
     public Structure getStructureOrBlank(Identifier id) {
@@ -72,8 +69,8 @@ implements SynchronousResourceReloadListener {
         });
     }
 
-    @Override
-    public void apply(ResourceManager manager) {
+    public void method_29300(ResourceManager resourceManager) {
+        this.field_25189 = resourceManager;
         this.structures.clear();
     }
 
@@ -85,7 +82,7 @@ implements SynchronousResourceReloadListener {
     @Nullable
     private Structure loadStructureFromResource(Identifier id) {
         Identifier identifier = new Identifier(id.getNamespace(), "structures/" + id.getPath() + ".nbt");
-        try (Resource resource = this.server.getDataManager().getResource(identifier);){
+        try (Resource resource = this.field_25189.getResource(identifier);){
             Structure structure = this.readStructure(resource.getInputStream());
             return structure;
         }
@@ -123,16 +120,16 @@ implements SynchronousResourceReloadListener {
     }
 
     private Structure readStructure(InputStream structureInputStream) throws IOException {
-        CompoundTag compoundTag = NbtIo.readCompressed(structureInputStream);
-        return this.createStructure(compoundTag);
+        NbtCompound nbtCompound = NbtIo.readCompressed(structureInputStream);
+        return this.createStructure(nbtCompound);
     }
 
-    public Structure createStructure(CompoundTag tag) {
-        if (!tag.contains("DataVersion", 99)) {
-            tag.putInt("DataVersion", 500);
+    public Structure createStructure(NbtCompound nbt) {
+        if (!nbt.contains("DataVersion", 99)) {
+            nbt.putInt("DataVersion", 500);
         }
         Structure structure = new Structure();
-        structure.fromTag(NbtHelper.update(this.dataFixer, DataFixTypes.STRUCTURE, tag, tag.getInt("DataVersion")));
+        structure.readNbt(NbtHelper.update(this.dataFixer, DataFixTypes.STRUCTURE, nbt, nbt.getInt("DataVersion")));
         return structure;
     }
 
@@ -153,9 +150,9 @@ implements SynchronousResourceReloadListener {
             LOGGER.error("Failed to create parent directory: {}", (Object)path2);
             return false;
         }
-        CompoundTag compoundTag = structure.toTag(new CompoundTag());
+        NbtCompound nbtCompound = structure.writeNbt(new NbtCompound());
         try (FileOutputStream outputStream = new FileOutputStream(path.toFile());){
-            NbtIo.writeCompressed(compoundTag, outputStream);
+            NbtIo.writeCompressed(nbtCompound, outputStream);
         }
         catch (Throwable throwable) {
             return false;

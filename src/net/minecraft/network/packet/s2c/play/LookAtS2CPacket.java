@@ -11,11 +11,11 @@ package net.minecraft.network.packet.s2c.play;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.command.arguments.EntityAnchorArgumentType;
+import net.minecraft.command.argument.EntityAnchorArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -33,8 +33,8 @@ implements Packet<ClientPlayPacketListener> {
     public LookAtS2CPacket() {
     }
 
-    public LookAtS2CPacket(EntityAnchorArgumentType.EntityAnchor entityAnchor, double targetX, double targetY, double targetZ) {
-        this.selfAnchor = entityAnchor;
+    public LookAtS2CPacket(EntityAnchorArgumentType.EntityAnchor selfAnchor, double targetX, double targetY, double targetZ) {
+        this.selfAnchor = selfAnchor;
         this.targetX = targetX;
         this.targetY = targetY;
         this.targetZ = targetZ;

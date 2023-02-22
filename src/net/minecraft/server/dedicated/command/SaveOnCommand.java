@@ -19,10 +19,10 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.TranslatableText;
 
 public class SaveOnCommand {
-    private static final SimpleCommandExceptionType ALREADY_ON_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.save.alreadyOn", new Object[0]));
+    private static final SimpleCommandExceptionType ALREADY_ON_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.save.alreadyOn"));
 
-    public static void register(CommandDispatcher<ServerCommandSource> commandDispatcher) {
-        commandDispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("save-on").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(4))).executes(commandContext -> {
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("save-on").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(4))).executes(commandContext -> {
             ServerCommandSource serverCommandSource = (ServerCommandSource)commandContext.getSource();
             boolean bl = false;
             for (ServerWorld serverWorld : serverCommandSource.getMinecraftServer().getWorlds()) {
@@ -33,7 +33,7 @@ public class SaveOnCommand {
             if (!bl) {
                 throw ALREADY_ON_EXCEPTION.create();
             }
-            serverCommandSource.sendFeedback(new TranslatableText("commands.save.enabled", new Object[0]), true);
+            serverCommandSource.sendFeedback(new TranslatableText("commands.save.enabled"), true);
             return 1;
         }));
     }

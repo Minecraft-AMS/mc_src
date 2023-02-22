@@ -9,44 +9,57 @@ package net.minecraft.test;
 
 import com.google.common.collect.Lists;
 import java.util.Collection;
-import net.minecraft.test.GameTest;
+import java.util.function.Consumer;
+import net.minecraft.test.GameTestState;
 import net.minecraft.test.TestListener;
 import org.jetbrains.annotations.Nullable;
 
 public class TestSet {
-    private final Collection<GameTest> tests = Lists.newArrayList();
+    private final Collection<GameTestState> tests = Lists.newArrayList();
     @Nullable
-    private TestListener listener;
+    private Collection<TestListener> field_25303 = Lists.newArrayList();
 
     public TestSet() {
     }
 
-    public TestSet(Collection<GameTest> tests) {
+    public TestSet(Collection<GameTestState> tests) {
         this.tests.addAll(tests);
     }
 
-    public void add(GameTest test) {
+    public void add(GameTestState test) {
         this.tests.add(test);
-        if (this.listener != null) {
-            test.addListener(this.listener);
-        }
+        this.field_25303.forEach(test::addListener);
     }
 
     public void addListener(TestListener listener) {
-        this.listener = listener;
-        this.tests.forEach(gameTest -> gameTest.addListener(listener));
+        this.field_25303.add(listener);
+        this.tests.forEach(gameTestState -> gameTestState.addListener(listener));
+    }
+
+    public void method_29407(final Consumer<GameTestState> consumer) {
+        this.addListener(new TestListener(){
+
+            @Override
+            public void onStarted(GameTestState test) {
+            }
+
+            @Override
+            public void onFailed(GameTestState test) {
+                consumer.accept(test);
+            }
+        });
     }
 
     public int getFailedRequiredTestCount() {
-        return (int)this.tests.stream().filter(GameTest::isFailed).filter(GameTest::isRequired).count();
+        return (int)this.tests.stream().filter(GameTestState::isFailed).filter(GameTestState::isRequired).count();
     }
 
     public int getFailedOptionalTestCount() {
-        return (int)this.tests.stream().filter(GameTest::isFailed).filter(GameTest::isOptional).count();
+        return (int)this.tests.stream().filter(GameTestState::isFailed).filter(GameTestState::isOptional).count();
     }
 
     public int getCompletedTestCount() {
-        return (int)this.tests.stream().filter(GameTest::isCompleted).count();
+        return (int)this.tests.stream().filter(GameTestState::isCompleted).count();
     }
 
     public boolean failed() {
@@ -68,13 +81,13 @@ public class TestSet {
     public String getResultString() {
         StringBuffer stringBuffer = new StringBuffer();
         stringBuffer.append('[');
-        this.tests.forEach(gameTest -> {
-            if (!gameTest.isStarted()) {
+        this.tests.forEach(gameTestState -> {
+            if (!gameTestState.isStarted()) {
                 stringBuffer.append(' ');
-            } else if (gameTest.isPassed()) {
+            } else if (gameTestState.isPassed()) {
                 stringBuffer.append('+');
-            } else if (gameTest.isFailed()) {
-                stringBuffer.append(gameTest.isRequired() ? (char)'X' : (char)'x');
+            } else if (gameTestState.isFailed()) {
+                stringBuffer.append(gameTestState.isRequired() ? (char)'X' : (char)'x');
             } else {
                 stringBuffer.append('_');
             }

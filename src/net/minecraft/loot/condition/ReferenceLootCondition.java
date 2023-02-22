@@ -15,9 +15,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionType;
+import net.minecraft.loot.condition.LootConditionTypes;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.JsonSerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,22 +29,27 @@ implements LootCondition {
     private static final Logger LOGGER = LogManager.getLogger();
     private final Identifier id;
 
-    public ReferenceLootCondition(Identifier id) {
+    private ReferenceLootCondition(Identifier id) {
         this.id = id;
     }
 
     @Override
-    public void check(LootTableReporter reporter) {
+    public LootConditionType getType() {
+        return LootConditionTypes.REFERENCE;
+    }
+
+    @Override
+    public void validate(LootTableReporter reporter) {
         if (reporter.hasCondition(this.id)) {
             reporter.report("Condition " + this.id + " is recursively called");
             return;
         }
-        LootCondition.super.check(reporter);
+        LootCondition.super.validate(reporter);
         LootCondition lootCondition = reporter.getCondition(this.id);
         if (lootCondition == null) {
             reporter.report("Unknown condition table called " + this.id);
         } else {
-            lootCondition.check(reporter.withSupplier(".{" + this.id + "}", this.id));
+            lootCondition.validate(reporter.withTable(".{" + this.id + "}", this.id));
         }
     }
 
@@ -69,12 +77,8 @@ implements LootCondition {
         return this.test((LootContext)context);
     }
 
-    public static class Factory
-    extends LootCondition.Factory<ReferenceLootCondition> {
-        protected Factory() {
-            super(new Identifier("reference"), ReferenceLootCondition.class);
-        }
-
+    public static class Serializer
+    implements JsonSerializer<ReferenceLootCondition> {
         @Override
         public void toJson(JsonObject jsonObject, ReferenceLootCondition referenceLootCondition, JsonSerializationContext jsonSerializationContext) {
             jsonObject.addProperty("name", referenceLootCondition.id.toString());
@@ -87,7 +91,7 @@ implements LootCondition {
         }
 
         @Override
-        public /* synthetic */ LootCondition fromJson(JsonObject json, JsonDeserializationContext context) {
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
             return this.fromJson(json, context);
         }
     }

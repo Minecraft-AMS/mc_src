@@ -2,33 +2,30 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.decorator;
 
-import com.mojang.datafixers.Dynamic;
+import com.mojang.serialization.Codec;
 import java.util.Random;
-import java.util.function.Function;
 import java.util.stream.Stream;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.decorator.ChanceDecoratorConfig;
 import net.minecraft.world.gen.decorator.Decorator;
+import net.minecraft.world.gen.decorator.DecoratorContext;
 
 public class WaterLakeDecorator
 extends Decorator<ChanceDecoratorConfig> {
-    public WaterLakeDecorator(Function<Dynamic<?>, ? extends ChanceDecoratorConfig> function) {
-        super(function);
+    public WaterLakeDecorator(Codec<ChanceDecoratorConfig> codec) {
+        super(codec);
     }
 
     @Override
-    public Stream<BlockPos> getPositions(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, ChanceDecoratorConfig chanceDecoratorConfig, BlockPos blockPos) {
+    public Stream<BlockPos> getPositions(DecoratorContext decoratorContext, Random random, ChanceDecoratorConfig chanceDecoratorConfig, BlockPos blockPos) {
         if (random.nextInt(chanceDecoratorConfig.chance) == 0) {
             int i = random.nextInt(16) + blockPos.getX();
             int j = random.nextInt(16) + blockPos.getZ();
-            int k = random.nextInt(chunkGenerator.getMaxY());
+            int k = random.nextInt(decoratorContext.getMaxY());
             return Stream.of(new BlockPos(i, k, j));
         }
         return Stream.empty();

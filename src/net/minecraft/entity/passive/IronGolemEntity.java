@@ -5,12 +5,14 @@
  *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
 import com.google.common.collect.ImmutableList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -18,48 +20,61 @@ import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.Durations;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
-import net.minecraft.entity.ai.goal.GoToEntityTargetGoal;
 import net.minecraft.entity.ai.goal.IronGolemLookGoal;
+import net.minecraft.entity.ai.goal.IronGolemWanderAroundGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.MoveThroughVillageGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.TrackIronGolemTargetGoal;
-import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
+import net.minecraft.entity.ai.goal.UniversalAngerGoal;
 import net.minecraft.entity.ai.goal.WanderAroundPointOfInterestGoal;
+import net.minecraft.entity.ai.goal.WanderNearTargetGoal;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.GolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.IntRange;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
+import org.jetbrains.annotations.Nullable;
 
 public class IronGolemEntity
-extends GolemEntity {
+extends GolemEntity
+implements Angerable {
     protected static final TrackedData<Byte> IRON_GOLEM_FLAGS = DataTracker.registerData(IronGolemEntity.class, TrackedDataHandlerRegistry.BYTE);
     private int attackTicksLeft;
     private int lookingAtVillagerTicksLeft;
+    private static final IntRange ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
+    private int angerTime;
+    private UUID angryAt;
 
     public IronGolemEntity(EntityType<? extends IronGolemEntity> entityType, World world) {
         super((EntityType<? extends GolemEntity>)entityType, world);
@@ -69,16 +84,17 @@ extends GolemEntity {
     @Override
     protected void initGoals() {
         this.goalSelector.add(1, new MeleeAttackGoal(this, 1.0, true));
-        this.goalSelector.add(2, new GoToEntityTargetGoal(this, 0.9, 32.0f));
-        this.goalSelector.add(2, new WanderAroundPointOfInterestGoal(this, 0.6));
-        this.goalSelector.add(3, new MoveThroughVillageGoal(this, 0.6, false, 4, () -> false));
+        this.goalSelector.add(2, new WanderNearTargetGoal(this, 0.9, 32.0f));
+        this.goalSelector.add(2, new WanderAroundPointOfInterestGoal((PathAwareEntity)this, 0.6, false));
+        this.goalSelector.add(4, new IronGolemWanderAroundGoal(this, 0.6));
         this.goalSelector.add(5, new IronGolemLookGoal(this));
-        this.goalSelector.add(6, new WanderAroundFarGoal(this, 0.6));
         this.goalSelector.add(7, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
         this.goalSelector.add(8, new LookAroundGoal(this));
         this.targetSelector.add(1, new TrackIronGolemTargetGoal(this));
         this.targetSelector.add(2, new RevengeGoal(this, new Class[0]));
+        this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
         this.targetSelector.add(3, new FollowTargetGoal<MobEntity>(this, MobEntity.class, 5, false, false, livingEntity -> livingEntity instanceof Monster && !(livingEntity instanceof CreeperEntity)));
+        this.targetSelector.add(4, new UniversalAngerGoal<IronGolemEntity>(this, false));
     }
 
     @Override
@@ -87,13 +103,8 @@ extends GolemEntity {
         this.dataTracker.startTracking(IRON_GOLEM_FLAGS, (byte)0);
     }
 
-    @Override
-    protected void initAttributes() {
-        super.initAttributes();
-        this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(100.0);
-        this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.25);
-        this.getAttributeInstance(EntityAttributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
-        this.getAttributes().register(EntityAttributes.ATTACK_DAMAGE).setBaseValue(15.0);
+    public static DefaultAttributeContainer.Builder createIronGolemAttributes() {
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 100.0).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25).add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 1.0).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 15.0);
     }
 
     @Override
@@ -125,6 +136,9 @@ extends GolemEntity {
         if (IronGolemEntity.squaredHorizontalLength(this.getVelocity()) > 2.500000277905201E-7 && this.random.nextInt(5) == 0 && !(blockState = this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.getX()), j = MathHelper.floor(this.getY() - (double)0.2f), k = MathHelper.floor(this.getZ())))).isAir()) {
             this.world.addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), this.getX() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), this.getY() + 0.1, this.getZ() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), 4.0 * ((double)this.random.nextFloat() - 0.5), 0.5, ((double)this.random.nextFloat() - 0.5) * 4.0);
         }
+        if (!this.world.isClient) {
+            this.tickAngerLogic((ServerWorld)this.world, true);
+        }
     }
 
     @Override
@@ -139,19 +153,46 @@ extends GolemEntity {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        super.writeCustomDataToTag(tag);
-        tag.putBoolean("PlayerCreated", this.isPlayerCreated());
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        nbt.putBoolean("PlayerCreated", this.isPlayerCreated());
+        this.writeAngerToNbt(nbt);
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        super.readCustomDataFromTag(tag);
-        this.setPlayerCreated(tag.getBoolean("PlayerCreated"));
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        this.setPlayerCreated(nbt.getBoolean("PlayerCreated"));
+        this.angerFromTag((ServerWorld)this.world, nbt);
+    }
+
+    @Override
+    public void chooseRandomAngerTime() {
+        this.setAngerTime(ANGER_TIME_RANGE.choose(this.random));
+    }
+
+    @Override
+    public void setAngerTime(int ticks) {
+        this.angerTime = ticks;
+    }
+
+    @Override
+    public int getAngerTime() {
+        return this.angerTime;
+    }
+
+    @Override
+    public void setAngryAt(@Nullable UUID uuid) {
+        this.angryAt = uuid;
+    }
+
+    @Override
+    public UUID getAngryAt() {
+        return this.angryAt;
     }
 
     private float getAttackDamage() {
-        return (float)this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).getValue();
+        return (float)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
     }
 
     @Override
@@ -159,7 +200,7 @@ extends GolemEntity {
         this.attackTicksLeft = 10;
         this.world.sendEntityStatus(this, (byte)4);
         float f = this.getAttackDamage();
-        float g = f > 0.0f ? f / 2.0f + (float)this.random.nextInt((int)f) : 0.0f;
+        float g = (int)f > 0 ? f / 2.0f + (float)this.random.nextInt((int)f) : f;
         boolean bl = target.damage(DamageSource.mob(this), g);
         if (bl) {
             target.setVelocity(target.getVelocity().add(0.0, 0.4f, 0.0));
@@ -180,7 +221,7 @@ extends GolemEntity {
     }
 
     public Crack getCrack() {
-        return Crack.from(this.getHealth() / this.getMaximumHealth());
+        return Crack.from(this.getHealth() / this.getMaxHealth());
     }
 
     @Override
@@ -224,23 +265,23 @@ extends GolemEntity {
     }
 
     @Override
-    protected boolean interactMob(PlayerEntity player, Hand hand) {
+    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
         if (item != Items.IRON_INGOT) {
-            return false;
+            return ActionResult.PASS;
         }
         float f = this.getHealth();
         this.heal(25.0f);
         if (this.getHealth() == f) {
-            return false;
+            return ActionResult.PASS;
         }
         float g = 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f;
         this.playSound(SoundEvents.ENTITY_IRON_GOLEM_REPAIR, 1.0f, g);
         if (!player.abilities.creativeMode) {
             itemStack.decrement(1);
         }
-        return true;
+        return ActionResult.success(this.world.isClient);
     }
 
     @Override
@@ -273,19 +314,25 @@ extends GolemEntity {
 
     @Override
     public boolean canSpawn(WorldView world) {
-        BlockPos blockPos = new BlockPos(this);
+        BlockPos blockPos = this.getBlockPos();
         BlockPos blockPos2 = blockPos.down();
         BlockState blockState = world.getBlockState(blockPos2);
         if (blockState.hasSolidTopSurface(world, blockPos2, this)) {
             for (int i = 1; i < 3; ++i) {
                 BlockState blockState2;
                 BlockPos blockPos3 = blockPos.up(i);
-                if (SpawnHelper.isClearForSpawn(world, blockPos3, blockState2 = world.getBlockState(blockPos3), blockState2.getFluidState())) continue;
+                if (SpawnHelper.isClearForSpawn(world, blockPos3, blockState2 = world.getBlockState(blockPos3), blockState2.getFluidState(), EntityType.IRON_GOLEM)) continue;
                 return false;
             }
-            return SpawnHelper.isClearForSpawn(world, blockPos, world.getBlockState(blockPos), Fluids.EMPTY.getDefaultState()) && world.intersectsEntities(this);
+            return SpawnHelper.isClearForSpawn(world, blockPos, world.getBlockState(blockPos), Fluids.EMPTY.getDefaultState(), EntityType.IRON_GOLEM) && world.intersectsEntities(this);
         }
         return false;
+    }
+
+    @Override
+    @Environment(value=EnvType.CLIENT)
+    public Vec3d method_29919() {
+        return new Vec3d(0.0, 0.875f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 
     public static enum Crack {

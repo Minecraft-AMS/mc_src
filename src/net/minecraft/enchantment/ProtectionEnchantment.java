@@ -16,26 +16,23 @@ public class ProtectionEnchantment
 extends Enchantment {
     public final Type protectionType;
 
-    public ProtectionEnchantment(Enchantment.Weight weight, Type type, EquipmentSlot ... slotTypes) {
-        super(weight, EnchantmentTarget.ARMOR, slotTypes);
-        this.protectionType = type;
-        if (type == Type.FALL) {
-            this.type = EnchantmentTarget.ARMOR_FEET;
-        }
+    public ProtectionEnchantment(Enchantment.Rarity weight, Type protectionType, EquipmentSlot ... slotTypes) {
+        super(weight, protectionType == Type.FALL ? EnchantmentTarget.ARMOR_FEET : EnchantmentTarget.ARMOR, slotTypes);
+        this.protectionType = protectionType;
     }
 
     @Override
-    public int getMinimumPower(int level) {
+    public int getMinPower(int level) {
         return this.protectionType.getBasePower() + (level - 1) * this.protectionType.getPowerPerLevel();
     }
 
     @Override
-    public int getMaximumPower(int level) {
-        return this.getMinimumPower(level) + this.protectionType.getPowerPerLevel();
+    public int getMaxPower(int level) {
+        return this.getMinPower(level) + this.protectionType.getPowerPerLevel();
     }
 
     @Override
-    public int getMaximumLevel() {
+    public int getMaxLevel() {
         return 4;
     }
 
@@ -63,7 +60,7 @@ extends Enchantment {
     }
 
     @Override
-    public boolean differs(Enchantment other) {
+    public boolean canAccept(Enchantment other) {
         if (other instanceof ProtectionEnchantment) {
             ProtectionEnchantment protectionEnchantment = (ProtectionEnchantment)other;
             if (this.protectionType == protectionEnchantment.protectionType) {
@@ -71,7 +68,7 @@ extends Enchantment {
             }
             return this.protectionType == Type.FALL || protectionEnchantment.protectionType == Type.FALL;
         }
-        return super.differs(other);
+        return super.canAccept(other);
     }
 
     public static int transformFireDuration(LivingEntity entity, int duration) {

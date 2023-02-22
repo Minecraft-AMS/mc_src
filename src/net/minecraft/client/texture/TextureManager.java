@@ -15,7 +15,6 @@ package net.minecraft.client.texture;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.realmsclient.RealmsMainScreen;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
@@ -26,7 +25,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.widget.AbstractButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.AsyncTexture;
 import net.minecraft.client.texture.MissingSprite;
@@ -35,7 +35,7 @@ import net.minecraft.client.texture.ResourceTexture;
 import net.minecraft.client.texture.TextureTickListener;
 import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceReloadListener;
+import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
@@ -47,9 +47,9 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TextureManager
-implements TextureTickListener,
-AutoCloseable,
-ResourceReloadListener {
+implements ResourceReloader,
+TextureTickListener,
+AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger();
     public static final Identifier MISSING_IDENTIFIER = new Identifier("");
     private final Map<Identifier, AbstractTexture> textures = Maps.newHashMap();
@@ -78,17 +78,29 @@ ResourceReloadListener {
         abstractTexture.bindTexture();
     }
 
-    public void registerTexture(Identifier identifier, AbstractTexture abstractTexture) {
-        AbstractTexture abstractTexture2 = this.textures.put(identifier, abstractTexture = this.method_24303(identifier, abstractTexture));
-        if (abstractTexture2 != abstractTexture) {
-            if (abstractTexture2 != null && abstractTexture2 != MissingSprite.getMissingSpriteTexture()) {
-                abstractTexture2.clearGlId();
-                this.tickListeners.remove(abstractTexture2);
+    public void registerTexture(Identifier id, AbstractTexture texture) {
+        AbstractTexture abstractTexture = this.textures.put(id, texture = this.method_24303(id, texture));
+        if (abstractTexture != texture) {
+            if (abstractTexture != null && abstractTexture != MissingSprite.getMissingSpriteTexture()) {
+                this.tickListeners.remove(abstractTexture);
+                this.method_30299(id, abstractTexture);
             }
-            if (abstractTexture instanceof TextureTickListener) {
-                this.tickListeners.add((TextureTickListener)((Object)abstractTexture));
+            if (texture instanceof TextureTickListener) {
+                this.tickListeners.add((TextureTickListener)((Object)texture));
             }
         }
+    }
+
+    private void method_30299(Identifier identifier, AbstractTexture abstractTexture) {
+        if (abstractTexture != MissingSprite.getMissingSpriteTexture()) {
+            try {
+                abstractTexture.close();
+            }
+            catch (Exception exception) {
+                LOGGER.warn("Failed to close texture {}", (Object)identifier, (Object)exception);
+            }
+        }
+        abstractTexture.clearGlId();
     }
 
     private AbstractTexture method_24303(Identifier identifier, AbstractTexture abstractTexture) {
@@ -105,9 +117,8 @@ ResourceReloadListener {
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Registering texture");
             CrashReportSection crashReportSection = crashReport.addElement("Resource location being registered");
-            AbstractTexture abstractTexture2 = abstractTexture;
             crashReportSection.add("Resource location", identifier);
-            crashReportSection.add("Texture object class", () -> abstractTexture2.getClass().getName());
+            crashReportSection.add("Texture object class", () -> abstractTexture.getClass().getName());
             throw new CrashException(crashReport);
         }
     }
@@ -154,21 +165,21 @@ ResourceReloadListener {
     public void destroyTexture(Identifier id) {
         AbstractTexture abstractTexture = this.getTexture(id);
         if (abstractTexture != null) {
-            TextureUtil.releaseTextureId(abstractTexture.getGlId());
+            TextureUtil.deleteId(abstractTexture.getGlId());
         }
     }
 
     @Override
     public void close() {
-        this.textures.values().forEach(AbstractTexture::clearGlId);
+        this.textures.forEach(this::method_30299);
         this.textures.clear();
         this.tickListeners.clear();
         this.dynamicIdCounters.clear();
     }
 
     @Override
-    public CompletableFuture<Void> reload(ResourceReloadListener.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
-        return ((CompletableFuture)CompletableFuture.allOf(TitleScreen.loadTexturesAsync(this, prepareExecutor), this.loadTextureAsync(AbstractButtonWidget.WIDGETS_LOCATION, prepareExecutor)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(void_ -> {
+    public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
+        return ((CompletableFuture)CompletableFuture.allOf(TitleScreen.loadTexturesAsync(this, prepareExecutor), this.loadTextureAsync(ClickableWidget.WIDGETS_TEXTURE, prepareExecutor)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(void_ -> {
             MissingSprite.getMissingSpriteTexture();
             RealmsMainScreen.method_23765(this.resourceContainer);
             Iterator<Map.Entry<Identifier, AbstractTexture>> iterator = this.textures.entrySet().iterator();

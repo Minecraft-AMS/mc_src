@@ -8,6 +8,7 @@ import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.NetworkSyncedItem;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
@@ -27,14 +28,15 @@ extends NetworkSyncedItem {
         if (!user.abilities.creativeMode) {
             itemStack2.decrement(1);
         }
+        user.incrementStat(Stats.USED.getOrCreateStat(this));
+        user.playSound(SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, 1.0f, 1.0f);
         if (itemStack2.isEmpty()) {
-            return TypedActionResult.success(itemStack);
+            return TypedActionResult.success(itemStack, world.isClient());
         }
         if (!user.inventory.insertStack(itemStack.copy())) {
             user.dropItem(itemStack, false);
         }
-        user.incrementStat(Stats.USED.getOrCreateStat(this));
-        return TypedActionResult.success(itemStack2);
+        return TypedActionResult.success(itemStack2, world.isClient());
     }
 }
 

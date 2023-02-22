@@ -13,29 +13,22 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.container.BlastFurnaceContainer;
-import net.minecraft.container.CraftingContainer;
-import net.minecraft.container.FurnaceContainer;
-import net.minecraft.container.SmokerContainer;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.recipe.book.RecipeBookCategory;
+import net.minecraft.recipe.book.RecipeBookOptions;
+import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 public class RecipeBook {
     protected final Set<Identifier> recipes = Sets.newHashSet();
     protected final Set<Identifier> toBeDisplayed = Sets.newHashSet();
-    protected boolean guiOpen;
-    protected boolean filteringCraftable;
-    protected boolean furnaceGuiOpen;
-    protected boolean furnaceFilteringCraftable;
-    protected boolean blastFurnaceGuiOpen;
-    protected boolean blastFurnaceFilteringCraftable;
-    protected boolean smokerGuiOpen;
-    protected boolean smokerFilteringCraftable;
+    private final RecipeBookOptions options = new RecipeBookOptions();
 
     public void copyFrom(RecipeBook book) {
         this.recipes.clear();
         this.toBeDisplayed.clear();
+        this.options.copyFrom(book.options);
         this.recipes.addAll(book.recipes);
         this.toBeDisplayed.addAll(book.toBeDisplayed);
     }
@@ -89,89 +82,41 @@ public class RecipeBook {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isGuiOpen() {
-        return this.guiOpen;
-    }
-
-    public void setGuiOpen(boolean guiOpen) {
-        this.guiOpen = guiOpen;
+    public boolean isGuiOpen(RecipeBookCategory category) {
+        return this.options.isGuiOpen(category);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isFilteringCraftable(CraftingContainer<?> container) {
-        if (container instanceof FurnaceContainer) {
-            return this.furnaceFilteringCraftable;
-        }
-        if (container instanceof BlastFurnaceContainer) {
-            return this.blastFurnaceFilteringCraftable;
-        }
-        if (container instanceof SmokerContainer) {
-            return this.smokerFilteringCraftable;
-        }
-        return this.filteringCraftable;
+    public void setGuiOpen(RecipeBookCategory category, boolean open) {
+        this.options.setGuiOpen(category, open);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isFilteringCraftable() {
-        return this.filteringCraftable;
-    }
-
-    public void setFilteringCraftable(boolean filteringCraftable) {
-        this.filteringCraftable = filteringCraftable;
+    public boolean isFilteringCraftable(AbstractRecipeScreenHandler<?> handler) {
+        return this.isFilteringCraftable(handler.getCategory());
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isFurnaceGuiOpen() {
-        return this.furnaceGuiOpen;
-    }
-
-    public void setFurnaceGuiOpen(boolean furnaceGuiOpen) {
-        this.furnaceGuiOpen = furnaceGuiOpen;
+    public boolean isFilteringCraftable(RecipeBookCategory category) {
+        return this.options.isFilteringCraftable(category);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean isFurnaceFilteringCraftable() {
-        return this.furnaceFilteringCraftable;
+    public void setFilteringCraftable(RecipeBookCategory category, boolean filteringCraftable) {
+        this.options.setFilteringCraftable(category, filteringCraftable);
     }
 
-    public void setFurnaceFilteringCraftable(boolean furnaceFilteringCraftable) {
-        this.furnaceFilteringCraftable = furnaceFilteringCraftable;
+    public void setOptions(RecipeBookOptions options) {
+        this.options.copyFrom(options);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public boolean isBlastFurnaceGuiOpen() {
-        return this.blastFurnaceGuiOpen;
+    public RecipeBookOptions getOptions() {
+        return this.options.copy();
     }
 
-    public void setBlastFurnaceGuiOpen(boolean blastFurnaceGuiOpen) {
-        this.blastFurnaceGuiOpen = blastFurnaceGuiOpen;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean isBlastFurnaceFilteringCraftable() {
-        return this.blastFurnaceFilteringCraftable;
-    }
-
-    public void setBlastFurnaceFilteringCraftable(boolean blastFurnaceFilteringCraftable) {
-        this.blastFurnaceFilteringCraftable = blastFurnaceFilteringCraftable;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean isSmokerGuiOpen() {
-        return this.smokerGuiOpen;
-    }
-
-    public void setSmokerGuiOpen(boolean smokerGuiOpen) {
-        this.smokerGuiOpen = smokerGuiOpen;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public boolean isSmokerFilteringCraftable() {
-        return this.smokerFilteringCraftable;
-    }
-
-    public void setSmokerFilteringCraftable(boolean smokerFilteringCraftable) {
-        this.smokerFilteringCraftable = smokerFilteringCraftable;
+    public void setCategoryOptions(RecipeBookCategory category, boolean guiOpen, boolean filteringCraftable) {
+        this.options.setGuiOpen(category, guiOpen);
+        this.options.setFilteringCraftable(category, filteringCraftable);
     }
 }
 

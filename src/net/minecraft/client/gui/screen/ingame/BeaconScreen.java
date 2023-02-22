@@ -12,52 +12,57 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.ContainerScreen;
-import net.minecraft.client.gui.widget.AbstractButtonWidget;
-import net.minecraft.client.gui.widget.AbstractPressableButtonWidget;
-import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.gui.screen.ScreenTexts;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.container.BeaconContainer;
-import net.minecraft.container.Container;
-import net.minecraft.container.ContainerListener;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.GuiCloseC2SPacket;
+import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateBeaconC2SPacket;
+import net.minecraft.screen.BeaconScreenHandler;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerListener;
+import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import net.minecraft.util.DefaultedList;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.collection.DefaultedList;
 
 @Environment(value=EnvType.CLIENT)
 public class BeaconScreen
-extends ContainerScreen<BeaconContainer> {
-    private static final Identifier BG_TEX = new Identifier("textures/gui/container/beacon.png");
+extends HandledScreen<BeaconScreenHandler> {
+    private static final Identifier TEXTURE = new Identifier("textures/gui/container/beacon.png");
+    private static final Text PRIMARY_POWER_TEXT = new TranslatableText("block.minecraft.beacon.primary");
+    private static final Text SECONDARY_POWER_TEXT = new TranslatableText("block.minecraft.beacon.secondary");
     private DoneButtonWidget doneButton;
     private boolean consumeGem;
     private StatusEffect primaryEffect;
     private StatusEffect secondaryEffect;
 
-    public BeaconScreen(final BeaconContainer container, PlayerInventory inventory, Text title) {
-        super(container, inventory, title);
-        this.containerWidth = 230;
-        this.containerHeight = 219;
-        container.addListener(new ContainerListener(){
+    public BeaconScreen(final BeaconScreenHandler handler, PlayerInventory inventory, Text title) {
+        super(handler, inventory, title);
+        this.backgroundWidth = 230;
+        this.backgroundHeight = 219;
+        handler.addListener(new ScreenHandlerListener(){
 
             @Override
-            public void onContainerRegistered(Container container2, DefaultedList<ItemStack> defaultedList) {
+            public void onHandlerRegistered(ScreenHandler handler2, DefaultedList<ItemStack> stacks) {
             }
 
             @Override
-            public void onContainerSlotUpdate(Container container2, int slotId, ItemStack itemStack) {
+            public void onSlotUpdate(ScreenHandler handler2, int slotId, ItemStack stack) {
             }
 
             @Override
-            public void onContainerPropertyUpdate(Container container2, int propertyId, int i) {
-                BeaconScreen.this.primaryEffect = container.getPrimaryEffect();
-                BeaconScreen.this.secondaryEffect = container.getSecondaryEffect();
+            public void onPropertyUpdate(ScreenHandler handler2, int property, int value) {
+                BeaconScreen.this.primaryEffect = handler.getPrimaryEffect();
+                BeaconScreen.this.secondaryEffect = handler.getSecondaryEffect();
                 BeaconScreen.this.consumeGem = true;
             }
         });
@@ -75,7 +80,7 @@ extends ContainerScreen<BeaconContainer> {
     @Override
     public void tick() {
         super.tick();
-        int i = ((BeaconContainer)this.container).getProperties();
+        int i = ((BeaconScreenHandler)this.handler).getProperties();
         if (this.consumeGem && i >= 0) {
             EffectButtonWidget effectButtonWidget;
             StatusEffect statusEffect;
@@ -123,40 +128,41 @@ extends ContainerScreen<BeaconContainer> {
                 }
             }
         }
-        this.doneButton.active = ((BeaconContainer)this.container).hasPayment() && this.primaryEffect != null;
+        this.doneButton.active = ((BeaconScreenHandler)this.handler).hasPayment() && this.primaryEffect != null;
     }
 
     @Override
-    protected void drawForeground(int mouseX, int mouseY) {
-        this.drawCenteredString(this.font, I18n.translate("block.minecraft.beacon.primary", new Object[0]), 62, 10, 0xE0E0E0);
-        this.drawCenteredString(this.font, I18n.translate("block.minecraft.beacon.secondary", new Object[0]), 169, 10, 0xE0E0E0);
-        for (AbstractButtonWidget abstractButtonWidget : this.buttons) {
-            if (!abstractButtonWidget.isHovered()) continue;
-            abstractButtonWidget.renderToolTip(mouseX - this.x, mouseY - this.y);
+    protected void drawForeground(MatrixStack matrices, int mouseX, int mouseY) {
+        BeaconScreen.drawCenteredText(matrices, this.textRenderer, PRIMARY_POWER_TEXT, 62, 10, 0xE0E0E0);
+        BeaconScreen.drawCenteredText(matrices, this.textRenderer, SECONDARY_POWER_TEXT, 169, 10, 0xE0E0E0);
+        for (ClickableWidget clickableWidget : this.buttons) {
+            if (!clickableWidget.isHovered()) continue;
+            clickableWidget.renderToolTip(matrices, mouseX - this.x, mouseY - this.y);
             break;
         }
     }
 
     @Override
-    protected void drawBackground(float delta, int mouseX, int mouseY) {
+    protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
         RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.minecraft.getTextureManager().bindTexture(BG_TEX);
-        int i = (this.width - this.containerWidth) / 2;
-        int j = (this.height - this.containerHeight) / 2;
-        this.blit(i, j, 0, 0, this.containerWidth, this.containerHeight);
+        this.client.getTextureManager().bindTexture(TEXTURE);
+        int i = (this.width - this.backgroundWidth) / 2;
+        int j = (this.height - this.backgroundHeight) / 2;
+        this.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
         this.itemRenderer.zOffset = 100.0f;
-        this.itemRenderer.renderGuiItem(new ItemStack(Items.EMERALD), i + 42, j + 109);
-        this.itemRenderer.renderGuiItem(new ItemStack(Items.DIAMOND), i + 42 + 22, j + 109);
-        this.itemRenderer.renderGuiItem(new ItemStack(Items.GOLD_INGOT), i + 42 + 44, j + 109);
-        this.itemRenderer.renderGuiItem(new ItemStack(Items.IRON_INGOT), i + 42 + 66, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.NETHERITE_INGOT), i + 20, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.EMERALD), i + 41, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.DIAMOND), i + 41 + 22, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.GOLD_INGOT), i + 42 + 44, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.IRON_INGOT), i + 42 + 66, j + 109);
         this.itemRenderer.zOffset = 0.0f;
     }
 
     @Override
-    public void render(int mouseX, int mouseY, float delta) {
-        this.renderBackground();
-        super.render(mouseX, mouseY, delta);
-        this.drawMouseoverTooltip(mouseX, mouseY);
+    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        this.renderBackground(matrices);
+        super.render(matrices, mouseX, mouseY, delta);
+        this.drawMouseoverTooltip(matrices, mouseX, mouseY);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -168,13 +174,13 @@ extends ContainerScreen<BeaconContainer> {
 
         @Override
         public void onPress() {
-            ((BeaconScreen)BeaconScreen.this).minecraft.player.networkHandler.sendPacket(new GuiCloseC2SPacket(((BeaconScreen)BeaconScreen.this).minecraft.player.container.syncId));
-            BeaconScreen.this.minecraft.openScreen(null);
+            ((BeaconScreen)BeaconScreen.this).client.player.networkHandler.sendPacket(new CloseHandledScreenC2SPacket(((BeaconScreen)BeaconScreen.this).client.player.currentScreenHandler.syncId));
+            BeaconScreen.this.client.openScreen(null);
         }
 
         @Override
-        public void renderToolTip(int mouseX, int mouseY) {
-            BeaconScreen.this.renderTooltip(I18n.translate("gui.cancel", new Object[0]), mouseX, mouseY);
+        public void renderToolTip(MatrixStack matrices, int mouseX, int mouseY) {
+            BeaconScreen.this.renderTooltip(matrices, ScreenTexts.CANCEL, mouseX, mouseY);
         }
     }
 
@@ -187,14 +193,14 @@ extends ContainerScreen<BeaconContainer> {
 
         @Override
         public void onPress() {
-            BeaconScreen.this.minecraft.getNetworkHandler().sendPacket(new UpdateBeaconC2SPacket(StatusEffect.getRawId(BeaconScreen.this.primaryEffect), StatusEffect.getRawId(BeaconScreen.this.secondaryEffect)));
-            ((BeaconScreen)BeaconScreen.this).minecraft.player.networkHandler.sendPacket(new GuiCloseC2SPacket(((BeaconScreen)BeaconScreen.this).minecraft.player.container.syncId));
-            BeaconScreen.this.minecraft.openScreen(null);
+            BeaconScreen.this.client.getNetworkHandler().sendPacket(new UpdateBeaconC2SPacket(StatusEffect.getRawId(BeaconScreen.this.primaryEffect), StatusEffect.getRawId(BeaconScreen.this.secondaryEffect)));
+            ((BeaconScreen)BeaconScreen.this).client.player.networkHandler.sendPacket(new CloseHandledScreenC2SPacket(((BeaconScreen)BeaconScreen.this).client.player.currentScreenHandler.syncId));
+            BeaconScreen.this.client.openScreen(null);
         }
 
         @Override
-        public void renderToolTip(int mouseX, int mouseY) {
-            BeaconScreen.this.renderTooltip(I18n.translate("gui.done", new Object[0]), mouseX, mouseY);
+        public void renderToolTip(MatrixStack matrices, int mouseX, int mouseY) {
+            BeaconScreen.this.renderTooltip(matrices, ScreenTexts.DONE, mouseX, mouseY);
         }
     }
 
@@ -211,8 +217,8 @@ extends ContainerScreen<BeaconContainer> {
         }
 
         @Override
-        protected void renderExtra() {
-            this.blit(this.x + 2, this.y + 2, this.u, this.v, 18, 18);
+        protected void renderExtra(MatrixStack matrices) {
+            this.drawTexture(matrices, this.x + 2, this.y + 2, this.u, this.v, 18, 18);
         }
     }
 
@@ -222,12 +228,22 @@ extends ContainerScreen<BeaconContainer> {
         private final StatusEffect effect;
         private final Sprite sprite;
         private final boolean primary;
+        private final Text tooltip;
 
         public EffectButtonWidget(int x, int y, StatusEffect statusEffect, boolean primary) {
             super(x, y);
             this.effect = statusEffect;
             this.sprite = MinecraftClient.getInstance().getStatusEffectSpriteManager().getSprite(statusEffect);
             this.primary = primary;
+            this.tooltip = this.getTextForEffect(statusEffect, primary);
+        }
+
+        private Text getTextForEffect(StatusEffect effect, boolean primary) {
+            TranslatableText mutableText = new TranslatableText(effect.getTranslationKey());
+            if (!primary && effect != StatusEffects.REGENERATION) {
+                mutableText.append(" II");
+            }
+            return mutableText;
         }
 
         @Override
@@ -247,33 +263,29 @@ extends ContainerScreen<BeaconContainer> {
         }
 
         @Override
-        public void renderToolTip(int mouseX, int mouseY) {
-            String string = I18n.translate(this.effect.getTranslationKey(), new Object[0]);
-            if (!this.primary && this.effect != StatusEffects.REGENERATION) {
-                string = string + " II";
-            }
-            BeaconScreen.this.renderTooltip(string, mouseX, mouseY);
+        public void renderToolTip(MatrixStack matrices, int mouseX, int mouseY) {
+            BeaconScreen.this.renderTooltip(matrices, this.tooltip, mouseX, mouseY);
         }
 
         @Override
-        protected void renderExtra() {
+        protected void renderExtra(MatrixStack matrices) {
             MinecraftClient.getInstance().getTextureManager().bindTexture(this.sprite.getAtlas().getId());
-            EffectButtonWidget.blit(this.x + 2, this.y + 2, this.getBlitOffset(), 18, 18, this.sprite);
+            EffectButtonWidget.drawSprite(matrices, this.x + 2, this.y + 2, this.getZOffset(), 18, 18, this.sprite);
         }
     }
 
     @Environment(value=EnvType.CLIENT)
     static abstract class BaseButtonWidget
-    extends AbstractPressableButtonWidget {
+    extends PressableWidget {
         private boolean disabled;
 
         protected BaseButtonWidget(int x, int y) {
-            super(x, y, 22, 22, "");
+            super(x, y, 22, 22, LiteralText.EMPTY);
         }
 
         @Override
-        public void renderButton(int mouseX, int mouseY, float delta) {
-            MinecraftClient.getInstance().getTextureManager().bindTexture(BG_TEX);
+        public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+            MinecraftClient.getInstance().getTextureManager().bindTexture(TEXTURE);
             RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
             int i = 219;
             int j = 0;
@@ -284,11 +296,11 @@ extends ContainerScreen<BeaconContainer> {
             } else if (this.isHovered()) {
                 j += this.width * 3;
             }
-            this.blit(this.x, this.y, j, 219, this.width, this.height);
-            this.renderExtra();
+            this.drawTexture(matrices, this.x, this.y, j, 219, this.width, this.height);
+            this.renderExtra(matrices);
         }
 
-        protected abstract void renderExtra();
+        protected abstract void renderExtra(MatrixStack var1);
 
         public boolean isDisabled() {
             return this.disabled;

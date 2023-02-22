@@ -3,21 +3,28 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.google.common.collect.Maps
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.SpecialCraftingRecipe;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 
 public class RepairItemRecipe
@@ -29,8 +36,8 @@ extends SpecialCraftingRecipe {
     @Override
     public boolean matches(CraftingInventory craftingInventory, World world) {
         ArrayList list = Lists.newArrayList();
-        for (int i = 0; i < craftingInventory.getInvSize(); ++i) {
-            ItemStack itemStack = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size(); ++i) {
+            ItemStack itemStack = craftingInventory.getStack(i);
             if (itemStack.isEmpty()) continue;
             list.add(itemStack);
             if (list.size() <= 1) continue;
@@ -45,8 +52,8 @@ extends SpecialCraftingRecipe {
     public ItemStack craft(CraftingInventory craftingInventory) {
         ItemStack itemStack;
         ArrayList list = Lists.newArrayList();
-        for (int i = 0; i < craftingInventory.getInvSize(); ++i) {
-            itemStack = craftingInventory.getInvStack(i);
+        for (int i = 0; i < craftingInventory.size(); ++i) {
+            itemStack = craftingInventory.getStack(i);
             if (itemStack.isEmpty()) continue;
             list.add(itemStack);
             if (list.size() <= 1) continue;
@@ -68,6 +75,18 @@ extends SpecialCraftingRecipe {
                 }
                 ItemStack itemStack4 = new ItemStack(itemStack3.getItem());
                 itemStack4.setDamage(m);
+                HashMap map = Maps.newHashMap();
+                Map<Enchantment, Integer> map2 = EnchantmentHelper.get(itemStack3);
+                Map<Enchantment, Integer> map3 = EnchantmentHelper.get(itemStack);
+                Registry.ENCHANTMENT.stream().filter(Enchantment::isCursed).forEach(enchantment -> {
+                    int i = Math.max(map2.getOrDefault(enchantment, 0), map3.getOrDefault(enchantment, 0));
+                    if (i > 0) {
+                        map.put(enchantment, i);
+                    }
+                });
+                if (!map.isEmpty()) {
+                    EnchantmentHelper.set(map, itemStack4);
+                }
                 return itemStack4;
             }
         }

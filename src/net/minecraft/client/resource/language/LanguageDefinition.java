@@ -17,15 +17,15 @@ public class LanguageDefinition
 implements Language,
 Comparable<LanguageDefinition> {
     private final String code;
-    private final String name;
     private final String region;
+    private final String name;
     private final boolean rightToLeft;
 
-    public LanguageDefinition(String code, String name, String region, boolean bl) {
+    public LanguageDefinition(String code, String region, String name, boolean rightToLeft) {
         this.code = code;
-        this.name = name;
         this.region = region;
-        this.rightToLeft = bl;
+        this.name = name;
+        this.rightToLeft = rightToLeft;
     }
 
     public String getCode() {
@@ -33,11 +33,11 @@ Comparable<LanguageDefinition> {
     }
 
     public String getName() {
-        return this.region;
+        return this.name;
     }
 
     public String getRegion() {
-        return this.name;
+        return this.region;
     }
 
     public boolean isRightToLeft() {
@@ -45,7 +45,7 @@ Comparable<LanguageDefinition> {
     }
 
     public String toString() {
-        return String.format("%s (%s)", this.region, this.name);
+        return String.format("%s (%s)", this.name, this.region);
     }
 
     public boolean equals(Object o) {

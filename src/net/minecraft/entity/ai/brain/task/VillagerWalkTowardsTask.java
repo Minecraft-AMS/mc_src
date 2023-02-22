@@ -17,7 +17,7 @@ import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.GlobalPos;
+import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
@@ -42,29 +42,29 @@ extends Task<VillagerEntity> {
         Brain<VillagerEntity> brain = villager.getBrain();
         villager.releaseTicketFor(this.destination);
         brain.forget(this.destination);
-        brain.putMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, time);
+        brain.remember(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, time);
     }
 
     @Override
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         Brain<VillagerEntity> brain = villagerEntity.getBrain();
         brain.getOptionalMemory(this.destination).ifPresent(globalPos -> {
-            if (this.shouldGiveUp(serverWorld, villagerEntity)) {
+            if (this.method_30952(serverWorld, (GlobalPos)globalPos) || this.shouldGiveUp(serverWorld, villagerEntity)) {
                 this.giveUp(villagerEntity, l);
-            } else if (this.exceedsMaxRange(serverWorld, villagerEntity, (GlobalPos)globalPos)) {
+            } else if (this.exceedsMaxRange(villagerEntity, (GlobalPos)globalPos)) {
                 int i;
                 Vec3d vec3d = null;
                 int j = 1000;
-                for (i = 0; i < 1000 && (vec3d == null || this.exceedsMaxRange(serverWorld, villagerEntity, GlobalPos.create(villagerEntity.dimension, new BlockPos(vec3d)))); ++i) {
-                    vec3d = TargetFinder.findTargetTowards(villagerEntity, 15, 7, new Vec3d(globalPos.getPos()));
+                for (i = 0; i < 1000 && (vec3d == null || this.exceedsMaxRange(villagerEntity, GlobalPos.create(serverWorld.getRegistryKey(), new BlockPos(vec3d)))); ++i) {
+                    vec3d = TargetFinder.findTargetTowards(villagerEntity, 15, 7, Vec3d.ofBottomCenter(globalPos.getPos()));
                 }
                 if (i == 1000) {
                     this.giveUp(villagerEntity, l);
                     return;
                 }
-                brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, this.speed, this.completionRange));
+                brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, this.speed, this.completionRange));
             } else if (!this.reachedDestination(serverWorld, villagerEntity, (GlobalPos)globalPos)) {
-                brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), this.speed, this.completionRange));
+                brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), this.speed, this.completionRange));
             }
         });
     }
@@ -77,12 +77,16 @@ extends Task<VillagerEntity> {
         return false;
     }
 
-    private boolean exceedsMaxRange(ServerWorld world, VillagerEntity villager, GlobalPos pos) {
-        return pos.getDimension() != world.getDimension().getType() || pos.getPos().getManhattanDistance(new BlockPos(villager)) > this.maxRange;
+    private boolean exceedsMaxRange(VillagerEntity villager, GlobalPos pos) {
+        return pos.getPos().getManhattanDistance(villager.getBlockPos()) > this.maxRange;
+    }
+
+    private boolean method_30952(ServerWorld serverWorld, GlobalPos globalPos) {
+        return globalPos.getDimension() != serverWorld.getRegistryKey();
     }
 
     private boolean reachedDestination(ServerWorld world, VillagerEntity villager, GlobalPos pos) {
-        return pos.getDimension() == world.getDimension().getType() && pos.getPos().getManhattanDistance(new BlockPos(villager)) <= this.completionRange;
+        return pos.getDimension() == world.getRegistryKey() && pos.getPos().getManhattanDistance(villager.getBlockPos()) <= this.completionRange;
     }
 }
 

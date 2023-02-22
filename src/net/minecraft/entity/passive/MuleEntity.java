@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
@@ -7,9 +10,11 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.passive.AbstractDonkeyEntity;
 import net.minecraft.entity.passive.PassiveEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 public class MuleEntity
 extends AbstractDonkeyEntity {
@@ -24,9 +29,21 @@ extends AbstractDonkeyEntity {
     }
 
     @Override
+    protected SoundEvent getAngrySound() {
+        super.getAngrySound();
+        return SoundEvents.ENTITY_MULE_ANGRY;
+    }
+
+    @Override
     protected SoundEvent getDeathSound() {
         super.getDeathSound();
         return SoundEvents.ENTITY_MULE_DEATH;
+    }
+
+    @Override
+    @Nullable
+    protected SoundEvent getEatSound() {
+        return SoundEvents.ENTITY_MULE_EAT;
     }
 
     @Override
@@ -41,8 +58,8 @@ extends AbstractDonkeyEntity {
     }
 
     @Override
-    public PassiveEntity createChild(PassiveEntity mate) {
-        return EntityType.MULE.create(this.world);
+    public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
+        return EntityType.MULE.create(world);
     }
 }
 

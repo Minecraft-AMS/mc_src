@@ -5,9 +5,9 @@
  *  com.google.common.collect.Maps
  *  com.google.gson.Gson
  *  com.google.gson.GsonBuilder
+ *  com.google.gson.reflect.TypeToken
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.io.IOUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -17,33 +17,32 @@ package net.minecraft.client.sound;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.options.GameOptions;
+import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.sound.ListenerSoundInstance;
 import net.minecraft.client.sound.Sound;
 import net.minecraft.client.sound.SoundContainer;
 import net.minecraft.client.sound.SoundEntry;
 import net.minecraft.client.sound.SoundEntryDeserializer;
 import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.client.sound.SoundInstanceListener;
 import net.minecraft.client.sound.SoundSystem;
 import net.minecraft.client.sound.TickableSoundInstance;
 import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SinglePreparationResourceReloadListener;
+import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -51,34 +50,17 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class SoundManager
-extends SinglePreparationResourceReloadListener<SoundList> {
+extends SinglePreparationResourceReloader<SoundList> {
     public static final Sound MISSING_SOUND = new Sound("meta:missing_sound", 1.0f, 1.0f, 1, Sound.RegistrationType.FILE, false, false, 16);
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Gson GSON = new GsonBuilder().registerTypeHierarchyAdapter(Text.class, (Object)new Text.Serializer()).registerTypeAdapter(SoundEntry.class, (Object)new SoundEntryDeserializer()).create();
-    private static final ParameterizedType TYPE = new ParameterizedType(){
-
-        @Override
-        public Type[] getActualTypeArguments() {
-            return new Type[]{String.class, SoundEntry.class};
-        }
-
-        @Override
-        public Type getRawType() {
-            return Map.class;
-        }
-
-        @Override
-        public Type getOwnerType() {
-            return null;
-        }
-    };
+    private static final TypeToken<Map<String, SoundEntry>> TYPE = new TypeToken<Map<String, SoundEntry>>(){};
     private final Map<Identifier, WeightedSoundSet> sounds = Maps.newHashMap();
     private final SoundSystem soundSystem;
 
@@ -96,9 +78,10 @@ extends SinglePreparationResourceReloadListener<SoundList> {
                 List<Resource> list = resourceManager.getAllResources(new Identifier(string, "sounds.json"));
                 for (Resource resource : list) {
                     profiler.push(resource.getResourcePackName());
-                    try {
+                    try (InputStream inputStream = resource.getInputStream();
+                         InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);){
                         profiler.push("parse");
-                        Map<String, SoundEntry> map = SoundManager.readSounds(resource.getInputStream());
+                        Map<String, SoundEntry> map = JsonHelper.deserialize(GSON, (Reader)reader, TYPE);
                         profiler.swap("register");
                         for (Map.Entry<String, SoundEntry> entry : map.entrySet()) {
                             soundList.register(new Identifier(string, entry.getKey()), entry.getValue(), resourceManager);
@@ -138,29 +121,18 @@ extends SinglePreparationResourceReloadListener<SoundList> {
         this.soundSystem.reloadSounds();
     }
 
-    @Nullable
-    protected static Map<String, SoundEntry> readSounds(InputStream inputStream) {
-        try {
-            Map map = (Map)JsonHelper.deserialize(GSON, (Reader)new InputStreamReader(inputStream, StandardCharsets.UTF_8), (Type)TYPE);
-            return map;
-        }
-        finally {
-            IOUtils.closeQuietly((InputStream)inputStream);
-        }
-    }
-
-    private static boolean isSoundResourcePresent(Sound sound, Identifier identifier, ResourceManager resourceManager) {
-        Identifier identifier2 = sound.getLocation();
-        if (!resourceManager.containsResource(identifier2)) {
-            LOGGER.warn("File {} does not exist, cannot add it to event {}", (Object)identifier2, (Object)identifier);
+    private static boolean isSoundResourcePresent(Sound sound, Identifier id, ResourceManager resourceManager) {
+        Identifier identifier = sound.getLocation();
+        if (!resourceManager.containsResource(identifier)) {
+            LOGGER.warn("File {} does not exist, cannot add it to event {}", (Object)identifier, (Object)id);
             return false;
         }
         return true;
     }
 
     @Nullable
-    public WeightedSoundSet get(Identifier identifier) {
-        return this.sounds.get(identifier);
+    public WeightedSoundSet get(Identifier id) {
+        return this.sounds.get(id);
     }
 
     public Collection<Identifier> getKeys() {
@@ -210,24 +182,24 @@ extends SinglePreparationResourceReloadListener<SoundList> {
         this.soundSystem.updateSoundVolume(category, volume);
     }
 
-    public void stop(SoundInstance soundInstance) {
-        this.soundSystem.stop(soundInstance);
+    public void stop(SoundInstance sound) {
+        this.soundSystem.stop(sound);
     }
 
-    public boolean isPlaying(SoundInstance soundInstance) {
-        return this.soundSystem.isPlaying(soundInstance);
+    public boolean isPlaying(SoundInstance sound) {
+        return this.soundSystem.isPlaying(sound);
     }
 
-    public void registerListener(ListenerSoundInstance listenerSoundInstance) {
-        this.soundSystem.registerListener(listenerSoundInstance);
+    public void registerListener(SoundInstanceListener listener) {
+        this.soundSystem.registerListener(listener);
     }
 
-    public void unregisterListener(ListenerSoundInstance listenerSoundInstance) {
-        this.soundSystem.unregisterListener(listenerSoundInstance);
+    public void unregisterListener(SoundInstanceListener listener) {
+        this.soundSystem.unregisterListener(listener);
     }
 
-    public void stopSounds(@Nullable Identifier identifier, @Nullable SoundCategory soundCategory) {
-        this.soundSystem.stopSounds(identifier, soundCategory);
+    public void stopSounds(@Nullable Identifier id, @Nullable SoundCategory soundCategory) {
+        this.soundSystem.stopSounds(id, soundCategory);
     }
 
     public String getDebugString() {

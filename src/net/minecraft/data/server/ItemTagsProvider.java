@@ -1,35 +1,27 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.google.common.collect.Lists
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.data.server;
 
-import com.google.common.collect.Lists;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.function.Function;
 import net.minecraft.block.Block;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.server.AbstractTagProvider;
+import net.minecraft.data.server.BlockTagsProvider;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.tag.Tag;
-import net.minecraft.tag.TagContainer;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class ItemTagsProvider
 extends AbstractTagProvider<Item> {
-    private static final Logger LOG = LogManager.getLogger();
+    private final Function<Tag.Identified<Block>, Tag.Builder> field_23783 = blockTagsProvider::method_27169;
 
-    public ItemTagsProvider(DataGenerator dataGenerator) {
+    public ItemTagsProvider(DataGenerator dataGenerator, BlockTagsProvider blockTagsProvider) {
         super(dataGenerator, Registry.ITEM);
     }
 
@@ -54,6 +46,9 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.ACACIA_LOGS, ItemTags.ACACIA_LOGS);
         this.copy(BlockTags.SPRUCE_LOGS, ItemTags.SPRUCE_LOGS);
         this.copy(BlockTags.JUNGLE_LOGS, ItemTags.JUNGLE_LOGS);
+        this.copy(BlockTags.CRIMSON_STEMS, ItemTags.CRIMSON_STEMS);
+        this.copy(BlockTags.WARPED_STEMS, ItemTags.WARPED_STEMS);
+        this.copy(BlockTags.LOGS_THAT_BURN, ItemTags.LOGS_THAT_BURN);
         this.copy(BlockTags.LOGS, ItemTags.LOGS);
         this.copy(BlockTags.SAND, ItemTags.SAND);
         this.copy(BlockTags.SLABS, ItemTags.SLABS);
@@ -69,56 +64,39 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.FENCES, ItemTags.FENCES);
         this.copy(BlockTags.TALL_FLOWERS, ItemTags.TALL_FLOWERS);
         this.copy(BlockTags.FLOWERS, ItemTags.FLOWERS);
+        this.copy(BlockTags.GOLD_ORES, ItemTags.GOLD_ORES);
+        this.copy(BlockTags.SOUL_FIRE_BASE_BLOCKS, ItemTags.SOUL_FIRE_BASE_BLOCKS);
         this.getOrCreateTagBuilder(ItemTags.BANNERS).add((Item[])new Item[]{Items.WHITE_BANNER, Items.ORANGE_BANNER, Items.MAGENTA_BANNER, Items.LIGHT_BLUE_BANNER, Items.YELLOW_BANNER, Items.LIME_BANNER, Items.PINK_BANNER, Items.GRAY_BANNER, Items.LIGHT_GRAY_BANNER, Items.CYAN_BANNER, Items.PURPLE_BANNER, Items.BLUE_BANNER, Items.BROWN_BANNER, Items.GREEN_BANNER, Items.RED_BANNER, Items.BLACK_BANNER});
         this.getOrCreateTagBuilder(ItemTags.BOATS).add((Item[])new Item[]{Items.OAK_BOAT, Items.SPRUCE_BOAT, Items.BIRCH_BOAT, Items.JUNGLE_BOAT, Items.ACACIA_BOAT, Items.DARK_OAK_BOAT});
         this.getOrCreateTagBuilder(ItemTags.FISHES).add((Item[])new Item[]{Items.COD, Items.COOKED_COD, Items.SALMON, Items.COOKED_SALMON, Items.PUFFERFISH, Items.TROPICAL_FISH});
         this.copy(BlockTags.STANDING_SIGNS, ItemTags.SIGNS);
-        this.getOrCreateTagBuilder(ItemTags.MUSIC_DISCS).add((Item[])new Item[]{Items.MUSIC_DISC_13, Items.MUSIC_DISC_CAT, Items.MUSIC_DISC_BLOCKS, Items.MUSIC_DISC_CHIRP, Items.MUSIC_DISC_FAR, Items.MUSIC_DISC_MALL, Items.MUSIC_DISC_MELLOHI, Items.MUSIC_DISC_STAL, Items.MUSIC_DISC_STRAD, Items.MUSIC_DISC_WARD, Items.MUSIC_DISC_11, Items.MUSIC_DISC_WAIT});
+        this.getOrCreateTagBuilder(ItemTags.CREEPER_DROP_MUSIC_DISCS).add((Item[])new Item[]{Items.MUSIC_DISC_13, Items.MUSIC_DISC_CAT, Items.MUSIC_DISC_BLOCKS, Items.MUSIC_DISC_CHIRP, Items.MUSIC_DISC_FAR, Items.MUSIC_DISC_MALL, Items.MUSIC_DISC_MELLOHI, Items.MUSIC_DISC_STAL, Items.MUSIC_DISC_STRAD, Items.MUSIC_DISC_WARD, Items.MUSIC_DISC_11, Items.MUSIC_DISC_WAIT});
+        this.getOrCreateTagBuilder(ItemTags.MUSIC_DISCS).addTag(ItemTags.CREEPER_DROP_MUSIC_DISCS).add(Items.MUSIC_DISC_PIGSTEP);
         this.getOrCreateTagBuilder(ItemTags.COALS).add((Item[])new Item[]{Items.COAL, Items.CHARCOAL});
         this.getOrCreateTagBuilder(ItemTags.ARROWS).add((Item[])new Item[]{Items.ARROW, Items.TIPPED_ARROW, Items.SPECTRAL_ARROW});
         this.getOrCreateTagBuilder(ItemTags.LECTERN_BOOKS).add((Item[])new Item[]{Items.WRITTEN_BOOK, Items.WRITABLE_BOOK});
+        this.getOrCreateTagBuilder(ItemTags.BEACON_PAYMENT_ITEMS).add((Item[])new Item[]{Items.NETHERITE_INGOT, Items.EMERALD, Items.DIAMOND, Items.GOLD_INGOT, Items.IRON_INGOT});
+        this.getOrCreateTagBuilder(ItemTags.PIGLIN_REPELLENTS).add(Items.SOUL_TORCH).add(Items.SOUL_LANTERN).add(Items.SOUL_CAMPFIRE);
+        this.getOrCreateTagBuilder(ItemTags.PIGLIN_LOVED).addTag(ItemTags.GOLD_ORES).add((Item[])new Item[]{Items.GOLD_BLOCK, Items.GILDED_BLACKSTONE, Items.LIGHT_WEIGHTED_PRESSURE_PLATE, Items.GOLD_INGOT, Items.BELL, Items.CLOCK, Items.GOLDEN_CARROT, Items.GLISTERING_MELON_SLICE, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE, Items.GOLDEN_HELMET, Items.GOLDEN_CHESTPLATE, Items.GOLDEN_LEGGINGS, Items.GOLDEN_BOOTS, Items.GOLDEN_HORSE_ARMOR, Items.GOLDEN_SWORD, Items.GOLDEN_PICKAXE, Items.GOLDEN_SHOVEL, Items.GOLDEN_AXE, Items.GOLDEN_HOE});
+        this.getOrCreateTagBuilder(ItemTags.NON_FLAMMABLE_WOOD).add((Item[])new Item[]{Items.WARPED_STEM, Items.STRIPPED_WARPED_STEM, Items.WARPED_HYPHAE, Items.STRIPPED_WARPED_HYPHAE, Items.CRIMSON_STEM, Items.STRIPPED_CRIMSON_STEM, Items.CRIMSON_HYPHAE, Items.STRIPPED_CRIMSON_HYPHAE, Items.CRIMSON_PLANKS, Items.WARPED_PLANKS, Items.CRIMSON_SLAB, Items.WARPED_SLAB, Items.CRIMSON_PRESSURE_PLATE, Items.WARPED_PRESSURE_PLATE, Items.CRIMSON_FENCE, Items.WARPED_FENCE, Items.CRIMSON_TRAPDOOR, Items.WARPED_TRAPDOOR, Items.CRIMSON_FENCE_GATE, Items.WARPED_FENCE_GATE, Items.CRIMSON_STAIRS, Items.WARPED_STAIRS, Items.CRIMSON_BUTTON, Items.WARPED_BUTTON, Items.CRIMSON_DOOR, Items.WARPED_DOOR, Items.CRIMSON_SIGN, Items.WARPED_SIGN});
+        this.getOrCreateTagBuilder(ItemTags.STONE_TOOL_MATERIALS).add((Item[])new Item[]{Items.COBBLESTONE, Items.BLACKSTONE});
+        this.getOrCreateTagBuilder(ItemTags.STONE_CRAFTING_MATERIALS).add((Item[])new Item[]{Items.COBBLESTONE, Items.BLACKSTONE});
     }
 
-    protected void copy(Tag<Block> tag, Tag<Item> tag2) {
-        Tag.Builder<Item> builder = this.getOrCreateTagBuilder(tag2);
-        for (Tag.Entry<Block> entry : tag.entries()) {
-            Tag.Entry<Item> entry2 = this.convert(entry);
-            builder.add((Item)((Object)entry2));
-        }
-    }
-
-    private Tag.Entry<Item> convert(Tag.Entry<Block> entry) {
-        if (entry instanceof Tag.TagEntry) {
-            return new Tag.TagEntry<Item>(((Tag.TagEntry)entry).getId());
-        }
-        if (entry instanceof Tag.CollectionEntry) {
-            ArrayList list = Lists.newArrayList();
-            for (Block block : ((Tag.CollectionEntry)entry).getValues()) {
-                Item item = block.asItem();
-                if (item == Items.AIR) {
-                    LOG.warn("Itemless block copied to item tag: {}", (Object)Registry.BLOCK.getId(block));
-                    continue;
-                }
-                list.add(item);
-            }
-            return new Tag.CollectionEntry<Item>(list);
-        }
-        throw new UnsupportedOperationException("Unknown tag entry " + entry);
+    protected void copy(Tag.Identified<Block> blockTag, Tag.Identified<Item> itemTag) {
+        Tag.Builder builder = this.method_27169(itemTag);
+        Tag.Builder builder2 = this.field_23783.apply(blockTag);
+        builder2.streamEntries().forEach(builder::add);
     }
 
     @Override
-    protected Path getOutput(Identifier identifier) {
-        return this.root.getOutput().resolve("data/" + identifier.getNamespace() + "/tags/items/" + identifier.getPath() + ".json");
+    protected Path getOutput(Identifier id) {
+        return this.root.getOutput().resolve("data/" + id.getNamespace() + "/tags/items/" + id.getPath() + ".json");
     }
 
     @Override
     public String getName() {
         return "Item Tags";
-    }
-
-    @Override
-    protected void setContainer(TagContainer<Item> tagContainer) {
-        ItemTags.setContainer(tagContainer);
     }
 }
 

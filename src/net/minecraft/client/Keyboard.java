@@ -15,20 +15,21 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHud;
+import net.minecraft.client.gui.screen.GameModeSelectionScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.options.AccessibilityScreen;
-import net.minecraft.client.gui.screen.options.ChatOptionsScreen;
-import net.minecraft.client.gui.screen.options.ControlsOptionsScreen;
+import net.minecraft.client.gui.screen.option.ControlsOptionsScreen;
+import net.minecraft.client.gui.screen.option.NarratorOptionsScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.options.KeyBinding;
-import net.minecraft.client.options.Option;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.option.Option;
 import net.minecraft.client.util.Clipboard;
 import net.minecraft.client.util.GlfwUtil;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.ScreenshotUtils;
-import net.minecraft.command.arguments.BlockArgumentParser;
+import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.entity.Entity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -44,7 +45,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.dimension.DimensionType;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -61,12 +61,12 @@ public class Keyboard {
         this.client = client;
     }
 
-    private void debugWarn(String string, Object ... objects) {
-        this.client.inGameHud.getChatHud().addMessage(new LiteralText("").append(new TranslatableText("debug.prefix", new Object[0]).formatted(Formatting.YELLOW, Formatting.BOLD)).append(" ").append(new TranslatableText(string, objects)));
+    private void debugWarn(String key, Object ... args) {
+        this.client.inGameHud.getChatHud().addMessage(new LiteralText("").append(new TranslatableText("debug.prefix").formatted(Formatting.YELLOW, Formatting.BOLD)).append(" ").append(new TranslatableText(key, args)));
     }
 
-    private void debugError(String string, Object ... objects) {
-        this.client.inGameHud.getChatHud().addMessage(new LiteralText("").append(new TranslatableText("debug.prefix", new Object[0]).formatted(Formatting.RED, Formatting.BOLD)).append(" ").append(new TranslatableText(string, objects)));
+    private void debugError(String key, Object ... args) {
+        this.client.inGameHud.getChatHud().addMessage(new LiteralText("").append(new TranslatableText("debug.prefix").formatted(Formatting.RED, Formatting.BOLD)).append(" ").append(new TranslatableText(key, args)));
     }
 
     private boolean processF3(int key) {
@@ -80,8 +80,8 @@ public class Keyboard {
                 return true;
             }
             case 66: {
-                boolean bl = !this.client.getEntityRenderManager().shouldRenderHitboxes();
-                this.client.getEntityRenderManager().setRenderHitboxes(bl);
+                boolean bl = !this.client.getEntityRenderDispatcher().shouldRenderHitboxes();
+                this.client.getEntityRenderDispatcher().setRenderHitboxes(bl);
                 this.debugWarn(bl ? "debug.show_hitboxes.on" : "debug.show_hitboxes.off", new Object[0]);
                 return true;
             }
@@ -108,18 +108,26 @@ public class Keyboard {
                 return true;
             }
             case 73: {
-                if (!this.client.player.getReducedDebugInfo()) {
-                    this.copyLookAt(this.client.player.allowsPermissionLevel(2), !Screen.hasShiftDown());
+                if (!this.client.player.hasReducedDebugInfo()) {
+                    this.copyLookAt(this.client.player.hasPermissionLevel(2), !Screen.hasShiftDown());
                 }
                 return true;
             }
             case 78: {
-                if (!this.client.player.allowsPermissionLevel(2)) {
+                if (!this.client.player.hasPermissionLevel(2)) {
                     this.debugWarn("debug.creative_spectator.error", new Object[0]);
-                } else if (this.client.player.isCreative()) {
+                } else if (!this.client.player.isSpectator()) {
                     this.client.player.sendChatMessage("/gamemode spectator");
                 } else {
-                    this.client.player.sendChatMessage("/gamemode creative");
+                    this.client.player.sendChatMessage("/gamemode " + this.client.interactionManager.getPreviousGameMode().getName());
+                }
+                return true;
+            }
+            case 293: {
+                if (!this.client.player.hasPermissionLevel(2)) {
+                    this.debugWarn("debug.gamemodes.error", new Object[0]);
+                } else {
+                    this.client.openScreen(new GameModeSelectionScreen());
                 }
                 return true;
             }
@@ -132,19 +140,20 @@ public class Keyboard {
             case 81: {
                 this.debugWarn("debug.help.message", new Object[0]);
                 ChatHud chatHud = this.client.inGameHud.getChatHud();
-                chatHud.addMessage(new TranslatableText("debug.reload_chunks.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.show_hitboxes.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.copy_location.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.clear_chat.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.cycle_renderdistance.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.chunk_boundaries.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.advanced_tooltips.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.inspect.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.creative_spectator.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.pause_focus.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.help.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.reload_resourcepacks.help", new Object[0]));
-                chatHud.addMessage(new TranslatableText("debug.pause.help", new Object[0]));
+                chatHud.addMessage(new TranslatableText("debug.reload_chunks.help"));
+                chatHud.addMessage(new TranslatableText("debug.show_hitboxes.help"));
+                chatHud.addMessage(new TranslatableText("debug.copy_location.help"));
+                chatHud.addMessage(new TranslatableText("debug.clear_chat.help"));
+                chatHud.addMessage(new TranslatableText("debug.cycle_renderdistance.help"));
+                chatHud.addMessage(new TranslatableText("debug.chunk_boundaries.help"));
+                chatHud.addMessage(new TranslatableText("debug.advanced_tooltips.help"));
+                chatHud.addMessage(new TranslatableText("debug.inspect.help"));
+                chatHud.addMessage(new TranslatableText("debug.creative_spectator.help"));
+                chatHud.addMessage(new TranslatableText("debug.pause_focus.help"));
+                chatHud.addMessage(new TranslatableText("debug.help.help"));
+                chatHud.addMessage(new TranslatableText("debug.reload_resourcepacks.help"));
+                chatHud.addMessage(new TranslatableText("debug.pause.help"));
+                chatHud.addMessage(new TranslatableText("debug.gamemodes.help"));
                 return true;
             }
             case 84: {
@@ -153,11 +162,15 @@ public class Keyboard {
                 return true;
             }
             case 67: {
-                if (this.client.player.getReducedDebugInfo()) {
+                if (this.client.player.hasReducedDebugInfo()) {
+                    return false;
+                }
+                ClientPlayNetworkHandler clientPlayNetworkHandler = this.client.player.networkHandler;
+                if (clientPlayNetworkHandler == null) {
                     return false;
                 }
                 this.debugWarn("debug.copy_location.message", new Object[0]);
-                this.setClipboard(String.format(Locale.ROOT, "/execute in %s run tp @s %.2f %.2f %.2f %.2f %.2f", DimensionType.getId(this.client.player.world.dimension.getType()), this.client.player.getX(), this.client.player.getY(), this.client.player.getZ(), Float.valueOf(this.client.player.yaw), Float.valueOf(this.client.player.pitch)));
+                this.setClipboard(String.format(Locale.ROOT, "/execute in %s run tp @s %.2f %.2f %.2f %.2f %.2f", this.client.player.world.getRegistryKey().getValue(), this.client.player.getX(), this.client.player.getY(), this.client.player.getZ(), Float.valueOf(this.client.player.yaw), Float.valueOf(this.client.player.pitch)));
                 return true;
             }
         }
@@ -175,15 +188,15 @@ public class Keyboard {
                 BlockState blockState = this.client.player.world.getBlockState(blockPos);
                 if (bl) {
                     if (bl2) {
-                        this.client.player.networkHandler.getDataQueryHandler().queryBlockNbt(blockPos, compoundTag -> {
-                            this.copyBlock(blockState, blockPos, (CompoundTag)compoundTag);
+                        this.client.player.networkHandler.getDataQueryHandler().queryBlockNbt(blockPos, nbtCompound -> {
+                            this.copyBlock(blockState, blockPos, (NbtCompound)nbtCompound);
                             this.debugWarn("debug.inspect.server.block", new Object[0]);
                         });
                         break;
                     }
                     BlockEntity blockEntity = this.client.player.world.getBlockEntity(blockPos);
-                    CompoundTag compoundTag2 = blockEntity != null ? blockEntity.toTag(new CompoundTag()) : null;
-                    this.copyBlock(blockState, blockPos, compoundTag2);
+                    NbtCompound nbtCompound2 = blockEntity != null ? blockEntity.writeNbt(new NbtCompound()) : null;
+                    this.copyBlock(blockState, blockPos, nbtCompound2);
                     this.debugWarn("debug.inspect.client.block", new Object[0]);
                     break;
                 }
@@ -196,14 +209,14 @@ public class Keyboard {
                 Identifier identifier = Registry.ENTITY_TYPE.getId(entity.getType());
                 if (bl) {
                     if (bl2) {
-                        this.client.player.networkHandler.getDataQueryHandler().queryEntityNbt(entity.getEntityId(), compoundTag -> {
-                            this.copyEntity(identifier, entity.getPos(), (CompoundTag)compoundTag);
+                        this.client.player.networkHandler.getDataQueryHandler().queryEntityNbt(entity.getEntityId(), nbtCompound -> {
+                            this.copyEntity(identifier, entity.getPos(), (NbtCompound)nbtCompound);
                             this.debugWarn("debug.inspect.server.entity", new Object[0]);
                         });
                         break;
                     }
-                    CompoundTag compoundTag2 = entity.toTag(new CompoundTag());
-                    this.copyEntity(identifier, entity.getPos(), compoundTag2);
+                    NbtCompound nbtCompound2 = entity.writeNbt(new NbtCompound());
+                    this.copyEntity(identifier, entity.getPos(), nbtCompound2);
                     this.debugWarn("debug.inspect.client.entity", new Object[0]);
                     break;
                 }
@@ -214,37 +227,36 @@ public class Keyboard {
         }
     }
 
-    private void copyBlock(BlockState blockState, BlockPos blockPos, @Nullable CompoundTag compoundTag) {
-        if (compoundTag != null) {
-            compoundTag.remove("x");
-            compoundTag.remove("y");
-            compoundTag.remove("z");
-            compoundTag.remove("id");
+    private void copyBlock(BlockState state, BlockPos pos, @Nullable NbtCompound nbt) {
+        if (nbt != null) {
+            nbt.remove("x");
+            nbt.remove("y");
+            nbt.remove("z");
+            nbt.remove("id");
         }
-        StringBuilder stringBuilder = new StringBuilder(BlockArgumentParser.stringifyBlockState(blockState));
-        if (compoundTag != null) {
-            stringBuilder.append(compoundTag);
+        StringBuilder stringBuilder = new StringBuilder(BlockArgumentParser.stringifyBlockState(state));
+        if (nbt != null) {
+            stringBuilder.append(nbt);
         }
-        String string = String.format(Locale.ROOT, "/setblock %d %d %d %s", blockPos.getX(), blockPos.getY(), blockPos.getZ(), stringBuilder);
+        String string = String.format(Locale.ROOT, "/setblock %d %d %d %s", pos.getX(), pos.getY(), pos.getZ(), stringBuilder);
         this.setClipboard(string);
     }
 
-    private void copyEntity(Identifier identifier, Vec3d vec3d, @Nullable CompoundTag compoundTag) {
+    private void copyEntity(Identifier id, Vec3d pos, @Nullable NbtCompound nbt) {
         String string2;
-        if (compoundTag != null) {
-            compoundTag.remove("UUIDMost");
-            compoundTag.remove("UUIDLeast");
-            compoundTag.remove("Pos");
-            compoundTag.remove("Dimension");
-            String string = compoundTag.toText().getString();
-            string2 = String.format(Locale.ROOT, "/summon %s %.2f %.2f %.2f %s", identifier.toString(), vec3d.x, vec3d.y, vec3d.z, string);
+        if (nbt != null) {
+            nbt.remove("UUID");
+            nbt.remove("Pos");
+            nbt.remove("Dimension");
+            String string = nbt.toText().getString();
+            string2 = String.format(Locale.ROOT, "/summon %s %.2f %.2f %.2f %s", id.toString(), pos.x, pos.y, pos.z, string);
         } else {
-            string2 = String.format(Locale.ROOT, "/summon %s %.2f %.2f %.2f", identifier.toString(), vec3d.x, vec3d.y, vec3d.z);
+            string2 = String.format(Locale.ROOT, "/summon %s %.2f %.2f %.2f", id.toString(), pos.x, pos.y, pos.z);
         }
         this.setClipboard(string2);
     }
 
-    public void onKey(long window, int key, int scancode, int i, int j) {
+    public void onKey(long window, int key, int scancode, int i, int modifiers) {
         boolean bl;
         if (window != this.client.getWindow().getHandle()) {
             return;
@@ -264,6 +276,7 @@ public class Keyboard {
             if (this.client.options.keyFullscreen.matchesKey(key, scancode)) {
                 this.client.getWindow().toggleFullscreen();
                 this.client.options.fullscreen = this.client.getWindow().isFullscreen();
+                this.client.options.write();
                 return;
             }
             if (this.client.options.keyScreenshot.matchesKey(key, scancode)) {
@@ -277,20 +290,17 @@ public class Keyboard {
         boolean bl2 = bl = parentElement == null || !(parentElement.getFocused() instanceof TextFieldWidget) || !((TextFieldWidget)parentElement.getFocused()).isActive();
         if (i != 0 && key == 66 && Screen.hasControlDown() && bl) {
             Option.NARRATOR.cycle(this.client.options, 1);
-            if (parentElement instanceof ChatOptionsScreen) {
-                ((ChatOptionsScreen)parentElement).setNarratorMessage();
-            }
-            if (parentElement instanceof AccessibilityScreen) {
-                ((AccessibilityScreen)parentElement).setNarratorMessage();
+            if (parentElement instanceof NarratorOptionsScreen) {
+                ((NarratorOptionsScreen)parentElement).updateNarratorButtonText();
             }
         }
         if (parentElement != null) {
             boolean[] bls = new boolean[]{false};
             Screen.wrapScreenError(() -> {
                 if (i == 1 || i == 2 && this.repeatEvents) {
-                    bls[0] = parentElement.keyPressed(key, scancode, j);
+                    bls[0] = parentElement.keyPressed(key, scancode, modifiers);
                 } else if (i == 0) {
-                    bls[0] = parentElement.keyReleased(key, scancode, j);
+                    bls[0] = parentElement.keyReleased(key, scancode, modifiers);
                 }
             }, "keyPressed event handler", parentElement.getClass().getCanonicalName());
             if (bls[0]) {
@@ -298,9 +308,9 @@ public class Keyboard {
             }
         }
         if (this.client.currentScreen == null || this.client.currentScreen.passEvents) {
-            InputUtil.KeyCode keyCode = InputUtil.getKeyCode(key, scancode);
+            InputUtil.Key key2 = InputUtil.fromKeyCode(key, scancode);
             if (i == 0) {
-                KeyBinding.setKeyPressed(keyCode, false);
+                KeyBinding.setKeyPressed(key2, false);
                 if (key == 292) {
                     if (this.switchF3State) {
                         this.switchF3State = false;
@@ -327,25 +337,19 @@ public class Keyboard {
                     }
                 }
                 if (bl22) {
-                    KeyBinding.setKeyPressed(keyCode, false);
+                    KeyBinding.setKeyPressed(key2, false);
                 } else {
-                    KeyBinding.setKeyPressed(keyCode, true);
-                    KeyBinding.onKeyPressed(keyCode);
+                    KeyBinding.setKeyPressed(key2, true);
+                    KeyBinding.onKeyPressed(key2);
                 }
-                if (this.client.options.debugProfilerEnabled) {
-                    if (key == 48) {
-                        this.client.handleProfilerKeyPress(0);
-                    }
-                    for (int k = 0; k < 9; ++k) {
-                        if (key != 49 + k) continue;
-                        this.client.handleProfilerKeyPress(k + 1);
-                    }
+                if (this.client.options.debugProfilerEnabled && key >= 48 && key <= 57) {
+                    this.client.handleProfilerKeyPress(key - 48);
                 }
             }
         }
     }
 
-    private void onChar(long window, int i, int j) {
+    private void onChar(long window, int i, int modifiers) {
         if (window != this.client.getWindow().getHandle()) {
             return;
         }
@@ -354,32 +358,32 @@ public class Keyboard {
             return;
         }
         if (Character.charCount(i) == 1) {
-            Screen.wrapScreenError(() -> element.charTyped((char)i, j), "charTyped event handler", element.getClass().getCanonicalName());
+            Screen.wrapScreenError(() -> element.charTyped((char)i, modifiers), "charTyped event handler", element.getClass().getCanonicalName());
         } else {
             for (char c : Character.toChars(i)) {
-                Screen.wrapScreenError(() -> element.charTyped(c, j), "charTyped event handler", element.getClass().getCanonicalName());
+                Screen.wrapScreenError(() -> element.charTyped(c, modifiers), "charTyped event handler", element.getClass().getCanonicalName());
             }
         }
     }
 
-    public void enableRepeatEvents(boolean repeatEvents) {
+    public void setRepeatEvents(boolean repeatEvents) {
         this.repeatEvents = repeatEvents;
     }
 
-    public void setup(long l2) {
-        InputUtil.setKeyboardCallbacks(l2, (l, i, j, k, m) -> this.client.execute(() -> this.onKey(l, i, j, k, m)), (l, i, j) -> this.client.execute(() -> this.onChar(l, i, j)));
+    public void setup(long window) {
+        InputUtil.setKeyboardCallbacks(window, (l, i, j, k, m) -> this.client.execute(() -> this.onKey(l, i, j, k, m)), (l, i, j) -> this.client.execute(() -> this.onChar(l, i, j)));
     }
 
     public String getClipboard() {
-        return this.clipboard.getClipboard(this.client.getWindow().getHandle(), (i, l) -> {
-            if (i != 65545) {
-                this.client.getWindow().logGlError(i, l);
+        return this.clipboard.getClipboard(this.client.getWindow().getHandle(), (error, description) -> {
+            if (error != 65545) {
+                this.client.getWindow().logGlError(error, description);
             }
         });
     }
 
-    public void setClipboard(String string) {
-        this.clipboard.setClipboard(this.client.getWindow().getHandle(), string);
+    public void setClipboard(String clipboard) {
+        this.clipboard.setClipboard(this.client.getWindow().getHandle(), clipboard);
     }
 
     public void pollDebugCrash() {
