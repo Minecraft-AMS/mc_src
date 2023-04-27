@@ -44,7 +44,7 @@ extends BlockWithEntity {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 12.0, 16.0);
     public static final List<BlockPos> BOOKSHELF_OFFSETS = BlockPos.stream(-2, 0, -2, 2, 1, 2).filter(pos -> Math.abs(pos.getX()) == 2 || Math.abs(pos.getZ()) == 2).map(BlockPos::toImmutable).toList();
 
-    protected EnchantingTableBlock(AbstractBlock.Settings settings) {
+    public EnchantingTableBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

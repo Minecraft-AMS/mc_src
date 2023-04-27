@@ -59,7 +59,7 @@ extends Structure {
                 }
             }
             if (feature.maxDistanceFromCenter + i > 128) {
-                return DataResult.error((String)"Structure size including terrain adaptation must not exceed 128");
+                return DataResult.error(() -> "Structure size including terrain adaptation must not exceed 128");
             }
             return DataResult.success((Object)feature);
         };

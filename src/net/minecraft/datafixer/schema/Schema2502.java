@@ -20,13 +20,9 @@ extends IdentifierNormalizingSchema {
         super(i, schema);
     }
 
-    protected static void registerEntity(Schema schema, Map<String, Supplier<TypeTemplate>> map, String name) {
-        schema.register(map, name, () -> Schema100.targetItems(schema));
-    }
-
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
-        Schema2502.registerEntity(schema, map, "minecraft:hoglin");
+        schema.register(map, "minecraft:hoglin", () -> Schema100.targetItems(schema));
         return map;
     }
 }

@@ -25,7 +25,7 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.client.render.model.json.ModelTransformation;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.CrossbowItem;
@@ -38,6 +38,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.world.World;
 import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
@@ -130,7 +131,7 @@ public class HeldItemRenderer {
         this.itemRenderer = itemRenderer;
     }
 
-    public void renderItem(LivingEntity entity, ItemStack stack, ModelTransformation.Mode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+    public void renderItem(LivingEntity entity, ItemStack stack, ModelTransformationMode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
         if (stack.isEmpty()) {
             return;
         }
@@ -212,7 +213,7 @@ public class HeldItemRenderer {
         matrices.translate(-0.5f, -0.5f, 0.0f);
         matrices.scale(0.0078125f, 0.0078125f, 0.0078125f);
         Integer integer = FilledMapItem.getMapId(stack);
-        MapState mapState = FilledMapItem.getMapState(integer, this.client.world);
+        MapState mapState = FilledMapItem.getMapState(integer, (World)this.client.world);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(mapState == null ? MAP_BACKGROUND : MAP_BACKGROUND_CHECKERBOARD);
         Matrix4f matrix4f = matrices.peek().getPositionMatrix();
         vertexConsumer.vertex(matrix4f, -7.0f, 135.0f, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(swingProgress).next();
@@ -266,6 +267,31 @@ public class HeldItemRenderer {
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float)i * h * 90.0f));
         matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(h * 10.0f));
         matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float)i * h * 30.0f));
+    }
+
+    private void applyBrushTransformation(MatrixStack matrices, float tickDelta, Arm arm, ItemStack stack, float equipProgress) {
+        this.applyEquipOffset(matrices, arm, equipProgress);
+        float f = (float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f;
+        float g = 1.0f - f / (float)stack.getMaxUseTime();
+        float h = -90.0f;
+        float i = 60.0f;
+        int j = 45;
+        float k = 150.0f;
+        float l = -15.0f;
+        float m = -15.0f + 75.0f * MathHelper.cos(g * 45.0f * (float)Math.PI);
+        if (arm != Arm.RIGHT) {
+            matrices.translate(0.1, 0.83, 0.35);
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-80.0f));
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90.0f));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(m));
+            matrices.translate(-0.3, 0.22, 0.35);
+        } else {
+            matrices.translate(-0.25, 0.22, 0.35);
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-80.0f));
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(90.0f));
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(0.0f));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(m));
+        }
     }
 
     private void applySwingOffset(MatrixStack matrices, Arm arm, float swingProgress) {
@@ -393,7 +419,7 @@ public class HeldItemRenderer {
                     matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float)i * 10.0f));
                 }
             }
-            this.renderItem(player, item, bl3 ? ModelTransformation.Mode.FIRST_PERSON_RIGHT_HAND : ModelTransformation.Mode.FIRST_PERSON_LEFT_HAND, !bl3, matrices, vertexConsumers, light);
+            this.renderItem(player, item, bl3 ? ModelTransformationMode.FIRST_PERSON_RIGHT_HAND : ModelTransformationMode.FIRST_PERSON_LEFT_HAND, !bl3, matrices, vertexConsumers, light);
         } else {
             boolean bl2;
             boolean bl3 = bl2 = arm == Arm.RIGHT;
@@ -459,6 +485,9 @@ public class HeldItemRenderer {
                         matrices.multiply(RotationAxis.NEGATIVE_Y.rotationDegrees((float)l * 45.0f));
                         break;
                     }
+                    case BRUSH: {
+                        this.applyBrushTransformation(matrices, tickDelta, arm, item, equipProgress);
+                    }
                 }
             } else if (player.isUsingRiptide()) {
                 this.applyEquipOffset(matrices, arm, equipProgress);
@@ -475,7 +504,7 @@ public class HeldItemRenderer {
                 this.applyEquipOffset(matrices, arm, equipProgress);
                 this.applySwingOffset(matrices, arm, swingProgress);
             }
-            this.renderItem(player, item, bl2 ? ModelTransformation.Mode.FIRST_PERSON_RIGHT_HAND : ModelTransformation.Mode.FIRST_PERSON_LEFT_HAND, !bl2, matrices, vertexConsumers, light);
+            this.renderItem(player, item, bl2 ? ModelTransformationMode.FIRST_PERSON_RIGHT_HAND : ModelTransformationMode.FIRST_PERSON_LEFT_HAND, !bl2, matrices, vertexConsumers, light);
         }
         matrices.pop();
     }

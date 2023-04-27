@@ -28,7 +28,7 @@ import net.minecraft.world.event.GameEvent;
 
 public class PumpkinBlock
 extends GourdBlock {
-    protected PumpkinBlock(AbstractBlock.Settings settings) {
+    public PumpkinBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

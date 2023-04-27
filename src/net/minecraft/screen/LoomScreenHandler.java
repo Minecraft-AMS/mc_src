@@ -172,7 +172,7 @@ extends ScreenHandler {
         ItemStack itemStack2 = this.dyeSlot.getStack();
         ItemStack itemStack3 = this.patternSlot.getStack();
         if (itemStack.isEmpty() || itemStack2.isEmpty()) {
-            this.outputSlot.setStack(ItemStack.EMPTY);
+            this.outputSlot.setStackNoCallbacks(ItemStack.EMPTY);
             this.bannerPatterns = List.of();
             this.selectedPattern.set(-1);
             return;
@@ -204,12 +204,12 @@ extends ScreenHandler {
             boolean bl3 = bl2 = nbtCompound != null && nbtCompound.contains("Patterns", 9) && !itemStack.isEmpty() && nbtCompound.getList("Patterns", 10).size() >= 6;
             if (bl2) {
                 this.selectedPattern.set(-1);
-                this.outputSlot.setStack(ItemStack.EMPTY);
+                this.outputSlot.setStackNoCallbacks(ItemStack.EMPTY);
             } else {
                 this.updateOutputSlot(registryEntry);
             }
         } else {
-            this.outputSlot.setStack(ItemStack.EMPTY);
+            this.outputSlot.setStackNoCallbacks(ItemStack.EMPTY);
         }
         this.sendContentUpdates();
     }
@@ -255,8 +255,8 @@ extends ScreenHandler {
     }
 
     @Override
-    public void close(PlayerEntity player) {
-        super.close(player);
+    public void onClosed(PlayerEntity player) {
+        super.onClosed(player);
         this.context.run((world, pos) -> this.dropInventory(player, this.input));
     }
 
@@ -286,7 +286,7 @@ extends ScreenHandler {
             BlockItem.setBlockEntityNbt(itemStack3, BlockEntityType.BANNER, nbtCompound);
         }
         if (!ItemStack.areEqual(itemStack3, this.outputSlot.getStack())) {
-            this.outputSlot.setStack(itemStack3);
+            this.outputSlot.setStackNoCallbacks(itemStack3);
         }
     }
 

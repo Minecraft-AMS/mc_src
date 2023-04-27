@@ -55,12 +55,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.RecipeManager;
-import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -178,7 +177,7 @@ extends World {
     }
 
     public ClientWorld(ClientPlayNetworkHandler networkHandler, Properties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> dimensionTypeEntry, int loadDistance, int simulationDistance, Supplier<Profiler> profiler, WorldRenderer worldRenderer, boolean debugWorld, long seed) {
-        super(properties, registryRef, dimensionTypeEntry, profiler, true, debugWorld, seed, 1000000);
+        super(properties, registryRef, networkHandler.getRegistryManager(), dimensionTypeEntry, profiler, true, debugWorld, seed, 1000000);
         this.networkHandler = networkHandler;
         this.chunkManager = new ClientChunkManager(this, loadDistance);
         this.clientWorldProperties = properties;
@@ -527,11 +526,6 @@ extends World {
     }
 
     @Override
-    public DynamicRegistryManager getRegistryManager() {
-        return this.networkHandler.getRegistryManager();
-    }
-
-    @Override
     public void updateListeners(BlockPos pos, BlockState oldState, BlockState newState, int flags) {
         this.worldRenderer.updateBlock(this, pos, oldState, newState, flags);
     }
@@ -607,7 +601,7 @@ extends World {
         return this.getRegistryManager().get(RegistryKeys.BIOME).entryOf(BiomeKeys.PLAINS);
     }
 
-    public float getStarBrightness(float tickDelta) {
+    public float getSkyBrightness(float tickDelta) {
         float f = this.getSkyAngle(tickDelta);
         float g = 1.0f - (MathHelper.cos(f * ((float)Math.PI * 2)) * 2.0f + 0.2f);
         g = MathHelper.clamp(g, 0.0f, 1.0f);

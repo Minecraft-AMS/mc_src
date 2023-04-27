@@ -56,6 +56,7 @@ public final class Material {
     public static final Material POWDER_SNOW = new Builder(MapColor.WHITE).notSolid().allowsMovement().build();
     public static final Material FROGSPAWN = new Builder(MapColor.WATER_BLUE).allowsMovement().lightPassesThrough().notSolid().destroyedByPiston().build();
     public static final Material FROGLIGHT = new Builder(MapColor.CLEAR).build();
+    public static final Material DECORATED_POT = new Builder(MapColor.TERRACOTTA_RED).destroyedByPiston().build();
     private final MapColor color;
     private final PistonBehavior pistonBehavior;
     private final boolean blocksMovement;
@@ -142,7 +143,7 @@ public final class Material {
             return this;
         }
 
-        protected Builder burnable() {
+        public Builder burnable() {
             this.burnable = true;
             return this;
         }
@@ -152,12 +153,12 @@ public final class Material {
             return this;
         }
 
-        protected Builder destroyedByPiston() {
+        public Builder destroyedByPiston() {
             this.pistonBehavior = PistonBehavior.DESTROY;
             return this;
         }
 
-        protected Builder blocksPistons() {
+        public Builder blocksPistons() {
             this.pistonBehavior = PistonBehavior.BLOCK;
             return this;
         }

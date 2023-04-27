@@ -23,7 +23,7 @@ extends BlockStateProvider {
 
     private static DataResult<WeightedBlockStateProvider> wrap(DataPool<BlockState> states) {
         if (states.isEmpty()) {
-            return DataResult.error((String)"WeightedStateProvider with no states");
+            return DataResult.error(() -> "WeightedStateProvider with no states");
         }
         return DataResult.success((Object)new WeightedBlockStateProvider(states));
     }

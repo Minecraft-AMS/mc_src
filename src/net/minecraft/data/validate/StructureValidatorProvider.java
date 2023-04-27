@@ -30,24 +30,13 @@ implements SnbtProvider.Tweaker {
     }
 
     public static NbtCompound update(String name, NbtCompound nbt) {
-        return StructureValidatorProvider.internalUpdate(name, StructureValidatorProvider.addDataVersion(nbt));
-    }
-
-    private static NbtCompound addDataVersion(NbtCompound nbt) {
-        if (!nbt.contains("DataVersion", 99)) {
-            nbt.putInt("DataVersion", 500);
-        }
-        return nbt;
-    }
-
-    private static NbtCompound internalUpdate(String name, NbtCompound nbt) {
         StructureTemplate structureTemplate = new StructureTemplate();
-        int i = nbt.getInt("DataVersion");
-        int j = 3200;
-        if (i < 3200) {
-            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", new Object[]{i, 3200, name});
+        int i = NbtHelper.getDataVersion(nbt, 500);
+        int j = 3318;
+        if (i < 3318) {
+            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", new Object[]{i, 3318, name});
         }
-        NbtCompound nbtCompound = NbtHelper.update(Schemas.getFixer(), DataFixTypes.STRUCTURE, nbt, i);
+        NbtCompound nbtCompound = DataFixTypes.STRUCTURE.update(Schemas.getFixer(), nbt, i);
         structureTemplate.readNbt(Registries.BLOCK.getReadOnlyWrapper(), nbtCompound);
         return structureTemplate.writeNbt(new NbtCompound());
     }

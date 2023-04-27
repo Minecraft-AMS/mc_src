@@ -34,11 +34,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.BookScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.PageTurnWidget;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.SelectionManager;
 import net.minecraft.client.util.math.MatrixStack;
@@ -411,12 +406,10 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         this.setFocused(null);
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, BookScreen.BOOK_TEXTURE);
         int i = (this.width - 192) / 2;
         int j = 2;
-        this.drawTexture(matrices, i, 2, 0, 0, 192, 192);
+        BookEditScreen.drawTexture(matrices, i, 2, 0, 0, 192, 192);
         if (this.signing) {
             boolean bl = this.tickCounter / 6 % 2 == 0;
             OrderedText orderedText = OrderedText.concat(OrderedText.styledForwardsVisitedString(this.title, Style.EMPTY), bl ? BLACK_CURSOR_TEXT : GRAY_CURSOR_TEXT);
@@ -426,7 +419,7 @@ extends Screen {
             this.textRenderer.draw(matrices, orderedText, (float)(i + 36 + (114 - l) / 2), 50.0f, 0);
             int m = this.textRenderer.getWidth(this.signedByText);
             this.textRenderer.draw(matrices, this.signedByText, (float)(i + 36 + (114 - m) / 2), 60.0f, 0);
-            this.textRenderer.drawTrimmed(FINALIZE_WARNING_TEXT, i + 36, 82, 114, 0);
+            this.textRenderer.drawTrimmed(matrices, FINALIZE_WARNING_TEXT, i + 36, 82, 114, 0);
         } else {
             int n = this.textRenderer.getWidth(this.pageIndicatorText);
             this.textRenderer.draw(matrices, this.pageIndicatorText, (float)(i - n + 192 - 44), 18.0f, 0);
@@ -434,7 +427,7 @@ extends Screen {
             for (Line line : pageContent.lines) {
                 this.textRenderer.draw(matrices, line.text, (float)line.x, (float)line.y, -16777216);
             }
-            this.drawSelection(pageContent.selectionRectangles);
+            this.drawSelection(matrices, pageContent.selectionRectangles);
             this.drawCursor(matrices, pageContent.position, pageContent.atEnd);
         }
         super.render(matrices, mouseX, mouseY, delta);
@@ -451,28 +444,17 @@ extends Screen {
         }
     }
 
-    private void drawSelection(Rect2i[] selectionRectangles) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionProgram);
-        RenderSystem.setShaderColor(0.0f, 0.0f, 255.0f, 255.0f);
-        RenderSystem.disableTexture();
+    private void drawSelection(MatrixStack matrices, Rect2i[] selectionRectangles) {
         RenderSystem.enableColorLogicOp();
         RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
-        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
         for (Rect2i rect2i : selectionRectangles) {
             int i = rect2i.getX();
             int j = rect2i.getY();
             int k = i + rect2i.getWidth();
             int l = j + rect2i.getHeight();
-            bufferBuilder.vertex(i, l, 0.0).next();
-            bufferBuilder.vertex(k, l, 0.0).next();
-            bufferBuilder.vertex(k, j, 0.0).next();
-            bufferBuilder.vertex(i, j, 0.0).next();
+            BookEditScreen.fill(matrices, i, j, k, l, -16776961);
         }
-        tessellator.draw();
         RenderSystem.disableColorLogicOp();
-        RenderSystem.enableTexture();
     }
 
     private Position screenPositionToAbsolutePosition(Position position) {

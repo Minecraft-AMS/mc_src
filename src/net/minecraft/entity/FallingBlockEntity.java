@@ -30,8 +30,8 @@ import net.minecraft.item.AutomaticItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.network.Packet;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
@@ -40,6 +40,7 @@ import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Properties;
+import net.minecraft.text.Text;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -223,7 +224,7 @@ extends Entity {
             damageSource2 = landingBlock.getDamageSource(this);
         } else {
             predicate = EntityPredicates.EXCEPT_SPECTATOR;
-            damageSource2 = DamageSource.fallingBlock(this);
+            damageSource2 = this.getDamageSources().fallingBlock(this);
         }
         float f = Math.min(MathHelper.floor((float)i * this.fallHurtAmount), this.fallHurtMax);
         this.world.getOtherEntities(this, this.getBoundingBox(), predicate).forEach(entity -> entity.damage(damageSource2, f));
@@ -280,6 +281,10 @@ extends Entity {
         this.fallHurtMax = fallHurtMax;
     }
 
+    public void setDestroyedOnLanding() {
+        this.destroyedOnLanding = true;
+    }
+
     @Override
     public boolean doesRenderOnFire() {
         return false;
@@ -293,6 +298,11 @@ extends Entity {
 
     public BlockState getBlockState() {
         return this.block;
+    }
+
+    @Override
+    protected Text getDefaultName() {
+        return Text.translatable("entity.minecraft.falling_block_type", this.block.getBlock().getName());
     }
 
     @Override

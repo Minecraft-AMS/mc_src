@@ -53,7 +53,7 @@ public class NetworkEncryptionUtils {
             return DataResult.success((Object)NetworkEncryptionUtils.decodeRsaPublicKeyPem(key));
         }
         catch (NetworkEncryptionException networkEncryptionException) {
-            return DataResult.error((String)networkEncryptionException.getMessage());
+            return DataResult.error(networkEncryptionException::getMessage);
         }
     }, NetworkEncryptionUtils::encodeRsaPublicKey);
     public static final Codec<PrivateKey> RSA_PRIVATE_KEY_CODEC = Codec.STRING.comapFlatMap(key -> {
@@ -61,7 +61,7 @@ public class NetworkEncryptionUtils {
             return DataResult.success((Object)NetworkEncryptionUtils.decodeRsaPrivateKeyPem(key));
         }
         catch (NetworkEncryptionException networkEncryptionException) {
-            return DataResult.error((String)networkEncryptionException.getMessage());
+            return DataResult.error(networkEncryptionException::getMessage);
         }
     }, NetworkEncryptionUtils::encodeRsaPrivateKey);
 

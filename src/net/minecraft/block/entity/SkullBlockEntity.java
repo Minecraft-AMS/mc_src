@@ -21,7 +21,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.util.ApiServices;
 import net.minecraft.util.Identifier;
@@ -153,14 +153,29 @@ extends BlockEntity {
         userCache.findByNameAsync(owner.getName(), profile -> Util.getMainWorkerExecutor().execute(() -> Util.ifPresentOrElse(profile, profile -> {
             Property property = (Property)Iterables.getFirst((Iterable)profile.getProperties().get((Object)"textures"), null);
             if (property == null) {
-                profile = sessionService.fillProfileProperties(profile, true);
+                MinecraftSessionService minecraftSessionService = sessionService;
+                if (minecraftSessionService == null) {
+                    return;
+                }
+                profile = minecraftSessionService.fillProfileProperties(profile, true);
             }
             GameProfile gameProfile = profile;
-            executor.execute(() -> {
-                userCache.add(gameProfile);
-                callback.accept(gameProfile);
-            });
-        }, () -> executor.execute(() -> callback.accept(owner)))));
+            Executor executor = executor;
+            if (executor != null) {
+                executor.execute(() -> {
+                    UserCache userCache = userCache;
+                    if (userCache != null) {
+                        userCache.add(gameProfile);
+                        callback.accept(gameProfile);
+                    }
+                });
+            }
+        }, () -> {
+            Executor executor = executor;
+            if (executor != null) {
+                executor.execute(() -> callback.accept(owner));
+            }
+        })));
     }
 
     public /* synthetic */ Packet toUpdatePacket() {

@@ -28,7 +28,7 @@ extends AbstractSkullBlock {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(4.0, 0.0, 4.0, 12.0, 8.0, 12.0);
     protected static final VoxelShape PIGLIN_SHAPE = Block.createCuboidShape(3.0, 0.0, 3.0, 13.0, 8.0, 13.0);
 
-    protected SkullBlock(SkullType skullType, AbstractBlock.Settings settings) {
+    public SkullBlock(SkullType skullType, AbstractBlock.Settings settings) {
         super(skullType, settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(ROTATION, 0));
     }
@@ -48,7 +48,7 @@ extends AbstractSkullBlock {
 
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return (BlockState)this.getDefaultState().with(ROTATION, RotationPropertyHelper.fromYaw(ctx.getPlayerYaw() + 180.0f));
+        return (BlockState)this.getDefaultState().with(ROTATION, RotationPropertyHelper.fromYaw(ctx.getPlayerYaw()));
     }
 
     @Override

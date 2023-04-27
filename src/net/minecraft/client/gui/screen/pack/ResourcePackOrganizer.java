@@ -19,6 +19,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.SimpleOption;
 import net.minecraft.resource.ResourcePackCompatibility;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
@@ -54,8 +56,12 @@ public class ResourcePackOrganizer {
         return this.enabledPacks.stream().map(pack -> new EnabledPack((ResourcePackProfile)pack));
     }
 
-    public void apply() {
+    void refreshEnabledProfiles() {
         this.resourcePackManager.setEnabledProfiles((Collection)Lists.reverse(this.enabledPacks).stream().map(ResourcePackProfile::getName).collect(ImmutableList.toImmutableList()));
+    }
+
+    public void apply() {
+        this.refreshEnabledProfiles();
         this.applier.accept(this.resourcePackManager);
     }
 
@@ -155,6 +161,11 @@ public class ResourcePackOrganizer {
         }
 
         @Override
+        public String getName() {
+            return this.profile.getName();
+        }
+
+        @Override
         public Text getDisplayName() {
             return this.profile.getDisplayName();
         }
@@ -183,6 +194,15 @@ public class ResourcePackOrganizer {
             this.getCurrentList().remove(this.profile);
             this.profile.getInitialPosition().insert(this.getOppositeList(), this.profile, Function.identity(), true);
             ResourcePackOrganizer.this.updateCallback.run();
+            ResourcePackOrganizer.this.refreshEnabledProfiles();
+            this.toggleHighContrastOption();
+        }
+
+        private void toggleHighContrastOption() {
+            if (this.profile.getName().equals("high_contrast")) {
+                SimpleOption<Boolean> simpleOption;
+                simpleOption.setValue((simpleOption = MinecraftClient.getInstance().options.getHighContrast()).getValue() == false);
+            }
         }
 
         protected void move(int offset) {
@@ -223,6 +243,8 @@ public class ResourcePackOrganizer {
         public Identifier getIconId();
 
         public ResourcePackCompatibility getCompatibility();
+
+        public String getName();
 
         public Text getDisplayName();
 

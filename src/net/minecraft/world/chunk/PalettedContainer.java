@@ -215,7 +215,7 @@ ReadableContainer<T> {
         } else {
             Optional<LongStream> optional = serialized.storage();
             if (optional.isEmpty()) {
-                return DataResult.error((String)"Missing values for non-zero storage");
+                return DataResult.error(() -> "Missing values for non-zero storage");
             }
             long[] ls = optional.get().toArray();
             try {
@@ -231,7 +231,7 @@ ReadableContainer<T> {
                 }
             }
             catch (PackedIntegerArray.InvalidLengthException invalidLengthException) {
-                return DataResult.error((String)("Failed to read PalettedContainer: " + invalidLengthException.getMessage()));
+                return DataResult.error(() -> "Failed to read PalettedContainer: " + invalidLengthException.getMessage());
             }
         }
         return DataResult.success(new PalettedContainer<T>(idList, paletteProvider, dataProvider, paletteStorage, list));

@@ -8,6 +8,7 @@
  *  com.google.common.collect.ImmutableMap
  *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.Object2ByteLinkedOpenHashMap
+ *  net.fabricmc.fabric.api.block.v1.FabricBlock
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -22,6 +23,7 @@ import it.unimi.dsi.fastutil.objects.Object2ByteLinkedOpenHashMap;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.fabricmc.fabric.api.block.v1.FabricBlock;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
@@ -37,7 +39,6 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
@@ -82,7 +83,8 @@ import org.slf4j.Logger;
 
 public class Block
 extends AbstractBlock
-implements ItemConvertible {
+implements ItemConvertible,
+FabricBlock {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final RegistryEntry.Reference<Block> registryEntry = Registries.BLOCK.createEntry(this);
     public static final IdList<BlockState> STATE_IDS = new IdList();
@@ -258,7 +260,7 @@ implements ItemConvertible {
         return (Boolean)FULL_CUBE_SHAPE_CACHE.getUnchecked((Object)shape);
     }
 
-    public boolean isTranslucent(BlockState state, BlockView world, BlockPos pos) {
+    public boolean isTransparent(BlockState state, BlockView world, BlockPos pos) {
         return !Block.isShapeFullCube(state.getOutlineShape(world, pos)) && state.getFluidState().isEmpty();
     }
 
@@ -280,7 +282,7 @@ implements ItemConvertible {
 
     public static void dropStacks(BlockState state, LootContext.Builder lootContext) {
         ServerWorld serverWorld = lootContext.getWorld();
-        BlockPos blockPos = new BlockPos(lootContext.get(LootContextParameters.ORIGIN));
+        BlockPos blockPos = BlockPos.ofFloored(lootContext.get(LootContextParameters.ORIGIN));
         state.getDroppedStacks(lootContext).forEach(stack -> Block.dropStack((World)serverWorld, blockPos, stack));
         state.onStacksDropped(serverWorld, blockPos, ItemStack.EMPTY, true);
     }
@@ -299,34 +301,34 @@ implements ItemConvertible {
         }
     }
 
-    public static void dropStacks(BlockState state, World world, BlockPos pos, @Nullable BlockEntity blockEntity, Entity entity, ItemStack stack2) {
+    public static void dropStacks(BlockState state, World world, BlockPos pos, @Nullable BlockEntity blockEntity, Entity entity, ItemStack tool) {
         if (world instanceof ServerWorld) {
-            Block.getDroppedStacks(state, (ServerWorld)world, pos, blockEntity, entity, stack2).forEach(stack -> Block.dropStack(world, pos, stack));
-            state.onStacksDropped((ServerWorld)world, pos, stack2, true);
+            Block.getDroppedStacks(state, (ServerWorld)world, pos, blockEntity, entity, tool).forEach(stack -> Block.dropStack(world, pos, stack));
+            state.onStacksDropped((ServerWorld)world, pos, tool, true);
         }
     }
 
     public static void dropStack(World world, BlockPos pos, ItemStack stack) {
-        float f = EntityType.ITEM.getHeight() / 2.0f;
-        double d = (double)((float)pos.getX() + 0.5f) + MathHelper.nextDouble(world.random, -0.25, 0.25);
-        double e = (double)((float)pos.getY() + 0.5f) + MathHelper.nextDouble(world.random, -0.25, 0.25) - (double)f;
-        double g = (double)((float)pos.getZ() + 0.5f) + MathHelper.nextDouble(world.random, -0.25, 0.25);
-        Block.dropStack(world, () -> new ItemEntity(world, d, e, g, stack), stack);
+        double d = (double)EntityType.ITEM.getHeight() / 2.0;
+        double e = (double)pos.getX() + 0.5 + MathHelper.nextDouble(world.random, -0.25, 0.25);
+        double f = (double)pos.getY() + 0.5 + MathHelper.nextDouble(world.random, -0.25, 0.25) - d;
+        double g = (double)pos.getZ() + 0.5 + MathHelper.nextDouble(world.random, -0.25, 0.25);
+        Block.dropStack(world, () -> new ItemEntity(world, e, f, g, stack), stack);
     }
 
     public static void dropStack(World world, BlockPos pos, Direction direction, ItemStack stack) {
         int i = direction.getOffsetX();
         int j = direction.getOffsetY();
         int k = direction.getOffsetZ();
-        float f = EntityType.ITEM.getWidth() / 2.0f;
-        float g = EntityType.ITEM.getHeight() / 2.0f;
-        double d = (double)((float)pos.getX() + 0.5f) + (i == 0 ? MathHelper.nextDouble(world.random, -0.25, 0.25) : (double)((float)i * (0.5f + f)));
-        double e = (double)((float)pos.getY() + 0.5f) + (j == 0 ? MathHelper.nextDouble(world.random, -0.25, 0.25) : (double)((float)j * (0.5f + g))) - (double)g;
-        double h = (double)((float)pos.getZ() + 0.5f) + (k == 0 ? MathHelper.nextDouble(world.random, -0.25, 0.25) : (double)((float)k * (0.5f + f)));
+        double d = (double)EntityType.ITEM.getWidth() / 2.0;
+        double e = (double)EntityType.ITEM.getHeight() / 2.0;
+        double f = (double)pos.getX() + 0.5 + (i == 0 ? MathHelper.nextDouble(world.random, -0.25, 0.25) : (double)i * (0.5 + d));
+        double g = (double)pos.getY() + 0.5 + (j == 0 ? MathHelper.nextDouble(world.random, -0.25, 0.25) : (double)j * (0.5 + e)) - e;
+        double h = (double)pos.getZ() + 0.5 + (k == 0 ? MathHelper.nextDouble(world.random, -0.25, 0.25) : (double)k * (0.5 + d));
         double l = i == 0 ? MathHelper.nextDouble(world.random, -0.1, 0.1) : (double)i * 0.1;
         double m = j == 0 ? MathHelper.nextDouble(world.random, 0.0, 0.1) : (double)j * 0.1 + 0.1;
         double n = k == 0 ? MathHelper.nextDouble(world.random, -0.1, 0.1) : (double)k * 0.1;
-        Block.dropStack(world, () -> new ItemEntity(world, d, e, h, stack, l, m, n), stack);
+        Block.dropStack(world, () -> new ItemEntity(world, f, g, h, stack, l, m, n), stack);
     }
 
     private static void dropStack(World world, Supplier<ItemEntity> itemEntitySupplier, ItemStack stack) {
@@ -359,10 +361,10 @@ implements ItemConvertible {
         return this.getDefaultState();
     }
 
-    public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack stack) {
+    public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool) {
         player.incrementStat(Stats.MINED.getOrCreateStat(this));
         player.addExhaustion(0.005f);
-        Block.dropStacks(state, world, pos, blockEntity, player, stack);
+        Block.dropStacks(state, world, pos, blockEntity, player, tool);
     }
 
     public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
@@ -384,7 +386,7 @@ implements ItemConvertible {
     }
 
     public void onLandedUpon(World world, BlockState state, BlockPos pos, Entity entity, float fallDistance) {
-        entity.handleFallDamage(fallDistance, 1.0f, DamageSource.FALL);
+        entity.handleFallDamage(fallDistance, 1.0f, entity.getDamageSources().fall());
     }
 
     public void onEntityLand(BlockView world, Entity entity) {

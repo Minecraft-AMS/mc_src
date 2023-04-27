@@ -43,7 +43,7 @@ implements Waterloggable {
     public static final BooleanProperty WATERLOGGED;
     public static final BooleanProperty BOTTOM;
 
-    protected ScaffoldingBlock(AbstractBlock.Settings settings) {
+    public ScaffoldingBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(DISTANCE, 7)).with(WATERLOGGED, false)).with(BOTTOM, false));
     }

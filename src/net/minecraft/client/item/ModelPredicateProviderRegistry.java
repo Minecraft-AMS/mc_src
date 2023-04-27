@@ -18,6 +18,7 @@ import net.minecraft.client.item.ClampedModelPredicateProvider;
 import net.minecraft.client.item.CompassAnglePredicateProvider;
 import net.minecraft.client.item.ModelPredicateProvider;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.data.client.ItemModelGenerator;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -29,8 +30,13 @@ import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.item.trim.ArmorTrim;
+import net.minecraft.item.trim.ArmorTrimMaterial;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -47,16 +53,16 @@ public class ModelPredicateProviderRegistry {
     private static final ClampedModelPredicateProvider DAMAGE_PROVIDER = (stack, world, entity, seed) -> MathHelper.clamp((float)stack.getDamage() / (float)stack.getMaxDamage(), 0.0f, 1.0f);
     private static final Map<Item, Map<Identifier, ModelPredicateProvider>> ITEM_SPECIFIC = Maps.newHashMap();
 
-    private static ClampedModelPredicateProvider register(Identifier id, ClampedModelPredicateProvider provider) {
+    public static ClampedModelPredicateProvider register(Identifier id, ClampedModelPredicateProvider provider) {
         GLOBAL.put(id, provider);
         return provider;
     }
 
-    private static void registerCustomModelData(ModelPredicateProvider provider) {
+    public static void registerCustomModelData(ModelPredicateProvider provider) {
         GLOBAL.put(new Identifier("custom_model_data"), provider);
     }
 
-    private static void register(Item item, Identifier id, ClampedModelPredicateProvider provider) {
+    public static void register(Item item, Identifier id, ClampedModelPredicateProvider provider) {
         ITEM_SPECIFIC.computeIfAbsent(item, key -> Maps.newHashMap()).put(id, provider);
     }
 
@@ -84,6 +90,19 @@ public class ModelPredicateProviderRegistry {
     static {
         ModelPredicateProviderRegistry.register(new Identifier("lefthanded"), (stack, world, entity, seed) -> entity == null || entity.getMainArm() == Arm.RIGHT ? 0.0f : 1.0f);
         ModelPredicateProviderRegistry.register(new Identifier("cooldown"), (stack, world, entity, seed) -> entity instanceof PlayerEntity ? ((PlayerEntity)entity).getItemCooldownManager().getCooldownProgress(stack.getItem(), 0.0f) : 0.0f);
+        ClampedModelPredicateProvider clampedModelPredicateProvider = (stack, world, entity, seed) -> {
+            if (!stack.isIn(ItemTags.TRIMMABLE_ARMOR)) {
+                return Float.NEGATIVE_INFINITY;
+            }
+            if (world == null) {
+                return 0.0f;
+            }
+            if (!world.getEnabledFeatures().contains(FeatureFlags.UPDATE_1_20)) {
+                return Float.NEGATIVE_INFINITY;
+            }
+            return ArmorTrim.getTrim(world.getRegistryManager(), stack).map(ArmorTrim::getMaterial).map(RegistryEntry::value).map(ArmorTrimMaterial::itemModelIndex).orElse(Float.valueOf(0.0f)).floatValue();
+        };
+        ModelPredicateProviderRegistry.register(ItemModelGenerator.TRIM_TYPE, clampedModelPredicateProvider);
         ModelPredicateProviderRegistry.registerCustomModelData((stack, world, entity, seed) -> stack.hasNbt() ? (float)stack.getNbt().getInt(CUSTOM_MODEL_DATA_KEY) : 0.0f);
         ModelPredicateProviderRegistry.register(Items.BOW, new Identifier("pull"), (stack, world, entity, seed) -> {
             if (entity == null) {
@@ -93,6 +112,12 @@ public class ModelPredicateProviderRegistry {
                 return 0.0f;
             }
             return (float)(stack.getMaxUseTime() - entity.getItemUseTimeLeft()) / 20.0f;
+        });
+        ModelPredicateProviderRegistry.register(Items.BRUSH, new Identifier("brushing"), (stack, world, entity, seed) -> {
+            if (entity == null || entity.getActiveItem() != stack) {
+                return 0.0f;
+            }
+            return (float)(entity.getItemUseTimeLeft() % 10) / 10.0f;
         });
         ModelPredicateProviderRegistry.register(Items.BOW, new Identifier("pulling"), (stack, world, entity, seed) -> entity != null && entity.isUsingItem() && entity.getActiveItem() == stack ? 1.0f : 0.0f);
         ModelPredicateProviderRegistry.register(Items.BUNDLE, new Identifier("filled"), (stack, world, entity, seed) -> BundleItem.getAmountFilled(stack));
@@ -154,8 +179,8 @@ public class ModelPredicateProviderRegistry {
             return (float)(stack.getMaxUseTime() - entity.getItemUseTimeLeft()) / (float)CrossbowItem.getPullTime(stack);
         });
         ModelPredicateProviderRegistry.register(Items.CROSSBOW, new Identifier("pulling"), (stack, world, entity, seed) -> entity != null && entity.isUsingItem() && entity.getActiveItem() == stack && !CrossbowItem.isCharged(stack) ? 1.0f : 0.0f);
-        ModelPredicateProviderRegistry.register(Items.CROSSBOW, new Identifier("charged"), (stack, world, entity, seed) -> entity != null && CrossbowItem.isCharged(stack) ? 1.0f : 0.0f);
-        ModelPredicateProviderRegistry.register(Items.CROSSBOW, new Identifier("firework"), (stack, world, entity, seed) -> entity != null && CrossbowItem.isCharged(stack) && CrossbowItem.hasProjectile(stack, Items.FIREWORK_ROCKET) ? 1.0f : 0.0f);
+        ModelPredicateProviderRegistry.register(Items.CROSSBOW, new Identifier("charged"), (stack, world, entity, seed) -> CrossbowItem.isCharged(stack) ? 1.0f : 0.0f);
+        ModelPredicateProviderRegistry.register(Items.CROSSBOW, new Identifier("firework"), (stack, world, entity, seed) -> CrossbowItem.isCharged(stack) && CrossbowItem.hasProjectile(stack, Items.FIREWORK_ROCKET) ? 1.0f : 0.0f);
         ModelPredicateProviderRegistry.register(Items.ELYTRA, new Identifier("broken"), (stack, world, entity, seed) -> ElytraItem.isUsable(stack) ? 0.0f : 1.0f);
         ModelPredicateProviderRegistry.register(Items.FISHING_ROD, new Identifier("cast"), (stack, world, entity, seed) -> {
             boolean bl2;
@@ -184,7 +209,7 @@ public class ModelPredicateProviderRegistry {
             }
             return 1.0f;
         });
-        ModelPredicateProviderRegistry.register(Items.GOAT_HORN, new Identifier("tooting"), (itemStack, clientWorld, livingEntity, i) -> livingEntity != null && livingEntity.isUsingItem() && livingEntity.getActiveItem() == itemStack ? 1.0f : 0.0f);
+        ModelPredicateProviderRegistry.register(Items.GOAT_HORN, new Identifier("tooting"), (stack, world, entity, seed) -> entity != null && entity.isUsingItem() && entity.getActiveItem() == stack ? 1.0f : 0.0f);
     }
 }
 

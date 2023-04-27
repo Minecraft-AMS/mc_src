@@ -42,7 +42,7 @@ extends Block {
     }));
     protected final VoxelShape[] connectionsToShape;
 
-    protected ConnectingBlock(float radius, AbstractBlock.Settings settings) {
+    public ConnectingBlock(float radius, AbstractBlock.Settings settings) {
         super(settings);
         this.connectionsToShape = this.generateFacingsToShapeMap(radius);
     }
@@ -69,7 +69,7 @@ extends Block {
     }
 
     @Override
-    public boolean isTranslucent(BlockState state, BlockView world, BlockPos pos) {
+    public boolean isTransparent(BlockState state, BlockView world, BlockPos pos) {
         return false;
     }
 

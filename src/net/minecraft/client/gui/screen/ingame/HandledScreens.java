@@ -31,6 +31,7 @@ import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.gui.screen.ingame.GrindstoneScreen;
 import net.minecraft.client.gui.screen.ingame.HopperScreen;
 import net.minecraft.client.gui.screen.ingame.LecternScreen;
+import net.minecraft.client.gui.screen.ingame.LegacySmithingScreen;
 import net.minecraft.client.gui.screen.ingame.LoomScreen;
 import net.minecraft.client.gui.screen.ingame.MerchantScreen;
 import net.minecraft.client.gui.screen.ingame.ScreenHandlerProvider;
@@ -69,7 +70,7 @@ public class HandledScreens {
         return PROVIDERS.get(type);
     }
 
-    private static <M extends ScreenHandler, U extends Screen> void register(ScreenHandlerType<? extends M> type, Provider<M, U> provider) {
+    public static <M extends ScreenHandler, U extends Screen> void register(ScreenHandlerType<? extends M> type, Provider<M, U> provider) {
         Provider<M, U> provider2 = PROVIDERS.put(type, provider);
         if (provider2 != null) {
             throw new IllegalStateException("Duplicate registration for " + Registries.SCREEN_HANDLER.getId(type));
@@ -107,6 +108,7 @@ public class HandledScreens {
         HandledScreens.register(ScreenHandlerType.LOOM, LoomScreen::new);
         HandledScreens.register(ScreenHandlerType.MERCHANT, MerchantScreen::new);
         HandledScreens.register(ScreenHandlerType.SHULKER_BOX, ShulkerBoxScreen::new);
+        HandledScreens.register(ScreenHandlerType.LEGACY_SMITHING, LegacySmithingScreen::new);
         HandledScreens.register(ScreenHandlerType.SMITHING, SmithingScreen::new);
         HandledScreens.register(ScreenHandlerType.SMOKER, SmokerScreen::new);
         HandledScreens.register(ScreenHandlerType.CARTOGRAPHY_TABLE, CartographyTableScreen::new);
@@ -114,7 +116,7 @@ public class HandledScreens {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static interface Provider<T extends ScreenHandler, U extends Screen> {
+    public static interface Provider<T extends ScreenHandler, U extends Screen> {
         default public void open(Text name, ScreenHandlerType<T> type, MinecraftClient client, int id) {
             U screen = this.create(type.create(id, client.player.getInventory()), client.player.getInventory(), name);
             client.player.currentScreenHandler = ((ScreenHandlerProvider)screen).getScreenHandler();

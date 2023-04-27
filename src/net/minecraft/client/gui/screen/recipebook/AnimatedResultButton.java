@@ -21,7 +21,6 @@ import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookResults;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
@@ -70,11 +69,11 @@ extends ClickableWidget {
 
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        boolean bl;
         if (!Screen.hasControlDown()) {
             this.time += delta;
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
         int i = 29;
         if (!this.resultCollection.hasCraftableRecipes()) {
@@ -84,30 +83,27 @@ extends ClickableWidget {
         if (this.resultCollection.getResults(this.recipeBook.isFilteringCraftable(this.craftingScreenHandler)).size() > 1) {
             j += 25;
         }
-        boolean bl = this.bounce > 0.0f;
-        MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        boolean bl2 = bl = this.bounce > 0.0f;
         if (bl) {
             float f = 1.0f + 0.1f * (float)Math.sin(this.bounce / 15.0f * (float)Math.PI);
-            matrixStack.push();
-            matrixStack.translate(this.getX() + 8, this.getY() + 12, 0.0f);
-            matrixStack.scale(f, f, 1.0f);
-            matrixStack.translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
-            RenderSystem.applyModelViewMatrix();
+            matrices.push();
+            matrices.translate(this.getX() + 8, this.getY() + 12, 0.0f);
+            matrices.scale(f, f, 1.0f);
+            matrices.translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
             this.bounce -= delta;
         }
-        this.drawTexture(matrices, this.getX(), this.getY(), i, j, this.width, this.height);
+        AnimatedResultButton.drawTexture(matrices, this.getX(), this.getY(), i, j, this.width, this.height);
         List<Recipe<?>> list = this.getResults();
         this.currentResultIndex = MathHelper.floor(this.time / 30.0f) % list.size();
-        ItemStack itemStack = list.get(this.currentResultIndex).getOutput();
+        ItemStack itemStack = list.get(this.currentResultIndex).getOutput(this.resultCollection.getRegistryManager());
         int k = 4;
         if (this.resultCollection.hasSingleOutput() && this.getResults().size() > 1) {
-            minecraftClient.getItemRenderer().renderInGuiWithOverrides(itemStack, this.getX() + k + 1, this.getY() + k + 1, 0, 10);
+            minecraftClient.getItemRenderer().renderInGuiWithOverrides(matrices, itemStack, this.getX() + k + 1, this.getY() + k + 1, 0, 10);
             --k;
         }
-        minecraftClient.getItemRenderer().renderInGui(itemStack, this.getX() + k, this.getY() + k);
+        minecraftClient.getItemRenderer().renderInGui(matrices, itemStack, this.getX() + k, this.getY() + k);
         if (bl) {
-            matrixStack.pop();
-            RenderSystem.applyModelViewMatrix();
+            matrices.pop();
         }
     }
 
@@ -129,7 +125,7 @@ extends ClickableWidget {
     }
 
     public List<Text> getTooltip(Screen screen) {
-        ItemStack itemStack = this.getResults().get(this.currentResultIndex).getOutput();
+        ItemStack itemStack = this.getResults().get(this.currentResultIndex).getOutput(this.resultCollection.getRegistryManager());
         ArrayList list = Lists.newArrayList(screen.getTooltipFromItem(itemStack));
         if (this.resultCollection.getResults(this.recipeBook.isFilteringCraftable(this.craftingScreenHandler)).size() > 1) {
             list.add(MORE_RECIPES_TEXT);
@@ -139,7 +135,7 @@ extends ClickableWidget {
 
     @Override
     public void appendClickableNarrations(NarrationMessageBuilder builder) {
-        ItemStack itemStack = this.getResults().get(this.currentResultIndex).getOutput();
+        ItemStack itemStack = this.getResults().get(this.currentResultIndex).getOutput(this.resultCollection.getRegistryManager());
         builder.put(NarrationPart.TITLE, (Text)Text.translatable("narration.recipe", itemStack.getName()));
         if (this.resultCollection.getResults(this.recipeBook.isFilteringCraftable(this.craftingScreenHandler)).size() > 1) {
             builder.put(NarrationPart.USAGE, Text.translatable("narration.button.usage.hovered"), Text.translatable("narration.recipe.usage.more"));

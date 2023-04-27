@@ -46,7 +46,6 @@ extends DrawableHelper {
         for (ClientBossBar clientBossBar : this.bossBars.values()) {
             int k = i / 2 - 91;
             int l = j;
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.setShaderTexture(0, BARS_TEXTURE);
             this.renderBossBar(matrices, k, l, clientBossBar);
             Text text = clientBossBar.getName();
@@ -68,11 +67,10 @@ extends DrawableHelper {
     }
 
     private void renderBossBar(MatrixStack matrices, int x, int y, BossBar bossBar, int width, int height) {
-        this.drawTexture(matrices, x, y, 0, bossBar.getColor().ordinal() * 5 * 2 + height, width, 5);
+        BossBarHud.drawTexture(matrices, x, y, 0, bossBar.getColor().ordinal() * 5 * 2 + height, width, 5);
         if (bossBar.getStyle() != BossBar.Style.PROGRESS) {
             RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            this.drawTexture(matrices, x, y, 0, 80 + (bossBar.getStyle().ordinal() - 1) * 5 * 2 + height, width, 5);
+            BossBarHud.drawTexture(matrices, x, y, 0, 80 + (bossBar.getStyle().ordinal() - 1) * 5 * 2 + height, width, 5);
             RenderSystem.disableBlend();
         }
     }

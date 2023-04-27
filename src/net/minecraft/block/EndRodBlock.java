@@ -18,7 +18,7 @@ import net.minecraft.world.World;
 
 public class EndRodBlock
 extends RodBlock {
-    protected EndRodBlock(AbstractBlock.Settings settings) {
+    public EndRodBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.UP));
     }

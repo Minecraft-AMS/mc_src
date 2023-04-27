@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class SpawnerBlock
 extends BlockWithEntity {
-    protected SpawnerBlock(AbstractBlock.Settings settings) {
+    public SpawnerBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
@@ -49,8 +49,8 @@ extends BlockWithEntity {
     }
 
     @Override
-    public void onStacksDropped(BlockState state, ServerWorld world, BlockPos pos, ItemStack stack, boolean dropExperience) {
-        super.onStacksDropped(state, world, pos, stack, dropExperience);
+    public void onStacksDropped(BlockState state, ServerWorld world, BlockPos pos, ItemStack tool, boolean dropExperience) {
+        super.onStacksDropped(state, world, pos, tool, dropExperience);
         if (dropExperience) {
             int i = 15 + world.random.nextInt(15) + world.random.nextInt(15);
             this.dropExperience(world, pos, i);
@@ -71,7 +71,7 @@ extends BlockWithEntity {
         } else {
             tooltip.add(ScreenTexts.EMPTY);
             tooltip.add(Text.translatable("block.minecraft.spawner.desc1").formatted(Formatting.GRAY));
-            tooltip.add(Text.literal(" ").append(Text.translatable("block.minecraft.spawner.desc2").formatted(Formatting.BLUE)));
+            tooltip.add(ScreenTexts.space().append(Text.translatable("block.minecraft.spawner.desc2").formatted(Formatting.BLUE)));
         }
     }
 

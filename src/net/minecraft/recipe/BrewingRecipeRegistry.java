@@ -178,7 +178,7 @@ public class BrewingRecipeRegistry {
         BrewingRecipeRegistry.registerPotionRecipe(Potions.SLOW_FALLING, Items.REDSTONE, Potions.LONG_SLOW_FALLING);
     }
 
-    private static void registerItemRecipe(Item input, Item ingredient, Item output) {
+    public static void registerItemRecipe(Item input, Item ingredient, Item output) {
         if (!(input instanceof PotionItem)) {
             throw new IllegalArgumentException("Expected a potion, got: " + Registries.ITEM.getId(input));
         }
@@ -188,14 +188,14 @@ public class BrewingRecipeRegistry {
         ITEM_RECIPES.add(new Recipe<Item>(input, Ingredient.ofItems(ingredient), output));
     }
 
-    private static void registerPotionType(Item item) {
+    public static void registerPotionType(Item item) {
         if (!(item instanceof PotionItem)) {
             throw new IllegalArgumentException("Expected a potion, got: " + Registries.ITEM.getId(item));
         }
         POTION_TYPES.add(Ingredient.ofItems(item));
     }
 
-    private static void registerPotionRecipe(Potion input, Item item, Potion output) {
+    public static void registerPotionRecipe(Potion input, Item item, Potion output) {
         POTION_RECIPES.add(new Recipe<Potion>(input, Ingredient.ofItems(item), output));
     }
 

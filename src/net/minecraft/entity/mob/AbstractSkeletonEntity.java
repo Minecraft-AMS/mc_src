@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoField;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityGroup;
@@ -133,8 +134,9 @@ implements RangedAttackMob {
     @Override
     public void tickRiding() {
         super.tickRiding();
-        if (this.getVehicle() instanceof PathAwareEntity) {
-            PathAwareEntity pathAwareEntity = (PathAwareEntity)this.getVehicle();
+        Entity entity = this.getControllingVehicle();
+        if (entity instanceof PathAwareEntity) {
+            PathAwareEntity pathAwareEntity = (PathAwareEntity)entity;
             this.bodyYaw = pathAwareEntity.bodyYaw;
         }
     }
@@ -187,7 +189,7 @@ implements RangedAttackMob {
 
     @Override
     public void attack(LivingEntity target, float pullProgress) {
-        ItemStack itemStack = this.getArrowType(this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW)));
+        ItemStack itemStack = this.getProjectileType(this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW)));
         PersistentProjectileEntity persistentProjectileEntity = this.createArrowProjectile(itemStack, pullProgress);
         double d = target.getX() - this.getX();
         double e = target.getBodyY(0.3333333333333333) - persistentProjectileEntity.getY();

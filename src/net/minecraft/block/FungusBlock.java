@@ -32,7 +32,7 @@ implements Fertilizable {
     private final Block nylium;
     private final RegistryKey<ConfiguredFeature<?, ?>> featureKey;
 
-    protected FungusBlock(AbstractBlock.Settings settings, RegistryKey<ConfiguredFeature<?, ?>> featureKey, Block nylium) {
+    public FungusBlock(AbstractBlock.Settings settings, RegistryKey<ConfiguredFeature<?, ?>> featureKey, Block nylium) {
         super(settings);
         this.featureKey = featureKey;
         this.nylium = nylium;

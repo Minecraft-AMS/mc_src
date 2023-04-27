@@ -26,9 +26,10 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.ai.brain.sensor.SensorType;
 import net.minecraft.entity.ai.brain.task.BreedTask;
-import net.minecraft.entity.ai.brain.task.FollowMobWithIntervalTask;
+import net.minecraft.entity.ai.brain.task.FleeTask;
 import net.minecraft.entity.ai.brain.task.GoTowardsLookTargetTask;
 import net.minecraft.entity.ai.brain.task.LookAroundTask;
+import net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.ai.brain.task.RandomLookAroundTask;
 import net.minecraft.entity.ai.brain.task.RandomTask;
@@ -39,7 +40,6 @@ import net.minecraft.entity.ai.brain.task.TaskTriggerer;
 import net.minecraft.entity.ai.brain.task.TemptTask;
 import net.minecraft.entity.ai.brain.task.TemptationCooldownTask;
 import net.minecraft.entity.ai.brain.task.WaitTask;
-import net.minecraft.entity.ai.brain.task.WalkTask;
 import net.minecraft.entity.ai.brain.task.WalkTowardClosestAdultTask;
 import net.minecraft.entity.ai.brain.task.WanderAroundTask;
 import net.minecraft.entity.mob.PathAwareEntity;
@@ -59,7 +59,7 @@ public class CamelBrain {
     private static final ImmutableList<SensorType<? extends Sensor<? super CamelEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.CAMEL_TEMPTATIONS, SensorType.NEAREST_ADULT);
     private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.IS_PANICKING, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.WALK_TARGET, MemoryModuleType.LOOK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.PATH, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.TEMPTING_PLAYER, MemoryModuleType.TEMPTATION_COOLDOWN_TICKS, MemoryModuleType.GAZE_COOLDOWN_TICKS, MemoryModuleType.IS_TEMPTED, (Object[])new MemoryModuleType[]{MemoryModuleType.BREED_TARGET, MemoryModuleType.NEAREST_VISIBLE_ADULT});
 
-    protected static void method_45367(CamelEntity camelEntity, Random random) {
+    protected static void initialize(CamelEntity camel, Random random) {
     }
 
     public static Brain.Profile<CamelEntity> createProfile() {
@@ -80,7 +80,7 @@ public class CamelBrain {
     }
 
     private static void addIdleActivities(Brain<CamelEntity> brain) {
-        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<CamelEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, FollowMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, (Object)new BreedTask(EntityType.CAMEL, 1.0f)), (Object)Pair.of((Object)2, (Object)new TemptTask(entity -> Float.valueOf(2.5f))), (Object)Pair.of((Object)3, TaskTriggerer.runIf(Predicate.not(CamelEntity::isStationary), WalkTowardClosestAdultTask.create(WALK_TOWARD_ADULT_RANGE, 2.5f))), (Object)Pair.of((Object)4, (Object)new RandomLookAroundTask(UniformIntProvider.create(150, 250), 30.0f, 0.0f, 0.0f)), (Object)Pair.of((Object)5, new RandomTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), ImmutableList.of((Object)Pair.of(TaskTriggerer.runIf(Predicate.not(CamelEntity::isStationary), StrollTask.create(2.0f)), (Object)1), (Object)Pair.of(TaskTriggerer.runIf(Predicate.not(CamelEntity::isStationary), GoTowardsLookTargetTask.create(2.0f, 3)), (Object)1), (Object)Pair.of((Object)new SitOrStandTask(20), (Object)1), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1))))));
+        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<CamelEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, LookAtMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, (Object)new BreedTask(EntityType.CAMEL, 1.0f)), (Object)Pair.of((Object)2, (Object)new TemptTask(entity -> Float.valueOf(2.5f))), (Object)Pair.of((Object)3, TaskTriggerer.runIf(Predicate.not(CamelEntity::isStationary), WalkTowardClosestAdultTask.create(WALK_TOWARD_ADULT_RANGE, 2.5f))), (Object)Pair.of((Object)4, (Object)new RandomLookAroundTask(UniformIntProvider.create(150, 250), 30.0f, 0.0f, 0.0f)), (Object)Pair.of((Object)5, new RandomTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), ImmutableList.of((Object)Pair.of(TaskTriggerer.runIf(Predicate.not(CamelEntity::isStationary), StrollTask.create(2.0f)), (Object)1), (Object)Pair.of(TaskTriggerer.runIf(Predicate.not(CamelEntity::isStationary), GoTowardsLookTargetTask.create(2.0f, 3)), (Object)1), (Object)Pair.of((Object)new SitOrStandTask(20), (Object)1), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1))))));
     }
 
     public static void updateActivities(CamelEntity camel) {
@@ -92,7 +92,7 @@ public class CamelBrain {
     }
 
     public static class CamelWalkTask
-    extends WalkTask {
+    extends FleeTask {
         public CamelWalkTask(float f) {
             super(f);
         }
@@ -123,7 +123,7 @@ public class CamelBrain {
 
         @Override
         protected boolean shouldRun(ServerWorld serverWorld, CamelEntity camelEntity) {
-            return !camelEntity.isTouchingWater() && camelEntity.getLastPoseTickDelta() >= (long)this.lastPoseTickDelta && !camelEntity.isLeashed() && camelEntity.isOnGround() && !camelEntity.hasPrimaryPassenger();
+            return !camelEntity.isTouchingWater() && camelEntity.getLastPoseTickDelta() >= (long)this.lastPoseTickDelta && !camelEntity.isLeashed() && camelEntity.isOnGround() && !camelEntity.hasControllingPassenger();
         }
 
         @Override

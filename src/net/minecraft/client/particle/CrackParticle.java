@@ -19,6 +19,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.particle.ItemStackParticleEffect;
+import net.minecraft.particle.ParticleEffect;
 
 @Environment(value=EnvType.CLIENT)
 public class CrackParticle
@@ -77,6 +78,11 @@ extends SpriteBillboardParticle {
         public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             return new CrackParticle(clientWorld, d, e, f, new ItemStack(Items.SNOWBALL));
         }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -86,6 +92,11 @@ extends SpriteBillboardParticle {
         public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             return new CrackParticle(clientWorld, d, e, f, new ItemStack(Items.SLIME_BALL));
         }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -94,6 +105,11 @@ extends SpriteBillboardParticle {
         @Override
         public Particle createParticle(ItemStackParticleEffect itemStackParticleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             return new CrackParticle(clientWorld, d, e, f, g, h, i, itemStackParticleEffect.getItemStack());
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((ItemStackParticleEffect)particleEffect, clientWorld, d, e, f, g, h, i);
         }
     }
 }

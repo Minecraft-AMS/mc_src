@@ -34,7 +34,7 @@ extends TorchBlock {
     public static final int field_31229 = 160;
     private static final int SCHEDULED_TICK_DELAY = 2;
 
-    protected RedstoneTorchBlock(AbstractBlock.Settings settings) {
+    public RedstoneTorchBlock(AbstractBlock.Settings settings) {
         super(settings, DustParticleEffect.DEFAULT);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(LIT, true));
     }

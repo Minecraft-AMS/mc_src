@@ -2,57 +2,121 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
+ *  com.google.gson.JsonObject
  */
 package net.minecraft.data.client;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import net.minecraft.data.client.Model;
 import net.minecraft.data.client.ModelIds;
 import net.minecraft.data.client.Models;
+import net.minecraft.data.client.TextureKey;
 import net.minecraft.data.client.TextureMap;
+import net.minecraft.item.ArmorItem;
+import net.minecraft.item.ArmorMaterial;
+import net.minecraft.item.ArmorMaterials;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
 public class ItemModelGenerator {
-    private final BiConsumer<Identifier, Supplier<JsonElement>> writer;
+    public static final Identifier TRIM_TYPE = new Identifier("trim_type");
+    private static final List<TrimMaterial> TRIM_MATERIALS = List.of(new TrimMaterial("quartz", 0.1f, Map.of()), new TrimMaterial("iron", 0.2f, Map.of(ArmorMaterials.IRON, "iron_darker")), new TrimMaterial("netherite", 0.3f, Map.of(ArmorMaterials.NETHERITE, "netherite_darker")), new TrimMaterial("redstone", 0.4f, Map.of()), new TrimMaterial("copper", 0.5f, Map.of()), new TrimMaterial("gold", 0.6f, Map.of(ArmorMaterials.GOLD, "gold_darker")), new TrimMaterial("emerald", 0.7f, Map.of()), new TrimMaterial("diamond", 0.8f, Map.of(ArmorMaterials.DIAMOND, "diamond_darker")), new TrimMaterial("lapis", 0.9f, Map.of()), new TrimMaterial("amethyst", 1.0f, Map.of()));
+    public final BiConsumer<Identifier, Supplier<JsonElement>> writer;
 
     public ItemModelGenerator(BiConsumer<Identifier, Supplier<JsonElement>> writer) {
         this.writer = writer;
     }
 
-    private void register(Item item, Model model) {
+    public final void register(Item item, Model model) {
         model.upload(ModelIds.getItemModelId(item), TextureMap.layer0(item), this.writer);
     }
 
-    private void register(Item item, String suffix, Model model) {
+    public final void register(Item item, String suffix, Model model) {
         model.upload(ModelIds.getItemSubModelId(item, suffix), TextureMap.layer0(TextureMap.getSubId(item, suffix)), this.writer);
     }
 
-    private void register(Item item, Item texture, Model model) {
+    public final void register(Item item, Item texture, Model model) {
         model.upload(ModelIds.getItemModelId(item), TextureMap.layer0(texture), this.writer);
     }
 
-    private void registerCompass(Item compass) {
+    public final void registerCompass(Item compass) {
         for (int i = 0; i < 32; ++i) {
             if (i == 16) continue;
             this.register(compass, String.format(Locale.ROOT, "_%02d", i), Models.GENERATED);
         }
     }
 
-    private void registerClock(Item clock) {
+    public final void registerClock(Item clock) {
         for (int i = 1; i < 64; ++i) {
             this.register(clock, String.format(Locale.ROOT, "_%02d", i), Models.GENERATED);
         }
     }
 
+    public final void uploadArmor(Identifier id, Identifier layer0, Identifier layer1) {
+        Models.GENERATED_TWO_LAYERS.upload(id, TextureMap.layered(layer0, layer1), this.writer);
+    }
+
+    public final void uploadArmor(Identifier id, Identifier layer0, Identifier layer1, Identifier layer2) {
+        Models.GENERATED_THREE_LAYERS.upload(id, TextureMap.layered(layer0, layer1, layer2), this.writer);
+    }
+
+    public final Identifier suffixTrim(Identifier id, String trimMaterialName) {
+        return id.withSuffixedPath("_" + trimMaterialName + "_trim");
+    }
+
+    public final JsonObject createArmorJson(Identifier id, Map<TextureKey, Identifier> textures, ArmorMaterial armorMaterial) {
+        JsonObject jsonObject = Models.GENERATED_TWO_LAYERS.createJson(id, textures);
+        JsonArray jsonArray = new JsonArray();
+        for (TrimMaterial trimMaterial : TRIM_MATERIALS) {
+            JsonObject jsonObject2 = new JsonObject();
+            JsonObject jsonObject3 = new JsonObject();
+            jsonObject3.addProperty(TRIM_TYPE.getPath(), (Number)Float.valueOf(trimMaterial.itemModelIndex()));
+            jsonObject2.add("predicate", (JsonElement)jsonObject3);
+            jsonObject2.addProperty("model", this.suffixTrim(id, trimMaterial.getAppliedName(armorMaterial)).toString());
+            jsonArray.add((JsonElement)jsonObject2);
+        }
+        jsonObject.add("overrides", (JsonElement)jsonArray);
+        return jsonObject;
+    }
+
+    public final void registerArmor(ArmorItem armor) {
+        Identifier identifier = ModelIds.getItemModelId(armor);
+        Identifier identifier2 = TextureMap.getId(armor);
+        Identifier identifier3 = TextureMap.getSubId(armor, "_overlay");
+        if (armor.getMaterial() == ArmorMaterials.LEATHER) {
+            Models.GENERATED_TWO_LAYERS.upload(identifier, TextureMap.layered(identifier2, identifier3), this.writer, (id, textures) -> this.createArmorJson(id, textures, armor.getMaterial()));
+        } else {
+            Models.GENERATED.upload(identifier, TextureMap.layer0(identifier2), this.writer, (id, textures) -> this.createArmorJson(id, textures, armor.getMaterial()));
+        }
+        for (TrimMaterial trimMaterial : TRIM_MATERIALS) {
+            String string = trimMaterial.getAppliedName(armor.getMaterial());
+            Identifier identifier4 = this.suffixTrim(identifier, string);
+            String string2 = armor.getType().getName() + "_trim_" + string;
+            Identifier identifier5 = new Identifier(string2).withPrefixedPath("trims/items/");
+            if (armor.getMaterial() == ArmorMaterials.LEATHER) {
+                this.uploadArmor(identifier4, identifier2, identifier3, identifier5);
+                continue;
+            }
+            this.uploadArmor(identifier4, identifier2, identifier5);
+        }
+    }
+
     public void register() {
         this.register(Items.ACACIA_BOAT, Models.GENERATED);
+        this.register(Items.CHERRY_BOAT, Models.GENERATED);
         this.register(Items.ACACIA_CHEST_BOAT, Models.GENERATED);
+        this.register(Items.CHERRY_CHEST_BOAT, Models.GENERATED);
         this.register(Items.AMETHYST_SHARD, Models.GENERATED);
         this.register(Items.APPLE, Models.GENERATED);
         this.register(Items.ARMOR_STAND, Models.GENERATED);
@@ -77,10 +141,6 @@ public class ItemModelGenerator {
         this.register(Items.BUCKET, Models.GENERATED);
         this.register(Items.CARROT_ON_A_STICK, Models.HANDHELD_ROD);
         this.register(Items.WARPED_FUNGUS_ON_A_STICK, Models.HANDHELD_ROD);
-        this.register(Items.CHAINMAIL_BOOTS, Models.GENERATED);
-        this.register(Items.CHAINMAIL_CHESTPLATE, Models.GENERATED);
-        this.register(Items.CHAINMAIL_HELMET, Models.GENERATED);
-        this.register(Items.CHAINMAIL_LEGGINGS, Models.GENERATED);
         this.register(Items.CHARCOAL, Models.GENERATED);
         this.register(Items.CHEST_MINECART, Models.GENERATED);
         this.register(Items.CHICKEN, Models.GENERATED);
@@ -108,12 +168,8 @@ public class ItemModelGenerator {
         this.register(Items.DARK_OAK_CHEST_BOAT, Models.GENERATED);
         this.register(Items.DIAMOND, Models.GENERATED);
         this.register(Items.DIAMOND_AXE, Models.HANDHELD);
-        this.register(Items.DIAMOND_BOOTS, Models.GENERATED);
-        this.register(Items.DIAMOND_CHESTPLATE, Models.GENERATED);
-        this.register(Items.DIAMOND_HELMET, Models.GENERATED);
         this.register(Items.DIAMOND_HOE, Models.HANDHELD);
         this.register(Items.DIAMOND_HORSE_ARMOR, Models.GENERATED);
-        this.register(Items.DIAMOND_LEGGINGS, Models.GENERATED);
         this.register(Items.DIAMOND_PICKAXE, Models.HANDHELD);
         this.register(Items.DIAMOND_SHOVEL, Models.HANDHELD);
         this.register(Items.DIAMOND_SWORD, Models.HANDHELD);
@@ -144,13 +200,9 @@ public class ItemModelGenerator {
         this.register(Items.RAW_GOLD, Models.GENERATED);
         this.register(Items.GOLDEN_APPLE, Models.GENERATED);
         this.register(Items.GOLDEN_AXE, Models.HANDHELD);
-        this.register(Items.GOLDEN_BOOTS, Models.GENERATED);
         this.register(Items.GOLDEN_CARROT, Models.GENERATED);
-        this.register(Items.GOLDEN_CHESTPLATE, Models.GENERATED);
-        this.register(Items.GOLDEN_HELMET, Models.GENERATED);
         this.register(Items.GOLDEN_HOE, Models.HANDHELD);
         this.register(Items.GOLDEN_HORSE_ARMOR, Models.GENERATED);
-        this.register(Items.GOLDEN_LEGGINGS, Models.GENERATED);
         this.register(Items.GOLDEN_PICKAXE, Models.HANDHELD);
         this.register(Items.GOLDEN_SHOVEL, Models.HANDHELD);
         this.register(Items.GOLDEN_SWORD, Models.HANDHELD);
@@ -166,13 +218,9 @@ public class ItemModelGenerator {
         this.register(Items.INK_SAC, Models.GENERATED);
         this.register(Items.RAW_IRON, Models.GENERATED);
         this.register(Items.IRON_AXE, Models.HANDHELD);
-        this.register(Items.IRON_BOOTS, Models.GENERATED);
-        this.register(Items.IRON_CHESTPLATE, Models.GENERATED);
-        this.register(Items.IRON_HELMET, Models.GENERATED);
         this.register(Items.IRON_HOE, Models.HANDHELD);
         this.register(Items.IRON_HORSE_ARMOR, Models.GENERATED);
         this.register(Items.IRON_INGOT, Models.GENERATED);
-        this.register(Items.IRON_LEGGINGS, Models.GENERATED);
         this.register(Items.IRON_NUGGET, Models.GENERATED);
         this.register(Items.IRON_PICKAXE, Models.HANDHELD);
         this.register(Items.IRON_SHOVEL, Models.HANDHELD);
@@ -220,12 +268,8 @@ public class ItemModelGenerator {
         this.register(Items.NAME_TAG, Models.GENERATED);
         this.register(Items.NAUTILUS_SHELL, Models.GENERATED);
         this.register(Items.NETHERITE_AXE, Models.HANDHELD);
-        this.register(Items.NETHERITE_BOOTS, Models.GENERATED);
-        this.register(Items.NETHERITE_CHESTPLATE, Models.GENERATED);
-        this.register(Items.NETHERITE_HELMET, Models.GENERATED);
         this.register(Items.NETHERITE_HOE, Models.HANDHELD);
         this.register(Items.NETHERITE_INGOT, Models.GENERATED);
-        this.register(Items.NETHERITE_LEGGINGS, Models.GENERATED);
         this.register(Items.NETHERITE_PICKAXE, Models.HANDHELD);
         this.register(Items.NETHERITE_SCRAP, Models.GENERATED);
         this.register(Items.NETHERITE_SHOVEL, Models.HANDHELD);
@@ -287,7 +331,6 @@ public class ItemModelGenerator {
         this.register(Items.TROPICAL_FISH_BUCKET, Models.GENERATED);
         this.register(Items.AXOLOTL_BUCKET, Models.GENERATED);
         this.register(Items.TADPOLE_BUCKET, Models.GENERATED);
-        this.register(Items.TURTLE_HELMET, Models.GENERATED);
         this.register(Items.WATER_BUCKET, Models.GENERATED);
         this.register(Items.WHEAT, Models.GENERATED);
         this.register(Items.WHITE_DYE, Models.GENERATED);
@@ -299,8 +342,35 @@ public class ItemModelGenerator {
         this.register(Items.WRITABLE_BOOK, Models.GENERATED);
         this.register(Items.WRITTEN_BOOK, Models.GENERATED);
         this.register(Items.YELLOW_DYE, Models.GENERATED);
+        this.register(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.VEX_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
         this.register(Items.DEBUG_STICK, Items.STICK, Models.HANDHELD);
         this.register(Items.ENCHANTED_GOLDEN_APPLE, Items.GOLDEN_APPLE, Models.GENERATED);
+        for (Item item : Registries.ITEM) {
+            if (!(item instanceof ArmorItem)) continue;
+            ArmorItem armorItem = (ArmorItem)item;
+            this.registerArmor(armorItem);
+        }
+        this.register(Items.POTTERY_SHARD_ARCHER, Models.GENERATED);
+        this.register(Items.POTTERY_SHARD_PRIZE, Models.GENERATED);
+        this.register(Items.POTTERY_SHARD_ARMS_UP, Models.GENERATED);
+        this.register(Items.POTTERY_SHARD_SKULL, Models.GENERATED);
+    }
+
+    record TrimMaterial(String name, float itemModelIndex, Map<ArmorMaterial, String> overrideArmorMaterials) {
+        public String getAppliedName(ArmorMaterial armorMaterial) {
+            return this.overrideArmorMaterials.getOrDefault(armorMaterial, this.name);
+        }
     }
 }
 

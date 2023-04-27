@@ -409,12 +409,11 @@ extends DrawableHelper {
         RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         RenderSystem.enableBlend();
-        RenderSystem.disableTexture();
         RenderSystem.defaultBlendFunc();
         bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
         Matrix4f matrix4f = AffineTransformation.identity().getMatrix();
         while (k != j) {
-            t = metricsData.method_15248(ls[k], showFps ? 30 : 60, showFps ? 60 : 20);
+            t = metricsData.scaleSample(ls[k], showFps ? 30 : 60, showFps ? 60 : 20);
             int u = showFps ? 100 : 60;
             int v = this.getMetricsLineColor(MathHelper.clamp(t, 0, u), 0, u / 2, u);
             int w = v >> 24 & 0xFF;
@@ -429,26 +428,25 @@ extends DrawableHelper {
             k = metricsData.wrapIndex(k + 1);
         }
         BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
-        RenderSystem.enableTexture();
         RenderSystem.disableBlend();
         if (showFps) {
             DebugHud.fill(matrices, x + 1, r - 30 + 1, x + 14, r - 30 + 10, -1873784752);
             this.textRenderer.draw(matrices, "60 FPS", (float)(x + 2), (float)(r - 30 + 2), 0xE0E0E0);
-            this.drawHorizontalLine(matrices, x, x + n - 1, r - 30, -1);
+            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 30, -1);
             DebugHud.fill(matrices, x + 1, r - 60 + 1, x + 14, r - 60 + 10, -1873784752);
             this.textRenderer.draw(matrices, "30 FPS", (float)(x + 2), (float)(r - 60 + 2), 0xE0E0E0);
-            this.drawHorizontalLine(matrices, x, x + n - 1, r - 60, -1);
+            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 60, -1);
         } else {
             DebugHud.fill(matrices, x + 1, r - 60 + 1, x + 14, r - 60 + 10, -1873784752);
             this.textRenderer.draw(matrices, "20 TPS", (float)(x + 2), (float)(r - 60 + 2), 0xE0E0E0);
-            this.drawHorizontalLine(matrices, x, x + n - 1, r - 60, -1);
+            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 60, -1);
         }
-        this.drawHorizontalLine(matrices, x, x + n - 1, r - 1, -1);
-        this.drawVerticalLine(matrices, x, r - 60, r, -1);
-        this.drawVerticalLine(matrices, x + n - 1, r - 60, r, -1);
+        DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 1, -1);
+        DebugHud.drawVerticalLine(matrices, x, r - 60, r, -1);
+        DebugHud.drawVerticalLine(matrices, x + n - 1, r - 60, r, -1);
         t = this.client.options.getMaxFps().getValue();
         if (showFps && t > 0 && t <= 250) {
-            this.drawHorizontalLine(matrices, x, x + n - 1, r - 1 - (int)(1800.0 / (double)t), -16711681);
+            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 1 - (int)(1800.0 / (double)t), -16711681);
         }
         String string = p + " ms min";
         String string2 = o / (long)n + " ms avg";
@@ -475,10 +473,10 @@ extends DrawableHelper {
         int n = color2 >> 16 & 0xFF;
         int o = color2 >> 8 & 0xFF;
         int p = color2 & 0xFF;
-        int q = MathHelper.clamp((int)MathHelper.lerp(dt, i, m), 0, 255);
-        int r = MathHelper.clamp((int)MathHelper.lerp(dt, j, n), 0, 255);
-        int s = MathHelper.clamp((int)MathHelper.lerp(dt, k, o), 0, 255);
-        int t = MathHelper.clamp((int)MathHelper.lerp(dt, l, p), 0, 255);
+        int q = MathHelper.clamp((int)MathHelper.lerp(dt, (float)i, (float)m), 0, 255);
+        int r = MathHelper.clamp((int)MathHelper.lerp(dt, (float)j, (float)n), 0, 255);
+        int s = MathHelper.clamp((int)MathHelper.lerp(dt, (float)k, (float)o), 0, 255);
+        int t = MathHelper.clamp((int)MathHelper.lerp(dt, (float)l, (float)p), 0, 255);
         return q << 24 | r << 16 | s << 8 | t;
     }
 

@@ -18,13 +18,13 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.encryption.PublicPlayerSession;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import net.minecraft.util.Util;
+import net.minecraft.util.Nullables;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
 
@@ -104,7 +104,7 @@ implements Packet<ClientPlayPacketListener> {
         final PublicPlayerSession.Serialized chatSession;
 
         Entry(ServerPlayerEntity player) {
-            this(player.getUuid(), player.getGameProfile(), true, player.pingMilliseconds, player.interactionManager.getGameMode(), player.getPlayerListName(), Util.map(player.getSession(), PublicPlayerSession::toSerialized));
+            this(player.getUuid(), player.getGameProfile(), true, player.pingMilliseconds, player.interactionManager.getGameMode(), player.getPlayerListName(), Nullables.map(player.getSession(), PublicPlayerSession::toSerialized));
         }
 
         public Entry(UUID uUID, GameProfile gameProfile, boolean bl, int i, GameMode gameMode, @Nullable Text text, @Nullable PublicPlayerSession.Serialized serialized) {

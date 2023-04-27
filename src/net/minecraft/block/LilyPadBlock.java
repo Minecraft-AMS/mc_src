@@ -23,7 +23,7 @@ public class LilyPadBlock
 extends PlantBlock {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 1.5, 15.0);
 
-    protected LilyPadBlock(AbstractBlock.Settings settings) {
+    public LilyPadBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

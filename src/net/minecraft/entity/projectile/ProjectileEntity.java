@@ -12,10 +12,11 @@ import java.util.UUID;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.Ownable;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.Packet;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.hit.BlockHitResult;
@@ -30,7 +31,8 @@ import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class ProjectileEntity
-extends Entity {
+extends Entity
+implements Ownable {
     @Nullable
     private UUID ownerUuid;
     @Nullable
@@ -38,7 +40,7 @@ extends Entity {
     private boolean leftOwner;
     private boolean shot;
 
-    ProjectileEntity(EntityType<? extends ProjectileEntity> entityType, World world) {
+    public ProjectileEntity(EntityType<? extends ProjectileEntity> entityType, World world) {
         super(entityType, world);
     }
 
@@ -49,6 +51,7 @@ extends Entity {
         }
     }
 
+    @Override
     @Nullable
     public Entity getOwner() {
         if (this.owner != null && !this.owner.isRemoved()) {
@@ -166,7 +169,7 @@ extends Entity {
     }
 
     protected boolean canHit(Entity entity) {
-        if (entity.isSpectator() || !entity.isAlive() || !entity.canHit()) {
+        if (!entity.canBeHitByProjectile()) {
             return false;
         }
         Entity entity2 = this.getOwner();

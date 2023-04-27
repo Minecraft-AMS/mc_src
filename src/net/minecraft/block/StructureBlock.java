@@ -34,7 +34,7 @@ extends BlockWithEntity
 implements OperatorBlock {
     public static final EnumProperty<StructureBlockMode> MODE = Properties.STRUCTURE_BLOCK_MODE;
 
-    protected StructureBlock(AbstractBlock.Settings settings) {
+    public StructureBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(MODE, StructureBlockMode.LOAD));
     }

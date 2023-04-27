@@ -38,6 +38,8 @@ implements ModelWithArms,
 ModelWithHead {
     public static final float field_32505 = 0.25f;
     public static final float field_32506 = 0.5f;
+    public static final float field_42513 = -0.1f;
+    private static final float field_42512 = 0.005f;
     private static final float SPYGLASS_ARM_YAW_OFFSET = 0.2617994f;
     private static final float SPYGLASS_ARM_PITCH_OFFSET = 1.9198622f;
     private static final float SPYGLASS_SNEAKING_ARM_PITCH_OFFSET = 0.2617994f;
@@ -126,10 +128,10 @@ ModelWithHead {
         this.leftArm.roll = 0.0f;
         this.rightLeg.pitch = MathHelper.cos(f * 0.6662f) * 1.4f * g / k;
         this.leftLeg.pitch = MathHelper.cos(f * 0.6662f + (float)Math.PI) * 1.4f * g / k;
-        this.rightLeg.yaw = 0.0f;
-        this.leftLeg.yaw = 0.0f;
-        this.rightLeg.roll = 0.0f;
-        this.leftLeg.roll = 0.0f;
+        this.rightLeg.yaw = 0.005f;
+        this.leftLeg.yaw = -0.005f;
+        this.rightLeg.roll = 0.005f;
+        this.leftLeg.roll = -0.005f;
         if (this.riding) {
             this.rightArm.pitch += -0.62831855f;
             this.leftArm.pitch += -0.62831855f;
@@ -175,8 +177,8 @@ ModelWithHead {
             this.rightArm.pivotY = 5.2f;
         } else {
             this.body.pitch = 0.0f;
-            this.rightLeg.pivotZ = 0.1f;
-            this.leftLeg.pivotZ = 0.1f;
+            this.rightLeg.pivotZ = 0.0f;
+            this.leftLeg.pivotZ = 0.0f;
             this.rightLeg.pivotY = 12.0f;
             this.leftLeg.pivotY = 12.0f;
             this.head.pivotY = 0.0f;
@@ -267,6 +269,11 @@ ModelWithHead {
                 CrossbowPosing.hold(this.rightArm, this.leftArm, this.head, true);
                 break;
             }
+            case BRUSH: {
+                this.rightArm.pitch = this.rightArm.pitch * 0.5f - 0.62831855f;
+                this.rightArm.yaw = 0.0f;
+                break;
+            }
             case SPYGLASS: {
                 this.rightArm.pitch = MathHelper.clamp(this.head.pitch - 1.9198622f - (((Entity)entity).isInSneakingPose() ? 0.2617994f : 0.0f), -2.4f, 3.3f);
                 this.rightArm.yaw = this.head.yaw - 0.2617994f;
@@ -313,6 +320,11 @@ ModelWithHead {
             }
             case CROSSBOW_HOLD: {
                 CrossbowPosing.hold(this.rightArm, this.leftArm, this.head, false);
+                break;
+            }
+            case BRUSH: {
+                this.leftArm.pitch = this.leftArm.pitch * 0.5f - 0.62831855f;
+                this.leftArm.yaw = 0.0f;
                 break;
             }
             case SPYGLASS: {
@@ -429,6 +441,7 @@ ModelWithHead {
         public static final /* enum */ ArmPose CROSSBOW_HOLD = new ArmPose(true);
         public static final /* enum */ ArmPose SPYGLASS = new ArmPose(false);
         public static final /* enum */ ArmPose TOOT_HORN = new ArmPose(false);
+        public static final /* enum */ ArmPose BRUSH = new ArmPose(false);
         private final boolean twoHanded;
         private static final /* synthetic */ ArmPose[] field_3404;
 
@@ -449,7 +462,7 @@ ModelWithHead {
         }
 
         private static /* synthetic */ ArmPose[] method_36892() {
-            return new ArmPose[]{EMPTY, ITEM, BLOCK, BOW_AND_ARROW, THROW_SPEAR, CROSSBOW_CHARGE, CROSSBOW_HOLD, SPYGLASS, TOOT_HORN};
+            return new ArmPose[]{EMPTY, ITEM, BLOCK, BOW_AND_ARROW, THROW_SPEAR, CROSSBOW_CHARGE, CROSSBOW_HOLD, SPYGLASS, TOOT_HORN, BRUSH};
         }
 
         static {

@@ -62,7 +62,7 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.item.HeldItemRenderer;
-import net.minecraft.client.render.model.json.ModelTransformation;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.client.util.Window;
@@ -70,6 +70,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.ItemFrameEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.EndermanEntity;
@@ -248,9 +249,13 @@ implements AutoCloseable {
     @Nullable
     private static ShaderProgram renderTypeTextProgram;
     @Nullable
+    private static ShaderProgram renderTypeTextBackgroundProgram;
+    @Nullable
     private static ShaderProgram renderTypeTextIntensityProgram;
     @Nullable
     private static ShaderProgram renderTypeTextSeeThroughProgram;
+    @Nullable
+    private static ShaderProgram renderTypeTextBackgroundSeeThroughProgram;
     @Nullable
     private static ShaderProgram renderTypeTextIntensitySeeThroughProgram;
     @Nullable
@@ -589,11 +594,17 @@ implements AutoCloseable {
             list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
                 renderTypeTextProgram = program;
             }));
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_background", VertexFormats.POSITION_COLOR_LIGHT), program -> {
+                renderTypeTextBackgroundProgram = program;
+            }));
             list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_intensity", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
                 renderTypeTextIntensityProgram = program;
             }));
             list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
                 renderTypeTextSeeThroughProgram = program;
+            }));
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_background_see_through", VertexFormats.POSITION_COLOR_LIGHT), program -> {
+                renderTypeTextBackgroundSeeThroughProgram = program;
             }));
             list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_intensity_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
                 renderTypeTextIntensitySeeThroughProgram = program;
@@ -720,7 +731,7 @@ implements AutoCloseable {
             Vec3d vec3d4 = entityHitResult.getPos();
             double g = vec3d.squaredDistanceTo(vec3d4);
             if (bl && g > 9.0) {
-                this.client.crosshairTarget = BlockHitResult.createMissed(vec3d4, Direction.getFacing(vec3d2.x, vec3d2.y, vec3d2.z), new BlockPos(vec3d4));
+                this.client.crosshairTarget = BlockHitResult.createMissed(vec3d4, Direction.getFacing(vec3d2.x, vec3d2.y, vec3d2.z), BlockPos.ofFloored(vec3d4));
             } else if (g < e || this.client.crosshairTarget == null) {
                 this.client.crosshairTarget = entityHitResult;
                 if (entity22 instanceof LivingEntity || entity22 instanceof ItemFrameEntity) {
@@ -767,7 +778,7 @@ implements AutoCloseable {
         return d;
     }
 
-    private void bobViewWhenHurt(MatrixStack matrices, float tickDelta) {
+    private void tiltViewWhenHurt(MatrixStack matrices, float tickDelta) {
         if (this.client.getCameraEntity() instanceof LivingEntity) {
             float g;
             LivingEntity livingEntity = (LivingEntity)this.client.getCameraEntity();
@@ -781,9 +792,10 @@ implements AutoCloseable {
             }
             f /= (float)livingEntity.maxHurtTime;
             f = MathHelper.sin(f * f * f * f * (float)Math.PI);
-            g = livingEntity.knockbackVelocity;
+            g = livingEntity.getDamageTiltYaw();
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-g));
-            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-f * 14.0f));
+            float h = (float)((double)(-f) * 14.0 * this.client.options.getDamageTiltStrength().getValue());
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(h));
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(g));
         }
     }
@@ -819,7 +831,7 @@ implements AutoCloseable {
         this.loadProjectionMatrix(this.getBasicProjectionMatrix(this.getFov(camera, tickDelta, false)));
         matrices.loadIdentity();
         matrices.push();
-        this.bobViewWhenHurt(matrices, tickDelta);
+        this.tiltViewWhenHurt(matrices, tickDelta);
         if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrices, tickDelta);
         }
@@ -832,7 +844,7 @@ implements AutoCloseable {
         matrices.pop();
         if (this.client.options.getPerspective().isFirstPerson() && !bl) {
             InGameOverlayRenderer.renderOverlays(this.client, matrices);
-            this.bobViewWhenHurt(matrices, tickDelta);
+            this.tiltViewWhenHurt(matrices, tickDelta);
         }
         if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrices, tickDelta);
@@ -859,11 +871,11 @@ implements AutoCloseable {
     }
 
     public static float getNightVisionStrength(LivingEntity entity, float tickDelta) {
-        int i = entity.getStatusEffect(StatusEffects.NIGHT_VISION).getDuration();
-        if (i > 200) {
+        StatusEffectInstance statusEffectInstance = entity.getStatusEffect(StatusEffects.NIGHT_VISION);
+        if (!statusEffectInstance.isDurationBelow(200)) {
             return 1.0f;
         }
-        return 0.7f + MathHelper.sin(((float)i - tickDelta) * (float)Math.PI * 0.2f) * 0.3f;
+        return 0.7f + MathHelper.sin(((float)statusEffectInstance.getDuration() - tickDelta) * (float)Math.PI * 0.2f) * 0.3f;
     }
 
     public void render(float tickDelta, long startTime, boolean tick) {
@@ -886,7 +898,6 @@ implements AutoCloseable {
             if (this.postProcessor != null && this.postProcessorEnabled) {
                 RenderSystem.disableBlend();
                 RenderSystem.disableDepthTest();
-                RenderSystem.enableTexture();
                 RenderSystem.resetTextureMatrix();
                 this.postProcessor.render(tickDelta);
             }
@@ -897,6 +908,7 @@ implements AutoCloseable {
         Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, (float)((double)window.getFramebufferWidth() / window.getScaleFactor()), (float)((double)window.getFramebufferHeight() / window.getScaleFactor()), 0.0f, 1000.0f, 3000.0f);
         RenderSystem.setProjectionMatrix(matrix4f);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
         matrixStack.loadIdentity();
         matrixStack.translate(0.0f, 0.0f, -2000.0f);
         RenderSystem.applyModelViewMatrix();
@@ -953,6 +965,11 @@ implements AutoCloseable {
                 throw new CrashException(crashReport);
             }
         }
+        this.client.getProfiler().push("toasts");
+        this.client.getToastManager().draw(matrixStack2);
+        this.client.getProfiler().pop();
+        matrixStack.pop();
+        RenderSystem.applyModelViewMatrix();
     }
 
     private void updateWorldIcon() {
@@ -1045,7 +1062,7 @@ implements AutoCloseable {
         MatrixStack matrixStack = new MatrixStack();
         double d = this.getFov(camera, tickDelta, true);
         matrixStack.multiplyPositionMatrix(this.getBasicProjectionMatrix(d));
-        this.bobViewWhenHurt(matrixStack, tickDelta);
+        this.tiltViewWhenHurt(matrixStack, tickDelta);
         if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrixStack, tickDelta);
         }
@@ -1119,7 +1136,7 @@ implements AutoCloseable {
         matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(6.0f * MathHelper.cos(f * 8.0f)));
         matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(6.0f * MathHelper.cos(f * 8.0f)));
         VertexConsumerProvider.Immediate immediate = this.buffers.getEntityVertexConsumers();
-        this.client.getItemRenderer().renderItem(this.floatingItem, ModelTransformation.Mode.FIXED, 0xF000F0, OverlayTexture.DEFAULT_UV, matrixStack, immediate, 0);
+        this.client.getItemRenderer().renderItem(this.floatingItem, ModelTransformationMode.FIXED, 0xF000F0, OverlayTexture.DEFAULT_UV, matrixStack, immediate, this.client.world, 0);
         matrixStack.pop();
         immediate.draw();
         RenderSystem.enableCull();
@@ -1414,6 +1431,11 @@ implements AutoCloseable {
     }
 
     @Nullable
+    public static ShaderProgram getRenderTypeTextBackgroundProgram() {
+        return renderTypeTextBackgroundProgram;
+    }
+
+    @Nullable
     public static ShaderProgram getRenderTypeTextIntensityProgram() {
         return renderTypeTextIntensityProgram;
     }
@@ -1421,6 +1443,11 @@ implements AutoCloseable {
     @Nullable
     public static ShaderProgram getRenderTypeTextSeeThroughProgram() {
         return renderTypeTextSeeThroughProgram;
+    }
+
+    @Nullable
+    public static ShaderProgram getRenderTypeTextBackgroundSeeThroughProgram() {
+        return renderTypeTextBackgroundSeeThroughProgram;
     }
 
     @Nullable

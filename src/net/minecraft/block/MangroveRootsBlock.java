@@ -27,7 +27,7 @@ extends Block
 implements Waterloggable {
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
 
-    protected MangroveRootsBlock(AbstractBlock.Settings settings) {
+    public MangroveRootsBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(WATERLOGGED, false));
     }

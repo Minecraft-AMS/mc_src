@@ -59,7 +59,7 @@ implements Waterloggable {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 14.0, 15.0);
     private static final Text CONTAINER_NAME = Text.translatable("container.enderchest");
 
-    protected EnderChestBlock(AbstractBlock.Settings settings) {
+    public EnderChestBlock(AbstractBlock.Settings settings) {
         super(settings, () -> BlockEntityType.ENDER_CHEST);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(WATERLOGGED, false));
     }
@@ -82,7 +82,7 @@ implements Waterloggable {
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         FluidState fluidState = ctx.getWorld().getFluidState(ctx.getBlockPos());
-        return (BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getPlayerFacing().getOpposite())).with(WATERLOGGED, fluidState.getFluid() == Fluids.WATER);
+        return (BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing().getOpposite())).with(WATERLOGGED, fluidState.getFluid() == Fluids.WATER);
     }
 
     @Override

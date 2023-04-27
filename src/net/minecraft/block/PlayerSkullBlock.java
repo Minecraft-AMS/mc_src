@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class PlayerSkullBlock
 extends SkullBlock {
-    protected PlayerSkullBlock(AbstractBlock.Settings settings) {
+    public PlayerSkullBlock(AbstractBlock.Settings settings) {
         super(SkullBlock.Type.PLAYER, settings);
     }
 

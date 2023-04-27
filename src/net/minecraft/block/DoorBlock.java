@@ -8,6 +8,7 @@ package net.minecraft.block;
 
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockSetType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.HorizontalFacingBlock;
@@ -24,7 +25,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
@@ -59,14 +59,12 @@ extends Block {
     protected static final VoxelShape SOUTH_SHAPE = Block.createCuboidShape(0.0, 0.0, 13.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape EAST_SHAPE = Block.createCuboidShape(13.0, 0.0, 0.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape WEST_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 3.0, 16.0, 16.0);
-    private final SoundEvent closeSound;
-    private final SoundEvent openSound;
+    private final BlockSetType blockSetType;
 
-    protected DoorBlock(AbstractBlock.Settings settings, SoundEvent closeSound, SoundEvent openSound) {
-        super(settings);
+    public DoorBlock(AbstractBlock.Settings settings, BlockSetType blockSetType) {
+        super(settings.sounds(blockSetType.soundType()));
+        this.blockSetType = blockSetType;
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(OPEN, false)).with(HINGE, DoorHinge.LEFT)).with(POWERED, false)).with(HALF, DoubleBlockHalf.LOWER));
-        this.closeSound = closeSound;
-        this.openSound = openSound;
     }
 
     @Override
@@ -135,7 +133,7 @@ extends Block {
         World world = ctx.getWorld();
         if (blockPos.getY() < world.getTopY() - 1 && world.getBlockState(blockPos.up()).canReplace(ctx)) {
             boolean bl = world.isReceivingRedstonePower(blockPos) || world.isReceivingRedstonePower(blockPos.up());
-            return (BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getPlayerFacing())).with(HINGE, this.getHinge(ctx))).with(POWERED, bl)).with(OPEN, bl)).with(HALF, DoubleBlockHalf.LOWER);
+            return (BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing())).with(HINGE, this.getHinge(ctx))).with(POWERED, bl)).with(OPEN, bl)).with(HALF, DoubleBlockHalf.LOWER);
         }
         return null;
     }
@@ -149,7 +147,7 @@ extends Block {
         boolean bl2;
         World blockView = ctx.getWorld();
         BlockPos blockPos = ctx.getBlockPos();
-        Direction direction = ctx.getPlayerFacing();
+        Direction direction = ctx.getHorizontalPlayerFacing();
         BlockPos blockPos2 = blockPos.up();
         Direction direction2 = direction.rotateYCounterclockwise();
         BlockPos blockPos3 = blockPos.offset(direction2);
@@ -227,7 +225,7 @@ extends Block {
     }
 
     private void playOpenCloseSound(@Nullable Entity entity, World world, BlockPos pos, boolean open) {
-        world.playSound(entity, pos, open ? this.openSound : this.closeSound, SoundCategory.BLOCKS, 1.0f, world.getRandom().nextFloat() * 0.1f + 0.9f);
+        world.playSound(entity, pos, open ? this.blockSetType.doorOpen() : this.blockSetType.doorClose(), SoundCategory.BLOCKS, 1.0f, world.getRandom().nextFloat() * 0.1f + 0.9f);
     }
 
     @Override

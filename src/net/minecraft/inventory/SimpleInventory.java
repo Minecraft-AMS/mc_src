@@ -27,7 +27,7 @@ public class SimpleInventory
 implements Inventory,
 RecipeInputProvider {
     private final int size;
-    private final DefaultedList<ItemStack> stacks;
+    public final DefaultedList<ItemStack> stacks;
     @Nullable
     private List<InventoryChangedListener> listeners;
 

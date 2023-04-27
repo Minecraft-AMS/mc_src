@@ -18,6 +18,7 @@ import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.PathNodeMaker;
 import net.minecraft.entity.ai.pathing.PathNodeNavigator;
+import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.registry.tag.BlockTags;
@@ -100,7 +101,7 @@ public abstract class EntityNavigation {
 
     @Nullable
     public final Path findPathTo(double x, double y, double z, int distance) {
-        return this.findPathTo(new BlockPos(x, y, z), distance);
+        return this.findPathTo(BlockPos.ofFloored(x, y, z), distance);
     }
 
     @Nullable
@@ -224,7 +225,7 @@ public abstract class EntityNavigation {
     }
 
     protected double adjustTargetY(Vec3d pos) {
-        BlockPos blockPos = new BlockPos(pos);
+        BlockPos blockPos = BlockPos.ofFloored(pos);
         return this.world.getBlockState(blockPos.down()).isAir() ? pos.y : LandPathNodeMaker.getFeetY(this.world, blockPos);
     }
 
@@ -237,7 +238,7 @@ public abstract class EntityNavigation {
         double e = Math.abs(this.entity.getY() - (double)vec3i.getY());
         double f = Math.abs(this.entity.getZ() - ((double)vec3i.getZ() + 0.5));
         boolean bl2 = bl = d < (double)this.nodeReachProximity && f < (double)this.nodeReachProximity && e < 1.0;
-        if (bl || this.entity.canJumpToNextPathNode(this.currentPath.getCurrentNode().type) && this.shouldJumpToNextNode(vec3d)) {
+        if (bl || this.canJumpToNext(this.currentPath.getCurrentNode().type) && this.shouldJumpToNextNode(vec3d)) {
             this.currentPath.next();
         }
         this.checkTimeouts(vec3d);
@@ -349,6 +350,10 @@ public abstract class EntityNavigation {
 
     protected boolean canPathDirectlyThrough(Vec3d origin, Vec3d target) {
         return false;
+    }
+
+    public boolean canJumpToNext(PathNodeType nodeType) {
+        return nodeType != PathNodeType.DANGER_FIRE && nodeType != PathNodeType.DANGER_OTHER && nodeType != PathNodeType.WALKABLE_DOOR;
     }
 
     protected static boolean doesNotCollide(MobEntity entity, Vec3d startPos, Vec3d entityPos, boolean includeFluids) {

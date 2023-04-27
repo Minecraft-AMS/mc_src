@@ -74,7 +74,6 @@ implements AutoCloseable {
         this.client.getTextureManager().bindTexture(this.textureIdentifier);
         RenderSystem.texParameter(3553, 10241, 9729);
         RenderSystem.texParameter(3553, 10240, 9729);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     private float getDarknessFactor(float delta) {
@@ -100,7 +99,7 @@ implements AutoCloseable {
         if (clientWorld == null) {
             return;
         }
-        float f = clientWorld.getStarBrightness(1.0f);
+        float f = clientWorld.getSkyBrightness(1.0f);
         float g = clientWorld.getLightningTicksLeft() > 0 ? 1.0f : f * 0.95f + 0.05f;
         float h = this.client.options.getDarknessEffectScale().getValue().floatValue();
         float i = this.getDarknessFactor(delta) * h;

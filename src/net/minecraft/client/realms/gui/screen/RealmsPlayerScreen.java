@@ -15,7 +15,6 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -28,12 +27,7 @@ import net.minecraft.client.realms.gui.screen.RealmsConfigureWorldScreen;
 import net.minecraft.client.realms.gui.screen.RealmsConfirmScreen;
 import net.minecraft.client.realms.gui.screen.RealmsInviteScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
-import net.minecraft.client.realms.util.RealmsTextureManager;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.realms.util.RealmsUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
@@ -193,20 +187,12 @@ extends RealmsScreen {
         if (this.invitedObjectSelectionList != null) {
             this.invitedObjectSelectionList.render(matrices, mouseX, mouseY, delta);
         }
-        RealmsPlayerScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+        RealmsPlayerScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
         int i = RealmsPlayerScreen.row(12) + 20;
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
         RenderSystem.setShaderTexture(0, OPTIONS_BACKGROUND);
+        RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1.0f);
+        RealmsPlayerScreen.drawTexture(matrices, 0, i, 0.0f, 0.0f, this.width, this.height - i, 32, 32);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        float f = 32.0f;
-        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(0.0, this.height, 0.0).texture(0.0f, (float)(this.height - i) / 32.0f + 0.0f).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(this.width, this.height, 0.0).texture((float)this.width / 32.0f, (float)(this.height - i) / 32.0f + 0.0f).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(this.width, i, 0.0).texture((float)this.width / 32.0f, 0.0f).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(0.0, i, 0.0).texture(0.0f, 0.0f).color(64, 64, 64, 255).next();
-        tessellator.draw();
         if (this.serverData != null && this.serverData.players != null) {
             this.textRenderer.draw(matrices, Text.empty().append(INVITED_TEXT).append(" (").append(Integer.toString(this.serverData.players.size())).append(")"), (float)this.column1_x, (float)RealmsPlayerScreen.row(0), 0xA0A0A0);
         } else {
@@ -226,14 +212,13 @@ extends RealmsScreen {
         int i = mouseX + 12;
         int j = mouseY - 12;
         int k = this.textRenderer.getWidth(tooltip);
-        this.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        RealmsPlayerScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
         this.textRenderer.drawWithShadow(matrices, tooltip, (float)i, (float)j, 0xFFFFFF);
     }
 
     void drawRemoveIcon(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
         boolean bl = mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 9 && mouseY < RealmsPlayerScreen.row(12) + 20 && mouseY > RealmsPlayerScreen.row(1);
         RenderSystem.setShaderTexture(0, CROSS_PLAYER_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         float f = bl ? 7.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, f, 8, 7, 8, 14);
         if (bl) {
@@ -245,7 +230,6 @@ extends RealmsScreen {
     void drawOpped(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
         boolean bl = mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 9 && mouseY < RealmsPlayerScreen.row(12) + 20 && mouseY > RealmsPlayerScreen.row(1);
         RenderSystem.setShaderTexture(0, OP_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         float f = bl ? 8.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, f, 8, 8, 8, 16);
         if (bl) {
@@ -257,7 +241,6 @@ extends RealmsScreen {
     void drawNormal(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
         boolean bl = mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 9 && mouseY < RealmsPlayerScreen.row(12) + 20 && mouseY > RealmsPlayerScreen.row(1);
         RenderSystem.setShaderTexture(0, USER_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         float f = bl ? 8.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, f, 8, 8, 8, 16);
         if (bl) {
@@ -308,11 +291,6 @@ extends RealmsScreen {
         }
 
         @Override
-        public boolean isFocused() {
-            return RealmsPlayerScreen.this.getFocused() == this;
-        }
-
-        @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (button == 0 && mouseX < (double)this.getScrollbarPositionX() && mouseY >= (double)this.top && mouseY <= (double)this.bottom) {
                 int i = RealmsPlayerScreen.this.column1_x;
@@ -321,7 +299,7 @@ extends RealmsScreen {
                 int l = k / this.itemHeight;
                 if (mouseX >= (double)i && mouseX <= (double)j && l >= 0 && k >= 0 && l < this.getEntryCount()) {
                     this.setSelected(l);
-                    this.itemClicked(k, l, mouseX, mouseY, this.width);
+                    this.itemClicked(k, l, mouseX, mouseY, this.width, button);
                 }
                 return true;
             }
@@ -329,7 +307,7 @@ extends RealmsScreen {
         }
 
         @Override
-        public void itemClicked(int cursorY, int selectionIndex, double mouseX, double mouseY, int listWidth) {
+        public void itemClicked(int cursorY, int selectionIndex, double mouseX, double mouseY, int listWidth, int i) {
             if (selectionIndex < 0 || selectionIndex > RealmsPlayerScreen.this.serverData.players.size() || RealmsPlayerScreen.this.operation == PlayerOperation.NONE) {
                 return;
             }
@@ -401,10 +379,7 @@ extends RealmsScreen {
                 RealmsPlayerScreen.this.drawNormal(matrices, RealmsPlayerScreen.this.column1_x + RealmsPlayerScreen.this.column_width - 10, y + 1, mouseX, mouseY);
             }
             RealmsPlayerScreen.this.drawRemoveIcon(matrices, RealmsPlayerScreen.this.column1_x + RealmsPlayerScreen.this.column_width - 22, y + 2, mouseX, mouseY);
-            RealmsTextureManager.withBoundFace(playerInfo.getUuid(), () -> {
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-                PlayerSkinDrawer.draw(matrices, RealmsPlayerScreen.this.column1_x + 2 + 2, y + 1, 8);
-            });
+            RealmsUtil.drawPlayerHead(matrices, RealmsPlayerScreen.this.column1_x + 2 + 2, y + 1, 8, playerInfo.getUuid());
         }
 
         @Override

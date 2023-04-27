@@ -9,6 +9,7 @@
 package net.minecraft.client.gui.widget;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -16,15 +17,18 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.ScreenRect;
 import net.minecraft.client.gui.Selectable;
+import net.minecraft.client.gui.navigation.GuiNavigation;
+import net.minecraft.client.gui.navigation.GuiNavigationPath;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.tooltip.FocusedTooltipPositioner;
-import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.tooltip.TooltipPositioner;
-import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.gui.tooltip.WidgetTooltipPositioner;
+import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundManager;
 import net.minecraft.client.util.math.MatrixStack;
@@ -41,8 +45,12 @@ public abstract class ClickableWidget
 extends DrawableHelper
 implements Drawable,
 Element,
+Widget,
 Selectable {
     public static final Identifier WIDGETS_TEXTURE = new Identifier("textures/gui/widgets.png");
+    public static final Identifier ACCESSIBILITY_TEXTURE = new Identifier("textures/gui/accessibility.png");
+    private static final double field_43055 = 0.5;
+    private static final double field_43056 = 3.0;
     protected int width;
     protected int height;
     private int x;
@@ -52,6 +60,7 @@ Selectable {
     public boolean active = true;
     public boolean visible = true;
     protected float alpha = 1.0f;
+    private int navigationOrder;
     private boolean focused;
     @Nullable
     private Tooltip tooltip;
@@ -67,18 +76,9 @@ Selectable {
         this.message = message;
     }
 
+    @Override
     public int getHeight() {
         return this.height;
-    }
-
-    protected int getYImage(boolean hovered) {
-        int i = 1;
-        if (!this.active) {
-            i = 0;
-        } else if (hovered) {
-            i = 2;
-        }
-        return i;
     }
 
     @Override
@@ -93,10 +93,11 @@ Selectable {
 
     private void applyTooltip() {
         Screen screen;
+        boolean bl;
         if (this.tooltip == null) {
             return;
         }
-        boolean bl = this.isHovered();
+        boolean bl2 = bl = this.hovered || this.isFocused() && MinecraftClient.getInstance().getNavigationType().isKeyboard();
         if (bl != this.wasHovered) {
             if (bl) {
                 this.lastHoveredTime = Util.getMeasuringTimeMs();
@@ -109,10 +110,10 @@ Selectable {
     }
 
     protected TooltipPositioner getTooltipPositioner() {
-        if (this.isFocused()) {
+        if (!this.hovered && this.isFocused() && MinecraftClient.getInstance().getNavigationType().isKeyboard()) {
             return new FocusedTooltipPositioner(this);
         }
-        return HoveredTooltipPositioner.INSTANCE;
+        return new WidgetTooltipPositioner(this);
     }
 
     public void setTooltip(@Nullable Tooltip tooltip) {
@@ -131,24 +132,42 @@ Selectable {
         return Text.translatable("gui.narrate.button", message);
     }
 
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        TextRenderer textRenderer = minecraftClient.textRenderer;
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, this.alpha);
-        int i = this.getYImage(this.isHovered());
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableDepthTest();
-        this.drawTexture(matrices, this.getX(), this.getY(), 0, 46 + i * 20, this.width / 2, this.height);
-        this.drawTexture(matrices, this.getX() + this.width / 2, this.getY(), 200 - this.width / 2, 46 + i * 20, this.width / 2, this.height);
-        this.renderBackground(matrices, minecraftClient, mouseX, mouseY);
-        int j = this.active ? 0xFFFFFF : 0xA0A0A0;
-        ClickableWidget.drawCenteredText(matrices, textRenderer, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, j | MathHelper.ceil(this.alpha * 255.0f) << 24);
+    public abstract void renderButton(MatrixStack var1, int var2, int var3, float var4);
+
+    protected static void drawScrollableText(MatrixStack matrices, TextRenderer textRenderer, Text text, int left, int top, int right, int bottom, int color) {
+        int i = textRenderer.getWidth(text);
+        int j = (top + bottom - textRenderer.fontHeight) / 2 + 1;
+        int k = right - left;
+        if (i > k) {
+            int l = i - k;
+            double d = (double)Util.getMeasuringTimeMs() / 1000.0;
+            double e = Math.max((double)l * 0.5, 3.0);
+            double f = Math.sin(1.5707963267948966 * Math.cos(Math.PI * 2 * d / e)) / 2.0 + 0.5;
+            double g = MathHelper.lerp(f, 0.0, (double)l);
+            ClickableWidget.enableScissor(left, top, right, bottom);
+            ClickableWidget.drawTextWithShadow(matrices, textRenderer, text, left - (int)g, j, color);
+            ClickableWidget.disableScissor();
+        } else {
+            ClickableWidget.drawCenteredTextWithShadow(matrices, textRenderer, text, (left + right) / 2, j, color);
+        }
     }
 
-    protected void renderBackground(MatrixStack matrices, MinecraftClient client, int mouseX, int mouseY) {
+    protected void drawScrollableText(MatrixStack matrices, TextRenderer textRenderer, int xMargin, int color) {
+        int i = this.getX() + xMargin;
+        int j = this.getX() + this.getWidth() - xMargin;
+        ClickableWidget.drawScrollableText(matrices, textRenderer, this.getMessage(), i, this.getY(), j, this.getY() + this.getHeight(), color);
+    }
+
+    public void drawTexture(MatrixStack matrices, Identifier texture, int x, int y, int u, int v, int hoveredVOffset, int width, int height, int textureWidth, int textureHeight) {
+        RenderSystem.setShaderTexture(0, texture);
+        int i = v;
+        if (!this.isNarratable()) {
+            i += hoveredVOffset * 2;
+        } else if (this.isSelected()) {
+            i += hoveredVOffset;
+        }
+        RenderSystem.enableDepthTest();
+        ClickableWidget.drawTexture(matrices, x, y, u, i, width, height, textureWidth, textureHeight);
     }
 
     public void onClick(double mouseX, double mouseY) {
@@ -200,21 +219,16 @@ Selectable {
         return this.active && this.visible && mouseX >= (double)this.getX() && mouseY >= (double)this.getY() && mouseX < (double)(this.getX() + this.width) && mouseY < (double)(this.getY() + this.height);
     }
 
-    public boolean isHovered() {
-        return this.hovered || this.focused;
-    }
-
     @Override
-    public boolean changeFocus(boolean lookForwards) {
+    @Nullable
+    public GuiNavigationPath getNavigationPath(GuiNavigation navigation) {
         if (!this.active || !this.visible) {
-            return false;
+            return null;
         }
-        this.focused = !this.focused;
-        this.onFocusedChanged(this.focused);
-        return this.focused;
-    }
-
-    protected void onFocusedChanged(boolean newFocused) {
+        if (!this.isFocused()) {
+            return GuiNavigationPath.of(this);
+        }
+        return null;
     }
 
     @Override
@@ -226,6 +240,7 @@ Selectable {
         soundManager.play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1.0f));
     }
 
+    @Override
     public int getWidth() {
         return this.width;
     }
@@ -246,8 +261,17 @@ Selectable {
         return this.message;
     }
 
+    @Override
     public boolean isFocused() {
         return this.focused;
+    }
+
+    public boolean isHovered() {
+        return this.hovered;
+    }
+
+    public boolean isSelected() {
+        return this.isHovered() || this.isFocused();
     }
 
     @Override
@@ -255,13 +279,14 @@ Selectable {
         return this.visible && this.active;
     }
 
-    protected void setFocused(boolean focused) {
+    @Override
+    public void setFocused(boolean focused) {
         this.focused = focused;
     }
 
     @Override
     public Selectable.SelectionType getType() {
-        if (this.focused) {
+        if (this.isFocused()) {
             return Selectable.SelectionType.FOCUSED;
         }
         if (this.hovered) {
@@ -291,25 +316,43 @@ Selectable {
         }
     }
 
+    @Override
     public int getX() {
         return this.x;
     }
 
+    @Override
     public void setX(int x) {
         this.x = x;
     }
 
-    public void setPos(int x, int y) {
-        this.setX(x);
-        this.setY(y);
-    }
-
+    @Override
     public int getY() {
         return this.y;
     }
 
+    @Override
     public void setY(int y) {
         this.y = y;
+    }
+
+    @Override
+    public void forEachChild(Consumer<ClickableWidget> consumer) {
+        consumer.accept(this);
+    }
+
+    @Override
+    public ScreenRect getNavigationFocus() {
+        return Widget.super.getNavigationFocus();
+    }
+
+    @Override
+    public int getNavigationOrder() {
+        return this.navigationOrder;
+    }
+
+    public void setNavigationOrder(int navigationOrder) {
+        this.navigationOrder = navigationOrder;
     }
 }
 

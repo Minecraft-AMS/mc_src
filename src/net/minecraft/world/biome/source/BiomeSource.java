@@ -2,23 +2,26 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Suppliers
+ *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.serialization.Codec
- *  it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.biome.source;
 
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
-import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
@@ -38,20 +41,17 @@ import org.jetbrains.annotations.Nullable;
 public abstract class BiomeSource
 implements BiomeSupplier {
     public static final Codec<BiomeSource> CODEC = Registries.BIOME_SOURCE.getCodec().dispatchStable(BiomeSource::getCodec, Function.identity());
-    private final Set<RegistryEntry<Biome>> biomes;
+    private final Supplier<Set<RegistryEntry<Biome>>> biomes = Suppliers.memoize(() -> (Set)this.biomeStream().distinct().collect(ImmutableSet.toImmutableSet()));
 
-    protected BiomeSource(Stream<RegistryEntry<Biome>> biomeStream) {
-        this(biomeStream.distinct().toList());
-    }
-
-    protected BiomeSource(List<RegistryEntry<Biome>> biomes) {
-        this.biomes = new ObjectLinkedOpenHashSet(biomes);
+    protected BiomeSource() {
     }
 
     protected abstract Codec<? extends BiomeSource> getCodec();
 
+    protected abstract Stream<RegistryEntry<Biome>> biomeStream();
+
     public Set<RegistryEntry<Biome>> getBiomes() {
-        return this.biomes;
+        return this.biomes.get();
     }
 
     public Set<RegistryEntry<Biome>> getBiomesInArea(int x, int y, int z, int radius, MultiNoiseUtil.MultiNoiseSampler sampler) {

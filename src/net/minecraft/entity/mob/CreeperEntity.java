@@ -199,7 +199,7 @@ implements SkinOverlayOwner {
     }
 
     public float getClientFuseTime(float timeDelta) {
-        return MathHelper.lerp(timeDelta, this.lastFuseTime, this.currentFuseTime) / (float)(this.fuseTime - 2);
+        return MathHelper.lerp(timeDelta, (float)this.lastFuseTime, (float)this.currentFuseTime) / (float)(this.fuseTime - 2);
     }
 
     public int getFuseSpeed() {
@@ -224,7 +224,11 @@ implements SkinOverlayOwner {
             this.world.playSound(player2, this.getX(), this.getY(), this.getZ(), soundEvent, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
             if (!this.world.isClient) {
                 this.ignite();
-                itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
+                if (!itemStack.isDamageable()) {
+                    itemStack.decrement(1);
+                } else {
+                    itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
+                }
             }
             return ActionResult.success(this.world.isClient);
         }

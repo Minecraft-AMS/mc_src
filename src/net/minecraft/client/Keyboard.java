@@ -10,6 +10,8 @@
 package net.minecraft.client;
 
 import com.google.common.base.MoreObjects;
+import com.mojang.blaze3d.platform.TextureUtil;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.Locale;
 import net.fabricmc.api.EnvType;
@@ -18,6 +20,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHud;
+import net.minecraft.client.gui.navigation.GuiNavigationType;
 import net.minecraft.client.gui.screen.GameModeSelectionScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.option.KeybindsScreen;
@@ -35,6 +38,9 @@ import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.registry.Registries;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -103,7 +109,7 @@ public class Keyboard {
     }
 
     private void addDebugMessage(Formatting formatting, Text text) {
-        this.client.inGameHud.getChatHud().addMessage(Text.empty().append(Text.translatable("debug.prefix").formatted(formatting, Formatting.BOLD)).append(" ").append(text));
+        this.client.inGameHud.getChatHud().addMessage(Text.empty().append(Text.translatable("debug.prefix").formatted(formatting, Formatting.BOLD)).append(ScreenTexts.SPACE).append(text));
     }
 
     private void debugLog(Text text) {
@@ -199,9 +205,17 @@ public class Keyboard {
                 chatHud.addMessage(Text.translatable("debug.creative_spectator.help"));
                 chatHud.addMessage(Text.translatable("debug.pause_focus.help"));
                 chatHud.addMessage(Text.translatable("debug.help.help"));
+                chatHud.addMessage(Text.translatable("debug.dump_dynamic_textures.help"));
                 chatHud.addMessage(Text.translatable("debug.reload_resourcepacks.help"));
                 chatHud.addMessage(Text.translatable("debug.pause.help"));
                 chatHud.addMessage(Text.translatable("debug.gamemodes.help"));
+                return true;
+            }
+            case 83: {
+                Path path = TextureUtil.getDebugTexturePath(this.client.runDirectory.toPath()).toAbsolutePath();
+                this.client.getTextureManager().dumpDynamicTextures(path);
+                MutableText text = Text.literal(path.toString()).formatted(Formatting.UNDERLINE).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, path.toFile().toString())));
+                this.debugLog("debug.dump_dynamic_textures", text);
                 return true;
             }
             case 84: {
@@ -306,6 +320,7 @@ public class Keyboard {
 
     public void onKey(long window, int key, int scancode, int action, int modifiers) {
         boolean bl2;
+        Screen screen;
         if (window != this.client.getWindow().getHandle()) {
             return;
         }
@@ -319,7 +334,20 @@ public class Keyboard {
             this.debugCrashLastLogTime = Util.getMeasuringTimeMs();
             this.debugCrashElapsedTime = 0L;
         }
-        Screen screen = this.client.currentScreen;
+        if ((screen = this.client.currentScreen) != null) {
+            switch (key) {
+                case 262: 
+                case 263: 
+                case 264: 
+                case 265: {
+                    this.client.setNavigationType(GuiNavigationType.KEYBOARD_ARROW);
+                    break;
+                }
+                case 258: {
+                    this.client.setNavigationType(GuiNavigationType.KEYBOARD_TAB);
+                }
+            }
+        }
         if (!(action != 1 || this.client.currentScreen instanceof KeybindsScreen && ((KeybindsScreen)screen).lastKeyCodeUpdateTime > Util.getMeasuringTimeMs() - 20L)) {
             if (this.client.options.fullscreenKey.matchesKey(key, scancode)) {
                 this.client.getWindow().toggleFullscreen();

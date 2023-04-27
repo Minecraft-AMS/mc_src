@@ -24,7 +24,7 @@ public class BiasedToBottomIntProvider
 extends IntProvider {
     public static final Codec<BiasedToBottomIntProvider> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("min_inclusive").forGetter(provider -> provider.min), (App)Codec.INT.fieldOf("max_inclusive").forGetter(provider -> provider.max)).apply((Applicative)instance, BiasedToBottomIntProvider::new)).comapFlatMap(provider -> {
         if (provider.max < provider.min) {
-            return DataResult.error((String)("Max must be at least min, min_inclusive: " + provider.min + ", max_inclusive: " + provider.max));
+            return DataResult.error(() -> "Max must be at least min, min_inclusive: " + biasedToBottomIntProvider.min + ", max_inclusive: " + biasedToBottomIntProvider.max);
         }
         return DataResult.success((Object)provider);
     }, Function.identity());

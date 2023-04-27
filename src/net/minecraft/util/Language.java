@@ -63,8 +63,8 @@ public abstract class Language {
             }
 
             @Override
-            public String get(String key) {
-                return this.field_25308.getOrDefault(key, key);
+            public String get(String key, String fallback) {
+                return this.field_25308.getOrDefault(key, fallback);
             }
 
             @Override
@@ -100,7 +100,11 @@ public abstract class Language {
         instance = language;
     }
 
-    public abstract String get(String var1);
+    public String get(String key) {
+        return this.get(key, key);
+    }
+
+    public abstract String get(String var1, String var2);
 
     public abstract boolean hasTranslation(String var1);
 

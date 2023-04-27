@@ -9,7 +9,6 @@
 package net.minecraft.client.gui.hud;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Iterator;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -49,18 +48,17 @@ implements SoundInstanceListener {
         if (!this.enabled || this.entries.isEmpty()) {
             return;
         }
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
         Vec3d vec3d = new Vec3d(this.client.player.getX(), this.client.player.getEyeY(), this.client.player.getZ());
         Vec3d vec3d2 = new Vec3d(0.0, 0.0, -1.0).rotateX(-this.client.player.getPitch() * ((float)Math.PI / 180)).rotateY(-this.client.player.getYaw() * ((float)Math.PI / 180));
         Vec3d vec3d3 = new Vec3d(0.0, 1.0, 0.0).rotateX(-this.client.player.getPitch() * ((float)Math.PI / 180)).rotateY(-this.client.player.getYaw() * ((float)Math.PI / 180));
         Vec3d vec3d4 = vec3d2.crossProduct(vec3d3);
         int i = 0;
         int j = 0;
+        double d = this.client.options.getNotificationDisplayTime().getValue();
         Iterator<SubtitleEntry> iterator = this.entries.iterator();
         while (iterator.hasNext()) {
             SubtitleEntry subtitleEntry = iterator.next();
-            if (subtitleEntry.getTime() + 3000L <= Util.getMeasuringTimeMs()) {
+            if ((double)subtitleEntry.getTime() + 3000.0 * d <= (double)Util.getMeasuringTimeMs()) {
                 iterator.remove();
                 continue;
             }
@@ -71,34 +69,32 @@ implements SoundInstanceListener {
             int k = 255;
             Text text = subtitleEntry.getText();
             Vec3d vec3d5 = subtitleEntry.getPosition().subtract(vec3d).normalize();
-            double d = -vec3d4.dotProduct(vec3d5);
-            double e = -vec3d2.dotProduct(vec3d5);
-            boolean bl = e > 0.5;
+            double e = -vec3d4.dotProduct(vec3d5);
+            double f = -vec3d2.dotProduct(vec3d5);
+            boolean bl = f > 0.5;
             int l = j / 2;
             int m = this.client.textRenderer.fontHeight;
             int n = m / 2;
-            float f = 1.0f;
+            float g = 1.0f;
             int o = this.client.textRenderer.getWidth(text);
-            int p = MathHelper.floor(MathHelper.clampedLerp(255.0f, 75.0f, (float)(Util.getMeasuringTimeMs() - subtitleEntry.getTime()) / 3000.0f));
+            int p = MathHelper.floor(MathHelper.clampedLerp(255.0f, 75.0f, (float)(Util.getMeasuringTimeMs() - subtitleEntry.getTime()) / (float)(3000.0 * d)));
             int q = p << 16 | p << 8 | p;
             matrices.push();
             matrices.translate((float)this.client.getWindow().getScaledWidth() - (float)l * 1.0f - 2.0f, (float)(this.client.getWindow().getScaledHeight() - 35) - (float)(i * (m + 1)) * 1.0f, 0.0f);
             matrices.scale(1.0f, 1.0f, 1.0f);
             SubtitlesHud.fill(matrices, -l - 1, -n - 1, l + 1, n + 1, this.client.options.getTextBackgroundColor(0.8f));
-            RenderSystem.enableBlend();
             int r = q + -16777216;
             if (!bl) {
-                if (d > 0.0) {
-                    SubtitlesHud.drawStringWithShadow(matrices, this.client.textRenderer, ">", l - this.client.textRenderer.getWidth(">"), -n, r);
-                } else if (d < 0.0) {
-                    SubtitlesHud.drawStringWithShadow(matrices, this.client.textRenderer, "<", -l, -n, r);
+                if (e > 0.0) {
+                    SubtitlesHud.drawTextWithShadow(matrices, this.client.textRenderer, ">", l - this.client.textRenderer.getWidth(">"), -n, r);
+                } else if (e < 0.0) {
+                    SubtitlesHud.drawTextWithShadow(matrices, this.client.textRenderer, "<", -l, -n, r);
                 }
             }
             SubtitlesHud.drawTextWithShadow(matrices, this.client.textRenderer, text, -o / 2, -n, r);
             matrices.pop();
             ++i;
         }
-        RenderSystem.disableBlend();
     }
 
     @Override

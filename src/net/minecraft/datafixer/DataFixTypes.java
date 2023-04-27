@@ -3,11 +3,21 @@
  * 
  * Could not load the following classes:
  *  com.mojang.datafixers.DSL$TypeReference
+ *  com.mojang.datafixers.DataFixer
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
  */
 package net.minecraft.datafixer;
 
 import com.mojang.datafixers.DSL;
+import com.mojang.datafixers.DataFixer;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
+import java.util.Set;
+import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.TypeReferences;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtOps;
 
 public final class DataFixTypes
 extends Enum<DataFixTypes> {
@@ -23,6 +33,7 @@ extends Enum<DataFixTypes> {
     public static final /* enum */ DataFixTypes POI_CHUNK = new DataFixTypes(TypeReferences.POI_CHUNK);
     public static final /* enum */ DataFixTypes WORLD_GEN_SETTINGS = new DataFixTypes(TypeReferences.WORLD_GEN_SETTINGS);
     public static final /* enum */ DataFixTypes ENTITY_CHUNK = new DataFixTypes(TypeReferences.ENTITY_CHUNK);
+    public static final Set<DSL.TypeReference> REQUIRED_TYPES;
     private final DSL.TypeReference typeReference;
     private static final /* synthetic */ DataFixTypes[] field_19223;
 
@@ -38,8 +49,24 @@ extends Enum<DataFixTypes> {
         this.typeReference = typeReference;
     }
 
-    public DSL.TypeReference getTypeReference() {
-        return this.typeReference;
+    private static int getSaveVersionId() {
+        return SharedConstants.getGameVersion().getSaveVersion().getId();
+    }
+
+    public <T> Dynamic<T> update(DataFixer dataFixer, Dynamic<T> dynamic, int oldVersion, int newVersion) {
+        return dataFixer.update(this.typeReference, dynamic, oldVersion, newVersion);
+    }
+
+    public <T> Dynamic<T> update(DataFixer dataFixer, Dynamic<T> dynamic, int oldVersion) {
+        return this.update(dataFixer, dynamic, oldVersion, DataFixTypes.getSaveVersionId());
+    }
+
+    public NbtCompound update(DataFixer dataFixer, NbtCompound nbt, int oldVersion, int newVersion) {
+        return (NbtCompound)this.update(dataFixer, new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt), oldVersion, newVersion).getValue();
+    }
+
+    public NbtCompound update(DataFixer dataFixer, NbtCompound nbt, int oldVersion) {
+        return this.update(dataFixer, nbt, oldVersion, DataFixTypes.getSaveVersionId());
     }
 
     private static /* synthetic */ DataFixTypes[] method_36589() {
@@ -48,6 +75,7 @@ extends Enum<DataFixTypes> {
 
     static {
         field_19223 = DataFixTypes.method_36589();
+        REQUIRED_TYPES = Set.of(DataFixTypes.LEVEL.typeReference);
     }
 }
 

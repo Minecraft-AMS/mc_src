@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
@@ -32,8 +33,9 @@ import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.map.MapState;
-import net.minecraft.network.Packet;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityAttachS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityAttributesS2CPacket;
@@ -49,6 +51,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -91,8 +94,14 @@ public class EntityTrackerEntry {
         Entity entity;
         List<Entity> list = this.entity.getPassengerList();
         if (!list.equals(this.lastPassengers)) {
-            this.lastPassengers = list;
             this.receiver.accept(new EntityPassengersSetS2CPacket(this.entity));
+            this.streamChangedPassengers(list, this.lastPassengers).forEach(passenger -> {
+                ServerPlayerEntity serverPlayerEntity;
+                if (passenger instanceof ServerPlayerEntity && !list.contains(serverPlayerEntity = (ServerPlayerEntity)passenger)) {
+                    serverPlayerEntity.networkHandler.requestTeleport(serverPlayerEntity.getX(), serverPlayerEntity.getY(), serverPlayerEntity.getZ(), serverPlayerEntity.getYaw(), serverPlayerEntity.getPitch());
+                }
+            });
+            this.lastPassengers = list;
         }
         if ((entity = this.entity) instanceof ItemFrameEntity) {
             ItemFrameEntity itemFrameEntity = (ItemFrameEntity)entity;
@@ -100,7 +109,7 @@ public class EntityTrackerEntry {
                 Integer integer;
                 MapState mapState;
                 ItemStack itemStack = itemFrameEntity.getHeldItemStack();
-                if (itemStack.getItem() instanceof FilledMapItem && (mapState = FilledMapItem.getMapState(integer = FilledMapItem.getMapId(itemStack), this.world)) != null) {
+                if (itemStack.getItem() instanceof FilledMapItem && (mapState = FilledMapItem.getMapState(integer = FilledMapItem.getMapId(itemStack), (World)this.world)) != null) {
                     for (ServerPlayerEntity serverPlayerEntity : this.world.getPlayers()) {
                         mapState.update(serverPlayerEntity, itemStack);
                         Packet<?> packet = mapState.getPlayerMarkerPacket(integer, serverPlayerEntity);
@@ -129,7 +138,6 @@ public class EntityTrackerEntry {
             } else {
                 Vec3d vec3d2;
                 double d;
-                boolean bl4;
                 ++this.updatesWithoutVehicle;
                 i = MathHelper.floor(this.entity.getYaw() * 256.0f / 360.0f);
                 int j = MathHelper.floor(this.entity.getPitch() * 256.0f / 360.0f);
@@ -137,23 +145,31 @@ public class EntityTrackerEntry {
                 boolean bl2 = this.trackedPos.subtract(vec3d).lengthSquared() >= 7.62939453125E-6;
                 Packet<ClientPlayPacketListener> packet2 = null;
                 boolean bl3 = bl2 || this.trackingTick % 60 == 0;
-                boolean bl = bl4 = Math.abs(i - this.lastYaw) >= 1 || Math.abs(j - this.lastPitch) >= 1;
+                boolean bl4 = Math.abs(i - this.lastYaw) >= 1 || Math.abs(j - this.lastPitch) >= 1;
+                boolean bl5 = false;
+                boolean bl6 = false;
                 if (this.trackingTick > 0 || this.entity instanceof PersistentProjectileEntity) {
-                    boolean bl5;
+                    boolean bl7;
                     long l = this.trackedPos.getDeltaX(vec3d);
                     long m = this.trackedPos.getDeltaY(vec3d);
                     long n = this.trackedPos.getDeltaZ(vec3d);
-                    boolean bl6 = bl5 = l < -32768L || l > 32767L || m < -32768L || m > 32767L || n < -32768L || n > 32767L;
-                    if (bl5 || this.updatesWithoutVehicle > 400 || this.hadVehicle || this.lastOnGround != this.entity.isOnGround()) {
+                    boolean bl = bl7 = l < -32768L || l > 32767L || m < -32768L || m > 32767L || n < -32768L || n > 32767L;
+                    if (bl7 || this.updatesWithoutVehicle > 400 || this.hadVehicle || this.lastOnGround != this.entity.isOnGround()) {
                         this.lastOnGround = this.entity.isOnGround();
                         this.updatesWithoutVehicle = 0;
                         packet2 = new EntityPositionS2CPacket(this.entity);
+                        bl5 = true;
+                        bl6 = true;
                     } else if (bl3 && bl4 || this.entity instanceof PersistentProjectileEntity) {
                         packet2 = new EntityS2CPacket.RotateAndMoveRelative(this.entity.getId(), (short)l, (short)m, (short)n, (byte)i, (byte)j, this.entity.isOnGround());
+                        bl5 = true;
+                        bl6 = true;
                     } else if (bl3) {
                         packet2 = new EntityS2CPacket.MoveRelative(this.entity.getId(), (short)l, (short)m, (short)n, this.entity.isOnGround());
+                        bl5 = true;
                     } else if (bl4) {
                         packet2 = new EntityS2CPacket.Rotate(this.entity.getId(), (byte)i, (byte)j, this.entity.isOnGround());
+                        bl6 = true;
                     }
                 }
                 if ((this.alwaysUpdateVelocity || this.entity.velocityDirty || this.entity instanceof LivingEntity && ((LivingEntity)this.entity).isFallFlying()) && this.trackingTick > 0 && ((d = (vec3d2 = this.entity.getVelocity()).squaredDistanceTo(this.velocity)) > 1.0E-7 || d > 0.0 && vec3d2.lengthSquared() == 0.0)) {
@@ -164,10 +180,10 @@ public class EntityTrackerEntry {
                     this.receiver.accept(packet2);
                 }
                 this.syncEntityData();
-                if (bl3) {
+                if (bl5) {
                     this.trackedPos.setPos(vec3d);
                 }
-                if (bl4) {
+                if (bl6) {
                     this.lastYaw = i;
                     this.lastPitch = j;
                 }
@@ -187,17 +203,23 @@ public class EntityTrackerEntry {
         }
     }
 
+    private Stream<Entity> streamChangedPassengers(List<Entity> passengers, List<Entity> lastPassengers) {
+        return Stream.concat(lastPassengers.stream().filter(passenger -> !passengers.contains(passenger)), passengers.stream().filter(passenger -> !lastPassengers.contains(passenger)));
+    }
+
     public void stopTracking(ServerPlayerEntity player) {
         this.entity.onStoppedTrackingBy(player);
         player.networkHandler.sendPacket(new EntitiesDestroyS2CPacket(this.entity.getId()));
     }
 
     public void startTracking(ServerPlayerEntity player) {
-        this.sendPackets(player.networkHandler::sendPacket);
+        ArrayList<Packet<ClientPlayPacketListener>> list = new ArrayList<Packet<ClientPlayPacketListener>>();
+        this.sendPackets(list::add);
+        player.networkHandler.sendPacket(new BundleS2CPacket((Iterable<Packet<ClientPlayPacketListener>>)list));
         this.entity.onStartedTrackingBy(player);
     }
 
-    public void sendPackets(Consumer<Packet<?>> sender) {
+    public void sendPackets(Consumer<Packet<ClientPlayPacketListener>> sender) {
         MobEntity mobEntity;
         if (this.entity.isRemoved()) {
             LOGGER.warn("Fetching packet for removed entity {}", (Object)this.entity);

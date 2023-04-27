@@ -14,6 +14,7 @@
  *  io.netty.channel.ChannelHandlerContext
  *  io.netty.channel.ChannelInitializer
  *  io.netty.channel.ChannelOption
+ *  io.netty.channel.ChannelPipeline
  *  io.netty.channel.DefaultEventLoopGroup
  *  io.netty.channel.EventLoopGroup
  *  io.netty.channel.SimpleChannelInboundHandler
@@ -48,6 +49,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -71,12 +73,14 @@ import net.minecraft.network.DecoderHandler;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
 import net.minecraft.network.OffThreadException;
-import net.minecraft.network.Packet;
+import net.minecraft.network.PacketBundleHandler;
+import net.minecraft.network.PacketBundler;
 import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.PacketDeflater;
 import net.minecraft.network.PacketEncoder;
 import net.minecraft.network.PacketEncoderException;
 import net.minecraft.network.PacketInflater;
+import net.minecraft.network.PacketUnbundler;
 import net.minecraft.network.SizePrepender;
 import net.minecraft.network.SplitterHandler;
 import net.minecraft.network.encryption.PacketDecryptor;
@@ -84,6 +88,7 @@ import net.minecraft.network.encryption.PacketEncryptor;
 import net.minecraft.network.listener.ClientLoginPacketListener;
 import net.minecraft.network.listener.PacketListener;
 import net.minecraft.network.listener.TickablePacketListener;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.login.LoginDisconnectS2CPacket;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.text.MutableText;
@@ -142,6 +147,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
 
     public void setState(NetworkState state) {
         this.channel.attr(PROTOCOL_ATTRIBUTE_KEY).set((Object)state);
+        this.channel.attr(PacketBundleHandler.KEY).set((Object)state);
         this.channel.config().setAutoRead(true);
         LOGGER.debug("Enabled auto read");
     }
@@ -223,6 +229,9 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         NetworkState networkState2 = this.getState();
         ++this.packetsSentCounter;
         if (networkState2 != networkState) {
+            if (networkState == null) {
+                throw new IllegalStateException("Encountered packet without set protocol: " + packet);
+            }
             LOGGER.debug("Disabled auto read");
             this.channel.config().setAutoRead(false);
         }
@@ -255,7 +264,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
     }
 
     private NetworkState getState() {
-        return (NetworkState)((Object)this.channel.attr(PROTOCOL_ATTRIBUTE_KEY).get());
+        return (NetworkState)this.channel.attr(PROTOCOL_ATTRIBUTE_KEY).get();
     }
 
     /*
@@ -293,8 +302,8 @@ extends SimpleChannelInboundHandler<Packet<?>> {
     }
 
     protected void updateStats() {
-        this.averagePacketsSent = MathHelper.lerp(0.75f, this.packetsSentCounter, this.averagePacketsSent);
-        this.averagePacketsReceived = MathHelper.lerp(0.75f, this.packetsReceivedCounter, this.averagePacketsReceived);
+        this.averagePacketsSent = MathHelper.lerp(0.75f, (float)this.packetsSentCounter, this.averagePacketsSent);
+        this.averagePacketsReceived = MathHelper.lerp(0.75f, (float)this.packetsReceivedCounter, this.averagePacketsReceived);
         this.packetsSentCounter = 0;
         this.packetsReceivedCounter = 0;
     }
@@ -342,10 +351,17 @@ extends SimpleChannelInboundHandler<Packet<?>> {
                 catch (ChannelException channelException) {
                     // empty catch block
                 }
-                channel.pipeline().addLast("timeout", (ChannelHandler)new ReadTimeoutHandler(30)).addLast("splitter", (ChannelHandler)new SplitterHandler()).addLast("decoder", (ChannelHandler)new DecoderHandler(NetworkSide.CLIENTBOUND)).addLast("prepender", (ChannelHandler)new SizePrepender()).addLast("encoder", (ChannelHandler)new PacketEncoder(NetworkSide.SERVERBOUND)).addLast("packet_handler", (ChannelHandler)clientConnection);
+                ChannelPipeline channelPipeline = channel.pipeline().addLast("timeout", (ChannelHandler)new ReadTimeoutHandler(30));
+                ClientConnection.addHandlers(channelPipeline, NetworkSide.CLIENTBOUND);
+                channelPipeline.addLast("packet_handler", (ChannelHandler)clientConnection);
             }
         })).channel(class_)).connect(address.getAddress(), address.getPort()).syncUninterruptibly();
         return clientConnection;
+    }
+
+    public static void addHandlers(ChannelPipeline pipeline, NetworkSide side) {
+        NetworkSide networkSide = side.getOpposite();
+        pipeline.addLast("splitter", (ChannelHandler)new SplitterHandler()).addLast("decoder", (ChannelHandler)new DecoderHandler(side)).addLast("prepender", (ChannelHandler)new SizePrepender()).addLast("encoder", (ChannelHandler)new PacketEncoder(networkSide)).addLast("unbundler", (ChannelHandler)new PacketUnbundler(networkSide)).addLast("bundler", (ChannelHandler)new PacketBundler(side));
     }
 
     public static ClientConnection connectLocal(SocketAddress address) {
@@ -353,7 +369,8 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         ((Bootstrap)((Bootstrap)((Bootstrap)new Bootstrap().group((EventLoopGroup)LOCAL_CLIENT_IO_GROUP.get())).handler((ChannelHandler)new ChannelInitializer<Channel>(){
 
             protected void initChannel(Channel channel) {
-                channel.pipeline().addLast("packet_handler", (ChannelHandler)clientConnection);
+                ChannelPipeline channelPipeline = channel.pipeline();
+                channelPipeline.addLast("packet_handler", (ChannelHandler)clientConnection);
             }
         })).channel(LocalChannel.class)).connect(address).syncUninterruptibly();
         return clientConnection;
@@ -373,7 +390,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         return this.channel != null && this.channel.isOpen();
     }
 
-    public boolean hasChannel() {
+    public boolean isChannelAbsent() {
         return this.channel == null;
     }
 

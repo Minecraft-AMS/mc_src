@@ -35,7 +35,7 @@ implements Vanishable {
     private final float attackDamage;
     private final Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers;
 
-    protected MiningToolItem(float attackDamage, float attackSpeed, ToolMaterial material, TagKey<Block> effectiveBlocks, Item.Settings settings) {
+    public MiningToolItem(float attackDamage, float attackSpeed, ToolMaterial material, TagKey<Block> effectiveBlocks, Item.Settings settings) {
         super(material, settings);
         this.effectiveBlocks = effectiveBlocks;
         this.miningSpeed = material.getMiningSpeedMultiplier();

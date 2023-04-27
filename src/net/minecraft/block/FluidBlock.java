@@ -48,7 +48,7 @@ implements FluidDrainable {
     public static final VoxelShape COLLISION_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
     public static final ImmutableList<Direction> FLOW_DIRECTIONS = ImmutableList.of((Object)Direction.DOWN, (Object)Direction.SOUTH, (Object)Direction.NORTH, (Object)Direction.EAST, (Object)Direction.WEST);
 
-    protected FluidBlock(FlowableFluid fluid, AbstractBlock.Settings settings) {
+    public FluidBlock(FlowableFluid fluid, AbstractBlock.Settings settings) {
         super(settings);
         this.fluid = fluid;
         this.statesByLevel = Lists.newArrayList();
@@ -79,7 +79,7 @@ implements FluidDrainable {
     }
 
     @Override
-    public boolean isTranslucent(BlockState state, BlockView world, BlockPos pos) {
+    public boolean isTransparent(BlockState state, BlockView world, BlockPos pos) {
         return false;
     }
 

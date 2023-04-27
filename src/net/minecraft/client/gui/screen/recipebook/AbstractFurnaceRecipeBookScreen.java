@@ -43,14 +43,14 @@ extends RecipeBookWidget {
 
     @Override
     public void showGhostRecipe(Recipe<?> recipe, List<Slot> slots) {
-        ItemStack itemStack = recipe.getOutput();
+        ItemStack itemStack = recipe.getOutput(this.client.world.getRegistryManager());
         this.ghostSlots.setRecipe(recipe);
         this.ghostSlots.addSlot(Ingredient.ofStacks(itemStack), slots.get((int)2).x, slots.get((int)2).y);
         DefaultedList<Ingredient> defaultedList = recipe.getIngredients();
         Slot slot = slots.get(1);
         if (slot.getStack().isEmpty()) {
             if (this.fuels == null) {
-                this.fuels = Ingredient.ofStacks(this.getAllowedFuels().stream().map(ItemStack::new));
+                this.fuels = Ingredient.ofStacks(this.getAllowedFuels().stream().filter(item -> item.isEnabled(this.client.world.getEnabledFeatures())).map(ItemStack::new));
             }
             this.ghostSlots.addSlot(this.fuels, slot.x, slot.y);
         }

@@ -11,7 +11,7 @@ public class DyedCarpetBlock
 extends CarpetBlock {
     private final DyeColor dyeColor;
 
-    protected DyedCarpetBlock(DyeColor dyeColor, AbstractBlock.Settings settings) {
+    public DyedCarpetBlock(DyeColor dyeColor, AbstractBlock.Settings settings) {
         super(settings);
         this.dyeColor = dyeColor;
     }

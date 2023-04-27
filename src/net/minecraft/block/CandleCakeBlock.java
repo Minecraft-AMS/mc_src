@@ -47,7 +47,7 @@ extends AbstractCandleBlock {
     private static final Map<Block, CandleCakeBlock> CANDLES_TO_CANDLE_CAKES = Maps.newHashMap();
     private static final Iterable<Vec3d> PARTICLE_OFFSETS = ImmutableList.of((Object)new Vec3d(0.5, 1.0, 0.5));
 
-    protected CandleCakeBlock(Block candle, AbstractBlock.Settings settings) {
+    public CandleCakeBlock(Block candle, AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(LIT, false));
         CANDLES_TO_CANDLE_CAKES.put(candle, this);

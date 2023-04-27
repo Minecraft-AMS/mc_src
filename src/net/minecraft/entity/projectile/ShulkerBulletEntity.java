@@ -36,6 +36,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class ShulkerBulletEntity
@@ -125,7 +126,7 @@ extends ProjectileEntity {
             blockPos = this.getBlockPos().down();
         } else {
             d = (double)this.target.getHeight() * 0.5;
-            blockPos = new BlockPos(this.target.getX(), this.target.getY() + d, this.target.getZ());
+            blockPos = BlockPos.ofFloored(this.target.getX(), this.target.getY() + d, this.target.getZ());
         }
         double e = (double)blockPos.getX() + 0.5;
         double f = (double)blockPos.getY() + d;
@@ -271,11 +272,12 @@ extends ProjectileEntity {
         Entity entity = entityHitResult.getEntity();
         Entity entity2 = this.getOwner();
         LivingEntity livingEntity = entity2 instanceof LivingEntity ? (LivingEntity)entity2 : null;
-        boolean bl = entity.damage(DamageSource.mobProjectile(this, livingEntity).setProjectile(), 4.0f);
+        boolean bl = entity.damage(this.getDamageSources().mobProjectile(this, livingEntity), 4.0f);
         if (bl) {
             this.applyDamageEffects(livingEntity, entity);
             if (entity instanceof LivingEntity) {
-                ((LivingEntity)entity).addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 200), (Entity)MoreObjects.firstNonNull((Object)entity2, (Object)this));
+                LivingEntity livingEntity2 = (LivingEntity)entity;
+                livingEntity2.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 200), (Entity)MoreObjects.firstNonNull((Object)entity2, (Object)this));
             }
         }
     }
@@ -287,10 +289,15 @@ extends ProjectileEntity {
         this.playSound(SoundEvents.ENTITY_SHULKER_BULLET_HIT, 1.0f, 1.0f);
     }
 
+    private void destroy() {
+        this.discard();
+        this.world.emitGameEvent(GameEvent.ENTITY_DAMAGE, this.getPos(), GameEvent.Emitter.of(this));
+    }
+
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        this.discard();
+        this.destroy();
     }
 
     @Override
@@ -303,7 +310,7 @@ extends ProjectileEntity {
         if (!this.world.isClient) {
             this.playSound(SoundEvents.ENTITY_SHULKER_BULLET_HURT, 1.0f, 1.0f);
             ((ServerWorld)this.world).spawnParticles(ParticleTypes.CRIT, this.getX(), this.getY(), this.getZ(), 15, 0.2, 0.2, 0.2, 0.0);
-            this.discard();
+            this.destroy();
         }
         return true;
     }

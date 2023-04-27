@@ -96,13 +96,7 @@ NamedScreenHandlerFactory {
 
         @Override
         public boolean canPlayerUse(PlayerEntity player) {
-            if (LecternBlockEntity.this.world.getBlockEntity(LecternBlockEntity.this.pos) != LecternBlockEntity.this) {
-                return false;
-            }
-            if (player.squaredDistanceTo((double)LecternBlockEntity.this.pos.getX() + 0.5, (double)LecternBlockEntity.this.pos.getY() + 0.5, (double)LecternBlockEntity.this.pos.getZ() + 0.5) > 64.0) {
-                return false;
-            }
-            return LecternBlockEntity.this.hasBook();
+            return Inventory.canPlayerUse(LecternBlockEntity.this, player) && LecternBlockEntity.this.hasBook();
         }
 
         @Override
@@ -156,7 +150,7 @@ NamedScreenHandlerFactory {
     void onBookRemoved() {
         this.currentPage = 0;
         this.pageCount = 0;
-        LecternBlock.setHasBook(this.getWorld(), this.getPos(), this.getCachedState(), false);
+        LecternBlock.setHasBook(null, this.getWorld(), this.getPos(), this.getCachedState(), false);
     }
 
     public void setBook(ItemStack book, @Nullable PlayerEntity player) {

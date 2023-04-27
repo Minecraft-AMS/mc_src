@@ -36,7 +36,7 @@ public class Activity {
     private final String id;
     private final int hashCode;
 
-    private Activity(String id) {
+    public Activity(String id) {
         this.id = id;
         this.hashCode = id.hashCode();
     }

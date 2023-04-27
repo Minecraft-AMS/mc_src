@@ -253,7 +253,7 @@ extends RealmsScreen {
         if (this.noTemplatesMessage != null) {
             this.renderMessages(matrices, mouseX, mouseY, this.noTemplatesMessage);
         }
-        RealmsSelectWorldTemplateScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 13, 0xFFFFFF);
+        RealmsSelectWorldTemplateScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 13, 0xFFFFFF);
         if (this.displayWarning) {
             int k;
             int i;
@@ -276,7 +276,7 @@ extends RealmsScreen {
                         k = 0x3366BB;
                     }
                 }
-                RealmsSelectWorldTemplateScreen.drawCenteredText(matrices, this.textRenderer, text, this.width / 2, RealmsSelectWorldTemplateScreen.row(-1 + i), k);
+                RealmsSelectWorldTemplateScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, text, this.width / 2, RealmsSelectWorldTemplateScreen.row(-1 + i), k);
             }
         }
         super.render(matrices, mouseX, mouseY, delta);
@@ -308,7 +308,7 @@ extends RealmsScreen {
         int i = mouseX + 12;
         int j = mouseY - 12;
         int k = this.textRenderer.getWidth(tooltip);
-        this.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        RealmsSelectWorldTemplateScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
         this.textRenderer.drawWithShadow(matrices, tooltip, (float)i, (float)j, 0xFFFFFF);
     }
 
@@ -339,7 +339,7 @@ extends RealmsScreen {
                 int k = j / this.itemHeight;
                 if (mouseX >= (double)i && mouseX < (double)this.getScrollbarPositionX() && k >= 0 && j >= 0 && k < this.getEntryCount()) {
                     this.setSelected(k);
-                    this.itemClicked(j, k, mouseX, mouseY, this.width);
+                    this.itemClicked(j, k, mouseX, mouseY, this.width, button);
                     if (k >= RealmsSelectWorldTemplateScreen.this.templateList.getEntryCount()) {
                         return super.mouseClicked(mouseX, mouseY, button);
                     }
@@ -373,11 +373,6 @@ extends RealmsScreen {
         @Override
         public void renderBackground(MatrixStack matrices) {
             RealmsSelectWorldTemplateScreen.this.renderBackground(matrices);
-        }
-
-        @Override
-        public boolean isFocused() {
-            return RealmsSelectWorldTemplateScreen.this.getFocused() == this;
         }
 
         public boolean isEmpty() {
@@ -419,11 +414,9 @@ extends RealmsScreen {
         }
 
         private void drawImage(MatrixStack matrices, int x, int y, int mouseX, int mouseY, WorldTemplate template) {
-            RealmsTextureManager.bindWorldTemplate(template.id, template.image);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(template.id, template.image));
             DrawableHelper.drawTexture(matrices, x + 1, y + 1, 0.0f, 0.0f, 38, 38, 38, 38);
             RenderSystem.setShaderTexture(0, SLOT_FRAME);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 40, 40, 40, 40);
         }
 
@@ -448,13 +441,11 @@ extends RealmsScreen {
             }
             if (!bl3) {
                 RenderSystem.setShaderTexture(0, LINK_ICONS);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 float f = bl ? 15.0f : 0.0f;
                 DrawableHelper.drawTexture(matrices, x + i, y, f, 0.0f, 15, 15, 30, 15);
             }
             if (!"".equals(trailer)) {
                 RenderSystem.setShaderTexture(0, TRAILER_ICONS);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 int j = x + i + (bl3 ? 0 : 17);
                 float g = bl2 ? 15.0f : 0.0f;
                 DrawableHelper.drawTexture(matrices, j, y, g, 0.0f, 15, 15, 30, 15);

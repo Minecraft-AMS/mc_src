@@ -35,7 +35,7 @@ extends Enum<ResourcePackCompatibility> {
     }
 
     public static ResourcePackCompatibility from(int packVersion, ResourceType type) {
-        int i = type.getPackVersion(SharedConstants.getGameVersion());
+        int i = SharedConstants.getGameVersion().getResourceVersion(type);
         if (packVersion < i) {
             return TOO_OLD;
         }

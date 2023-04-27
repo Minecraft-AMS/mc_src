@@ -32,7 +32,7 @@ implements Waterloggable {
     private static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 10.0, 2.0, 14.0, 16.0, 14.0);
 
-    protected HangingRootsBlock(AbstractBlock.Settings settings) {
+    public HangingRootsBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(WATERLOGGED, false));
     }

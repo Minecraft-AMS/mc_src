@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class SmokerBlock
 extends AbstractFurnaceBlock {
-    protected SmokerBlock(AbstractBlock.Settings settings) {
+    public SmokerBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

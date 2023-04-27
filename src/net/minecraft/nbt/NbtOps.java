@@ -122,7 +122,7 @@ implements DynamicOps<NbtElement> {
             AbstractNbtNumber abstractNbtNumber = (AbstractNbtNumber)nbtElement;
             return DataResult.success((Object)abstractNbtNumber.numberValue());
         }
-        return DataResult.error((String)"Not a number");
+        return DataResult.error(() -> "Not a number");
     }
 
     public NbtElement createNumeric(Number number) {
@@ -162,7 +162,7 @@ implements DynamicOps<NbtElement> {
             NbtString nbtString = (NbtString)nbtElement;
             return DataResult.success((Object)nbtString.asString());
         }
-        return DataResult.error((String)"Not a string");
+        return DataResult.error(() -> "Not a string");
     }
 
     public NbtElement createString(String string) {
@@ -170,19 +170,19 @@ implements DynamicOps<NbtElement> {
     }
 
     public DataResult<NbtElement> mergeToList(NbtElement nbtElement, NbtElement nbtElement2) {
-        return NbtOps.createMerger(nbtElement).map(merger -> DataResult.success((Object)merger.merge(nbtElement2).getResult())).orElseGet(() -> DataResult.error((String)("mergeToList called with not a list: " + nbtElement), (Object)nbtElement));
+        return NbtOps.createMerger(nbtElement).map(merger -> DataResult.success((Object)merger.merge(nbtElement2).getResult())).orElseGet(() -> DataResult.error(() -> "mergeToList called with not a list: " + nbtElement, (Object)nbtElement));
     }
 
     public DataResult<NbtElement> mergeToList(NbtElement nbtElement, List<NbtElement> list) {
-        return NbtOps.createMerger(nbtElement).map(merger -> DataResult.success((Object)merger.merge(list).getResult())).orElseGet(() -> DataResult.error((String)("mergeToList called with not a list: " + nbtElement), (Object)nbtElement));
+        return NbtOps.createMerger(nbtElement).map(merger -> DataResult.success((Object)merger.merge(list).getResult())).orElseGet(() -> DataResult.error(() -> "mergeToList called with not a list: " + nbtElement, (Object)nbtElement));
     }
 
     public DataResult<NbtElement> mergeToMap(NbtElement nbtElement, NbtElement nbtElement2, NbtElement nbtElement3) {
         if (!(nbtElement instanceof NbtCompound) && !(nbtElement instanceof NbtEnd)) {
-            return DataResult.error((String)("mergeToMap called with not a map: " + nbtElement), (Object)nbtElement);
+            return DataResult.error(() -> "mergeToMap called with not a map: " + nbtElement, (Object)nbtElement);
         }
         if (!(nbtElement2 instanceof NbtString)) {
-            return DataResult.error((String)("key is not a string: " + nbtElement2), (Object)nbtElement);
+            return DataResult.error(() -> "key is not a string: " + nbtElement2, (Object)nbtElement);
         }
         NbtCompound nbtCompound = new NbtCompound();
         if (nbtElement instanceof NbtCompound) {
@@ -195,7 +195,7 @@ implements DynamicOps<NbtElement> {
 
     public DataResult<NbtElement> mergeToMap(NbtElement nbtElement, MapLike<NbtElement> mapLike) {
         if (!(nbtElement instanceof NbtCompound) && !(nbtElement instanceof NbtEnd)) {
-            return DataResult.error((String)("mergeToMap called with not a map: " + nbtElement), (Object)nbtElement);
+            return DataResult.error(() -> "mergeToMap called with not a map: " + nbtElement, (Object)nbtElement);
         }
         NbtCompound nbtCompound = new NbtCompound();
         if (nbtElement instanceof NbtCompound) {
@@ -212,7 +212,7 @@ implements DynamicOps<NbtElement> {
             nbtCompound.put(nbtElement.asString(), (NbtElement)pair.getSecond());
         });
         if (!list.isEmpty()) {
-            return DataResult.error((String)("some keys are not strings: " + list), (Object)nbtCompound);
+            return DataResult.error(() -> "some keys are not strings: " + list, (Object)nbtCompound);
         }
         return DataResult.success((Object)nbtCompound);
     }
@@ -222,7 +222,7 @@ implements DynamicOps<NbtElement> {
             NbtCompound nbtCompound = (NbtCompound)nbtElement;
             return DataResult.success(nbtCompound.getKeys().stream().map(key -> Pair.of((Object)this.createString((String)key), (Object)nbtCompound.get((String)key))));
         }
-        return DataResult.error((String)("Not a map: " + nbtElement));
+        return DataResult.error(() -> "Not a map: " + nbtElement);
     }
 
     public DataResult<Consumer<BiConsumer<NbtElement, NbtElement>>> getMapEntries(NbtElement nbtElement) {
@@ -230,7 +230,7 @@ implements DynamicOps<NbtElement> {
             NbtCompound nbtCompound = (NbtCompound)nbtElement;
             return DataResult.success(entryConsumer -> nbtCompound.getKeys().forEach(key -> entryConsumer.accept(this.createString((String)key), nbtCompound.get((String)key))));
         }
-        return DataResult.error((String)("Not a map: " + nbtElement));
+        return DataResult.error(() -> "Not a map: " + nbtElement);
     }
 
     public DataResult<MapLike<NbtElement>> getMap(NbtElement nbtElement) {
@@ -267,7 +267,7 @@ implements DynamicOps<NbtElement> {
                 }
             });
         }
-        return DataResult.error((String)("Not a map: " + nbtElement));
+        return DataResult.error(() -> "Not a map: " + nbtElement);
     }
 
     public NbtElement createMap(Stream<Pair<NbtElement, NbtElement>> stream) {
@@ -296,7 +296,7 @@ implements DynamicOps<NbtElement> {
             AbstractNbtList abstractNbtList = (AbstractNbtList)nbtElement;
             return DataResult.success(abstractNbtList.stream().map(nbt -> nbt));
         }
-        return DataResult.error((String)"Not a list");
+        return DataResult.error(() -> "Not a list");
     }
 
     public DataResult<Consumer<Consumer<NbtElement>>> getList(NbtElement nbtElement) {
@@ -311,7 +311,7 @@ implements DynamicOps<NbtElement> {
             AbstractNbtList abstractNbtList = (AbstractNbtList)nbtElement;
             return DataResult.success(abstractNbtList::forEach);
         }
-        return DataResult.error((String)("Not a list: " + nbtElement));
+        return DataResult.error(() -> "Not a list: " + nbtElement);
     }
 
     public DataResult<ByteBuffer> getByteBuffer(NbtElement nbtElement) {
@@ -608,7 +608,7 @@ implements DynamicOps<NbtElement> {
                 }
                 return DataResult.success((Object)nbtCompound3);
             }
-            return DataResult.error((String)("mergeToMap called with not a map: " + nbtElement), (Object)nbtElement);
+            return DataResult.error(() -> "mergeToMap called with not a map: " + nbtElement, (Object)nbtElement);
         }
 
         protected /* synthetic */ Object append(String key, Object value, Object nbt) {

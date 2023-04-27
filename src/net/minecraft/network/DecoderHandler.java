@@ -19,8 +19,8 @@ import java.util.List;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
 import org.slf4j.Logger;
 
@@ -40,14 +40,14 @@ extends ByteToMessageDecoder {
         }
         PacketByteBuf packetByteBuf = new PacketByteBuf(buf);
         int j = packetByteBuf.readVarInt();
-        Packet<?> packet = ((NetworkState)((Object)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getPacketHandler(this.side, j, packetByteBuf);
+        Packet<?> packet = ((NetworkState)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get()).getPacketHandler(this.side, j, packetByteBuf);
         if (packet == null) {
             throw new IOException("Bad packet id " + j);
         }
-        int k = ((NetworkState)((Object)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId();
+        int k = ((NetworkState)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get()).getId();
         FlightProfiler.INSTANCE.onPacketReceived(k, j, ctx.channel().remoteAddress(), i);
         if (packetByteBuf.readableBytes() > 0) {
-            throw new IOException("Packet " + ((NetworkState)((Object)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId() + "/" + j + " (" + packet.getClass().getSimpleName() + ") was larger than I expected, found " + packetByteBuf.readableBytes() + " bytes extra whilst reading packet " + j);
+            throw new IOException("Packet " + ((NetworkState)ctx.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get()).getId() + "/" + j + " (" + packet.getClass().getSimpleName() + ") was larger than I expected, found " + packetByteBuf.readableBytes() + " bytes extra whilst reading packet " + j);
         }
         objects.add(packet);
         if (LOGGER.isDebugEnabled()) {

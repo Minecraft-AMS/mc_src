@@ -34,7 +34,7 @@ extends DataFix {
     }
 
     public TypeRewriteRule makeRule() {
-        return TypeRewriteRule.seq((TypeRewriteRule)this.writeFixAndRead("ChunkToProtoChunkFix", this.getInputSchema().getType(TypeReferences.CHUNK), this.getOutputSchema().getType(TypeReferences.CHUNK), dynamic -> dynamic.update("Level", ChunkToProtoChunkFix::fixLevel)), (TypeRewriteRule)this.writeAndRead("Structure biome inject", this.getInputSchema().getType(TypeReferences.STRUCTURE_FEATURE), this.getOutputSchema().getType(TypeReferences.STRUCTURE_FEATURE)));
+        return this.writeFixAndRead("ChunkToProtoChunkFix", this.getInputSchema().getType(TypeReferences.CHUNK), this.getOutputSchema().getType(TypeReferences.CHUNK), dynamic -> dynamic.update("Level", ChunkToProtoChunkFix::fixLevel));
     }
 
     private static <T> Dynamic<T> fixLevel(Dynamic<T> dynamic) {

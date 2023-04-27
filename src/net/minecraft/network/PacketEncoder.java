@@ -18,9 +18,9 @@ import java.io.IOException;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.PacketEncoderException;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
 import org.slf4j.Logger;
 
@@ -34,31 +34,31 @@ extends MessageToByteEncoder<Packet<?>> {
     }
 
     protected void encode(ChannelHandlerContext channelHandlerContext, Packet<?> packet, ByteBuf byteBuf) throws Exception {
-        NetworkState networkState = (NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get());
+        NetworkState networkState = (NetworkState)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get();
         if (networkState == null) {
             throw new RuntimeException("ConnectionProtocol unknown: " + packet);
         }
-        Integer integer = networkState.getPacketId(this.side, packet);
+        int i = networkState.getPacketId(this.side, packet);
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(ClientConnection.PACKET_SENT_MARKER, "OUT: [{}:{}] {}", new Object[]{channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), integer, packet.getClass().getName()});
+            LOGGER.debug(ClientConnection.PACKET_SENT_MARKER, "OUT: [{}:{}] {}", new Object[]{channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get(), i, packet.getClass().getName()});
         }
-        if (integer == null) {
+        if (i == -1) {
             throw new IOException("Can't serialize unregistered packet");
         }
         PacketByteBuf packetByteBuf = new PacketByteBuf(byteBuf);
-        packetByteBuf.writeVarInt(integer);
+        packetByteBuf.writeVarInt(i);
         try {
-            int i = packetByteBuf.writerIndex();
+            int j = packetByteBuf.writerIndex();
             packet.write(packetByteBuf);
-            int j = packetByteBuf.writerIndex() - i;
-            if (j > 0x800000) {
-                throw new IllegalArgumentException("Packet too big (is " + j + ", should be less than 8388608): " + packet);
+            int k = packetByteBuf.writerIndex() - j;
+            if (k > 0x800000) {
+                throw new IllegalArgumentException("Packet too big (is " + k + ", should be less than 8388608): " + packet);
             }
-            int k = ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId();
-            FlightProfiler.INSTANCE.onPacketSent(k, integer, channelHandlerContext.channel().remoteAddress(), j);
+            int l = ((NetworkState)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get()).getId();
+            FlightProfiler.INSTANCE.onPacketSent(l, i, channelHandlerContext.channel().remoteAddress(), k);
         }
         catch (Throwable throwable) {
-            LOGGER.error("Error receiving packet {}", (Object)integer, (Object)throwable);
+            LOGGER.error("Error receiving packet {}", (Object)i, (Object)throwable);
             if (packet.isWritingErrorSkippable()) {
                 throw new PacketEncoderException(throwable);
             }

@@ -147,11 +147,6 @@ extends AnimalEntity {
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
-        return false;
-    }
-
-    @Override
     @Nullable
     protected SoundEvent getAmbientSound() {
         return SoundEvents.ENTITY_OCELOT_AMBIENT;
@@ -178,7 +173,7 @@ extends AnimalEntity {
 
     @Override
     public boolean tryAttack(Entity target) {
-        return target.damage(DamageSource.mob(this), this.getAttackDamage());
+        return target.damage(this.getDamageSources().mobAttack(this), this.getAttackDamage());
     }
 
     @Override

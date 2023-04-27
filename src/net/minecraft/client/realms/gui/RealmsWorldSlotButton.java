@@ -108,7 +108,7 @@ extends ButtonWidget {
         if (action == Action.NOTHING) {
             return Pair.of(null, (Object)Text.literal(text));
         }
-        Text text2 = minigame ? (empty ? ScreenTexts.EMPTY : Text.literal(" ").append(text).append(" ").append(server.minigameName)) : Text.literal(" ").append(text);
+        Text text2 = minigame ? (empty ? ScreenTexts.EMPTY : ScreenTexts.space().append(text).append(ScreenTexts.SPACE).append(server.minigameName)) : ScreenTexts.space().append(text);
         Text text3 = action == Action.JOIN ? ACTIVE_TOOLTIP : (minigame ? MINIGAME_TOOLTIP : TOOLTIP);
         MutableText text4 = text3.copy().append(text2);
         return Pair.of((Object)text3, (Object)text4);
@@ -124,17 +124,17 @@ extends ButtonWidget {
 
     private void drawSlotFrame(MatrixStack matrices, int x, int y, int mouseX, int mouseY, boolean active, String slotName, int slotIndex, long imageId, @Nullable String image, boolean empty, boolean minigame, Action action, @Nullable Text actionPrompt) {
         boolean bl2;
-        boolean bl = this.isHovered();
+        boolean bl = this.isSelected();
         if (this.isMouseOver(mouseX, mouseY) && actionPrompt != null) {
             this.tooltipSetter.accept(actionPrompt);
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         if (minigame) {
-            RealmsTextureManager.bindWorldTemplate(String.valueOf(imageId), image);
+            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(String.valueOf(imageId), image));
         } else if (empty) {
             RenderSystem.setShaderTexture(0, EMPTY_FRAME);
         } else if (image != null && imageId != -1L) {
-            RealmsTextureManager.bindWorldTemplate(String.valueOf(imageId), image);
+            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(String.valueOf(imageId), image));
         } else if (slotIndex == 1) {
             RenderSystem.setShaderTexture(0, PANORAMA_0);
         } else if (slotIndex == 2) {
@@ -144,8 +144,6 @@ extends ButtonWidget {
         }
         if (active) {
             RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
-        } else {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
         RealmsWorldSlotButton.drawTexture(matrices, x + 3, y + 3, 0.0f, 0.0f, 74, 74, 74, 74);
         RenderSystem.setShaderTexture(0, SLOT_FRAME);
@@ -158,17 +156,16 @@ extends ButtonWidget {
             RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
         }
         RealmsWorldSlotButton.drawTexture(matrices, x, y, 0.0f, 0.0f, 80, 80, 80, 80);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         if (active) {
             this.drawCheckmark(matrices, x, y);
         }
-        RealmsWorldSlotButton.drawCenteredText(matrices, minecraftClient.textRenderer, slotName, x + 40, y + 66, 0xFFFFFF);
+        RealmsWorldSlotButton.drawCenteredTextWithShadow(matrices, minecraftClient.textRenderer, slotName, x + 40, y + 66, 0xFFFFFF);
     }
 
     private void drawCheckmark(MatrixStack matrices, int x, int y) {
         RenderSystem.setShaderTexture(0, CHECKMARK);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
         RealmsWorldSlotButton.drawTexture(matrices, x + 67, y + 4, 0.0f, 0.0f, 9, 8, 9, 8);
         RenderSystem.disableBlend();
     }

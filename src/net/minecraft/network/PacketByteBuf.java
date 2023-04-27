@@ -6,12 +6,16 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
+ *  com.google.gson.Gson
+ *  com.google.gson.JsonElement
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.properties.Property
  *  com.mojang.authlib.properties.PropertyMap
  *  com.mojang.datafixers.util.Either
  *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DynamicOps
+ *  com.mojang.serialization.JsonOps
  *  io.netty.buffer.ByteBuf
  *  io.netty.buffer.ByteBufAllocator
  *  io.netty.buffer.ByteBufInputStream
@@ -22,6 +26,8 @@
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  it.unimi.dsi.fastutil.ints.IntList
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Quaternionf
+ *  org.joml.Vector3f
  */
 package net.minecraft.network;
 
@@ -29,12 +35,16 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.JsonOps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
@@ -76,7 +86,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.network.encryption.NetworkEncryptionException;
 import net.minecraft.network.encryption.NetworkEncryptionUtils;
@@ -88,6 +97,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.IndexedIterable;
 import net.minecraft.util.hit.BlockHitResult;
@@ -100,6 +110,8 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 public class PacketByteBuf
 extends ByteBuf {
@@ -112,6 +124,7 @@ extends ByteBuf {
     private static final int field_39381 = 256;
     private static final int field_39382 = 256;
     private static final int field_39383 = 512;
+    private static final Gson GSON = new Gson();
 
     public PacketByteBuf(ByteBuf parent) {
         this.parent = parent;
@@ -134,15 +147,26 @@ extends ByteBuf {
     }
 
     @Deprecated
-    public <T> T decode(Codec<T> codec) {
+    public <T> T decode(DynamicOps<NbtElement> ops, Codec<T> codec) {
         NbtCompound nbtCompound = this.readUnlimitedNbt();
-        return Util.getResult(codec.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound), error -> new DecoderException("Failed to decode: " + error + " " + nbtCompound));
+        return Util.getResult(codec.parse(ops, (Object)nbtCompound), error -> new DecoderException("Failed to decode: " + error + " " + nbtCompound));
     }
 
     @Deprecated
-    public <T> void encode(Codec<T> codec, T object) {
-        NbtElement nbtElement = (NbtElement)Util.getResult(codec.encodeStart((DynamicOps)NbtOps.INSTANCE, object), error -> new EncoderException("Failed to encode: " + error + " " + object));
+    public <T> void encode(DynamicOps<NbtElement> ops, Codec<T> codec, T value) {
+        NbtElement nbtElement = (NbtElement)Util.getResult(codec.encodeStart(ops, value), error -> new EncoderException("Failed to encode: " + error + " " + value));
         this.writeNbt((NbtCompound)nbtElement);
+    }
+
+    public <T> T decodeAsJson(Codec<T> codec) {
+        JsonElement jsonElement = JsonHelper.deserialize(GSON, this.readString(), JsonElement.class);
+        DataResult dataResult = codec.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonElement);
+        return Util.getResult(dataResult, error -> new DecoderException("Failed to decode json: " + error));
+    }
+
+    public <T> void encodeAsJson(Codec<T> codec, T value) {
+        DataResult dataResult = codec.encodeStart((DynamicOps)JsonOps.INSTANCE, value);
+        this.writeString(GSON.toJson((JsonElement)Util.getResult(dataResult, error -> new EncoderException("Failed to encode: " + error + " " + value))));
     }
 
     public <T> void writeRegistryValue(IndexedIterable<T> registry, T value) {
@@ -449,6 +473,27 @@ extends ByteBuf {
     public void writeGlobalPos(GlobalPos pos) {
         this.writeRegistryKey(pos.getDimension());
         this.writeBlockPos(pos.getPos());
+    }
+
+    public Vector3f readVector3f() {
+        return new Vector3f(this.readFloat(), this.readFloat(), this.readFloat());
+    }
+
+    public void writeVector3f(Vector3f vector3f) {
+        this.writeFloat(vector3f.x());
+        this.writeFloat(vector3f.y());
+        this.writeFloat(vector3f.z());
+    }
+
+    public Quaternionf readQuaternionf() {
+        return new Quaternionf(this.readFloat(), this.readFloat(), this.readFloat(), this.readFloat());
+    }
+
+    public void writeQuaternionf(Quaternionf quaternionf) {
+        this.writeFloat(quaternionf.x);
+        this.writeFloat(quaternionf.y);
+        this.writeFloat(quaternionf.z);
+        this.writeFloat(quaternionf.w);
     }
 
     public Text readText() {

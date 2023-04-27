@@ -16,6 +16,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.client.toast.ToastManager;
 import net.minecraft.client.util.math.MatrixStack;
@@ -76,10 +77,9 @@ implements Toast {
             this.justUpdated = false;
         }
         RenderSystem.setShaderTexture(0, TEXTURE);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         int i = this.getWidth();
         if (i == 160 && this.lines.size() <= 1) {
-            manager.drawTexture(matrices, 0, 0, 0, 64, i, this.getHeight());
+            DrawableHelper.drawTexture(matrices, 0, 0, 0, 64, i, this.getHeight());
         } else {
             j = this.getHeight();
             int k = 28;
@@ -98,17 +98,17 @@ implements Toast {
                 manager.getClient().textRenderer.draw(matrices, this.lines.get(j), 18.0f, (float)(18 + j * 12), -1);
             }
         }
-        return startTime - this.startTime < this.type.displayDuration ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
+        return (double)(startTime - this.startTime) < (double)this.type.displayDuration * manager.getNotificationDisplayTimeMultiplier() ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
     }
 
     private void drawPart(MatrixStack matrices, ToastManager manager, int width, int textureV, int y, int height) {
         int i = textureV == 0 ? 20 : 5;
         int j = Math.min(60, width - i);
-        manager.drawTexture(matrices, 0, y, 0, 64 + textureV, i, height);
+        DrawableHelper.drawTexture(matrices, 0, y, 0, 64 + textureV, i, height);
         for (int k = i; k < width - j; k += 64) {
-            manager.drawTexture(matrices, k, y, 32, 64 + textureV, Math.min(64, width - k - j), height);
+            DrawableHelper.drawTexture(matrices, k, y, 32, 64 + textureV, Math.min(64, width - k - j), height);
         }
-        manager.drawTexture(matrices, width - j, y, 160 - j, 64 + textureV, j, height);
+        DrawableHelper.drawTexture(matrices, width - j, y, 160 - j, 64 + textureV, j, height);
     }
 
     public void setContent(Text title, @Nullable Text description) {
@@ -157,7 +157,6 @@ implements Toast {
         public static final /* enum */ Type TUTORIAL_HINT = new Type();
         public static final /* enum */ Type NARRATOR_TOGGLE = new Type();
         public static final /* enum */ Type WORLD_BACKUP = new Type();
-        public static final /* enum */ Type WORLD_GEN_SETTINGS_TRANSFER = new Type();
         public static final /* enum */ Type PACK_LOAD_FAILURE = new Type();
         public static final /* enum */ Type WORLD_ACCESS_FAILURE = new Type();
         public static final /* enum */ Type PACK_COPY_FAILURE = new Type();
@@ -183,7 +182,7 @@ implements Toast {
         }
 
         private static /* synthetic */ Type[] method_36871() {
-            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION, UNSECURE_SERVER_WARNING};
+            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION, UNSECURE_SERVER_WARNING};
         }
 
         static {

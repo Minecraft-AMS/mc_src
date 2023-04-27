@@ -6,6 +6,7 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
  *  com.mojang.logging.LogUtils
+ *  net.fabricmc.fabric.api.item.v1.FabricItem
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import net.fabricmc.fabric.api.item.v1.FabricItem;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -41,6 +43,7 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.resource.featuretoggle.FeatureFlag;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.resource.featuretoggle.FeatureSet;
@@ -67,7 +70,8 @@ import org.slf4j.Logger;
 
 public class Item
 implements ToggleableFeature,
-ItemConvertible {
+ItemConvertible,
+FabricItem {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final Map<Block, Item> BLOCK_ITEMS = Maps.newHashMap();
     protected static final UUID ATTACK_DAMAGE_MODIFIER_ID = UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF");
@@ -367,12 +371,7 @@ ItemConvertible {
     }
 
     public boolean damage(DamageSource source) {
-        return !this.fireproof || !source.isFire();
-    }
-
-    @Nullable
-    public SoundEvent getEquipSound() {
-        return null;
+        return !this.fireproof || !source.isIn(DamageTypeTags.IS_FIRE);
     }
 
     public boolean canBeNested() {

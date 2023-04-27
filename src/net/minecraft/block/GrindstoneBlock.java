@@ -100,7 +100,7 @@ extends WallMountedBlock {
     public static final VoxelShape X_CEILING_SHAPE = VoxelShapes.union(X_CEILING_SIDES, Block.createCuboidShape(2.0, 0.0, 4.0, 14.0, 12.0, 12.0));
     private static final Text TITLE = Text.translatable("container.grindstone_title");
 
-    protected GrindstoneBlock(AbstractBlock.Settings settings) {
+    public GrindstoneBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(FACE, WallMountLocation.WALL));
     }

@@ -268,11 +268,9 @@ public class StructureTemplateManager {
     }
 
     public StructureTemplate createTemplate(NbtCompound nbt) {
-        if (!nbt.contains("DataVersion", 99)) {
-            nbt.putInt("DataVersion", 500);
-        }
         StructureTemplate structureTemplate = new StructureTemplate();
-        structureTemplate.readNbt(this.blockLookup, NbtHelper.update(this.dataFixer, DataFixTypes.STRUCTURE, nbt, nbt.getInt("DataVersion")));
+        int i = NbtHelper.getDataVersion(nbt, 500);
+        structureTemplate.readNbt(this.blockLookup, DataFixTypes.STRUCTURE.update(this.dataFixer, nbt, i));
         return structureTemplate;
     }
 

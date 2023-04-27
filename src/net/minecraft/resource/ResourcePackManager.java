@@ -6,6 +6,7 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.ImmutableSet
+ *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  org.jetbrains.annotations.Nullable
  */
@@ -15,7 +16,9 @@ import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +58,28 @@ public class ResourcePackManager {
 
     public void setEnabledProfiles(Collection<String> enabled) {
         this.enabled = this.buildEnabledProfiles(enabled);
+    }
+
+    public boolean enable(String profile) {
+        ResourcePackProfile resourcePackProfile = this.profiles.get(profile);
+        if (resourcePackProfile != null && !this.enabled.contains(resourcePackProfile)) {
+            ArrayList list = Lists.newArrayList(this.enabled);
+            list.add(resourcePackProfile);
+            this.enabled = list;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean disable(String profile) {
+        ResourcePackProfile resourcePackProfile = this.profiles.get(profile);
+        if (resourcePackProfile != null && this.enabled.contains(resourcePackProfile)) {
+            ArrayList list = Lists.newArrayList(this.enabled);
+            list.remove(resourcePackProfile);
+            this.enabled = list;
+            return true;
+        }
+        return false;
     }
 
     private List<ResourcePackProfile> buildEnabledProfiles(Collection<String> enabledNames) {

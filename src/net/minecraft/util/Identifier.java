@@ -111,7 +111,7 @@ implements Comparable<Identifier> {
             return DataResult.success((Object)new Identifier(id));
         }
         catch (InvalidIdentifierException invalidIdentifierException) {
-            return DataResult.error((String)("Not a valid resource location: " + id + " " + invalidIdentifierException.getMessage()));
+            return DataResult.error(() -> "Not a valid resource location: " + id + " " + invalidIdentifierException.getMessage());
         }
     }
 
@@ -133,6 +133,10 @@ implements Comparable<Identifier> {
 
     public Identifier withPrefixedPath(String prefix) {
         return this.withPath(prefix + this.path);
+    }
+
+    public Identifier withSuffixedPath(String suffix) {
+        return this.withPath(this.path + suffix);
     }
 
     public String toString() {
@@ -177,6 +181,10 @@ implements Comparable<Identifier> {
 
     public String toTranslationKey(String prefix) {
         return prefix + "." + this.toTranslationKey();
+    }
+
+    public String toTranslationKey(String prefix, String suffix) {
+        return prefix + "." + this.toTranslationKey() + "." + suffix;
     }
 
     public static Identifier fromCommandInput(StringReader reader) throws CommandSyntaxException {

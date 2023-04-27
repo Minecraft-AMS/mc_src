@@ -39,7 +39,7 @@ FluidFillable {
     protected static final float field_31242 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 12.0, 14.0);
 
-    protected SeagrassBlock(AbstractBlock.Settings settings) {
+    public SeagrassBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

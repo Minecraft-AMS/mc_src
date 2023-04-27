@@ -9,6 +9,7 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Keyable
  *  com.mojang.serialization.MapCodec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
@@ -24,9 +25,12 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Keyable;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -38,6 +42,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.collection.Pool;
 import net.minecraft.util.collection.Weight;
 import net.minecraft.util.collection.Weighted;
+import net.minecraft.util.dynamic.Codecs;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -70,28 +75,33 @@ public class SpawnSettings {
         return this.creatureSpawnProbability;
     }
 
-    public static class SpawnDensity {
+    public record SpawnDensity(double gravityLimit, double mass) {
         public static final Codec<SpawnDensity> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.DOUBLE.fieldOf("energy_budget").forGetter(spawnDensity -> spawnDensity.gravityLimit), (App)Codec.DOUBLE.fieldOf("charge").forGetter(spawnDensity -> spawnDensity.mass)).apply((Applicative)instance, SpawnDensity::new));
-        private final double gravityLimit;
-        private final double mass;
 
-        SpawnDensity(double gravityLimit, double mass) {
-            this.gravityLimit = gravityLimit;
-            this.mass = mass;
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{SpawnDensity.class, "energyBudget;charge", "gravityLimit", "mass"}, this);
         }
 
-        public double getGravityLimit() {
-            return this.gravityLimit;
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{SpawnDensity.class, "energyBudget;charge", "gravityLimit", "mass"}, this);
         }
 
-        public double getMass() {
-            return this.mass;
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{SpawnDensity.class, "energyBudget;charge", "gravityLimit", "mass"}, this, object);
         }
     }
 
     public static class SpawnEntry
     extends Weighted.Absent {
-        public static final Codec<SpawnEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registries.ENTITY_TYPE.getCodec().fieldOf("type").forGetter(spawnEntry -> spawnEntry.type), (App)Weight.CODEC.fieldOf("weight").forGetter(Weighted.Absent::getWeight), (App)Codec.INT.fieldOf("minCount").forGetter(spawnEntry -> spawnEntry.minGroupSize), (App)Codec.INT.fieldOf("maxCount").forGetter(spawnEntry -> spawnEntry.maxGroupSize)).apply((Applicative)instance, SpawnEntry::new));
+        public static final Codec<SpawnEntry> CODEC = Codecs.validate(RecordCodecBuilder.create(instance -> instance.group((App)Registries.ENTITY_TYPE.getCodec().fieldOf("type").forGetter(spawnEntry -> spawnEntry.type), (App)Weight.CODEC.fieldOf("weight").forGetter(Weighted.Absent::getWeight), (App)Codecs.POSITIVE_INT.fieldOf("minCount").forGetter(spawnEntry -> spawnEntry.minGroupSize), (App)Codecs.POSITIVE_INT.fieldOf("maxCount").forGetter(spawnEntry -> spawnEntry.maxGroupSize)).apply((Applicative)instance, SpawnEntry::new)), spawnEntry -> {
+            if (spawnEntry.minGroupSize > spawnEntry.maxGroupSize) {
+                return DataResult.error(() -> "minCount needs to be smaller or equal to maxCount");
+            }
+            return DataResult.success((Object)spawnEntry);
+        });
         public final EntityType<?> type;
         public final int minGroupSize;
         public final int maxGroupSize;

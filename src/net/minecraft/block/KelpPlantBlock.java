@@ -21,7 +21,7 @@ import net.minecraft.world.WorldAccess;
 public class KelpPlantBlock
 extends AbstractPlantBlock
 implements FluidFillable {
-    protected KelpPlantBlock(AbstractBlock.Settings settings) {
+    public KelpPlantBlock(AbstractBlock.Settings settings) {
         super(settings, Direction.UP, VoxelShapes.fullCube(), true);
     }
 

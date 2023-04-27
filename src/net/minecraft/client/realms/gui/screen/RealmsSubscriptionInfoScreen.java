@@ -18,6 +18,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.MultilineTextWidget;
 import net.minecraft.client.realms.RealmsClient;
 import net.minecraft.client.realms.dto.RealmsServer;
 import net.minecraft.client.realms.dto.Subscription;
@@ -30,6 +31,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Urls;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -49,6 +51,7 @@ extends RealmsScreen {
     private static final Text DAY_TEXT = Text.translatable("mco.configure.world.subscription.day");
     private static final Text DAYS_TEXT = Text.translatable("mco.configure.world.subscription.days");
     private static final Text UNKNOWN_TEXT = Text.translatable("mco.configure.world.subscription.unknown");
+    private static final Text field_43152 = Text.translatable("mco.configure.world.subscription.recurring.info");
     private final Screen parent;
     final RealmsServer serverData;
     final Screen mainScreen;
@@ -56,7 +59,6 @@ extends RealmsScreen {
     private Text startDate = UNKNOWN_TEXT;
     @Nullable
     private Subscription.SubscriptionType type;
-    private static final String EXTEND_JAVA_REALMS_URL = "https://aka.ms/ExtendJavaRealms";
 
     public RealmsSubscriptionInfoScreen(Screen parent, RealmsServer serverData, Screen mainScreen) {
         super(NarratorManager.EMPTY);
@@ -69,7 +71,7 @@ extends RealmsScreen {
     public void init() {
         this.getSubscription(this.serverData.id);
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.configure.world.subscription.extend"), button -> {
-            String string = "https://aka.ms/ExtendJavaRealms?subscriptionId=" + this.serverData.remoteSubscriptionId + "&profileId=" + this.client.getSession().getUuid();
+            String string = Urls.getExtendJavaRealmsUrl(this.serverData.remoteSubscriptionId, this.client.getSession().getUuid());
             this.client.keyboard.setClipboard(string);
             Util.getOperatingSystem().open(string);
         }).dimensions(this.width / 2 - 100, RealmsSubscriptionInfoScreen.row(6), 200, 20).build());
@@ -80,6 +82,8 @@ extends RealmsScreen {
                 MutableText text2 = Text.translatable("mco.configure.world.delete.question.line2");
                 this.client.setScreen(new RealmsLongConfirmationScreen(this::onDeletionConfirmed, RealmsLongConfirmationScreen.Type.WARNING, text, text2, true));
             }).dimensions(this.width / 2 - 100, RealmsSubscriptionInfoScreen.row(10), 200, 20).build());
+        } else {
+            this.addDrawableChild(new MultilineTextWidget(this.width / 2 - 100, RealmsSubscriptionInfoScreen.row(8), field_43152, this.textRenderer).setTextColor(0xA0A0A0).setMaxWidth(200));
         }
     }
 
@@ -141,7 +145,7 @@ extends RealmsScreen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         int i = this.width / 2 - 100;
-        RealmsSubscriptionInfoScreen.drawCenteredText(matrices, this.textRenderer, SUBSCRIPTION_TITLE, this.width / 2, 17, 0xFFFFFF);
+        RealmsSubscriptionInfoScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, SUBSCRIPTION_TITLE, this.width / 2, 17, 0xFFFFFF);
         this.textRenderer.draw(matrices, SUBSCRIPTION_START_LABEL_TEXT, (float)i, (float)RealmsSubscriptionInfoScreen.row(0), 0xA0A0A0);
         this.textRenderer.draw(matrices, this.startDate, (float)i, (float)RealmsSubscriptionInfoScreen.row(1), 0xFFFFFF);
         if (this.type == Subscription.SubscriptionType.NORMAL) {
@@ -164,7 +168,7 @@ extends RealmsScreen {
         int j = daysLeft % 30;
         MutableText mutableText = Text.empty();
         if (i > 0) {
-            mutableText.append(Integer.toString(i)).append(" ");
+            mutableText.append(Integer.toString(i)).append(ScreenTexts.SPACE);
             if (i == 1) {
                 mutableText.append(MONTH_TEXT);
             } else {
@@ -175,7 +179,7 @@ extends RealmsScreen {
             if (i > 0) {
                 mutableText.append(", ");
             }
-            mutableText.append(Integer.toString(j)).append(" ");
+            mutableText.append(Integer.toString(j)).append(ScreenTexts.SPACE);
             if (j == 1) {
                 mutableText.append(DAY_TEXT);
             } else {

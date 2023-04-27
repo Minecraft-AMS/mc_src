@@ -35,12 +35,11 @@ extends RealmsScreen {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Text TITLE = Text.translatable("mco.terms.title");
     private static final Text SENTENCE_ONE_TEXT = Text.translatable("mco.terms.sentence.1");
-    private static final Text SENTENCE_TWO_TEXT = Text.literal(" ").append(Text.translatable("mco.terms.sentence.2").fillStyle(Style.EMPTY.withUnderline(true)));
+    private static final Text SENTENCE_TWO_TEXT = ScreenTexts.space().append(Text.translatable("mco.terms.sentence.2").fillStyle(Style.EMPTY.withUnderline(true)));
     private final Screen parent;
     private final RealmsMainScreen mainScreen;
     private final RealmsServer realmsServer;
     private boolean onLink;
-    private final String realmsToSUrl = "https://aka.ms/MinecraftRealmsTerms";
 
     public RealmsTermsScreen(Screen parent, RealmsMainScreen mainScreen, RealmsServer realmsServer) {
         super(TITLE);
@@ -88,13 +87,13 @@ extends RealmsScreen {
 
     @Override
     public Text getNarratedTitle() {
-        return ScreenTexts.joinSentences(super.getNarratedTitle(), SENTENCE_ONE_TEXT).append(" ").append(SENTENCE_TWO_TEXT);
+        return ScreenTexts.joinSentences(super.getNarratedTitle(), SENTENCE_ONE_TEXT).append(ScreenTexts.SPACE).append(SENTENCE_TWO_TEXT);
     }
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        RealmsTermsScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+        RealmsTermsScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
         this.textRenderer.draw(matrices, SENTENCE_ONE_TEXT, (float)(this.width / 2 - 120), (float)RealmsTermsScreen.row(5), 0xFFFFFF);
         int i = this.textRenderer.getWidth(SENTENCE_ONE_TEXT);
         int j = this.width / 2 - 121 + i;

@@ -10,7 +10,7 @@ import net.minecraft.registry.tag.BlockTags;
 
 public class PickaxeItem
 extends MiningToolItem {
-    protected PickaxeItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
+    public PickaxeItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
         super(attackDamage, attackSpeed, material, BlockTags.PICKAXE_MINEABLE, settings);
     }
 }

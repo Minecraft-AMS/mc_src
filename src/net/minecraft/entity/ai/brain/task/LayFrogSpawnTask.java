@@ -8,6 +8,7 @@ package net.minecraft.entity.ai.brain.task;
 
 import com.mojang.datafixers.kinds.Applicative;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
@@ -17,6 +18,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.world.event.GameEvent;
 
 public class LayFrogSpawnTask {
     public static Task<LivingEntity> create(Block frogSpawn) {
@@ -29,7 +31,9 @@ public class LayFrogSpawnTask {
                 BlockPos blockPos3;
                 BlockPos blockPos2 = blockPos.offset(direction);
                 if (!world.getBlockState(blockPos2).getCollisionShape(world, blockPos2).getFace(Direction.UP).isEmpty() || !world.getFluidState(blockPos2).isOf(Fluids.WATER) || !world.getBlockState(blockPos3 = blockPos2.up()).isAir()) continue;
-                world.setBlockState(blockPos3, frogSpawn.getDefaultState(), 3);
+                BlockState blockState = frogSpawn.getDefaultState();
+                world.setBlockState(blockPos3, blockState, 3);
+                world.emitGameEvent(GameEvent.BLOCK_PLACE, blockPos3, GameEvent.Emitter.of(entity, blockState));
                 world.playSoundFromEntity(null, entity, SoundEvents.ENTITY_FROG_LAY_SPAWN, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 isPregnant.forget();
                 return true;

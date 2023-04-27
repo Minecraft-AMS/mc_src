@@ -20,6 +20,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -97,8 +98,8 @@ extends Entity {
         }
         if (!this.isRemoved() && !this.world.isClient) {
             this.remove(Entity.RemovalReason.KILLED);
-            if (!source.isExplosive()) {
-                DamageSource damageSource = source.getAttacker() != null ? DamageSource.explosion(this, source.getAttacker()) : null;
+            if (!source.isIn(DamageTypeTags.IS_EXPLOSION)) {
+                DamageSource damageSource = source.getAttacker() != null ? this.getDamageSources().explosion(this, source.getAttacker()) : null;
                 this.world.createExplosion(this, damageSource, null, this.getX(), this.getY(), this.getZ(), 6.0f, false, World.ExplosionSourceType.BLOCK);
             }
             this.crystalDestroyed(source);
@@ -108,7 +109,7 @@ extends Entity {
 
     @Override
     public void kill() {
-        this.crystalDestroyed(DamageSource.GENERIC);
+        this.crystalDestroyed(this.getDamageSources().generic());
         super.kill();
     }
 

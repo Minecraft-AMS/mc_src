@@ -46,17 +46,26 @@ public class BlockColors {
         BlockColors blockColors = new BlockColors();
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> {
             if (world == null || pos == null) {
-                return -1;
+                return GrassColors.getDefaultColor();
             }
             return BiomeColors.getGrassColor(world, state.get(TallPlantBlock.HALF) == DoubleBlockHalf.UPPER ? pos.down() : pos);
         }, Blocks.LARGE_FERN, Blocks.TALL_GRASS);
         blockColors.registerColorProperty(TallPlantBlock.HALF, Blocks.LARGE_FERN, Blocks.TALL_GRASS);
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> {
             if (world == null || pos == null) {
-                return GrassColors.getColor(0.5, 1.0);
+                return GrassColors.getDefaultColor();
             }
             return BiomeColors.getGrassColor(world, pos);
         }, Blocks.GRASS_BLOCK, Blocks.FERN, Blocks.GRASS, Blocks.POTTED_FERN);
+        blockColors.registerColorProvider((state, world, pos, tintIndex) -> {
+            if (tintIndex != 0) {
+                if (world == null || pos == null) {
+                    return GrassColors.getDefaultColor();
+                }
+                return BiomeColors.getGrassColor(world, pos);
+            }
+            return -1;
+        }, Blocks.PINK_PETALS);
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> FoliageColors.getSpruceColor(), Blocks.SPRUCE_LEAVES);
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> FoliageColors.getBirchColor(), Blocks.BIRCH_LEAVES);
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> {

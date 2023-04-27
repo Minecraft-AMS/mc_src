@@ -25,7 +25,7 @@ extends Block {
     protected static final VoxelShape BOUNDING_SHAPE = Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 10.0, 10.0);
     protected final ParticleEffect particle;
 
-    protected TorchBlock(AbstractBlock.Settings settings, ParticleEffect particle) {
+    public TorchBlock(AbstractBlock.Settings settings, ParticleEffect particle) {
         super(settings);
         this.particle = particle;
     }

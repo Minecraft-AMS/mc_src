@@ -82,11 +82,11 @@ extends LivingEntityRenderer<T, M> {
         float m = 0.025f;
         VertexConsumer vertexConsumer = provider.getBuffer(RenderLayer.getLeash());
         Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-        float n = MathHelper.fastInverseSqrt(j * j + l * l) * 0.025f / 2.0f;
+        float n = MathHelper.inverseSqrt(j * j + l * l) * 0.025f / 2.0f;
         float o = l * n;
         float p = j * n;
-        BlockPos blockPos = new BlockPos(((Entity)entity).getCameraPosVec(tickDelta));
-        BlockPos blockPos2 = new BlockPos(holdingEntity.getCameraPosVec(tickDelta));
+        BlockPos blockPos = BlockPos.ofFloored(((Entity)entity).getCameraPosVec(tickDelta));
+        BlockPos blockPos2 = BlockPos.ofFloored(holdingEntity.getCameraPosVec(tickDelta));
         int q = this.getBlockLight(entity, blockPos);
         int r = this.dispatcher.getRenderer(holdingEntity).getBlockLight(holdingEntity, blockPos2);
         int s = ((MobEntity)entity).world.getLightLevel(LightType.SKY, blockPos);
@@ -102,8 +102,8 @@ extends LivingEntityRenderer<T, M> {
 
     private static void renderLeashPiece(VertexConsumer vertexConsumer, Matrix4f positionMatrix, float f, float g, float h, int leashedEntityBlockLight, int holdingEntityBlockLight, int leashedEntitySkyLight, int holdingEntitySkyLight, float i, float j, float k, float l, int pieceIndex, boolean isLeashKnot) {
         float m = (float)pieceIndex / 24.0f;
-        int n = (int)MathHelper.lerp(m, leashedEntityBlockLight, holdingEntityBlockLight);
-        int o = (int)MathHelper.lerp(m, leashedEntitySkyLight, holdingEntitySkyLight);
+        int n = (int)MathHelper.lerp(m, (float)leashedEntityBlockLight, (float)holdingEntityBlockLight);
+        int o = (int)MathHelper.lerp(m, (float)leashedEntitySkyLight, (float)holdingEntitySkyLight);
         int p = LightmapTextureManager.pack(n, o);
         float q = pieceIndex % 2 == (isLeashKnot ? 1 : 0) ? 0.7f : 1.0f;
         float r = 0.5f * q;

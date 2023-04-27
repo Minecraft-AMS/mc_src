@@ -19,5 +19,9 @@ public class GrassColors {
         }
         return colorMap[k];
     }
+
+    public static int getDefaultColor() {
+        return GrassColors.getColor(0.5, 1.0);
+    }
 }
 

@@ -19,6 +19,9 @@ import com.mojang.serialization.codecs.UnboundedMapCodec;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.item.trim.ArmorTrimMaterial;
+import net.minecraft.item.trim.ArmorTrimPattern;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.registry.CombinedDynamicRegistries;
 import net.minecraft.registry.DynamicRegistryManager;
@@ -37,7 +40,10 @@ public class SerializableRegistries {
         ImmutableMap.Builder builder = ImmutableMap.builder();
         SerializableRegistries.add(builder, RegistryKeys.BIOME, Biome.NETWORK_CODEC);
         SerializableRegistries.add(builder, RegistryKeys.MESSAGE_TYPE, MessageType.CODEC);
+        SerializableRegistries.add(builder, RegistryKeys.TRIM_PATTERN, ArmorTrimPattern.CODEC);
+        SerializableRegistries.add(builder, RegistryKeys.TRIM_MATERIAL, ArmorTrimMaterial.CODEC);
         SerializableRegistries.add(builder, RegistryKeys.DIMENSION_TYPE, DimensionType.CODEC);
+        SerializableRegistries.add(builder, RegistryKeys.DAMAGE_TYPE, DamageType.CODEC);
         return builder.build();
     });
     public static final Codec<DynamicRegistryManager> CODEC = SerializableRegistries.createCodec();
@@ -51,7 +57,7 @@ public class SerializableRegistries {
     }
 
     private static <E> DataResult<? extends Codec<E>> getNetworkCodec(RegistryKey<? extends Registry<E>> registryRef) {
-        return Optional.ofNullable(REGISTRIES.get(registryRef)).map(info -> info.networkCodec()).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown or not serializable registry: " + registryRef)));
+        return Optional.ofNullable(REGISTRIES.get(registryRef)).map(info -> info.networkCodec()).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown or not serializable registry: " + registryRef));
     }
 
     private static <E> Codec<DynamicRegistryManager> createCodec() {

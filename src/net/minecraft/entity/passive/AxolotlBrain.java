@@ -27,11 +27,11 @@ import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.BreedTask;
 import net.minecraft.entity.ai.brain.task.CompositeTask;
-import net.minecraft.entity.ai.brain.task.FollowMobWithIntervalTask;
 import net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask;
 import net.minecraft.entity.ai.brain.task.ForgetTask;
 import net.minecraft.entity.ai.brain.task.GoTowardsLookTargetTask;
 import net.minecraft.entity.ai.brain.task.LookAroundTask;
+import net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask;
 import net.minecraft.entity.ai.brain.task.LookTargetUtil;
 import net.minecraft.entity.ai.brain.task.MeleeAttackTask;
 import net.minecraft.entity.ai.brain.task.PlayDeadTask;
@@ -86,7 +86,7 @@ public class AxolotlBrain {
     }
 
     private static void addIdleActivities(Brain<AxolotlEntity> brain) {
-        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<AxolotlEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, FollowMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, (Object)new BreedTask(EntityType.AXOLOTL, 0.2f)), (Object)Pair.of((Object)2, new RandomTask(ImmutableList.of((Object)Pair.of((Object)new TemptTask(AxolotlBrain::getTemptedSpeed), (Object)1), (Object)Pair.of(WalkTowardClosestAdultTask.create(WALK_TOWARD_ADULT_RANGE, AxolotlBrain::getAdultFollowingSpeed), (Object)1)))), (Object)Pair.of((Object)3, UpdateAttackTargetTask.create(AxolotlBrain::getAttackTarget)), (Object)Pair.of((Object)3, SeekWaterTask.create(6, 0.15f)), (Object)Pair.of((Object)4, new CompositeTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Set<MemoryModuleType<?>>)ImmutableSet.of(), CompositeTask.Order.ORDERED, CompositeTask.RunMode.TRY_ALL, ImmutableList.of((Object)Pair.of(StrollTask.createDynamicRadius(0.5f), (Object)2), (Object)Pair.of(StrollTask.create(0.15f, false), (Object)2), (Object)Pair.of(GoTowardsLookTargetTask.create(AxolotlBrain::canGoToLookTarget, AxolotlBrain::getTemptedSpeed, 3), (Object)3), (Object)Pair.of(TaskTriggerer.predicate(Entity::isInsideWaterOrBubbleColumn), (Object)5), (Object)Pair.of(TaskTriggerer.predicate(Entity::isOnGround), (Object)5))))));
+        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<AxolotlEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, LookAtMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, (Object)new BreedTask(EntityType.AXOLOTL, 0.2f)), (Object)Pair.of((Object)2, new RandomTask(ImmutableList.of((Object)Pair.of((Object)new TemptTask(AxolotlBrain::getTemptedSpeed), (Object)1), (Object)Pair.of(WalkTowardClosestAdultTask.create(WALK_TOWARD_ADULT_RANGE, AxolotlBrain::getAdultFollowingSpeed), (Object)1)))), (Object)Pair.of((Object)3, UpdateAttackTargetTask.create(AxolotlBrain::getAttackTarget)), (Object)Pair.of((Object)3, SeekWaterTask.create(6, 0.15f)), (Object)Pair.of((Object)4, new CompositeTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Set<MemoryModuleType<?>>)ImmutableSet.of(), CompositeTask.Order.ORDERED, CompositeTask.RunMode.TRY_ALL, ImmutableList.of((Object)Pair.of(StrollTask.createDynamicRadius(0.5f), (Object)2), (Object)Pair.of(StrollTask.create(0.15f, false), (Object)2), (Object)Pair.of(GoTowardsLookTargetTask.create(AxolotlBrain::canGoToLookTarget, AxolotlBrain::getTemptedSpeed, 3), (Object)3), (Object)Pair.of(TaskTriggerer.predicate(Entity::isInsideWaterOrBubbleColumn), (Object)5), (Object)Pair.of(TaskTriggerer.predicate(Entity::isOnGround), (Object)5))))));
     }
 
     private static boolean canGoToLookTarget(LivingEntity entity) {

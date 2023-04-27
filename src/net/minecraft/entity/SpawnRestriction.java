@@ -54,7 +54,7 @@ import org.jetbrains.annotations.Nullable;
 public class SpawnRestriction {
     private static final Map<EntityType<?>, Entry> RESTRICTIONS = Maps.newHashMap();
 
-    private static <T extends MobEntity> void register(EntityType<T> type, Location location, Heightmap.Type heightmapType, SpawnPredicate<T> predicate) {
+    public static <T extends MobEntity> void register(EntityType<T> type, Location location, Heightmap.Type heightmapType, SpawnPredicate<T> predicate) {
         Entry entry = RESTRICTIONS.put(type, new Entry(heightmapType, location, predicate));
         if (entry != null) {
             throw new IllegalStateException("Duplicate registration for type " + Registries.ENTITY_TYPE.getId(type));

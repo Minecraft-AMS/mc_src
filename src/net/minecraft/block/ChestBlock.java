@@ -151,7 +151,7 @@ implements Waterloggable {
         }
     };
 
-    protected ChestBlock(AbstractBlock.Settings settings, Supplier<BlockEntityType<? extends ChestBlockEntity>> supplier) {
+    public ChestBlock(AbstractBlock.Settings settings, Supplier<BlockEntityType<? extends ChestBlockEntity>> supplier) {
         super(settings, supplier);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(CHEST_TYPE, ChestType.SINGLE)).with(WATERLOGGED, false));
     }
@@ -217,7 +217,7 @@ implements Waterloggable {
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         Direction direction3;
         ChestType chestType = ChestType.SINGLE;
-        Direction direction = ctx.getPlayerFacing().getOpposite();
+        Direction direction = ctx.getHorizontalPlayerFacing().getOpposite();
         FluidState fluidState = ctx.getWorld().getFluidState(ctx.getBlockPos());
         boolean bl = ctx.shouldCancelInteraction();
         Direction direction2 = ctx.getSide();

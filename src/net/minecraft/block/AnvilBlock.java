@@ -62,7 +62,7 @@ extends FallingBlock {
 
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
-        return (BlockState)this.getDefaultState().with(FACING, ctx.getPlayerFacing().rotateYClockwise());
+        return (BlockState)this.getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing().rotateYClockwise());
     }
 
     @Override
@@ -111,7 +111,7 @@ extends FallingBlock {
 
     @Override
     public DamageSource getDamageSource(Entity attacker) {
-        return DamageSource.anvil(attacker);
+        return attacker.getDamageSources().fallingAnvil(attacker);
     }
 
     @Nullable

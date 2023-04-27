@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  it.unimi.dsi.fastutil.booleans.BooleanConsumer
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -11,6 +12,7 @@ package net.minecraft.client.gui.screen;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -53,13 +55,11 @@ extends Screen {
         MutableText text = this.isHardcore ? Text.translatable("deathScreen.spectate") : Text.translatable("deathScreen.respawn");
         this.buttons.add(this.addDrawableChild(ButtonWidget.builder(text, button -> {
             this.client.player.requestRespawn();
-            this.client.setScreen(null);
+            button.active = false;
         }).dimensions(this.width / 2 - 100, this.height / 4 + 72, 200, 20).build()));
         this.titleScreenButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("deathScreen.titleScreen"), button -> this.client.getAbuseReportContext().tryShowDraftScreen(this.client, this, this::onTitleScreenButtonClicked, true)).dimensions(this.width / 2 - 100, this.height / 4 + 96, 200, 20).build());
         this.buttons.add(this.titleScreenButton);
-        for (ButtonWidget buttonWidget : this.buttons) {
-            buttonWidget.active = false;
-        }
+        this.setButtonsActive(false);
         this.scoreText = Text.translatable("deathScreen.score").append(": ").append(Text.literal(Integer.toString(this.client.player.getScore())).formatted(Formatting.YELLOW));
     }
 
@@ -73,7 +73,7 @@ extends Screen {
             this.quitLevel();
             return;
         }
-        ConfirmScreen confirmScreen = new ConfirmScreen(confirmed -> {
+        TitleScreenConfirmScreen confirmScreen = new TitleScreenConfirmScreen(confirmed -> {
             if (confirmed) {
                 this.quitLevel();
             } else {
@@ -95,15 +95,15 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.fillGradient(matrices, 0, 0, this.width, this.height, 0x60500000, -1602211792);
+        DeathScreen.fillGradient(matrices, 0, 0, this.width, this.height, 0x60500000, -1602211792);
         matrices.push();
         matrices.scale(2.0f, 2.0f, 2.0f);
-        DeathScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2 / 2, 30, 0xFFFFFF);
+        DeathScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2 / 2, 30, 0xFFFFFF);
         matrices.pop();
         if (this.message != null) {
-            DeathScreen.drawCenteredText(matrices, this.textRenderer, this.message, this.width / 2, 85, 0xFFFFFF);
+            DeathScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.message, this.width / 2, 85, 0xFFFFFF);
         }
-        DeathScreen.drawCenteredText(matrices, this.textRenderer, this.scoreText, this.width / 2, 100, 0xFFFFFF);
+        DeathScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.scoreText, this.width / 2, 100, 0xFFFFFF);
         if (this.message != null && mouseY > 85 && mouseY < 85 + this.textRenderer.fontHeight) {
             Style style = this.getTextComponentUnderMouse(mouseX);
             this.renderTextHoverEffect(matrices, style, mouseX, mouseY);
@@ -111,8 +111,7 @@ extends Screen {
         super.render(matrices, mouseX, mouseY, delta);
         if (this.titleScreenButton != null && this.client.getAbuseReportContext().hasDraft()) {
             RenderSystem.setShaderTexture(0, ClickableWidget.WIDGETS_TEXTURE);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            this.drawTexture(matrices, this.titleScreenButton.getX() + this.titleScreenButton.getWidth() - 17, this.titleScreenButton.getY() + 3, 182, 24, 15, 15);
+            DeathScreen.drawTexture(matrices, this.titleScreenButton.getX() + this.titleScreenButton.getWidth() - 17, this.titleScreenButton.getY() + 3, 182, 24, 15, 15);
         }
     }
 
@@ -150,9 +149,21 @@ extends Screen {
         super.tick();
         ++this.ticksSinceDeath;
         if (this.ticksSinceDeath == 20) {
-            for (ButtonWidget buttonWidget : this.buttons) {
-                buttonWidget.active = true;
-            }
+            this.setButtonsActive(true);
+        }
+    }
+
+    private void setButtonsActive(boolean active) {
+        for (ButtonWidget buttonWidget : this.buttons) {
+            buttonWidget.active = active;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static class TitleScreenConfirmScreen
+    extends ConfirmScreen {
+        public TitleScreenConfirmScreen(BooleanConsumer booleanConsumer, Text text, Text text2, Text text3, Text text4) {
+            super(booleanConsumer, text, text2, text3, text4);
         }
     }
 }

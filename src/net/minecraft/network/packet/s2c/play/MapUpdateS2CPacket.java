@@ -12,9 +12,9 @@ import java.util.Collection;
 import java.util.List;
 import net.minecraft.item.map.MapIcon;
 import net.minecraft.item.map.MapState;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,10 +28,10 @@ implements Packet<ClientPlayPacketListener> {
     @Nullable
     private final MapState.UpdateData updateData;
 
-    public MapUpdateS2CPacket(int id, byte scale, boolean showIcons, @Nullable Collection<MapIcon> icons, @Nullable MapState.UpdateData updateData) {
+    public MapUpdateS2CPacket(int id, byte scale, boolean locked, @Nullable Collection<MapIcon> icons, @Nullable MapState.UpdateData updateData) {
         this.id = id;
         this.scale = scale;
-        this.locked = showIcons;
+        this.locked = locked;
         this.icons = icons != null ? Lists.newArrayList(icons) : null;
         this.updateData = updateData;
     }

@@ -9,7 +9,6 @@ package net.minecraft.entity.projectile.thrown;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.EndermiteEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
@@ -42,7 +41,7 @@ extends ThrownItemEntity {
     @Override
     protected void onEntityHit(EntityHitResult entityHitResult) {
         super.onEntityHit(entityHitResult);
-        entityHitResult.getEntity().damage(DamageSource.thrownProjectile(this, this.getOwner()), 0.0f);
+        entityHitResult.getEntity().damage(this.getDamageSources().thrown(this, this.getOwner()), 0.0f);
     }
 
     @Override
@@ -55,7 +54,7 @@ extends ThrownItemEntity {
             Entity entity = this.getOwner();
             if (entity instanceof ServerPlayerEntity) {
                 ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
-                if (serverPlayerEntity.networkHandler.getConnection().isOpen() && serverPlayerEntity.world == this.world && !serverPlayerEntity.isSleeping()) {
+                if (serverPlayerEntity.networkHandler.isConnectionOpen() && serverPlayerEntity.world == this.world && !serverPlayerEntity.isSleeping()) {
                     EndermiteEntity endermiteEntity;
                     if (this.random.nextFloat() < 0.05f && this.world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && (endermiteEntity = EntityType.ENDERMITE.create(this.world)) != null) {
                         endermiteEntity.refreshPositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch());
@@ -67,7 +66,7 @@ extends ThrownItemEntity {
                         entity.requestTeleport(this.getX(), this.getY(), this.getZ());
                     }
                     entity.onLanding();
-                    entity.damage(DamageSource.FALL, 5.0f);
+                    entity.damage(this.getDamageSources().fall(), 5.0f);
                 }
             } else if (entity != null) {
                 entity.requestTeleport(this.getX(), this.getY(), this.getZ());

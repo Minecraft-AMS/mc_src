@@ -78,7 +78,7 @@ implements RecipeSerializer<T> {
         return this.read(id, json);
     }
 
-    static interface RecipeFactory<T extends AbstractCookingRecipe> {
+    public static interface RecipeFactory<T extends AbstractCookingRecipe> {
         public T create(Identifier var1, String var2, CookingRecipeCategory var3, Ingredient var4, ItemStack var5, float var6, int var7);
     }
 }

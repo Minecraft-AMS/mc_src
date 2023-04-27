@@ -9,11 +9,11 @@ package net.minecraft.network.packet.c2s.play;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
 import java.time.Instant;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 import net.minecraft.network.message.LastSeenMessageList;
 import net.minecraft.network.message.MessageSignatureData;
+import net.minecraft.network.packet.Packet;
 import org.jetbrains.annotations.Nullable;
 
 public record ChatMessageC2SPacket(String chatMessage, Instant timestamp, long salt, @Nullable MessageSignatureData signature, LastSeenMessageList.Acknowledgment acknowledgment) implements Packet<ServerPlayPacketListener>

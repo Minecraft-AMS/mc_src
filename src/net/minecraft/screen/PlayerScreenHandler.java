@@ -15,6 +15,7 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.inventory.CraftingResultInventory;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Equipment;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeMatcher;
@@ -68,9 +69,8 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
 
                 @Override
                 public void setStack(ItemStack stack) {
-                    ItemStack itemStack = this.getStack();
+                    PlayerScreenHandler.onEquipStack(owner, equipmentSlot, stack, this.getStack());
                     super.setStack(stack);
-                    owner.onEquipStack(equipmentSlot, itemStack, stack);
                 }
 
                 @Override
@@ -109,10 +109,23 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
         this.addSlot(new Slot(inventory, 40, 77, 62){
 
             @Override
+            public void setStack(ItemStack stack) {
+                PlayerScreenHandler.onEquipStack(owner, EquipmentSlot.OFFHAND, stack, this.getStack());
+                super.setStack(stack);
+            }
+
+            @Override
             public Pair<Identifier, Identifier> getBackgroundSprite() {
                 return Pair.of((Object)BLOCK_ATLAS_TEXTURE, (Object)EMPTY_OFFHAND_ARMOR_SLOT);
             }
         });
+    }
+
+    static void onEquipStack(PlayerEntity player, EquipmentSlot slot, ItemStack newStack, ItemStack currentStack) {
+        Equipment equipment = Equipment.fromStack(newStack);
+        if (equipment != null) {
+            player.onEquipStack(slot, currentStack, newStack);
+        }
     }
 
     public static boolean isInHotbar(int slot) {
@@ -141,8 +154,8 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
     }
 
     @Override
-    public void close(PlayerEntity player) {
-        super.close(player);
+    public void onClosed(PlayerEntity player) {
+        super.onClosed(player);
         this.craftingResult.clear();
         if (player.world.isClient) {
             return;
@@ -159,7 +172,7 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
     public ItemStack quickMove(PlayerEntity player, int slot) {
         ItemStack itemStack = ItemStack.EMPTY;
         Slot slot2 = (Slot)this.slots.get(slot);
-        if (slot2 != null && slot2.hasStack()) {
+        if (slot2.hasStack()) {
             int i;
             ItemStack itemStack2 = slot2.getStack();
             itemStack = itemStack2.copy();

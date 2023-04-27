@@ -30,11 +30,11 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.CustomizeFlatLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.world.GeneratorOptionsHolder;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.DynamicRegistryManager;
@@ -175,9 +175,9 @@ extends Screen {
         this.listText = Text.translatable("createWorld.customize.presets.list");
         this.customPresetField = new TextFieldWidget(this.textRenderer, 50, 40, this.width - 100, 20, this.shareText);
         this.customPresetField.setMaxLength(1230);
-        MoreOptionsDialog moreOptionsDialog = this.parent.parent.moreOptionsDialog;
-        DynamicRegistryManager dynamicRegistryManager = moreOptionsDialog.getRegistryManager();
-        FeatureSet featureSet = moreOptionsDialog.getGeneratorOptionsHolder().dataConfiguration().enabledFeatures();
+        GeneratorOptionsHolder generatorOptionsHolder = this.parent.parent.getWorldCreator().getGeneratorOptionsHolder();
+        DynamicRegistryManager.Immutable dynamicRegistryManager = generatorOptionsHolder.getCombinedRegistryManager();
+        FeatureSet featureSet = generatorOptionsHolder.dataConfiguration().enabledFeatures();
         RegistryWrapper.Impl<Biome> registryEntryLookup = dynamicRegistryManager.getWrapperOrThrow(RegistryKeys.BIOME);
         RegistryWrapper.Impl<StructureSet> registryEntryLookup2 = dynamicRegistryManager.getWrapperOrThrow(RegistryKeys.STRUCTURE_SET);
         RegistryWrapper.Impl<PlacedFeature> registryEntryLookup3 = dynamicRegistryManager.getWrapperOrThrow(RegistryKeys.PLACED_FEATURE);
@@ -219,7 +219,7 @@ extends Screen {
         this.listWidget.render(matrices, mouseX, mouseY, delta);
         matrices.push();
         matrices.translate(0.0f, 0.0f, 400.0f);
-        PresetsScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
+        PresetsScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
         PresetsScreen.drawTextWithShadow(matrices, this.textRenderer, this.shareText, 50, 30, 0xA0A0A0);
         PresetsScreen.drawTextWithShadow(matrices, this.textRenderer, this.listText, 50, 70, 0xA0A0A0);
         matrices.pop();
@@ -256,11 +256,6 @@ extends Screen {
         public void setSelected(@Nullable SuperflatPresetEntry superflatPresetEntry) {
             super.setSelected(superflatPresetEntry);
             PresetsScreen.this.updateSelectButton(superflatPresetEntry != null);
-        }
-
-        @Override
-        protected boolean isFocused() {
-            return PresetsScreen.this.getFocused() == this;
         }
 
         @Override
@@ -308,13 +303,12 @@ extends Screen {
 
             private void renderIcon(MatrixStack matrices, int x, int y, Item iconItem) {
                 this.drawIconBackground(matrices, x + 1, y + 1);
-                PresetsScreen.this.itemRenderer.renderGuiItemIcon(new ItemStack(iconItem), x + 2, y + 2);
+                PresetsScreen.this.itemRenderer.renderGuiItemIcon(matrices, new ItemStack(iconItem), x + 2, y + 2);
             }
 
             private void drawIconBackground(MatrixStack matrices, int x, int y) {
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 RenderSystem.setShaderTexture(0, DrawableHelper.STATS_ICON_TEXTURE);
-                DrawableHelper.drawTexture(matrices, x, y, PresetsScreen.this.getZOffset(), 0.0f, 0.0f, 18, 18, 128, 128);
+                DrawableHelper.drawTexture(matrices, x, y, 0, 0.0f, 0.0f, 18, 18, 128, 128);
             }
 
             @Override

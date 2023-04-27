@@ -10,6 +10,7 @@
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSerializationContext
  *  com.google.gson.JsonSerializer
+ *  net.fabricmc.fabric.api.loot.v2.FabricLootPoolBuilder
  *  org.apache.commons.lang3.ArrayUtils
  *  org.apache.commons.lang3.mutable.MutableInt
  */
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import net.fabricmc.fabric.api.loot.v2.FabricLootPoolBuilder;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootChoice;
 import net.minecraft.loot.LootTableReporter;
@@ -49,13 +51,13 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class LootPool {
-    final LootPoolEntry[] entries;
-    final LootCondition[] conditions;
+    public final LootPoolEntry[] entries;
+    public final LootCondition[] conditions;
     private final Predicate<LootContext> predicate;
-    final LootFunction[] functions;
+    public final LootFunction[] functions;
     private final BiFunction<ItemStack, LootContext, ItemStack> javaFunctions;
-    final LootNumberProvider rolls;
-    final LootNumberProvider bonusRolls;
+    public final LootNumberProvider rolls;
+    public final LootNumberProvider bonusRolls;
 
     LootPool(LootPoolEntry[] entries, LootCondition[] conditions, LootFunction[] functions, LootNumberProvider rolls, LootNumberProvider bonusRolls) {
         this.entries = entries;
@@ -128,7 +130,8 @@ public class LootPool {
 
     public static class Builder
     implements LootFunctionConsumingBuilder<Builder>,
-    LootConditionConsumingBuilder<Builder> {
+    LootConditionConsumingBuilder<Builder>,
+    FabricLootPoolBuilder {
         private final List<LootPoolEntry> entries = Lists.newArrayList();
         private final List<LootCondition> conditions = Lists.newArrayList();
         private final List<LootFunction> functions = Lists.newArrayList();

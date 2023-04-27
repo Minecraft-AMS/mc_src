@@ -48,11 +48,9 @@ public class CubeMapRenderer {
         matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180.0f));
         RenderSystem.applyModelViewMatrix();
         RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
         RenderSystem.disableCull();
         RenderSystem.depthMask(false);
-        RenderSystem.defaultBlendFunc();
         int i = 2;
         for (int j = 0; j < 4; ++j) {
             matrixStack.push();

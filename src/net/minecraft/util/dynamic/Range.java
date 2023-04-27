@@ -9,7 +9,6 @@ package net.minecraft.util.dynamic;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import java.util.function.Function;
 import net.minecraft.util.dynamic.Codecs;
 
 public record Range<T extends Comparable<T>>(T minInclusive, T maxInclusive) {
@@ -26,23 +25,22 @@ public record Range<T extends Comparable<T>>(T minInclusive, T maxInclusive) {
     }
 
     public static <T extends Comparable<T>> Codec<Range<T>> createRangedCodec(Codec<T> codec, T minInclusive, T maxInclusive) {
-        Function<Range, DataResult> function = range -> {
+        return Codecs.validate(Range.createCodec(codec), range -> {
             if (range.minInclusive().compareTo(minInclusive) < 0) {
-                return DataResult.error((String)("Range limit too low, expected at least " + minInclusive + " [" + range.minInclusive() + "-" + range.maxInclusive() + "]"));
+                return DataResult.error(() -> "Range limit too low, expected at least " + minInclusive + " [" + range.minInclusive() + "-" + range.maxInclusive() + "]");
             }
             if (range.maxInclusive().compareTo(maxInclusive) > 0) {
-                return DataResult.error((String)("Range limit too high, expected at most " + maxInclusive + " [" + range.minInclusive() + "-" + range.maxInclusive() + "]"));
+                return DataResult.error(() -> "Range limit too high, expected at most " + maxInclusive + " [" + range.minInclusive() + "-" + range.maxInclusive() + "]");
             }
             return DataResult.success((Object)range);
-        };
-        return Range.createCodec(codec).flatXmap(function, function);
+        });
     }
 
     public static <T extends Comparable<T>> DataResult<Range<T>> validate(T minInclusive, T maxInclusive) {
         if (minInclusive.compareTo(maxInclusive) <= 0) {
             return DataResult.success(new Range<T>(minInclusive, maxInclusive));
         }
-        return DataResult.error((String)"min_inclusive must be less than or equal to max_inclusive");
+        return DataResult.error(() -> "min_inclusive must be less than or equal to max_inclusive");
     }
 
     public boolean contains(T value) {

@@ -93,7 +93,12 @@ VehicleInventory {
     @Override
     public ActionResult interact(PlayerEntity player, Hand hand) {
         if (!this.canAddPassenger(player) || player.shouldCancelInteraction()) {
-            return this.open(this::emitGameEvent, player);
+            ActionResult actionResult = this.open(player);
+            if (actionResult.isAccepted()) {
+                this.emitGameEvent(GameEvent.CONTAINER_OPEN, player);
+                PiglinBrain.onGuardedBlockInteracted(player, true);
+            }
+            return actionResult;
         }
         return super.interact(player, hand);
     }
@@ -114,6 +119,7 @@ VehicleInventory {
             case BoatEntity.Type.BIRCH -> Items.BIRCH_CHEST_BOAT;
             case BoatEntity.Type.JUNGLE -> Items.JUNGLE_CHEST_BOAT;
             case BoatEntity.Type.ACACIA -> Items.ACACIA_CHEST_BOAT;
+            case BoatEntity.Type.CHERRY -> Items.CHERRY_CHEST_BOAT;
             case BoatEntity.Type.DARK_OAK -> Items.DARK_OAK_CHEST_BOAT;
             case BoatEntity.Type.MANGROVE -> Items.MANGROVE_CHEST_BOAT;
             case BoatEntity.Type.BAMBOO -> Items.BAMBOO_CHEST_RAFT;
@@ -208,6 +214,11 @@ VehicleInventory {
     @Override
     public void resetInventory() {
         this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
+    }
+
+    @Override
+    public void onClose(PlayerEntity player) {
+        this.world.emitGameEvent(GameEvent.CONTAINER_CLOSE, this.getPos(), GameEvent.Emitter.of(player));
     }
 }
 

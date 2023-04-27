@@ -20,7 +20,7 @@ public class CoralFanBlock
 extends DeadCoralFanBlock {
     private final Block deadCoralBlock;
 
-    protected CoralFanBlock(Block deadCoralBlock, AbstractBlock.Settings settings) {
+    public CoralFanBlock(Block deadCoralBlock, AbstractBlock.Settings settings) {
         super(settings);
         this.deadCoralBlock = deadCoralBlock;
     }

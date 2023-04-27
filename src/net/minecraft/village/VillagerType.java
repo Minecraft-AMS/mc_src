@@ -26,7 +26,7 @@ public final class VillagerType {
     public static final VillagerType SWAMP = VillagerType.create("swamp");
     public static final VillagerType TAIGA = VillagerType.create("taiga");
     private final String name;
-    private static final Map<RegistryKey<Biome>, VillagerType> BIOME_TO_TYPE = Util.make(Maps.newHashMap(), map -> {
+    public static final Map<RegistryKey<Biome>, VillagerType> BIOME_TO_TYPE = Util.make(Maps.newHashMap(), map -> {
         map.put(BiomeKeys.BADLANDS, DESERT);
         map.put(BiomeKeys.DESERT, DESERT);
         map.put(BiomeKeys.ERODED_BADLANDS, DESERT);
@@ -58,7 +58,7 @@ public final class VillagerType {
         map.put(BiomeKeys.WINDSWEPT_FOREST, TAIGA);
     });
 
-    private VillagerType(String name) {
+    public VillagerType(String name) {
         this.name = name;
     }
 

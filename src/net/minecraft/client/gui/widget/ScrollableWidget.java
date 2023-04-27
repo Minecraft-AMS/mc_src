@@ -7,17 +7,11 @@
  */
 package net.minecraft.client.gui.widget;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
@@ -40,17 +34,17 @@ Element {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        boolean bl2;
         if (!this.visible) {
             return false;
         }
         boolean bl = this.isWithinBounds(mouseX, mouseY);
-        boolean bl2 = this.overflows() && mouseX >= (double)(this.getX() + this.width) && mouseX <= (double)(this.getX() + this.width + 8) && mouseY >= (double)this.getY() && mouseY < (double)(this.getY() + this.height);
-        this.setFocused(bl || bl2);
+        boolean bl3 = bl2 = this.overflows() && mouseX >= (double)(this.getX() + this.width) && mouseX <= (double)(this.getX() + this.width + 8) && mouseY >= (double)this.getY() && mouseY < (double)(this.getY() + this.height);
         if (bl2 && button == 0) {
             this.scrollbarDragged = true;
             return true;
         }
-        return false;
+        return bl || bl2;
     }
 
     @Override
@@ -88,6 +82,21 @@ Element {
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        boolean bl2;
+        boolean bl = keyCode == 265;
+        boolean bl3 = bl2 = keyCode == 264;
+        if (bl || bl2) {
+            double d = this.scrollY;
+            this.setScrollY(this.scrollY + (double)(bl ? -1 : 1) * this.getDeltaYPerScroll());
+            if (d != this.scrollY) {
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         if (!this.visible) {
             return;
@@ -108,7 +117,7 @@ Element {
 
     protected void renderOverlay(MatrixStack matrices) {
         if (this.overflows()) {
-            this.drawScrollbar();
+            this.drawScrollbar(matrices);
         }
     }
 
@@ -142,25 +151,14 @@ Element {
         ScrollableWidget.fill(matrices, this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1, -16777216);
     }
 
-    private void drawScrollbar() {
+    private void drawScrollbar(MatrixStack matrices) {
         int i = this.getScrollbarThumbHeight();
         int j = this.getX() + this.width;
         int k = this.getX() + this.width + 8;
         int l = Math.max(this.getY(), (int)this.scrollY * (this.height - i) / this.getMaxScrollY() + this.getY());
         int m = l + i;
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-        bufferBuilder.vertex(j, m, 0.0).color(128, 128, 128, 255).next();
-        bufferBuilder.vertex(k, m, 0.0).color(128, 128, 128, 255).next();
-        bufferBuilder.vertex(k, l, 0.0).color(128, 128, 128, 255).next();
-        bufferBuilder.vertex(j, l, 0.0).color(128, 128, 128, 255).next();
-        bufferBuilder.vertex(j, m - 1, 0.0).color(192, 192, 192, 255).next();
-        bufferBuilder.vertex(k - 1, m - 1, 0.0).color(192, 192, 192, 255).next();
-        bufferBuilder.vertex(k - 1, l, 0.0).color(192, 192, 192, 255).next();
-        bufferBuilder.vertex(j, l, 0.0).color(192, 192, 192, 255).next();
-        tessellator.draw();
+        ScrollableWidget.fill(matrices, j, l, k, m, -8355712);
+        ScrollableWidget.fill(matrices, j, l, k - 1, m - 1, -4144960);
     }
 
     protected boolean isVisible(int top, int bottom) {

@@ -143,7 +143,7 @@ extends BlockWithEntity {
         if (oldState.isOf(state.getBlock())) {
             return;
         }
-        this.updateEnabled(world, pos, state);
+        this.updateEnabled(world, pos, state, 2);
     }
 
     @Override
@@ -161,14 +161,14 @@ extends BlockWithEntity {
 
     @Override
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
-        this.updateEnabled(world, pos, state);
+        this.updateEnabled(world, pos, state, 4);
     }
 
-    private void updateEnabled(World world, BlockPos pos, BlockState state) {
+    private void updateEnabled(World world, BlockPos pos, BlockState state, int flags) {
         boolean bl;
         boolean bl2 = bl = !world.isReceivingRedstonePower(pos);
         if (bl != state.get(ENABLED)) {
-            world.setBlockState(pos, (BlockState)state.with(ENABLED, bl), 4);
+            world.setBlockState(pos, (BlockState)state.with(ENABLED, bl), flags);
         }
     }
 

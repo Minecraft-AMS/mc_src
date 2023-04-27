@@ -102,7 +102,7 @@ public class Brain<E extends LivingEntity> {
             }
 
             private <T, U> DataResult<MemoryEntry<U>> parse(MemoryModuleType<U> memoryType, DynamicOps<T> ops, T value) {
-                return memoryType.getCodec().map(DataResult::success).orElseGet(() -> DataResult.error((String)("No codec for memory: " + memoryType))).flatMap(codec -> codec.parse(ops, value)).map(data -> new MemoryEntry(memoryType, Optional.of(data)));
+                return memoryType.getCodec().map(DataResult::success).orElseGet(() -> DataResult.error(() -> "No codec for memory: " + memoryType)).flatMap(codec -> codec.parse(ops, value)).map(data -> new MemoryEntry(memoryType, Optional.of(data)));
             }
 
             public <T> RecordBuilder<T> encode(Brain<E> brain, DynamicOps<T> dynamicOps, RecordBuilder<T> recordBuilder) {
@@ -145,6 +145,10 @@ public class Brain<E extends LivingEntity> {
 
     public boolean hasMemoryModule(MemoryModuleType<?> type) {
         return this.isMemoryInState(type, MemoryModuleState.VALUE_PRESENT);
+    }
+
+    public void forgetAll() {
+        this.memories.keySet().forEach(type -> this.memories.put((MemoryModuleType<?>)type, Optional.empty()));
     }
 
     public <U> void forget(MemoryModuleType<U> type) {

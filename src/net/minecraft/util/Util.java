@@ -93,6 +93,7 @@ import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.Schemas;
 import net.minecraft.state.property.Property;
+import net.minecraft.util.CachedMapper;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TimeSupplier;
 import net.minecraft.util.crash.CrashException;
@@ -108,7 +109,6 @@ public class Util {
     private static final int MAX_PARALLELISM = 255;
     private static final String MAX_BG_THREADS_PROPERTY = "max.bg.threads";
     private static final AtomicInteger NEXT_WORKER_ID = new AtomicInteger(1);
-    private static final ExecutorService BOOTSTRAP_EXECUTOR = Util.createWorker("Bootstrap");
     private static final ExecutorService MAIN_WORKER_EXECUTOR = Util.createWorker("Main");
     private static final ExecutorService IO_WORKER_EXECUTOR = Util.createIoWorker();
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss", Locale.ROOT);
@@ -192,10 +192,6 @@ public class Util {
         return 255;
     }
 
-    public static ExecutorService getBootstrapExecutor() {
-        return BOOTSTRAP_EXECUTOR;
-    }
-
     public static ExecutorService getMainWorkerExecutor() {
         return MAIN_WORKER_EXECUTOR;
     }
@@ -262,7 +258,7 @@ public class Util {
         block2: {
             type = null;
             try {
-                type = Schemas.getFixer().getSchema(DataFixUtils.makeKey((int)SharedConstants.getGameVersion().getWorldVersion())).getChoiceType(typeReference, id);
+                type = Schemas.getFixer().getSchema(DataFixUtils.makeKey((int)SharedConstants.getGameVersion().getSaveVersion().getId())).getChoiceType(typeReference, id);
             }
             catch (IllegalArgumentException illegalArgumentException) {
                 LOGGER.error("No data fixer registered for {}", (Object)id);
@@ -381,21 +377,6 @@ public class Util {
         return object;
     }
 
-    @Nullable
-    public static <T, R> R map(@Nullable T value, Function<T, R> mapper) {
-        if (value == null) {
-            return null;
-        }
-        return mapper.apply(value);
-    }
-
-    public static <T, R> R mapOrElse(@Nullable T value, Function<T, R> mapper, R other) {
-        if (value == null) {
-            return other;
-        }
-        return mapper.apply(value);
-    }
-
     public static <K> Hash.Strategy<K> identityHashStrategy() {
         return IdentityHashStrategy.INSTANCE;
     }
@@ -419,10 +400,11 @@ public class Util {
     public static <V> CompletableFuture<List<V>> combineCancellable(List<? extends CompletableFuture<? extends V>> futures) {
         CompletableFuture completableFuture = new CompletableFuture();
         return Util.combine(futures, throwable -> {
-            for (CompletableFuture completableFuture2 : futures) {
-                completableFuture2.cancel(true);
+            if (completableFuture.completeExceptionally((Throwable)throwable)) {
+                for (CompletableFuture completableFuture2 : futures) {
+                    completableFuture2.cancel(true);
+                }
             }
-            completableFuture.completeExceptionally((Throwable)throwable);
         }).applyToEither((CompletionStage)completableFuture, Function.identity());
     }
 
@@ -663,22 +645,22 @@ public class Util {
     public static DataResult<int[]> toArray(IntStream stream, int length) {
         int[] is = stream.limit(length + 1).toArray();
         if (is.length != length) {
-            String string = "Input is not a list of " + length + " ints";
+            Supplier<String> supplier = () -> "Input is not a list of " + length + " ints";
             if (is.length >= length) {
-                return DataResult.error((String)string, (Object)Arrays.copyOf(is, length));
+                return DataResult.error(supplier, (Object)Arrays.copyOf(is, length));
             }
-            return DataResult.error((String)string);
+            return DataResult.error(supplier);
         }
         return DataResult.success((Object)is);
     }
 
     public static <T> DataResult<List<T>> toArray(List<T> list, int length) {
         if (list.size() != length) {
-            String string = "Input is not a list of " + length + " elements";
+            Supplier<String> supplier = () -> "Input is not a list of " + length + " elements";
             if (list.size() >= length) {
-                return DataResult.error((String)string, list.subList(0, length));
+                return DataResult.error(supplier, list.subList(0, length));
             }
-            return DataResult.error((String)string);
+            return DataResult.error(supplier);
         }
         return DataResult.success(list);
     }
@@ -712,6 +694,10 @@ public class Util {
 
     public static String replaceInvalidChars(String string, CharPredicate predicate) {
         return string.toLowerCase(Locale.ROOT).chars().mapToObj(charCode -> predicate.test((char)charCode) ? Character.toString((char)charCode) : "_").collect(Collectors.joining());
+    }
+
+    public static <K, V> CachedMapper<K, V> cachedMapper(Function<K, V> mapper) {
+        return new CachedMapper<K, V>(mapper);
     }
 
     public static <T, R> Function<T, R> memoize(final Function<T, R> function) {

@@ -25,7 +25,7 @@ public class DirtPathBlock
 extends Block {
     protected static final VoxelShape SHAPE = FarmlandBlock.SHAPE;
 
-    protected DirtPathBlock(AbstractBlock.Settings settings) {
+    public DirtPathBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
@@ -52,7 +52,7 @@ extends Block {
 
     @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        FarmlandBlock.setToDirt(state, world, pos);
+        FarmlandBlock.setToDirt(null, state, world, pos);
     }
 
     @Override

@@ -59,6 +59,11 @@ extends Screen {
     }
 
     @Override
+    protected boolean hasUsageText() {
+        return false;
+    }
+
+    @Override
     public void removed() {
         this.done = true;
         this.narrateScreenIfNarrationEnabled(true);
@@ -90,7 +95,7 @@ extends Screen {
         int j = this.height / 2;
         int k = 30;
         LevelLoadingScreen.drawChunkMap(matrices, this.progressProvider, i, j + 30, 2, 0);
-        LevelLoadingScreen.drawCenteredText(matrices, this.textRenderer, this.getPercentage(), i, j - this.textRenderer.fontHeight / 2 - 30, 0xFFFFFF);
+        LevelLoadingScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.getPercentage(), i, j - this.textRenderer.fontHeight / 2 - 30, 0xFFFFFF);
     }
 
     public static void drawChunkMap(MatrixStack matrices, WorldGenerationProgressTracker progressProvider, int centerX, int centerY, int pixelSize, int pixelMargin) {

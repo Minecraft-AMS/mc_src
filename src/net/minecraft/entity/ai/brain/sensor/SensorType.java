@@ -58,7 +58,7 @@ public class SensorType<U extends Sensor<?>> {
     public static final SensorType<WardenAttackablesSensor> WARDEN_ENTITY_SENSOR = SensorType.register("warden_entity_sensor", WardenAttackablesSensor::new);
     private final Supplier<U> factory;
 
-    private SensorType(Supplier<U> factory) {
+    public SensorType(Supplier<U> factory) {
         this.factory = factory;
     }
 

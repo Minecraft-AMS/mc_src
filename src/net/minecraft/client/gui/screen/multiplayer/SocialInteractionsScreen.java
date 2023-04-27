@@ -50,14 +50,12 @@ extends Screen {
     private static final Text EMPTY_HIDDEN_TEXT = Text.translatable("gui.socialInteractions.empty_hidden").formatted(Formatting.GRAY);
     private static final Text EMPTY_BLOCKED_TEXT = Text.translatable("gui.socialInteractions.empty_blocked").formatted(Formatting.GRAY);
     private static final Text BLOCKING_TEXT = Text.translatable("gui.socialInteractions.blocking_hint");
-    private static final String BLOCKING_URL = "https://aka.ms/javablocking";
     private static final int field_32424 = 8;
-    private static final int field_32425 = 16;
     private static final int field_32426 = 236;
     private static final int field_32427 = 16;
     private static final int field_32428 = 64;
+    public static final int field_32433 = 72;
     public static final int field_32432 = 88;
-    public static final int field_32433 = 78;
     private static final int field_32429 = 238;
     private static final int field_32430 = 20;
     private static final int field_32431 = 36;
@@ -83,12 +81,8 @@ extends Screen {
         return Math.max(52, this.height - 128 - 16);
     }
 
-    private int getRowCount() {
-        return this.getScreenHeight() / 16;
-    }
-
     private int getPlayerListBottom() {
-        return 80 + this.getRowCount() * 16 - 8;
+        return 80 + this.getScreenHeight() - 8;
     }
 
     private int getSearchBoxX() {
@@ -120,13 +114,13 @@ extends Screen {
         int j = this.playerList.getRowLeft();
         int k = this.playerList.getRowRight();
         int l = this.textRenderer.getWidth(BLOCKING_TEXT) + 40;
-        int m = 64 + 16 * this.getRowCount();
+        int m = 64 + this.getScreenHeight();
         int n = (this.width - l) / 2 + 3;
         this.allTabButton = this.addDrawableChild(ButtonWidget.builder(ALL_TAB_TITLE, button -> this.setCurrentTab(Tab.ALL)).dimensions(j, 45, i, 20).build());
         this.hiddenTabButton = this.addDrawableChild(ButtonWidget.builder(HIDDEN_TAB_TITLE, button -> this.setCurrentTab(Tab.HIDDEN)).dimensions((j + k - i) / 2 + 1, 45, i, 20).build());
         this.blockedTabButton = this.addDrawableChild(ButtonWidget.builder(BLOCKED_TAB_TITLE, button -> this.setCurrentTab(Tab.BLOCKED)).dimensions(k - i + 1, 45, i, 20).build());
         String string = this.searchBox != null ? this.searchBox.getText() : "";
-        this.searchBox = new TextFieldWidget(this.textRenderer, this.getSearchBoxX() + 28, 78, 196, 16, SEARCH_TEXT){
+        this.searchBox = new TextFieldWidget(this.textRenderer, this.getSearchBoxX() + 29, 75, 198, 13, SEARCH_TEXT){
 
             @Override
             protected MutableText getNarrationMessage() {
@@ -137,7 +131,6 @@ extends Screen {
             }
         };
         this.searchBox.setMaxLength(16);
-        this.searchBox.setDrawsBackground(false);
         this.searchBox.setVisible(true);
         this.searchBox.setEditableColor(0xFFFFFF);
         this.searchBox.setText(string);
@@ -147,10 +140,10 @@ extends Screen {
         this.addSelectableChild(this.playerList);
         this.blockingButton = this.addDrawableChild(ButtonWidget.builder(BLOCKING_TEXT, button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
-                Util.getOperatingSystem().open(BLOCKING_URL);
+                Util.getOperatingSystem().open("https://aka.ms/javablocking");
             }
             this.client.setScreen(this);
-        }, BLOCKING_URL, true))).dimensions(n, m, l, 20).build());
+        }, "https://aka.ms/javablocking", true))).dimensions(n, m, l, 20).build());
         this.initialized = true;
         this.setCurrentTab(this.currentTab);
     }
@@ -200,13 +193,8 @@ extends Screen {
         int i = this.getSearchBoxX() + 3;
         super.renderBackground(matrices);
         RenderSystem.setShaderTexture(0, SOCIAL_INTERACTIONS_TEXTURE);
-        this.drawTexture(matrices, i, 64, 1, 1, 236, 8);
-        int j = this.getRowCount();
-        for (int k = 0; k < j; ++k) {
-            this.drawTexture(matrices, i, 72 + 16 * k, 1, 10, 236, 16);
-        }
-        this.drawTexture(matrices, i, 72 + 16 * j, 1, 27, 236, 8);
-        this.drawTexture(matrices, i + 10, 76, 243, 1, 12, 12);
+        SocialInteractionsScreen.drawNineSlicedTexture(matrices, i, 64, 236, this.getScreenHeight() + 16, 8, 236, 34, 1, 1);
+        SocialInteractionsScreen.drawTexture(matrices, i + 10, 76, 243, 1, 12, 12);
     }
 
     @Override
@@ -219,11 +207,11 @@ extends Screen {
         if (!this.playerList.isEmpty()) {
             this.playerList.render(matrices, mouseX, mouseY, delta);
         } else if (!this.searchBox.getText().isEmpty()) {
-            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_SEARCH_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
+            SocialInteractionsScreen.drawCenteredTextWithShadow(matrices, this.client.textRenderer, EMPTY_SEARCH_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
         } else if (this.currentTab == Tab.HIDDEN) {
-            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_HIDDEN_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
+            SocialInteractionsScreen.drawCenteredTextWithShadow(matrices, this.client.textRenderer, EMPTY_HIDDEN_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
         } else if (this.currentTab == Tab.BLOCKED) {
-            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
+            SocialInteractionsScreen.drawCenteredTextWithShadow(matrices, this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
         }
         this.searchBox.render(matrices, mouseX, mouseY, delta);
         this.blockingButton.visible = this.currentTab == Tab.BLOCKED;

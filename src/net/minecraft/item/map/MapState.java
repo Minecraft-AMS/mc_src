@@ -31,7 +31,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.MapUpdateS2CPacket;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.text.Text;
@@ -88,15 +88,15 @@ extends PersistentState {
         return new MapState(l, m, scale, showIcons, unlimitedTracking, false, dimension);
     }
 
-    public static MapState of(byte scale, boolean showIcons, RegistryKey<World> dimension) {
-        return new MapState(0, 0, scale, false, false, showIcons, dimension);
+    public static MapState of(byte scale, boolean locked, RegistryKey<World> dimension) {
+        return new MapState(0, 0, scale, false, false, locked, dimension);
     }
 
     public static MapState fromNbt(NbtCompound nbt) {
         RegistryKey registryKey = (RegistryKey)DimensionType.worldFromDimensionNbt(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("dimension"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).orElseThrow(() -> new IllegalArgumentException("Invalid map dimension: " + nbt.get("dimension")));
         int i = nbt.getInt("xCenter");
         int j = nbt.getInt("zCenter");
-        byte b = (byte)MathHelper.clamp((int)nbt.getByte("scale"), 0, 4);
+        byte b = (byte)MathHelper.clamp(nbt.getByte("scale"), 0, 4);
         boolean bl = !nbt.contains("trackingPosition", 1) || nbt.getBoolean("trackingPosition");
         boolean bl2 = nbt.getBoolean("unlimitedTracking");
         boolean bl3 = nbt.getBoolean("locked");

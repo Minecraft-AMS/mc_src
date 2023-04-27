@@ -26,6 +26,7 @@ import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.render.block.entity.CampfireBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ChestBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ConduitBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.DecoratedPotBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.EnchantingTableBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.EndGatewayBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.EndPortalBlockEntityRenderer;
@@ -37,13 +38,14 @@ import net.minecraft.client.render.block.entity.ShulkerBoxBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SkullBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.StructureBlockBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.SuspiciousSandBlockEntityRenderer;
 import net.minecraft.registry.Registries;
 
 @Environment(value=EnvType.CLIENT)
 public class BlockEntityRendererFactories {
     private static final Map<BlockEntityType<?>, BlockEntityRendererFactory<?>> FACTORIES = Maps.newHashMap();
 
-    private static <T extends BlockEntity> void register(BlockEntityType<? extends T> type, BlockEntityRendererFactory<T> factory) {
+    public static <T extends BlockEntity> void register(BlockEntityType<? extends T> type, BlockEntityRendererFactory<T> factory) {
         FACTORIES.put(type, factory);
     }
 
@@ -81,6 +83,8 @@ public class BlockEntityRendererFactories {
         BlockEntityRendererFactories.register(BlockEntityType.CONDUIT, ConduitBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.BELL, BellBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.CAMPFIRE, CampfireBlockEntityRenderer::new);
+        BlockEntityRendererFactories.register(BlockEntityType.SUSPICIOUS_SAND, SuspiciousSandBlockEntityRenderer::new);
+        BlockEntityRendererFactories.register(BlockEntityType.DECORATED_POT, DecoratedPotBlockEntityRenderer::new);
     }
 }
 

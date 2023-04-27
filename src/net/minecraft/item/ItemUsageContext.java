@@ -28,7 +28,7 @@ public class ItemUsageContext {
         this(player.world, player, hand, player.getStackInHand(hand), hit);
     }
 
-    protected ItemUsageContext(World world, @Nullable PlayerEntity player, Hand hand, ItemStack stack, BlockHitResult hit) {
+    public ItemUsageContext(World world, @Nullable PlayerEntity player, Hand hand, ItemStack stack, BlockHitResult hit) {
         this.player = player;
         this.hand = hand;
         this.hit = hit;
@@ -73,7 +73,7 @@ public class ItemUsageContext {
         return this.world;
     }
 
-    public Direction getPlayerFacing() {
+    public Direction getHorizontalPlayerFacing() {
         return this.player == null ? Direction.NORTH : this.player.getHorizontalFacing();
     }
 

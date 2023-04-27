@@ -6,11 +6,11 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.render.item;
 
 import com.google.common.collect.Sets;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import java.util.Set;
@@ -22,11 +22,9 @@ import net.minecraft.block.TransparentBlock;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.color.item.ItemColors;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.OverlayVertexConsumer;
 import net.minecraft.client.render.RenderLayer;
@@ -36,15 +34,12 @@ import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexConsumers;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.item.BuiltinModelItemRenderer;
 import net.minecraft.client.render.item.ItemModels;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedModelManager;
 import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.render.model.json.ModelTransformation;
-import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.ModelIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
@@ -68,11 +63,13 @@ import net.minecraft.util.math.MatrixUtil;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class ItemRenderer
 implements SynchronousResourceReloader {
-    public static final Identifier ENCHANTED_ITEM_GLINT = new Identifier("textures/misc/enchanted_item_glint.png");
+    public static final Identifier ENTITY_ENCHANTMENT_GLINT = new Identifier("textures/misc/enchanted_glint_entity.png");
+    public static final Identifier ITEM_ENCHANTMENT_GLINT = new Identifier("textures/misc/enchanted_glint_item.png");
     private static final Set<Item> WITHOUT_MODELS = Sets.newHashSet((Object[])new Item[]{Items.AIR});
     private static final int field_32937 = 8;
     private static final int field_32938 = 8;
@@ -84,13 +81,14 @@ implements SynchronousResourceReloader {
     public static final ModelIdentifier TRIDENT_IN_HAND = ModelIdentifier.ofVanilla("trident_in_hand", "inventory");
     private static final ModelIdentifier SPYGLASS = ModelIdentifier.ofVanilla("spyglass", "inventory");
     public static final ModelIdentifier SPYGLASS_IN_HAND = ModelIdentifier.ofVanilla("spyglass_in_hand", "inventory");
-    public float zOffset;
+    private final MinecraftClient client;
     private final ItemModels models;
     private final TextureManager textureManager;
     private final ItemColors colors;
     private final BuiltinModelItemRenderer builtinModelItemRenderer;
 
-    public ItemRenderer(TextureManager manager, BakedModelManager bakery, ItemColors colors, BuiltinModelItemRenderer builtinModelItemRenderer) {
+    public ItemRenderer(MinecraftClient client, TextureManager manager, BakedModelManager bakery, ItemColors colors, BuiltinModelItemRenderer builtinModelItemRenderer) {
+        this.client = client;
         this.textureManager = manager;
         this.models = new ItemModels(bakery);
         this.builtinModelItemRenderer = builtinModelItemRenderer;
@@ -116,13 +114,13 @@ implements SynchronousResourceReloader {
         this.renderBakedItemQuads(matrices, vertices, model.getQuads(null, null, random), stack, light, overlay);
     }
 
-    public void renderItem(ItemStack stack, ModelTransformation.Mode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, int overlay, BakedModel model) {
+    public void renderItem(ItemStack stack, ModelTransformationMode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, int overlay, BakedModel model) {
         boolean bl;
         if (stack.isEmpty()) {
             return;
         }
         matrices.push();
-        boolean bl2 = bl = renderMode == ModelTransformation.Mode.GUI || renderMode == ModelTransformation.Mode.GROUND || renderMode == ModelTransformation.Mode.FIXED;
+        boolean bl2 = bl = renderMode == ModelTransformationMode.GUI || renderMode == ModelTransformationMode.GROUND || renderMode == ModelTransformationMode.FIXED;
         if (bl) {
             if (stack.isOf(Items.TRIDENT)) {
                 model = this.models.getModelManager().getModel(TRIDENT);
@@ -137,12 +135,12 @@ implements SynchronousResourceReloader {
         } else {
             VertexConsumer vertexConsumer;
             Block block;
-            boolean bl22 = renderMode != ModelTransformation.Mode.GUI && !renderMode.isFirstPerson() && stack.getItem() instanceof BlockItem ? !((block = ((BlockItem)stack.getItem()).getBlock()) instanceof TransparentBlock) && !(block instanceof StainedGlassPaneBlock) : true;
+            boolean bl22 = renderMode != ModelTransformationMode.GUI && !renderMode.isFirstPerson() && stack.getItem() instanceof BlockItem ? !((block = ((BlockItem)stack.getItem()).getBlock()) instanceof TransparentBlock) && !(block instanceof StainedGlassPaneBlock) : true;
             RenderLayer renderLayer = RenderLayers.getItemLayer(stack, bl22);
             if (stack.isIn(ItemTags.COMPASSES) && stack.hasGlint()) {
                 matrices.push();
                 MatrixStack.Entry entry = matrices.peek();
-                if (renderMode == ModelTransformation.Mode.GUI) {
+                if (renderMode == ModelTransformationMode.GUI) {
                     MatrixUtil.scale(entry.getPositionMatrix(), 0.5f);
                 } else if (renderMode.isFirstPerson()) {
                     MatrixUtil.scale(entry.getPositionMatrix(), 0.75f);
@@ -211,11 +209,11 @@ implements SynchronousResourceReloader {
         return bakedModel2 == null ? this.models.getModelManager().getMissingModel() : bakedModel2;
     }
 
-    public void renderItem(ItemStack stack, ModelTransformation.Mode transformationType, int light, int overlay, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int seed) {
-        this.renderItem(null, stack, transformationType, false, matrices, vertexConsumers, null, light, overlay, seed);
+    public void renderItem(ItemStack stack, ModelTransformationMode transformationType, int light, int overlay, MatrixStack matrices, VertexConsumerProvider vertexConsumers, @Nullable World world, int seed) {
+        this.renderItem(null, stack, transformationType, false, matrices, vertexConsumers, world, light, overlay, seed);
     }
 
-    public void renderItem(@Nullable LivingEntity entity, ItemStack item, ModelTransformation.Mode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, @Nullable World world, int light, int overlay, int seed) {
+    public void renderItem(@Nullable LivingEntity entity, ItemStack item, ModelTransformationMode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, @Nullable World world, int light, int overlay, int seed) {
         if (item.isEmpty()) {
             return;
         }
@@ -223,139 +221,122 @@ implements SynchronousResourceReloader {
         this.renderItem(item, renderMode, leftHanded, matrices, vertexConsumers, light, overlay, bakedModel);
     }
 
-    public void renderGuiItemIcon(ItemStack stack, int x, int y) {
-        this.renderGuiItemModel(stack, x, y, this.getModel(stack, null, null, 0));
+    public void renderGuiItemIcon(MatrixStack matrices, ItemStack stack, int x, int y) {
+        this.renderGuiItemModel(matrices, stack, x, y, this.getModel(stack, null, null, 0));
     }
 
-    protected void renderGuiItemModel(ItemStack stack, int x, int y, BakedModel model) {
+    protected void renderGuiItemModel(MatrixStack matrices, ItemStack stack, int x, int y, BakedModel model) {
         boolean bl;
-        this.textureManager.getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE).setFilter(false, false);
-        RenderSystem.setShaderTexture(0, SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
-        RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        matrixStack.push();
-        matrixStack.translate(x, y, 100.0f + this.zOffset);
-        matrixStack.translate(8.0f, 8.0f, 0.0f);
-        matrixStack.scale(1.0f, -1.0f, 1.0f);
-        matrixStack.scale(16.0f, 16.0f, 16.0f);
-        RenderSystem.applyModelViewMatrix();
-        MatrixStack matrixStack2 = new MatrixStack();
-        VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+        matrices.push();
+        matrices.translate(x, y, 100.0f);
+        matrices.translate(8.0f, 8.0f, 0.0f);
+        matrices.multiplyPositionMatrix(new Matrix4f().scaling(1.0f, -1.0f, 1.0f));
+        matrices.scale(16.0f, 16.0f, 16.0f);
+        VertexConsumerProvider.Immediate immediate = this.client.getBufferBuilders().getEntityVertexConsumers();
         boolean bl2 = bl = !model.isSideLit();
         if (bl) {
             DiffuseLighting.disableGuiDepthLighting();
         }
-        this.renderItem(stack, ModelTransformation.Mode.GUI, false, matrixStack2, immediate, 0xF000F0, OverlayTexture.DEFAULT_UV, model);
+        MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
+        matrixStack.multiplyPositionMatrix(matrices.peek().getPositionMatrix());
+        RenderSystem.applyModelViewMatrix();
+        this.renderItem(stack, ModelTransformationMode.GUI, false, new MatrixStack(), immediate, 0xF000F0, OverlayTexture.DEFAULT_UV, model);
         immediate.draw();
         RenderSystem.enableDepthTest();
         if (bl) {
             DiffuseLighting.enableGuiDepthLighting();
         }
+        matrices.pop();
         matrixStack.pop();
         RenderSystem.applyModelViewMatrix();
     }
 
-    public void renderInGuiWithOverrides(ItemStack stack, int x, int y) {
-        this.innerRenderInGui(MinecraftClient.getInstance().player, stack, x, y, 0);
+    public void renderInGuiWithOverrides(MatrixStack matrices, ItemStack stack, int x, int y) {
+        this.innerRenderInGui(matrices, this.client.player, this.client.world, stack, x, y, 0);
     }
 
-    public void renderInGuiWithOverrides(ItemStack stack, int x, int y, int seed) {
-        this.innerRenderInGui(MinecraftClient.getInstance().player, stack, x, y, seed);
+    public void renderInGuiWithOverrides(MatrixStack matrices, ItemStack stack, int x, int y, int seed) {
+        this.innerRenderInGui(matrices, this.client.player, this.client.world, stack, x, y, seed);
     }
 
-    public void renderInGuiWithOverrides(ItemStack stack, int x, int y, int seed, int depth) {
-        this.innerRenderInGui(MinecraftClient.getInstance().player, stack, x, y, seed, depth);
+    public void renderInGuiWithOverrides(MatrixStack matrices, ItemStack stack, int x, int y, int seed, int depth) {
+        this.innerRenderInGui(matrices, this.client.player, this.client.world, stack, x, y, seed, depth);
     }
 
-    public void renderInGui(ItemStack stack, int x, int y) {
-        this.innerRenderInGui(null, stack, x, y, 0);
+    public void renderInGui(MatrixStack matrices, ItemStack stack, int x, int y) {
+        this.innerRenderInGui(matrices, null, this.client.world, stack, x, y, 0);
     }
 
-    public void renderInGuiWithOverrides(LivingEntity entity, ItemStack stack, int x, int y, int seed) {
-        this.innerRenderInGui(entity, stack, x, y, seed);
+    public void renderInGuiWithOverrides(MatrixStack matrices, LivingEntity entity, ItemStack stack, int x, int y, int seed) {
+        this.innerRenderInGui(matrices, entity, entity.world, stack, x, y, seed);
     }
 
-    private void innerRenderInGui(@Nullable LivingEntity entity, ItemStack stack, int x, int y, int seed) {
-        this.innerRenderInGui(entity, stack, x, y, seed, 0);
+    private void innerRenderInGui(MatrixStack matrices, @Nullable LivingEntity entity, @Nullable World world, ItemStack stack, int x, int y, int seed) {
+        this.innerRenderInGui(matrices, entity, world, stack, x, y, seed, 0);
     }
 
-    private void innerRenderInGui(@Nullable LivingEntity entity, ItemStack itemStack, int x, int y, int seed, int depth) {
-        if (itemStack.isEmpty()) {
+    private void innerRenderInGui(MatrixStack matrices, @Nullable LivingEntity entity, @Nullable World world, ItemStack stack, int x, int y, int seed, int depth) {
+        if (stack.isEmpty()) {
             return;
         }
-        BakedModel bakedModel = this.getModel(itemStack, null, entity, seed);
-        this.zOffset = bakedModel.hasDepth() ? this.zOffset + 50.0f + (float)depth : this.zOffset + 50.0f;
+        BakedModel bakedModel = this.getModel(stack, world, entity, seed);
+        matrices.push();
+        matrices.translate(0.0f, 0.0f, 50 + (bakedModel.hasDepth() ? depth : 0));
         try {
-            this.renderGuiItemModel(itemStack, x, y, bakedModel);
+            this.renderGuiItemModel(matrices, stack, x, y, bakedModel);
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Rendering item");
             CrashReportSection crashReportSection = crashReport.addElement("Item being rendered");
-            crashReportSection.add("Item Type", () -> String.valueOf(itemStack.getItem()));
-            crashReportSection.add("Item Damage", () -> String.valueOf(itemStack.getDamage()));
-            crashReportSection.add("Item NBT", () -> String.valueOf(itemStack.getNbt()));
-            crashReportSection.add("Item Foil", () -> String.valueOf(itemStack.hasGlint()));
+            crashReportSection.add("Item Type", () -> String.valueOf(stack.getItem()));
+            crashReportSection.add("Item Damage", () -> String.valueOf(stack.getDamage()));
+            crashReportSection.add("Item NBT", () -> String.valueOf(stack.getNbt()));
+            crashReportSection.add("Item Foil", () -> String.valueOf(stack.hasGlint()));
             throw new CrashException(crashReport);
         }
-        this.zOffset = bakedModel.hasDepth() ? this.zOffset - 50.0f - (float)depth : this.zOffset - 50.0f;
+        matrices.pop();
     }
 
-    public void renderGuiItemOverlay(TextRenderer renderer, ItemStack stack, int x, int y) {
-        this.renderGuiItemOverlay(renderer, stack, x, y, null);
+    public void renderGuiItemOverlay(MatrixStack matrices, TextRenderer textRenderer, ItemStack stack, int x, int y) {
+        this.renderGuiItemOverlay(matrices, textRenderer, stack, x, y, null);
     }
 
-    public void renderGuiItemOverlay(TextRenderer renderer, ItemStack stack, int x, int y, @Nullable String countLabel) {
+    public void renderGuiItemOverlay(MatrixStack matrices, TextRenderer textRenderer, ItemStack stack, int x, int y, @Nullable String countLabel) {
         ClientPlayerEntity clientPlayerEntity;
         float f;
+        int l;
+        int k;
         if (stack.isEmpty()) {
             return;
         }
-        MatrixStack matrixStack = new MatrixStack();
+        matrices.push();
         if (stack.getCount() != 1 || countLabel != null) {
             String string = countLabel == null ? String.valueOf(stack.getCount()) : countLabel;
-            matrixStack.translate(0.0f, 0.0f, this.zOffset + 200.0f);
+            matrices.translate(0.0f, 0.0f, 200.0f);
             VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-            renderer.draw(string, (float)(x + 19 - 2 - renderer.getWidth(string)), (float)(y + 6 + 3), 0xFFFFFF, true, matrixStack.peek().getPositionMatrix(), (VertexConsumerProvider)immediate, false, 0, 0xF000F0);
+            textRenderer.draw(string, (float)(x + 19 - 2 - textRenderer.getWidth(string)), (float)(y + 6 + 3), 0xFFFFFF, true, matrices.peek().getPositionMatrix(), (VertexConsumerProvider)immediate, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
             immediate.draw();
         }
         if (stack.isItemBarVisible()) {
             RenderSystem.disableDepthTest();
-            RenderSystem.disableTexture();
-            RenderSystem.disableBlend();
-            Tessellator tessellator = Tessellator.getInstance();
-            BufferBuilder bufferBuilder = tessellator.getBuffer();
             int i = stack.getItemBarStep();
             int j = stack.getItemBarColor();
-            this.renderGuiQuad(bufferBuilder, x + 2, y + 13, 13, 2, 0, 0, 0, 255);
-            this.renderGuiQuad(bufferBuilder, x + 2, y + 13, i, 1, j >> 16 & 0xFF, j >> 8 & 0xFF, j & 0xFF, 255);
-            RenderSystem.enableBlend();
-            RenderSystem.enableTexture();
+            k = x + 2;
+            l = y + 13;
+            DrawableHelper.fill(matrices, k, l, k + 13, l + 2, -16777216);
+            DrawableHelper.fill(matrices, k, l, k + i, l + 1, j | 0xFF000000);
             RenderSystem.enableDepthTest();
         }
-        float f2 = f = (clientPlayerEntity = MinecraftClient.getInstance().player) == null ? 0.0f : clientPlayerEntity.getItemCooldownManager().getCooldownProgress(stack.getItem(), MinecraftClient.getInstance().getTickDelta());
+        float f2 = f = (clientPlayerEntity = this.client.player) == null ? 0.0f : clientPlayerEntity.getItemCooldownManager().getCooldownProgress(stack.getItem(), this.client.getTickDelta());
         if (f > 0.0f) {
             RenderSystem.disableDepthTest();
-            RenderSystem.disableTexture();
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            Tessellator tessellator2 = Tessellator.getInstance();
-            BufferBuilder bufferBuilder2 = tessellator2.getBuffer();
-            this.renderGuiQuad(bufferBuilder2, x, y + MathHelper.floor(16.0f * (1.0f - f)), 16, MathHelper.ceil(16.0f * f), 255, 255, 255, 127);
-            RenderSystem.enableTexture();
+            k = y + MathHelper.floor(16.0f * (1.0f - f));
+            l = k + MathHelper.ceil(16.0f * f);
+            DrawableHelper.fill(matrices, x, k, x + 16, l, Integer.MAX_VALUE);
             RenderSystem.enableDepthTest();
         }
-    }
-
-    private void renderGuiQuad(BufferBuilder buffer, int x, int y, int width, int height, int red, int green, int blue, int alpha) {
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        buffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-        buffer.vertex(x + 0, y + 0, 0.0).color(red, green, blue, alpha).next();
-        buffer.vertex(x + 0, y + height, 0.0).color(red, green, blue, alpha).next();
-        buffer.vertex(x + width, y + height, 0.0).color(red, green, blue, alpha).next();
-        buffer.vertex(x + width, y + 0, 0.0).color(red, green, blue, alpha).next();
-        BufferRenderer.drawWithGlobalProgram(buffer.end());
+        matrices.pop();
     }
 
     @Override

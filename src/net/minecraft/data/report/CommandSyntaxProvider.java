@@ -39,7 +39,7 @@ implements DataProvider {
     }
 
     @Override
-    public final String getName() {
+    public String getName() {
         return "Command Syntax";
     }
 }

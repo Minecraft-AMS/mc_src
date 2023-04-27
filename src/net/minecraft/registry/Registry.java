@@ -46,13 +46,13 @@ IndexedIterable<T> {
     public RegistryKey<? extends Registry<T>> getKey();
 
     default public Codec<T> getCodec() {
-        Codec codec = Identifier.CODEC.flatXmap(id -> Optional.ofNullable(this.get((Identifier)id)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown registry key in " + this.getKey() + ": " + id))), value -> this.getKey(value).map(RegistryKey::getValue).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown registry element in " + this.getKey() + ":" + value))));
+        Codec codec = Identifier.CODEC.flatXmap(id -> Optional.ofNullable(this.get((Identifier)id)).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown registry key in " + this.getKey() + ": " + id)), value -> this.getKey(value).map(RegistryKey::getValue).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown registry element in " + this.getKey() + ":" + value)));
         Codec<Object> codec2 = Codecs.rawIdChecked(value -> this.getKey(value).isPresent() ? this.getRawId(value) : -1, this::get, -1);
         return Codecs.withLifecycle(Codecs.orCompressed(codec, codec2), this::getEntryLifecycle, this::getEntryLifecycle);
     }
 
     default public Codec<RegistryEntry<T>> createEntryCodec() {
-        Codec codec = Identifier.CODEC.flatXmap(id -> this.getEntry(RegistryKey.of(this.getKey(), id)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown registry key in " + this.getKey() + ": " + id))), entry -> entry.getKey().map(RegistryKey::getValue).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown registry element in " + this.getKey() + ":" + entry))));
+        Codec codec = Identifier.CODEC.flatXmap(id -> this.getEntry(RegistryKey.of(this.getKey(), id)).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown registry key in " + this.getKey() + ": " + id)), entry -> entry.getKey().map(RegistryKey::getValue).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown registry element in " + this.getKey() + ":" + entry)));
         return Codecs.withLifecycle(codec, entry -> this.getEntryLifecycle(entry.value()), entry -> this.getEntryLifecycle(entry.value()));
     }
 

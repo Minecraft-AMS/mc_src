@@ -119,7 +119,7 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         this.layers.render(matrices, mouseX, mouseY, delta);
-        CustomizeFlatLevelScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
+        CustomizeFlatLevelScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
         int i = this.width / 2 - 92 - 16;
         CustomizeFlatLevelScreen.drawTextWithShadow(matrices, this.textRenderer, this.tileText, i, 32, 0xFFFFFF);
         CustomizeFlatLevelScreen.drawTextWithShadow(matrices, this.textRenderer, this.heightText, i + 2 + 213 - this.textRenderer.getWidth(this.heightText), 32, 0xFFFFFF);
@@ -140,11 +140,6 @@ extends Screen {
         public void setSelected(@Nullable SuperflatLayerEntry superflatLayerEntry) {
             super.setSelected(superflatLayerEntry);
             CustomizeFlatLevelScreen.this.updateRemoveLayerButton();
-        }
-
-        @Override
-        protected boolean isFocused() {
-            return CustomizeFlatLevelScreen.this.getFocused() == this;
         }
 
         @Override
@@ -215,14 +210,13 @@ extends Screen {
             private void renderIcon(MatrixStack matrices, int x, int y, ItemStack iconItem) {
                 this.renderIconBackgroundTexture(matrices, x + 1, y + 1);
                 if (!iconItem.isEmpty()) {
-                    CustomizeFlatLevelScreen.this.itemRenderer.renderGuiItemIcon(iconItem, x + 2, y + 2);
+                    CustomizeFlatLevelScreen.this.itemRenderer.renderGuiItemIcon(matrices, iconItem, x + 2, y + 2);
                 }
             }
 
             private void renderIconBackgroundTexture(MatrixStack matrices, int x, int y) {
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 RenderSystem.setShaderTexture(0, DrawableHelper.STATS_ICON_TEXTURE);
-                DrawableHelper.drawTexture(matrices, x, y, CustomizeFlatLevelScreen.this.getZOffset(), 0.0f, 0.0f, 18, 18, 128, 128);
+                DrawableHelper.drawTexture(matrices, x, y, 0, 0.0f, 0.0f, 18, 18, 128, 128);
             }
         }
     }

@@ -19,6 +19,7 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
@@ -70,7 +71,7 @@ extends AbstractMinecartEntity {
         PersistentProjectileEntity persistentProjectileEntity;
         Entity entity = source.getSource();
         if (entity instanceof PersistentProjectileEntity && (persistentProjectileEntity = (PersistentProjectileEntity)entity).isOnFire()) {
-            DamageSource damageSource = DamageSource.explosion(this, source.getAttacker());
+            DamageSource damageSource = this.getDamageSources().explosion(this, source.getAttacker());
             this.explode(damageSource, persistentProjectileEntity.getVelocity().lengthSquared());
         }
         return super.damage(source, amount);
@@ -79,7 +80,7 @@ extends AbstractMinecartEntity {
     @Override
     public void dropItems(DamageSource damageSource) {
         double d = this.getVelocity().horizontalLengthSquared();
-        if (damageSource.isFire() || damageSource.isExplosive() || d >= (double)0.01f) {
+        if (damageSource.isIn(DamageTypeTags.IS_FIRE) || damageSource.isIn(DamageTypeTags.IS_EXPLOSION) || d >= (double)0.01f) {
             if (this.fuseTicks < 0) {
                 this.prime();
                 this.fuseTicks = this.random.nextInt(20) + this.random.nextInt(20);

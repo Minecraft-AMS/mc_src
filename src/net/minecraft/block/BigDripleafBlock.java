@@ -76,7 +76,7 @@ Waterloggable {
     private static final Map<Direction, VoxelShape> SHAPES_FOR_DIRECTION = ImmutableMap.of((Object)Direction.NORTH, (Object)VoxelShapes.combine(BigDripleafStemBlock.NORTH_SHAPE, BASE_SHAPE, BooleanBiFunction.ONLY_FIRST), (Object)Direction.SOUTH, (Object)VoxelShapes.combine(BigDripleafStemBlock.SOUTH_SHAPE, BASE_SHAPE, BooleanBiFunction.ONLY_FIRST), (Object)Direction.EAST, (Object)VoxelShapes.combine(BigDripleafStemBlock.EAST_SHAPE, BASE_SHAPE, BooleanBiFunction.ONLY_FIRST), (Object)Direction.WEST, (Object)VoxelShapes.combine(BigDripleafStemBlock.WEST_SHAPE, BASE_SHAPE, BooleanBiFunction.ONLY_FIRST));
     private final Map<BlockState, VoxelShape> shapes;
 
-    protected BigDripleafBlock(AbstractBlock.Settings settings) {
+    public BigDripleafBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(WATERLOGGED, false)).with(FACING, Direction.NORTH)).with(TILT, Tilt.NONE));
         this.shapes = this.getShapesForStates(BigDripleafBlock::getShapeForState);
@@ -254,7 +254,7 @@ Waterloggable {
         BlockState blockState = ctx.getWorld().getBlockState(ctx.getBlockPos().down());
         FluidState fluidState = ctx.getWorld().getFluidState(ctx.getBlockPos());
         boolean bl = blockState.isOf(Blocks.BIG_DRIPLEAF) || blockState.isOf(Blocks.BIG_DRIPLEAF_STEM);
-        return (BlockState)((BlockState)this.getDefaultState().with(WATERLOGGED, fluidState.isEqualAndStill(Fluids.WATER))).with(FACING, bl ? blockState.get(FACING) : ctx.getPlayerFacing().getOpposite());
+        return (BlockState)((BlockState)this.getDefaultState().with(WATERLOGGED, fluidState.isEqualAndStill(Fluids.WATER))).with(FACING, bl ? blockState.get(FACING) : ctx.getHorizontalPlayerFacing().getOpposite());
     }
 
     @Override

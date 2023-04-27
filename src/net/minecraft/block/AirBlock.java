@@ -15,7 +15,7 @@ import net.minecraft.world.BlockView;
 
 public class AirBlock
 extends Block {
-    protected AirBlock(AbstractBlock.Settings settings) {
+    public AirBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

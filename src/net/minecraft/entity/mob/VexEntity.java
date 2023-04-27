@@ -7,6 +7,7 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
@@ -14,6 +15,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
+import net.minecraft.entity.Ownable;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.control.MoveControl;
@@ -49,7 +51,8 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class VexEntity
-extends HostileEntity {
+extends HostileEntity
+implements Ownable {
     public static final float field_30502 = 45.836624f;
     public static final int field_28645 = MathHelper.ceil(3.9269907f);
     protected static final TrackedData<Byte> VEX_FLAGS = DataTracker.registerData(VexEntity.class, TrackedDataHandlerRegistry.BYTE);
@@ -92,7 +95,7 @@ extends HostileEntity {
         this.setNoGravity(true);
         if (this.alive && --this.lifeTicks <= 0) {
             this.lifeTicks = 20;
-            this.damage(DamageSource.STARVE, 1.0f);
+            this.damage(this.getDamageSources().starve(), 1.0f);
         }
     }
 
@@ -143,6 +146,7 @@ extends HostileEntity {
         }
     }
 
+    @Override
     @Nullable
     public MobEntity getOwner() {
         return this.owner;
@@ -223,6 +227,12 @@ extends HostileEntity {
     @Override
     public double getHeightOffset() {
         return 0.4;
+    }
+
+    @Override
+    @Nullable
+    public /* synthetic */ Entity getOwner() {
+        return this.getOwner();
     }
 
     class VexMoveControl

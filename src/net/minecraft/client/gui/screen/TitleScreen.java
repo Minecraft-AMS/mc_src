@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.util.concurrent.Runnables
  *  com.mojang.authlib.minecraft.BanDetails
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
@@ -12,15 +11,14 @@
  */
 package net.minecraft.client.gui.screen;
 
-import com.google.common.util.concurrent.Runnables;
 import com.mojang.authlib.minecraft.BanDetails;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.fabricmc.api.EnvType;
@@ -31,13 +29,14 @@ import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.CubeMapRenderer;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.LogoDrawer;
 import net.minecraft.client.gui.RotatingCubeMapRenderer;
 import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.CreditsScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerWarningScreen;
 import net.minecraft.client.gui.screen.option.AccessibilityOptionsScreen;
+import net.minecraft.client.gui.screen.option.CreditsAndAttributionScreen;
 import net.minecraft.client.gui.screen.option.LanguageOptionsScreen;
 import net.minecraft.client.gui.screen.option.OptionsScreen;
 import net.minecraft.client.gui.screen.world.SelectWorldScreen;
@@ -48,7 +47,6 @@ import net.minecraft.client.gui.widget.PressableTextWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
 import net.minecraft.client.realms.gui.screen.RealmsNotificationsScreen;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.toast.SystemToast;
@@ -61,7 +59,6 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.random.Random;
 import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.storage.LevelStorage;
@@ -77,13 +74,9 @@ extends Screen {
     public static final Text COPYRIGHT = Text.literal("Copyright Mojang AB. Do not distribute!");
     public static final CubeMapRenderer PANORAMA_CUBE_MAP = new CubeMapRenderer(new Identifier("textures/gui/title/background/panorama"));
     private static final Identifier PANORAMA_OVERLAY = new Identifier("textures/gui/title/background/panorama_overlay.png");
-    private static final Identifier ACCESSIBILITY_ICON_TEXTURE = new Identifier("textures/gui/accessibility.png");
-    private final boolean isMinceraft;
     @Nullable
     private String splashText;
     private ButtonWidget buttonResetDemo;
-    private static final Identifier MINECRAFT_TITLE_TEXTURE = new Identifier("textures/gui/title/minecraft.png");
-    private static final Identifier EDITION_TITLE_TEXTURE = new Identifier("textures/gui/title/edition.png");
     @Nullable
     private RealmsNotificationsScreen realmsNotificationGui;
     private final RotatingCubeMapRenderer backgroundRenderer = new RotatingCubeMapRenderer(PANORAMA_CUBE_MAP);
@@ -91,31 +84,36 @@ extends Screen {
     private long backgroundFadeStart;
     @Nullable
     private DeprecationNotice deprecationNotice;
+    private final LogoDrawer logoDrawer;
 
     public TitleScreen() {
         this(false);
     }
 
     public TitleScreen(boolean doBackgroundFade) {
-        super(Text.translatable("narrator.screen.title"));
-        this.doBackgroundFade = doBackgroundFade;
-        this.isMinceraft = (double)Random.create().nextFloat() < 1.0E-4;
+        this(doBackgroundFade, null);
     }
 
-    private boolean areRealmsNotificationsEnabled() {
-        return this.client.options.getRealmsNotifications().getValue() != false && this.realmsNotificationGui != null;
+    public TitleScreen(boolean doBackgroundFade, @Nullable LogoDrawer logoDrawer) {
+        super(Text.translatable("narrator.screen.title"));
+        this.doBackgroundFade = doBackgroundFade;
+        this.logoDrawer = Objects.requireNonNullElseGet(logoDrawer, () -> new LogoDrawer(false));
+    }
+
+    private boolean isRealmsNotificationsGuiDisplayed() {
+        return this.realmsNotificationGui != null;
     }
 
     @Override
     public void tick() {
-        if (this.areRealmsNotificationsEnabled()) {
+        if (this.isRealmsNotificationsGuiDisplayed()) {
             this.realmsNotificationGui.tick();
         }
         this.client.getRealms32BitWarningChecker().showWarningIfNeeded(this);
     }
 
     public static CompletableFuture<Void> loadTexturesAsync(TextureManager textureManager, Executor executor) {
-        return CompletableFuture.allOf(textureManager.loadTextureAsync(MINECRAFT_TITLE_TEXTURE, executor), textureManager.loadTextureAsync(EDITION_TITLE_TEXTURE, executor), textureManager.loadTextureAsync(PANORAMA_OVERLAY, executor), PANORAMA_CUBE_MAP.loadTexturesAsync(textureManager, executor));
+        return CompletableFuture.allOf(textureManager.loadTextureAsync(LogoDrawer.LOGO_TEXTURE, executor), textureManager.loadTextureAsync(LogoDrawer.EDITION_TEXTURE, executor), textureManager.loadTextureAsync(PANORAMA_OVERLAY, executor), PANORAMA_CUBE_MAP.loadTexturesAsync(textureManager, executor));
     }
 
     @Override
@@ -145,13 +143,13 @@ extends Screen {
         this.addDrawableChild(new TexturedButtonWidget(this.width / 2 - 124, l + 72 + 12, 20, 20, 0, 106, 20, ButtonWidget.WIDGETS_TEXTURE, 256, 256, button -> this.client.setScreen(new LanguageOptionsScreen((Screen)this, this.client.options, this.client.getLanguageManager())), Text.translatable("narrator.button.language")));
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("menu.options"), button -> this.client.setScreen(new OptionsScreen(this, this.client.options))).dimensions(this.width / 2 - 100, l + 72 + 12, 98, 20).build());
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("menu.quit"), button -> this.client.scheduleStop()).dimensions(this.width / 2 + 2, l + 72 + 12, 98, 20).build());
-        this.addDrawableChild(new TexturedButtonWidget(this.width / 2 + 104, l + 72 + 12, 20, 20, 0, 0, 20, ACCESSIBILITY_ICON_TEXTURE, 32, 64, button -> this.client.setScreen(new AccessibilityOptionsScreen(this, this.client.options)), Text.translatable("narrator.button.accessibility")));
-        this.addDrawableChild(new PressableTextWidget(j, this.height - 10, i, 10, COPYRIGHT, button -> this.client.setScreen(new CreditsScreen(false, Runnables.doNothing())), this.textRenderer));
+        this.addDrawableChild(new TexturedButtonWidget(this.width / 2 + 104, l + 72 + 12, 20, 20, 0, 0, 20, ButtonWidget.ACCESSIBILITY_TEXTURE, 32, 64, button -> this.client.setScreen(new AccessibilityOptionsScreen(this, this.client.options)), Text.translatable("narrator.button.accessibility")));
+        this.addDrawableChild(new PressableTextWidget(j, this.height - 10, i, 10, COPYRIGHT, button -> this.client.setScreen(new CreditsAndAttributionScreen(this)), this.textRenderer));
         this.client.setConnectedToRealms(false);
-        if (this.client.options.getRealmsNotifications().getValue().booleanValue() && this.realmsNotificationGui == null) {
+        if (this.realmsNotificationGui == null) {
             this.realmsNotificationGui = new RealmsNotificationsScreen();
         }
-        if (this.areRealmsNotificationsEnabled()) {
+        if (this.isRealmsNotificationsGuiDisplayed()) {
             this.realmsNotificationGui.init(this.client, this.width, this.height);
         }
         if (!this.client.is64Bit()) {
@@ -250,41 +248,19 @@ extends Screen {
         }
         float f = this.doBackgroundFade ? (float)(Util.getMeasuringTimeMs() - this.backgroundFadeStart) / 1000.0f : 1.0f;
         this.backgroundRenderer.render(delta, MathHelper.clamp(f, 0.0f, 1.0f));
-        int i = 274;
-        int j = this.width / 2 - 137;
-        int k = 30;
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, PANORAMA_OVERLAY);
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, this.doBackgroundFade ? (float)MathHelper.ceil(MathHelper.clamp(f, 0.0f, 1.0f)) : 1.0f);
         TitleScreen.drawTexture(matrices, 0, 0, this.width, this.height, 0.0f, 0.0f, 16, 128, 16, 128);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         float g = this.doBackgroundFade ? MathHelper.clamp(f - 1.0f, 0.0f, 1.0f) : 1.0f;
-        int l = MathHelper.ceil(g * 255.0f) << 24;
-        if ((l & 0xFC000000) == 0) {
+        this.logoDrawer.draw(matrices, this.width, g);
+        int i = MathHelper.ceil(g * 255.0f) << 24;
+        if ((i & 0xFC000000) == 0) {
             return;
         }
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderTexture(0, MINECRAFT_TITLE_TEXTURE);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, g);
-        if (this.isMinceraft) {
-            this.drawWithOutline(j, 30, (x, y) -> {
-                this.drawTexture(matrices, x + 0, (int)y, 0, 0, 99, 44);
-                this.drawTexture(matrices, x + 99, (int)y, 129, 0, 27, 44);
-                this.drawTexture(matrices, x + 99 + 26, (int)y, 126, 0, 3, 44);
-                this.drawTexture(matrices, x + 99 + 26 + 3, (int)y, 99, 0, 26, 44);
-                this.drawTexture(matrices, x + 155, (int)y, 0, 45, 155, 44);
-            });
-        } else {
-            this.drawWithOutline(j, 30, (x, y) -> {
-                this.drawTexture(matrices, x + 0, (int)y, 0, 0, 155, 44);
-                this.drawTexture(matrices, x + 155, (int)y, 0, 45, 155, 44);
-            });
-        }
-        RenderSystem.setShaderTexture(0, EDITION_TITLE_TEXTURE);
-        TitleScreen.drawTexture(matrices, j + 88, 67, 0.0f, 0.0f, 98, 14, 128, 16);
         if (this.deprecationNotice != null) {
-            this.deprecationNotice.render(matrices, l);
+            this.deprecationNotice.render(matrices, i);
         }
         if (this.splashText != null) {
             matrices.push();
@@ -293,7 +269,7 @@ extends Screen {
             float h = 1.8f - MathHelper.abs(MathHelper.sin((float)(Util.getMeasuringTimeMs() % 1000L) / 1000.0f * ((float)Math.PI * 2)) * 0.1f);
             h = h * 100.0f / (float)(this.textRenderer.getWidth(this.splashText) + 32);
             matrices.scale(h, h, h);
-            TitleScreen.drawCenteredText(matrices, this.textRenderer, this.splashText, 0, -8, 0xFFFF00 | l);
+            TitleScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.splashText, 0, -8, 0xFFFF00 | i);
             matrices.pop();
         }
         String string = "Minecraft " + SharedConstants.getGameVersion().getName();
@@ -301,13 +277,13 @@ extends Screen {
         if (MinecraftClient.getModStatus().isModded()) {
             string = string + I18n.translate("menu.modded", new Object[0]);
         }
-        TitleScreen.drawStringWithShadow(matrices, this.textRenderer, string, 2, this.height - 10, 0xFFFFFF | l);
+        TitleScreen.drawTextWithShadow(matrices, this.textRenderer, string, 2, this.height - 10, 0xFFFFFF | i);
         for (Element element : this.children()) {
             if (!(element instanceof ClickableWidget)) continue;
             ((ClickableWidget)element).setAlpha(g);
         }
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.areRealmsNotificationsEnabled() && g >= 1.0f) {
+        if (this.isRealmsNotificationsGuiDisplayed() && g >= 1.0f) {
             RenderSystem.enableDepthTest();
             this.realmsNotificationGui.render(matrices, mouseX, mouseY, delta);
         }
@@ -318,13 +294,21 @@ extends Screen {
         if (super.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        return this.areRealmsNotificationsEnabled() && this.realmsNotificationGui.mouseClicked(mouseX, mouseY, button);
+        return this.isRealmsNotificationsGuiDisplayed() && this.realmsNotificationGui.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public void removed() {
         if (this.realmsNotificationGui != null) {
             this.realmsNotificationGui.removed();
+        }
+    }
+
+    @Override
+    public void onDisplayed() {
+        super.onDisplayed();
+        if (this.realmsNotificationGui != null) {
+            this.realmsNotificationGui.onDisplayed();
         }
     }
 
@@ -353,7 +337,7 @@ extends Screen {
     @Environment(value=EnvType.CLIENT)
     record DeprecationNotice(TextRenderer textRenderer, MultilineText label, int x, int y) {
         public void render(MatrixStack matrices, int color) {
-            this.label.fillBackground(matrices, this.x, this.y, this.textRenderer.fontHeight, 2, 0x55200000);
+            this.label.fillBackground(matrices, this.x, this.y, this.textRenderer.fontHeight, 2, 0x200000 | Math.min(color, 0x55000000));
             this.label.drawCenterWithShadow(matrices, this.x, this.y, this.textRenderer.fontHeight, 0xFFFFFF | color);
         }
 

@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
  *  com.mojang.logging.LogUtils
@@ -15,7 +15,7 @@
  */
 package net.minecraft.client.gui.screen;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -25,6 +25,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -40,7 +42,12 @@ import net.minecraft.client.gui.AbstractParentElement;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.ScreenRect;
 import net.minecraft.client.gui.Selectable;
+import net.minecraft.client.gui.navigation.GuiNavigation;
+import net.minecraft.client.gui.navigation.GuiNavigationPath;
+import net.minecraft.client.gui.navigation.Navigable;
+import net.minecraft.client.gui.navigation.NavigationDirection;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
@@ -91,6 +98,7 @@ implements Drawable {
     private final List<Selectable> selectables = Lists.newArrayList();
     @Nullable
     protected MinecraftClient client;
+    private boolean screenInitialized;
     protected ItemRenderer itemRenderer;
     public int width;
     public int height;
@@ -141,19 +149,79 @@ implements Drawable {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        GuiNavigation.Tab guiNavigation;
         if (keyCode == 256 && this.shouldCloseOnEsc()) {
             this.close();
             return true;
         }
-        if (keyCode == 258) {
-            boolean bl;
-            boolean bl2 = bl = !Screen.hasShiftDown();
-            if (!this.changeFocus(bl)) {
-                this.changeFocus(bl);
-            }
-            return false;
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        switch (keyCode) {
+            case 263: {
+                Record record = this.getArrowNavigation(NavigationDirection.LEFT);
+                break;
+            }
+            case 262: {
+                Record record = this.getArrowNavigation(NavigationDirection.RIGHT);
+                break;
+            }
+            case 265: {
+                Record record = this.getArrowNavigation(NavigationDirection.UP);
+                break;
+            }
+            case 264: {
+                Record record = this.getArrowNavigation(NavigationDirection.DOWN);
+                break;
+            }
+            case 258: {
+                Record record = this.getTabNavigation();
+                break;
+            }
+            default: {
+                Record record = guiNavigation = null;
+            }
+        }
+        if (guiNavigation != null) {
+            GuiNavigationPath guiNavigationPath = super.getNavigationPath(guiNavigation);
+            if (guiNavigationPath == null && guiNavigation instanceof GuiNavigation.Tab) {
+                this.blur();
+                guiNavigationPath = super.getNavigationPath(guiNavigation);
+            }
+            if (guiNavigationPath != null) {
+                this.switchFocus(guiNavigationPath);
+            }
+        }
+        return false;
+    }
+
+    private GuiNavigation.Tab getTabNavigation() {
+        boolean bl = !Screen.hasShiftDown();
+        return new GuiNavigation.Tab(bl);
+    }
+
+    private GuiNavigation.Arrow getArrowNavigation(NavigationDirection direction) {
+        return new GuiNavigation.Arrow(direction);
+    }
+
+    protected void setInitialFocus(Element element) {
+        GuiNavigationPath guiNavigationPath = GuiNavigationPath.of(this, element.getNavigationPath(new GuiNavigation.Down()));
+        if (guiNavigationPath != null) {
+            this.switchFocus(guiNavigationPath);
+        }
+    }
+
+    private void blur() {
+        GuiNavigationPath guiNavigationPath = this.getFocusedPath();
+        if (guiNavigationPath != null) {
+            guiNavigationPath.setFocused(false);
+        }
+    }
+
+    @VisibleForTesting
+    protected void switchFocus(GuiNavigationPath path) {
+        this.blur();
+        path.setFocused(true);
     }
 
     public boolean shouldCloseOnEsc() {
@@ -228,61 +296,52 @@ implements Drawable {
 
     private void renderTooltipFromComponents(MatrixStack matrices, List<TooltipComponent> components, int x, int y, TooltipPositioner positioner) {
         TooltipComponent tooltipComponent2;
-        int q;
-        int k;
+        int r;
         if (components.isEmpty()) {
             return;
         }
         int i = 0;
         int j = components.size() == 1 ? -2 : 0;
         for (TooltipComponent tooltipComponent : components) {
-            k = tooltipComponent.getWidth(this.textRenderer);
+            int k = tooltipComponent.getWidth(this.textRenderer);
             if (k > i) {
                 i = k;
             }
             j += tooltipComponent.getHeight();
         }
-        int l = x + 12;
-        int m = y - 12;
-        k = i;
-        int n = j;
-        Vector2ic vector2ic = positioner.getPosition(this, l, m, k, n);
-        l = vector2ic.x();
-        m = vector2ic.y();
+        int l = i;
+        int m = j;
+        Vector2ic vector2ic = positioner.getPosition(this, x, y, l, m);
+        int n = vector2ic.x();
+        int o = vector2ic.y();
         matrices.push();
-        int o = 400;
-        float f = this.itemRenderer.zOffset;
-        this.itemRenderer.zOffset = 400.0f;
+        int p = 400;
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
         Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-        TooltipBackgroundRenderer.render((matrix, builder, startX, startY, endX, endY, z, colorStart, colorEnd) -> DrawableHelper.fillGradient(matrix, builder, startX, startY, endX, endY, z, colorStart, colorEnd), matrix4f, bufferBuilder, l, m, k, n, 400);
+        TooltipBackgroundRenderer.render((matrix, builder, startX, startY, endX, endY, z, colorStart, colorEnd) -> DrawableHelper.fillGradient(matrix, builder, startX, startY, endX, endY, z, colorStart, colorEnd), matrix4f, bufferBuilder, n, o, l, m, 400);
         RenderSystem.enableDepthTest();
-        RenderSystem.disableTexture();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
-        RenderSystem.disableBlend();
-        RenderSystem.enableTexture();
         VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
         matrices.translate(0.0f, 0.0f, 400.0f);
-        int p = m;
-        for (q = 0; q < components.size(); ++q) {
-            tooltipComponent2 = components.get(q);
-            tooltipComponent2.drawText(this.textRenderer, l, p, matrix4f, immediate);
-            p += tooltipComponent2.getHeight() + (q == 0 ? 2 : 0);
+        int q = o;
+        for (r = 0; r < components.size(); ++r) {
+            tooltipComponent2 = components.get(r);
+            tooltipComponent2.drawText(this.textRenderer, n, q, matrix4f, immediate);
+            q += tooltipComponent2.getHeight() + (r == 0 ? 2 : 0);
         }
         immediate.draw();
-        matrices.pop();
-        p = m;
-        for (q = 0; q < components.size(); ++q) {
-            tooltipComponent2 = components.get(q);
-            tooltipComponent2.drawItems(this.textRenderer, l, p, matrices, this.itemRenderer, 400);
-            p += tooltipComponent2.getHeight() + (q == 0 ? 2 : 0);
+        q = o;
+        for (r = 0; r < components.size(); ++r) {
+            tooltipComponent2 = components.get(r);
+            tooltipComponent2.drawItems(this.textRenderer, n, q, matrices, this.itemRenderer);
+            q += tooltipComponent2.getHeight() + (r == 0 ? 2 : 0);
         }
-        this.itemRenderer.zOffset = f;
+        matrices.pop();
     }
 
     protected void renderTextHoverEffect(MatrixStack matrices, @Nullable Style style, int x, int y) {
@@ -376,14 +435,19 @@ implements Drawable {
         this.textRenderer = client.textRenderer;
         this.width = width;
         this.height = height;
-        this.clearAndInit();
+        if (!this.screenInitialized) {
+            this.init();
+        } else {
+            this.initTabNavigation();
+        }
+        this.screenInitialized = true;
         this.narrateScreenIfNarrationEnabled(false);
         this.setElementNarrationDelay(SCREEN_INIT_NARRATION_DELAY);
     }
 
     protected void clearAndInit() {
         this.clearChildren();
-        this.setFocused(null);
+        this.blur();
         this.init();
     }
 
@@ -401,31 +465,23 @@ implements Drawable {
     public void removed() {
     }
 
-    public void renderBackground(MatrixStack matrices) {
-        this.renderBackground(matrices, 0);
+    public void onDisplayed() {
     }
 
-    public void renderBackground(MatrixStack matrices, int vOffset) {
+    public void renderBackground(MatrixStack matrices) {
         if (this.client.world != null) {
-            this.fillGradient(matrices, 0, 0, this.width, this.height, -1072689136, -804253680);
+            Screen.fillGradient(matrices, 0, 0, this.width, this.height, -1072689136, -804253680);
         } else {
-            this.renderBackgroundTexture(vOffset);
+            this.renderBackgroundTexture(matrices);
         }
     }
 
-    public void renderBackgroundTexture(int vOffset) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
+    public void renderBackgroundTexture(MatrixStack matrices) {
         RenderSystem.setShaderTexture(0, OPTIONS_BACKGROUND_TEXTURE);
+        RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1.0f);
+        int i = 32;
+        Screen.drawTexture(matrices, 0, 0, 0, 0.0f, 0.0f, this.width, this.height, 32, 32);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        float f = 32.0f;
-        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(0.0, this.height, 0.0).texture(0.0f, (float)this.height / 32.0f + (float)vOffset).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(this.width, this.height, 0.0).texture((float)this.width / 32.0f, (float)this.height / 32.0f + (float)vOffset).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(this.width, 0.0, 0.0).texture((float)this.width / 32.0f, vOffset).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(0.0, 0.0, 0.0).texture(0.0f, vOffset).color(64, 64, 64, 255).next();
-        tessellator.draw();
     }
 
     public boolean shouldPause() {
@@ -475,8 +531,14 @@ implements Drawable {
         return code == 65 && Screen.hasControlDown() && !Screen.hasShiftDown() && !Screen.hasAltDown();
     }
 
+    protected void initTabNavigation() {
+        this.clearAndInit();
+    }
+
     public void resize(MinecraftClient client, int width, int height) {
-        this.init(client, width, height);
+        this.width = width;
+        this.height = height;
+        this.initTabNavigation();
     }
 
     public static void wrapScreenError(Runnable task, String errorTitle, String screenName) {
@@ -560,21 +622,28 @@ implements Drawable {
         }
     }
 
-    protected void addScreenNarrations(NarrationMessageBuilder builder) {
-        builder.put(NarrationPart.TITLE, this.getNarratedTitle());
-        builder.put(NarrationPart.USAGE, SCREEN_USAGE_TEXT);
-        this.addElementNarrations(builder);
+    protected boolean hasUsageText() {
+        return true;
+    }
+
+    protected void addScreenNarrations(NarrationMessageBuilder messageBuilder) {
+        messageBuilder.put(NarrationPart.TITLE, this.getNarratedTitle());
+        if (this.hasUsageText()) {
+            messageBuilder.put(NarrationPart.USAGE, SCREEN_USAGE_TEXT);
+        }
+        this.addElementNarrations(messageBuilder);
     }
 
     protected void addElementNarrations(NarrationMessageBuilder builder) {
-        ImmutableList immutableList = (ImmutableList)this.selectables.stream().filter(Selectable::isNarratable).collect(ImmutableList.toImmutableList());
-        SelectedElementNarrationData selectedElementNarrationData = Screen.findSelectedElementData((List<? extends Selectable>)immutableList, this.selected);
+        List list = this.selectables.stream().filter(Selectable::isNarratable).collect(Collectors.toList());
+        Collections.sort(list, Comparator.comparingInt(Navigable::getNavigationOrder));
+        SelectedElementNarrationData selectedElementNarrationData = Screen.findSelectedElementData(list, this.selected);
         if (selectedElementNarrationData != null) {
             if (selectedElementNarrationData.selectType.isFocused()) {
                 this.selected = selectedElementNarrationData.selectable;
             }
-            if (immutableList.size() > 1) {
-                builder.put(NarrationPart.POSITION, (Text)Text.translatable("narrator.position.screen", selectedElementNarrationData.index + 1, immutableList.size()));
+            if (list.size() > 1) {
+                builder.put(NarrationPart.POSITION, (Text)Text.translatable("narrator.position.screen", selectedElementNarrationData.index + 1, list.size()));
                 if (selectedElementNarrationData.selectType == Selectable.SelectionType.FOCUSED) {
                     builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.component_list.usage"));
                 }
@@ -630,6 +699,11 @@ implements Drawable {
         for (ClickableWidget clickableWidget : widgets) {
             clickableWidget.visible = false;
         }
+    }
+
+    @Override
+    public ScreenRect getNavigationFocus() {
+        return new ScreenRect(0, 0, this.width, this.height);
     }
 
     static {

@@ -28,7 +28,7 @@ extends Block {
     public static final int field_31250 = 6;
     public static final int field_31251 = 64;
 
-    protected SpongeBlock(AbstractBlock.Settings settings) {
+    public SpongeBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

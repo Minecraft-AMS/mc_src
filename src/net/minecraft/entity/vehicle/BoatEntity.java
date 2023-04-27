@@ -203,7 +203,7 @@ implements VariantHolder<Type> {
         this.world.addParticle(ParticleTypes.SPLASH, this.getX() + (double)this.random.nextFloat(), this.getY() + 0.7, this.getZ() + (double)this.random.nextFloat(), 0.0, 0.0, 0.0);
         if (this.random.nextInt(20) == 0) {
             this.world.playSound(this.getX(), this.getY(), this.getZ(), this.getSplashSound(), this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat(), false);
-            this.emitGameEvent(GameEvent.SPLASH, this.getPrimaryPassenger());
+            this.emitGameEvent(GameEvent.SPLASH, this.getControllingPassenger());
         }
     }
 
@@ -224,6 +224,7 @@ implements VariantHolder<Type> {
             case Type.BIRCH -> Items.BIRCH_BOAT;
             case Type.JUNGLE -> Items.JUNGLE_BOAT;
             case Type.ACACIA -> Items.ACACIA_BOAT;
+            case Type.CHERRY -> Items.CHERRY_BOAT;
             case Type.DARK_OAK -> Items.DARK_OAK_BOAT;
             case Type.MANGROVE -> Items.MANGROVE_BOAT;
             case Type.BAMBOO -> Items.BAMBOO_RAFT;
@@ -232,7 +233,7 @@ implements VariantHolder<Type> {
     }
 
     @Override
-    public void animateDamage() {
+    public void animateDamage(float yaw) {
         this.setDamageWobbleSide(-this.getDamageWobbleSide());
         this.setDamageWobbleTicks(10);
         this.setDamageWobbleStrength(this.getDamageWobbleStrength() * 11.0f);
@@ -306,11 +307,11 @@ implements VariantHolder<Type> {
         this.checkBlockCollision();
         List<Entity> list = this.world.getOtherEntities(this, this.getBoundingBox().expand(0.2f, -0.01f, 0.2f), EntityPredicates.canBePushedBy(this));
         if (!list.isEmpty()) {
-            boolean bl = !this.world.isClient && !(this.getPrimaryPassenger() instanceof PlayerEntity);
+            boolean bl = !this.world.isClient && !(this.getControllingPassenger() instanceof PlayerEntity);
             for (int j = 0; j < list.size(); ++j) {
                 Entity entity = list.get(j);
                 if (entity.hasPassenger(this)) continue;
-                if (bl && this.getPassengerList().size() < this.getMaxPassengers() && !entity.hasVehicle() && entity.getWidth() < this.getWidth() && entity instanceof LivingEntity && !(entity instanceof WaterCreatureEntity) && !(entity instanceof PlayerEntity)) {
+                if (bl && this.getPassengerList().size() < this.getMaxPassengers() && !entity.hasVehicle() && this.isSmallerThanBoat(entity) && entity instanceof LivingEntity && !(entity instanceof WaterCreatureEntity) && !(entity instanceof PlayerEntity)) {
                     entity.startRiding(this);
                     continue;
                 }
@@ -549,7 +550,7 @@ implements VariantHolder<Type> {
                 this.velocityDecay = 0.9f;
             } else if (this.location == Location.ON_LAND) {
                 this.velocityDecay = this.nearbySlipperiness;
-                if (this.getPrimaryPassenger() instanceof PlayerEntity) {
+                if (this.getControllingPassenger() instanceof PlayerEntity) {
                     this.nearbySlipperiness /= 2.0f;
                 }
             }
@@ -592,6 +593,10 @@ implements VariantHolder<Type> {
         return 0.0f;
     }
 
+    public boolean isSmallerThanBoat(Entity entity) {
+        return entity.getWidth() < this.getWidth();
+    }
+
     @Override
     public void updatePassengerPosition(Entity passenger) {
         if (!this.hasPassenger(passenger)) {
@@ -623,7 +628,7 @@ implements VariantHolder<Type> {
         double e;
         Vec3d vec3d = BoatEntity.getPassengerDismountOffset(this.getWidth() * MathHelper.SQUARE_ROOT_OF_TWO, passenger.getWidth(), passenger.getYaw());
         double d = this.getX() + vec3d.x;
-        BlockPos blockPos = new BlockPos(d, this.getBoundingBox().maxY, e = this.getZ() + vec3d.z);
+        BlockPos blockPos = BlockPos.ofFloored(d, this.getBoundingBox().maxY, e = this.getZ() + vec3d.z);
         BlockPos blockPos2 = blockPos.down();
         if (!this.world.isWater(blockPos2)) {
             double g;
@@ -698,7 +703,7 @@ implements VariantHolder<Type> {
                     this.onLanding();
                     return;
                 }
-                this.handleFallDamage(this.fallDistance, 1.0f, DamageSource.FALL);
+                this.handleFallDamage(this.fallDistance, 1.0f, this.getDamageSources().fall());
                 if (!this.world.isClient && !this.isRemoved()) {
                     this.kill();
                     if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
@@ -719,7 +724,7 @@ implements VariantHolder<Type> {
     }
 
     public boolean isPaddleMoving(int paddle) {
-        return this.dataTracker.get(paddle == 0 ? LEFT_PADDLE_MOVING : RIGHT_PADDLE_MOVING) != false && this.getPrimaryPassenger() != null;
+        return this.dataTracker.get(paddle == 0 ? LEFT_PADDLE_MOVING : RIGHT_PADDLE_MOVING) != false && this.getControllingPassenger() != null;
     }
 
     public void setDamageWobbleStrength(float wobbleStrength) {
@@ -779,8 +784,10 @@ implements VariantHolder<Type> {
 
     @Override
     @Nullable
-    public Entity getPrimaryPassenger() {
-        return this.getFirstPassenger();
+    public LivingEntity getControllingPassenger() {
+        LivingEntity livingEntity;
+        Entity entity = this.getFirstPassenger();
+        return entity instanceof LivingEntity ? (livingEntity = (LivingEntity)entity) : null;
     }
 
     public void setInputs(boolean pressingLeft, boolean pressingRight, boolean pressingForward, boolean pressingBack) {
@@ -813,6 +820,7 @@ implements VariantHolder<Type> {
         public static final /* enum */ Type BIRCH = new Type(Blocks.BIRCH_PLANKS, "birch");
         public static final /* enum */ Type JUNGLE = new Type(Blocks.JUNGLE_PLANKS, "jungle");
         public static final /* enum */ Type ACACIA = new Type(Blocks.ACACIA_PLANKS, "acacia");
+        public static final /* enum */ Type CHERRY = new Type(Blocks.CHERRY_PLANKS, "cherry");
         public static final /* enum */ Type DARK_OAK = new Type(Blocks.DARK_OAK_PLANKS, "dark_oak");
         public static final /* enum */ Type MANGROVE = new Type(Blocks.MANGROVE_PLANKS, "mangrove");
         public static final /* enum */ Type BAMBOO = new Type(Blocks.BAMBOO_PLANKS, "bamboo");
@@ -861,7 +869,7 @@ implements VariantHolder<Type> {
         }
 
         private static /* synthetic */ Type[] method_36671() {
-            return new Type[]{OAK, SPRUCE, BIRCH, JUNGLE, ACACIA, DARK_OAK, MANGROVE, BAMBOO};
+            return new Type[]{OAK, SPRUCE, BIRCH, JUNGLE, ACACIA, CHERRY, DARK_OAK, MANGROVE, BAMBOO};
         }
 
         static {

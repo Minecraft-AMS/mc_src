@@ -16,6 +16,7 @@ import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.ParticleEffect;
 
 @Environment(value=EnvType.CLIENT)
 public class CampfireSmokeParticle
@@ -70,6 +71,11 @@ extends SpriteBillboardParticle {
             campfireSmokeParticle.setSprite(this.spriteProvider);
             return campfireSmokeParticle;
         }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -87,6 +93,11 @@ extends SpriteBillboardParticle {
             campfireSmokeParticle.setAlpha(0.9f);
             campfireSmokeParticle.setSprite(this.spriteProvider);
             return campfireSmokeParticle;
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
         }
     }
 }

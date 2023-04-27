@@ -208,7 +208,7 @@ public abstract class Particle {
     }
 
     protected int getBrightness(float tint) {
-        BlockPos blockPos = new BlockPos(this.x, this.y, this.z);
+        BlockPos blockPos = BlockPos.ofFloored(this.x, this.y, this.z);
         if (this.world.isChunkLoaded(blockPos)) {
             return WorldRenderer.getLightmapCoordinates(this.world, blockPos);
         }

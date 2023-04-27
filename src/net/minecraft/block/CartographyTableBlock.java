@@ -27,7 +27,7 @@ public class CartographyTableBlock
 extends Block {
     private static final Text TITLE = Text.translatable("container.cartography_table");
 
-    protected CartographyTableBlock(AbstractBlock.Settings settings) {
+    public CartographyTableBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

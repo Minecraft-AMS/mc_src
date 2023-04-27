@@ -12,9 +12,9 @@ package net.minecraft.util.math;
 import com.google.common.base.MoreObjects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
@@ -29,27 +29,19 @@ implements Comparable<Vec3i> {
     private int y;
     private int z;
 
-    private static Function<Vec3i, DataResult<Vec3i>> createRangeValidator(int maxAbsValue) {
-        return vec -> {
+    public static Codec<Vec3i> createOffsetCodec(int maxAbsValue) {
+        return Codecs.validate(CODEC, vec -> {
             if (Math.abs(vec.getX()) < maxAbsValue && Math.abs(vec.getY()) < maxAbsValue && Math.abs(vec.getZ()) < maxAbsValue) {
                 return DataResult.success((Object)vec);
             }
-            return DataResult.error((String)("Position out of range, expected at most " + maxAbsValue + ": " + vec));
-        };
-    }
-
-    public static Codec<Vec3i> createOffsetCodec(int maxAbsValue) {
-        return CODEC.flatXmap(Vec3i.createRangeValidator(maxAbsValue), Vec3i.createRangeValidator(maxAbsValue));
+            return DataResult.error(() -> "Position out of range, expected at most " + maxAbsValue + ": " + vec);
+        });
     }
 
     public Vec3i(int x, int y, int z) {
         this.x = x;
         this.y = y;
         this.z = z;
-    }
-
-    public Vec3i(double x, double y, double z) {
-        this(MathHelper.floor(x), MathHelper.floor(y), MathHelper.floor(z));
     }
 
     public boolean equals(Object o) {
@@ -109,13 +101,6 @@ implements Comparable<Vec3i> {
     protected Vec3i setZ(int z) {
         this.z = z;
         return this;
-    }
-
-    public Vec3i add(double x, double y, double z) {
-        if (x == 0.0 && y == 0.0 && z == 0.0) {
-            return this;
-        }
-        return new Vec3i((double)this.getX() + x, (double)this.getY() + y, (double)this.getZ() + z);
     }
 
     public Vec3i add(int x, int y, int z) {

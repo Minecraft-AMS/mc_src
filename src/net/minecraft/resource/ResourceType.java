@@ -1,21 +1,13 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.mojang.bridge.game.GameVersion
- *  com.mojang.bridge.game.PackType
  */
 package net.minecraft.resource;
 
-import com.mojang.bridge.game.GameVersion;
-import com.mojang.bridge.game.PackType;
-
 public final class ResourceType
 extends Enum<ResourceType> {
-    public static final /* enum */ ResourceType CLIENT_RESOURCES = new ResourceType("assets", PackType.RESOURCE);
-    public static final /* enum */ ResourceType SERVER_DATA = new ResourceType("data", PackType.DATA);
+    public static final /* enum */ ResourceType CLIENT_RESOURCES = new ResourceType("assets");
+    public static final /* enum */ ResourceType SERVER_DATA = new ResourceType("data");
     private final String directory;
-    private final PackType packType;
     private static final /* synthetic */ ResourceType[] field_14191;
 
     public static ResourceType[] values() {
@@ -26,17 +18,12 @@ extends Enum<ResourceType> {
         return Enum.valueOf(ResourceType.class, string);
     }
 
-    private ResourceType(String name, PackType packType) {
+    private ResourceType(String name) {
         this.directory = name;
-        this.packType = packType;
     }
 
     public String getDirectory() {
         return this.directory;
-    }
-
-    public int getPackVersion(GameVersion gameVersion) {
-        return gameVersion.getPackVersion(this.packType);
     }
 
     private static /* synthetic */ ResourceType[] method_36582() {

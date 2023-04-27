@@ -4,13 +4,11 @@
  * Could not load the following classes:
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
- *  com.mojang.bridge.game.PackType
  */
 package net.minecraft.data;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.bridge.game.PackType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +17,7 @@ import net.minecraft.MinecraftVersion;
 import net.minecraft.data.DataOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.DataWriter;
+import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.resource.metadata.PackFeatureSetMetadata;
 import net.minecraft.resource.metadata.PackResourceMetadata;
@@ -47,12 +46,12 @@ implements DataProvider {
     }
 
     @Override
-    public final String getName() {
+    public String getName() {
         return "Pack Metadata";
     }
 
     public static MetadataProvider create(DataOutput output, Text description) {
-        return new MetadataProvider(output).add(PackResourceMetadata.SERIALIZER, new PackResourceMetadata(description, MinecraftVersion.CURRENT.getPackVersion(PackType.DATA)));
+        return new MetadataProvider(output).add(PackResourceMetadata.SERIALIZER, new PackResourceMetadata(description, MinecraftVersion.CURRENT.getResourceVersion(ResourceType.SERVER_DATA)));
     }
 
     public static MetadataProvider create(DataOutput output, Text description, FeatureSet requiredFeatures) {

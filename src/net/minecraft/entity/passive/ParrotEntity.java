@@ -103,7 +103,7 @@ Flutterer {
         }
     };
     private static final Item COOKIE = Items.COOKIE;
-    private static final Set<Item> TAMING_INGREDIENTS = Sets.newHashSet((Object[])new Item[]{Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS});
+    private static final Set<Item> TAMING_INGREDIENTS = Sets.newHashSet((Object[])new Item[]{Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS});
     static final Map<EntityType<?>, SoundEvent> MOB_SOUNDS = Util.make(Maps.newHashMap(), map -> {
         map.put(EntityType.BLAZE, SoundEvents.ENTITY_PARROT_IMITATE_BLAZE);
         map.put(EntityType.CAVE_SPIDER, SoundEvents.ENTITY_PARROT_IMITATE_SPIDER);
@@ -282,7 +282,7 @@ Flutterer {
             }
             this.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 900));
             if (player.isCreative() || !this.isInvulnerable()) {
-                this.damage(DamageSource.player(player), Float.MAX_VALUE);
+                this.damage(this.getDamageSources().playerAttack(player), Float.MAX_VALUE);
             }
             return ActionResult.success(this.world.isClient);
         }
@@ -305,11 +305,6 @@ Flutterer {
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
-        return false;
-    }
-
-    @Override
     protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
     }
 
@@ -326,7 +321,7 @@ Flutterer {
 
     @Override
     public boolean tryAttack(Entity target) {
-        return target.damage(DamageSource.mob(this), 3.0f);
+        return target.damage(this.getDamageSources().mobAttack(this), 3.0f);
     }
 
     @Override

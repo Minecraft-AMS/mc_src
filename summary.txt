@@ -1,4 +1,4 @@
-Summary for ./1.19.3.jar
+Summary for .\1.19.4\minecraft-merged-project-root-1.19.4-net.fabricmc.yarn.1_19_4.1.19.4+build.2-v2.jar
 Decompiled with CFR 0.152
 
 
@@ -9,15 +9,15 @@ doAccept(java.io.DataInput net.minecraft.nbt.scanner.NbtScanner )
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [4[SWITCH], 8[CASE]], but top level block is 9[SWITCH]
 
 
-net.minecraft.entity.passive.RabbitEntity
-----------------------------
-
-createChild(net.minecraft.server.world.ServerWorld net.minecraft.entity.passive.PassiveEntity )
-  Unable to fully structure code
-
-
 net.minecraft.client.util.Window
 ----------------------------
 
 readImage(net.minecraft.resource.InputSupplier<java.io.InputStream> java.nio.IntBuffer java.nio.IntBuffer java.nio.IntBuffer )
   Loose catch block
+
+
+net.minecraft.entity.passive.RabbitEntity
+----------------------------
+
+createChild(net.minecraft.server.world.ServerWorld net.minecraft.entity.passive.PassiveEntity )
+  Unable to fully structure code

@@ -23,14 +23,9 @@ extends IdentifierNormalizingSchema {
         super(i, schema);
     }
 
-    protected static void register(Schema schema, Map<String, Supplier<TypeTemplate>> map, String id) {
-        schema.register(map, id, () -> Schema100.targetItems(schema));
-        schema.register(map, "minecraft:warden", () -> DSL.optionalFields((String)"ArmorItems", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"HandItems", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"listener", (TypeTemplate)DSL.optionalFields((String)"event", (TypeTemplate)DSL.optionalFields((String)"game_event", (TypeTemplate)TypeReferences.GAME_EVENT_NAME.in(schema)))));
-    }
-
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
-        Schema3081.register(schema, map, "minecraft:warden");
+        schema.register(map, "minecraft:warden", () -> DSL.optionalFields((String)"listener", (TypeTemplate)DSL.optionalFields((String)"event", (TypeTemplate)DSL.optionalFields((String)"game_event", (TypeTemplate)TypeReferences.GAME_EVENT_NAME.in(schema))), (TypeTemplate)Schema100.targetItems(schema)));
         return map;
     }
 }

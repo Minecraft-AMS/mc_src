@@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class FurnaceBlock
 extends AbstractFurnaceBlock {
-    protected FurnaceBlock(AbstractBlock.Settings settings) {
+    public FurnaceBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

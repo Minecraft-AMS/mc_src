@@ -33,7 +33,7 @@ public final class Uuids {
             return DataResult.success((Object)UUID.fromString(string), (Lifecycle)Lifecycle.stable());
         }
         catch (IllegalArgumentException illegalArgumentException) {
-            return DataResult.error((String)("Invalid UUID " + string + ": " + illegalArgumentException.getMessage()));
+            return DataResult.error(() -> "Invalid UUID " + string + ": " + illegalArgumentException.getMessage());
         }
     }, UUID::toString);
     public static Codec<UUID> CODEC = Codec.either(INT_STREAM_CODEC, (Codec)Codec.STRING.comapFlatMap(string -> {
@@ -41,7 +41,7 @@ public final class Uuids {
             return DataResult.success((Object)UUIDTypeAdapter.fromString((String)string), (Lifecycle)Lifecycle.stable());
         }
         catch (IllegalArgumentException illegalArgumentException) {
-            return DataResult.error((String)("Invalid UUID " + string + ": " + illegalArgumentException.getMessage()));
+            return DataResult.error(() -> "Invalid UUID " + string + ": " + illegalArgumentException.getMessage());
         }
     }, UUIDTypeAdapter::fromUUID)).xmap(either -> (UUID)either.map(uuid -> uuid, uuid -> uuid), Either::right);
     public static final int BYTE_ARRAY_SIZE = 16;

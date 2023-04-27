@@ -3,24 +3,30 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  net.fabricmc.fabric.api.itemgroup.v1.IdentifiableItemGroup
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import com.google.common.collect.Lists;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.fabricmc.fabric.api.itemgroup.v1.IdentifiableItemGroup;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemStackSet;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
-public class ItemGroup {
+public class ItemGroup
+implements IdentifiableItemGroup {
     private final Text displayName;
     String texture = "items.png";
     boolean scrollbar = true;
@@ -98,9 +104,9 @@ public class ItemGroup {
         return this.type;
     }
 
-    public void updateEntries(FeatureSet enabledFeatures, boolean operatorEnabled) {
-        EntriesImpl entriesImpl = new EntriesImpl(this, enabledFeatures);
-        this.entryCollector.accept(enabledFeatures, entriesImpl, operatorEnabled);
+    public void updateEntries(DisplayContext displayContext) {
+        EntriesImpl entriesImpl = new EntriesImpl(this, displayContext.enabledFeatures);
+        this.entryCollector.accept(displayContext, entriesImpl);
         this.displayStacks = entriesImpl.parentTabStacks;
         this.searchTabStacks = entriesImpl.searchTabStacks;
         this.reloadSearchProvider();
@@ -151,8 +157,9 @@ public class ItemGroup {
         }
     }
 
+    @FunctionalInterface
     public static interface EntryCollector {
-        public void accept(FeatureSet var1, Entries var2, boolean var3);
+        public void accept(DisplayContext var1, Entries var2);
     }
 
     public static final class Type
@@ -181,7 +188,7 @@ public class ItemGroup {
     }
 
     public static class Builder {
-        private static final EntryCollector EMPTY_ENTRIES = (enabledFeatures, entries, operatorEnabled) -> {};
+        private static final EntryCollector EMPTY_ENTRIES = (displayContext, entries) -> {};
         private final Row row;
         private final int column;
         private Text displayName = Text.empty();
@@ -292,7 +299,51 @@ public class ItemGroup {
         }
     }
 
-    protected static interface Entries {
+    public static final class DisplayContext
+    extends Record {
+        final FeatureSet enabledFeatures;
+        private final boolean hasPermissions;
+        private final RegistryWrapper.WrapperLookup lookup;
+
+        public DisplayContext(FeatureSet featureSet, boolean bl, RegistryWrapper.WrapperLookup wrapperLookup) {
+            this.enabledFeatures = featureSet;
+            this.hasPermissions = bl;
+            this.lookup = wrapperLookup;
+        }
+
+        public boolean doesNotMatch(FeatureSet enabledFeatures, boolean hasPermissions, RegistryWrapper.WrapperLookup lookup) {
+            return !this.enabledFeatures.equals(enabledFeatures) || this.hasPermissions != hasPermissions || this.lookup != lookup;
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{DisplayContext.class, "enabledFeatures;hasPermissions;holders", "enabledFeatures", "hasPermissions", "lookup"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{DisplayContext.class, "enabledFeatures;hasPermissions;holders", "enabledFeatures", "hasPermissions", "lookup"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{DisplayContext.class, "enabledFeatures;hasPermissions;holders", "enabledFeatures", "hasPermissions", "lookup"}, this, object);
+        }
+
+        public FeatureSet enabledFeatures() {
+            return this.enabledFeatures;
+        }
+
+        public boolean hasPermissions() {
+            return this.hasPermissions;
+        }
+
+        public RegistryWrapper.WrapperLookup lookup() {
+            return this.lookup;
+        }
+    }
+
+    public static interface Entries {
         public void add(ItemStack var1, StackVisibility var2);
 
         default public void add(ItemStack stack) {
@@ -316,7 +367,7 @@ public class ItemGroup {
         }
     }
 
-    protected static final class StackVisibility
+    public static final class StackVisibility
     extends Enum<StackVisibility> {
         public static final /* enum */ StackVisibility PARENT_AND_SEARCH_TABS = new StackVisibility();
         public static final /* enum */ StackVisibility PARENT_TAB_ONLY = new StackVisibility();

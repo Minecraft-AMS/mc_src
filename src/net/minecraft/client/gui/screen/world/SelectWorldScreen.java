@@ -72,7 +72,7 @@ extends Screen {
         this.deleteButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.delete"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::deleteIfConfirmed)).dimensions(this.width / 2 - 76, this.height - 28, 72, 20).build());
         this.recreateButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.recreate"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::recreate)).dimensions(this.width / 2 + 4, this.height - 28, 72, 20).build());
         this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 + 82, this.height - 28, 72, 20).build());
-        this.worldSelected(false);
+        this.worldSelected(false, false);
         this.setInitialFocus(this.searchBox);
     }
 
@@ -98,15 +98,15 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.levelList.render(matrices, mouseX, mouseY, delta);
         this.searchBox.render(matrices, mouseX, mouseY, delta);
-        SelectWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
+        SelectWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
     }
 
-    public void worldSelected(boolean active) {
-        this.selectButton.active = active;
-        this.deleteButton.active = active;
-        this.editButton.active = active;
-        this.recreateButton.active = active;
+    public void worldSelected(boolean buttonsActive, boolean deleteButtonActive) {
+        this.selectButton.active = buttonsActive;
+        this.editButton.active = buttonsActive;
+        this.recreateButton.active = buttonsActive;
+        this.deleteButton.active = deleteButtonActive;
     }
 
     @Override

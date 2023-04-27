@@ -11,6 +11,7 @@
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  it.unimi.dsi.fastutil.ints.IntComparators
  *  it.unimi.dsi.fastutil.ints.IntList
+ *  net.fabricmc.fabric.api.recipe.v1.ingredient.FabricIngredient
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.recipe;
@@ -31,6 +32,7 @@ import java.util.Collections;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import net.fabricmc.fabric.api.recipe.v1.ingredient.FabricIngredient;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
@@ -46,7 +48,8 @@ import net.minecraft.util.JsonHelper;
 import org.jetbrains.annotations.Nullable;
 
 public final class Ingredient
-implements Predicate<ItemStack> {
+implements Predicate<ItemStack>,
+FabricIngredient {
     public static final Ingredient EMPTY = new Ingredient(Stream.empty());
     private final Entry[] entries;
     @Nullable

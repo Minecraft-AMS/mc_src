@@ -4,6 +4,8 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
  *  org.joml.Quaternionf
  *  org.joml.Quaternionfc
  */
@@ -19,7 +21,6 @@ import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.util.math.MatrixStack;
@@ -31,6 +32,8 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 
@@ -75,7 +78,7 @@ implements RecipeBookProvider {
         this.addDrawableChild(new TexturedButtonWidget(this.x + 104, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, button -> {
             this.recipeBook.toggleOpen();
             this.x = this.recipeBook.findLeftEdge(this.width, this.backgroundWidth);
-            button.setPos(this.x + 104, this.height / 2 - 22);
+            button.setPosition(this.x + 104, this.height / 2 - 22);
             this.mouseDown = true;
         }));
         this.addSelectableChild(this.recipeBook);
@@ -106,30 +109,19 @@ implements RecipeBookProvider {
 
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
         int i = this.x;
         int j = this.y;
-        this.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
-        InventoryScreen.drawEntity(i + 51, j + 75, 30, (float)(i + 51) - this.mouseX, (float)(j + 75 - 50) - this.mouseY, this.client.player);
+        InventoryScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        InventoryScreen.drawEntity(matrices, i + 51, j + 75, 30, (float)(i + 51) - this.mouseX, (float)(j + 75 - 50) - this.mouseY, (LivingEntity)this.client.player);
     }
 
-    public static void drawEntity(int x, int y, int size, float mouseX, float mouseY, LivingEntity entity) {
+    public static void drawEntity(MatrixStack matrices, int x, int y, int size, float mouseX, float mouseY, LivingEntity entity) {
         float f = (float)Math.atan(mouseX / 40.0f);
         float g = (float)Math.atan(mouseY / 40.0f);
-        MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        matrixStack.push();
-        matrixStack.translate(x, y, 1050.0f);
-        matrixStack.scale(1.0f, 1.0f, -1.0f);
-        RenderSystem.applyModelViewMatrix();
-        MatrixStack matrixStack2 = new MatrixStack();
-        matrixStack2.translate(0.0f, 0.0f, 1000.0f);
-        matrixStack2.scale(size, size, size);
         Quaternionf quaternionf = new Quaternionf().rotateZ((float)Math.PI);
         Quaternionf quaternionf2 = new Quaternionf().rotateX(g * 20.0f * ((float)Math.PI / 180));
         quaternionf.mul((Quaternionfc)quaternionf2);
-        matrixStack2.multiply(quaternionf);
         float h = entity.bodyYaw;
         float i = entity.getYaw();
         float j = entity.getPitch();
@@ -140,23 +132,39 @@ implements RecipeBookProvider {
         entity.setPitch(-g * 20.0f);
         entity.headYaw = entity.getYaw();
         entity.prevHeadYaw = entity.getYaw();
-        DiffuseLighting.method_34742();
-        EntityRenderDispatcher entityRenderDispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
-        quaternionf2.conjugate();
-        entityRenderDispatcher.setRotation(quaternionf2);
-        entityRenderDispatcher.setRenderShadows(false);
-        VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        RenderSystem.runAsFancy(() -> entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, matrixStack2, immediate, 0xF000F0));
-        immediate.draw();
-        entityRenderDispatcher.setRenderShadows(true);
+        InventoryScreen.drawEntity(matrices, x, y, size, quaternionf, quaternionf2, entity);
         entity.bodyYaw = h;
         entity.setYaw(i);
         entity.setPitch(j);
         entity.prevHeadYaw = k;
         entity.headYaw = l;
+    }
+
+    public static void drawEntity(MatrixStack matrices, int x, int y, int size, Quaternionf quaternionf, @Nullable Quaternionf quaternionf2, LivingEntity entity) {
+        double d = 1000.0;
+        MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
+        matrixStack.translate(0.0, 0.0, 1000.0);
+        RenderSystem.applyModelViewMatrix();
+        matrices.push();
+        matrices.translate((double)x, (double)y, -950.0);
+        matrices.multiplyPositionMatrix(new Matrix4f().scaling((float)size, (float)size, (float)(-size)));
+        matrices.multiply(quaternionf);
+        DiffuseLighting.method_34742();
+        EntityRenderDispatcher entityRenderDispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
+        if (quaternionf2 != null) {
+            quaternionf2.conjugate();
+            entityRenderDispatcher.setRotation(quaternionf2);
+        }
+        entityRenderDispatcher.setRenderShadows(false);
+        VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+        RenderSystem.runAsFancy(() -> entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, matrices, immediate, 0xF000F0));
+        immediate.draw();
+        entityRenderDispatcher.setRenderShadows(true);
+        matrices.pop();
+        DiffuseLighting.enableGuiDepthLighting();
         matrixStack.pop();
         RenderSystem.applyModelViewMatrix();
-        DiffuseLighting.enableGuiDepthLighting();
     }
 
     @Override

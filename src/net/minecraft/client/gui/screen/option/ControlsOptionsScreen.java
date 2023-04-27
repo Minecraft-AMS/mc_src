@@ -36,17 +36,17 @@ extends GameOptionsScreen {
         int k = this.height / 6 - 12;
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("options.mouse_settings"), button -> this.client.setScreen(new MouseOptionsScreen(this, this.gameOptions))).dimensions(i, k, 150, 20).build());
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("controls.keybinds"), button -> this.client.setScreen(new KeybindsScreen(this, this.gameOptions))).dimensions(j, k, 150, 20).build());
-        this.addDrawableChild(this.gameOptions.getSneakToggled().createButton(this.gameOptions, i, k += 24, 150));
-        this.addDrawableChild(this.gameOptions.getSprintToggled().createButton(this.gameOptions, j, k, 150));
-        this.addDrawableChild(this.gameOptions.getAutoJump().createButton(this.gameOptions, i, k += 24, 150));
-        this.addDrawableChild(this.gameOptions.getOperatorItemsTab().createButton(this.gameOptions, j, k, 150));
+        this.addDrawableChild(this.gameOptions.getSneakToggled().createWidget(this.gameOptions, i, k += 24, 150));
+        this.addDrawableChild(this.gameOptions.getSprintToggled().createWidget(this.gameOptions, j, k, 150));
+        this.addDrawableChild(this.gameOptions.getAutoJump().createWidget(this.gameOptions, i, k += 24, 150));
+        this.addDrawableChild(this.gameOptions.getOperatorItemsTab().createWidget(this.gameOptions, j, k, 150));
         this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 - 100, k += 24, 200, 20).build());
     }
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        ControlsOptionsScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 15, 0xFFFFFF);
+        ControlsOptionsScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 15, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
     }
 }

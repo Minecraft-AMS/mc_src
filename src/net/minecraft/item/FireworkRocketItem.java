@@ -20,6 +20,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -89,7 +90,7 @@ extends Item {
             return;
         }
         if (nbtCompound.contains(FLIGHT_KEY, 99)) {
-            tooltip.add(Text.translatable("item.minecraft.firework_rocket.flight").append(" ").append(String.valueOf(nbtCompound.getByte(FLIGHT_KEY))).formatted(Formatting.GRAY));
+            tooltip.add(Text.translatable("item.minecraft.firework_rocket.flight").append(ScreenTexts.SPACE).append(String.valueOf(nbtCompound.getByte(FLIGHT_KEY))).formatted(Formatting.GRAY));
         }
         if (!(nbtList = nbtCompound.getList(EXPLOSIONS_KEY, 10)).isEmpty()) {
             for (int i = 0; i < nbtList.size(); ++i) {

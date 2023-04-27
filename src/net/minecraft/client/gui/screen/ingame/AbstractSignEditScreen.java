@@ -16,24 +16,19 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractSignBlock;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.WoodType;
 import net.minecraft.block.entity.SignBlockEntity;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.SelectionManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.util.SignType;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -42,7 +37,7 @@ public abstract class AbstractSignEditScreen
 extends Screen {
     protected final SignBlockEntity blockEntity;
     protected final String[] text;
-    protected final SignType signType;
+    protected final WoodType signType;
     private int ticksSinceOpened;
     private int currentRow;
     private SelectionManager selectionManager;
@@ -53,7 +48,7 @@ extends Screen {
 
     public AbstractSignEditScreen(SignBlockEntity blockEntity, boolean filtered, Text title) {
         super(title);
-        this.signType = AbstractSignBlock.getSignType(blockEntity.getCachedState().getBlock());
+        this.signType = AbstractSignBlock.getWoodType(blockEntity.getCachedState().getBlock());
         this.text = (String[])IntStream.range(0, 4).mapToObj(row -> blockEntity.getTextOnRow(row, filtered)).map(Text::getString).toArray(String[]::new);
         this.blockEntity = blockEntity;
     }
@@ -123,7 +118,7 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         DiffuseLighting.disableGuiDepthLighting();
         this.renderBackground(matrices);
-        AbstractSignEditScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 40, 0xFFFFFF);
+        AbstractSignEditScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 40, 0xFFFFFF);
         this.renderSign(matrices);
         DiffuseLighting.enableGuiDepthLighting();
         super.render(matrices, mouseX, mouseY, delta);
@@ -171,12 +166,12 @@ extends Screen {
                 string = this.textRenderer.mirror(string);
             }
             float f = -this.client.textRenderer.getWidth(string) / 2;
-            this.client.textRenderer.draw(string, f, n * this.blockEntity.getTextLineHeight() - l, i, false, matrix4f, vertexConsumers, false, 0, 0xF000F0, false);
+            this.client.textRenderer.draw(string, f, n * this.blockEntity.getTextLineHeight() - l, i, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0, false);
             if (n != this.currentRow || j < 0 || !bl) continue;
             o = this.client.textRenderer.getWidth(string.substring(0, Math.max(Math.min(j, string.length()), 0)));
             p = o - this.client.textRenderer.getWidth(string) / 2;
             if (j < string.length()) continue;
-            this.client.textRenderer.draw("_", p, m, i, false, matrix4f, vertexConsumers, false, 0, 0xF000F0, false);
+            this.client.textRenderer.draw("_", p, m, i, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0, false);
         }
         vertexConsumers.draw();
         for (n = 0; n < this.text.length; ++n) {
@@ -194,20 +189,10 @@ extends Screen {
             int t = this.client.textRenderer.getWidth(string.substring(0, r)) - this.client.textRenderer.getWidth(string) / 2;
             int u = Math.min(s, t);
             int v = Math.max(s, t);
-            Tessellator tessellator = Tessellator.getInstance();
-            BufferBuilder bufferBuilder = tessellator.getBuffer();
-            RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-            RenderSystem.disableTexture();
             RenderSystem.enableColorLogicOp();
             RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
-            bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-            bufferBuilder.vertex(matrix4f, u, m + this.blockEntity.getTextLineHeight(), 0.0f).color(0, 0, 255, 255).next();
-            bufferBuilder.vertex(matrix4f, v, m + this.blockEntity.getTextLineHeight(), 0.0f).color(0, 0, 255, 255).next();
-            bufferBuilder.vertex(matrix4f, v, m, 0.0f).color(0, 0, 255, 255).next();
-            bufferBuilder.vertex(matrix4f, u, m, 0.0f).color(0, 0, 255, 255).next();
-            BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+            AbstractSignEditScreen.fill(matrices, u, m, v, m + this.blockEntity.getTextLineHeight(), -16776961);
             RenderSystem.disableColorLogicOp();
-            RenderSystem.enableTexture();
         }
     }
 }

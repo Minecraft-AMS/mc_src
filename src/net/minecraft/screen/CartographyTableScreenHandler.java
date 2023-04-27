@@ -123,7 +123,7 @@ extends ScreenHandler {
     private void updateResult(ItemStack map, ItemStack item, ItemStack oldResult) {
         this.context.run((world, pos) -> {
             ItemStack itemStack4;
-            MapState mapState = FilledMapItem.getOrCreateMapState(map, world);
+            MapState mapState = FilledMapItem.getMapState(map, world);
             if (mapState == null) {
                 return;
             }
@@ -188,8 +188,8 @@ extends ScreenHandler {
     }
 
     @Override
-    public void close(PlayerEntity player) {
-        super.close(player);
+    public void onClosed(PlayerEntity player) {
+        super.onClosed(player);
         this.resultInventory.removeStack(2);
         this.context.run((world, pos) -> this.dropInventory(player, this.inventory));
     }

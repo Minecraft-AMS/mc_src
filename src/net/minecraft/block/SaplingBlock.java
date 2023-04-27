@@ -29,7 +29,7 @@ implements Fertilizable {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 12.0, 14.0);
     private final SaplingGenerator generator;
 
-    protected SaplingBlock(SaplingGenerator generator, AbstractBlock.Settings settings) {
+    public SaplingBlock(SaplingGenerator generator, AbstractBlock.Settings settings) {
         super(settings);
         this.generator = generator;
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(STAGE, 0));

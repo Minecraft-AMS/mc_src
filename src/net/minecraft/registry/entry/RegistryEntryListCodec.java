@@ -18,7 +18,6 @@ import com.mojang.serialization.DynamicOps;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKey;
@@ -36,12 +35,11 @@ implements Codec<RegistryEntryList<E>> {
     private final Codec<Either<TagKey<E>, List<RegistryEntry<E>>>> entryListStorageCodec;
 
     private static <E> Codec<List<RegistryEntry<E>>> createDirectEntryListCodec(Codec<RegistryEntry<E>> entryCodec, boolean alwaysSerializeAsList) {
-        Function function = Codecs.createEqualTypeChecker(RegistryEntry::getType);
-        Codec codec = entryCodec.listOf().flatXmap(function, function);
+        Codec codec = Codecs.validate(entryCodec.listOf(), Codecs.createEqualTypeChecker(RegistryEntry::getType));
         if (alwaysSerializeAsList) {
             return codec;
         }
-        return Codec.either((Codec)codec, entryCodec).xmap(either -> (List)either.map(entries -> entries, List::of), entries -> entries.size() == 1 ? Either.right((Object)((RegistryEntry)entries.get(0))) : Either.left((Object)entries));
+        return Codec.either(codec, entryCodec).xmap(either -> (List)either.map(entries -> entries, List::of), entries -> entries.size() == 1 ? Either.right((Object)((RegistryEntry)entries.get(0))) : Either.left((Object)entries));
     }
 
     public static <E> Codec<RegistryEntryList<E>> create(RegistryKey<? extends Registry<E>> registryRef, Codec<RegistryEntry<E>> entryCodec, boolean alwaysSerializeAsList) {
@@ -70,7 +68,7 @@ implements Codec<RegistryEntryList<E>> {
         Optional optional;
         if (dynamicOps instanceof RegistryOps && (optional = (registryOps = (RegistryOps)dynamicOps).getOwner(this.registry)).isPresent()) {
             if (!registryEntryList.ownerEquals(optional.get())) {
-                return DataResult.error((String)("HolderSet " + registryEntryList + " is not valid in current registry set"));
+                return DataResult.error(() -> "HolderSet " + registryEntryList + " is not valid in current registry set");
             }
             return this.entryListStorageCodec.encode((Object)registryEntryList.getStorage().mapRight(List::copyOf), dynamicOps, object);
         }
@@ -86,7 +84,7 @@ implements Codec<RegistryEntryList<E>> {
                     list.add(direct);
                     continue;
                 }
-                return DataResult.error((String)("Can't decode element " + registryEntry + " without registry"));
+                return DataResult.error(() -> "Can't decode element " + registryEntry + " without registry");
             }
             return DataResult.success((Object)new Pair(RegistryEntryList.of(list), pair.getSecond()));
         });

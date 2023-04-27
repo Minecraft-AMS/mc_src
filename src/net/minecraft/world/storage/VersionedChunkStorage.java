@@ -48,14 +48,14 @@ implements AutoCloseable {
 
     public NbtCompound updateChunkNbt(RegistryKey<World> worldKey, Supplier<PersistentStateManager> persistentStateManagerFactory, NbtCompound nbt, Optional<RegistryKey<Codec<? extends ChunkGenerator>>> generatorCodecKey) {
         int i = VersionedChunkStorage.getDataVersion(nbt);
-        if (i < 1493 && (nbt = NbtHelper.update(this.dataFixer, DataFixTypes.CHUNK, nbt, i, 1493)).getCompound("Level").getBoolean("hasLegacyStructureData")) {
+        if (i < 1493 && (nbt = DataFixTypes.CHUNK.update(this.dataFixer, nbt, i, 1493)).getCompound("Level").getBoolean("hasLegacyStructureData")) {
             FeatureUpdater featureUpdater = this.getFeatureUpdater(worldKey, persistentStateManagerFactory);
             nbt = featureUpdater.getUpdatedReferences(nbt);
         }
         VersionedChunkStorage.saveContextToNbt(nbt, worldKey, generatorCodecKey);
-        nbt = NbtHelper.update(this.dataFixer, DataFixTypes.CHUNK, nbt, Math.max(1493, i));
-        if (i < SharedConstants.getGameVersion().getWorldVersion()) {
-            nbt.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
+        nbt = DataFixTypes.CHUNK.update(this.dataFixer, nbt, Math.max(1493, i));
+        if (i < SharedConstants.getGameVersion().getSaveVersion().getId()) {
+            NbtHelper.putDataVersion(nbt);
         }
         nbt.remove("__context");
         return nbt;
@@ -86,7 +86,7 @@ implements AutoCloseable {
     }
 
     public static int getDataVersion(NbtCompound nbt) {
-        return nbt.contains("DataVersion", 99) ? nbt.getInt("DataVersion") : -1;
+        return NbtHelper.getDataVersion(nbt, -1);
     }
 
     public CompletableFuture<Optional<NbtCompound>> getNbt(ChunkPos chunkPos) {

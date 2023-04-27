@@ -42,7 +42,6 @@ import net.minecraft.text.TextColor;
 import net.minecraft.text.TextVisitFactory;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
-import net.minecraft.util.math.AffineTransformation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
@@ -116,32 +115,32 @@ public class TextRenderer {
             return 0;
         }
         VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-        int i = this.draw(text, x, y, color, shadow, matrix, immediate, false, 0, 0xF000F0, mirror);
+        int i = this.draw(text, x, y, color, shadow, matrix, immediate, TextLayerType.NORMAL, 0, 0xF000F0, mirror);
         immediate.draw();
         return i;
     }
 
     private int draw(OrderedText text, float x, float y, int color, Matrix4f matrix, boolean shadow) {
         VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-        int i = this.draw(text, x, y, color, shadow, matrix, (VertexConsumerProvider)immediate, false, 0, 0xF000F0);
+        int i = this.draw(text, x, y, color, shadow, matrix, (VertexConsumerProvider)immediate, TextLayerType.NORMAL, 0, 0xF000F0);
         immediate.draw();
         return i;
     }
 
-    public int draw(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, boolean seeThrough, int backgroundColor, int light) {
-        return this.draw(text, x, y, color, shadow, matrix, vertexConsumers, seeThrough, backgroundColor, light, this.isRightToLeft());
+    public int draw(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, TextLayerType layerType, int backgroundColor, int light) {
+        return this.draw(text, x, y, color, shadow, matrix, vertexConsumers, layerType, backgroundColor, light, this.isRightToLeft());
     }
 
-    public int draw(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, boolean seeThrough, int backgroundColor, int light, boolean rightToLeft) {
-        return this.drawInternal(text, x, y, color, shadow, matrix, vertexConsumers, seeThrough, backgroundColor, light, rightToLeft);
+    public int draw(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, TextLayerType layerType, int backgroundColor, int light, boolean rightToLeft) {
+        return this.drawInternal(text, x, y, color, shadow, matrix, vertexConsumers, layerType, backgroundColor, light, rightToLeft);
     }
 
-    public int draw(Text text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, boolean seeThrough, int backgroundColor, int light) {
-        return this.draw(text.asOrderedText(), x, y, color, shadow, matrix, vertexConsumers, seeThrough, backgroundColor, light);
+    public int draw(Text text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, TextLayerType layerType, int backgroundColor, int light) {
+        return this.draw(text.asOrderedText(), x, y, color, shadow, matrix, vertexConsumers, layerType, backgroundColor, light);
     }
 
-    public int draw(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, boolean seeThrough, int backgroundColor, int light) {
-        return this.drawInternal(text, x, y, color, shadow, matrix, vertexConsumers, seeThrough, backgroundColor, light);
+    public int draw(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, TextLayerType layerType, int backgroundColor, int light) {
+        return this.drawInternal(text, x, y, color, shadow, matrix, vertexConsumers, layerType, backgroundColor, light);
     }
 
     public void drawWithOutline(OrderedText text, float x, float y, int color, int outlineColor, Matrix4f matrix, VertexConsumerProvider vertexConsumers, int light) {
@@ -176,39 +175,39 @@ public class TextRenderer {
         return argb;
     }
 
-    private int drawInternal(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, boolean seeThrough, int backgroundColor, int light, boolean mirror) {
+    private int drawInternal(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, TextLayerType layerType, int backgroundColor, int light, boolean mirror) {
         if (mirror) {
             text = this.mirror(text);
         }
         color = TextRenderer.tweakTransparency(color);
         Matrix4f matrix4f = new Matrix4f((Matrix4fc)matrix);
         if (shadow) {
-            this.drawLayer(text, x, y, color, true, matrix, vertexConsumers, seeThrough, backgroundColor, light);
+            this.drawLayer(text, x, y, color, true, matrix, vertexConsumers, layerType, backgroundColor, light);
             matrix4f.translate((Vector3fc)FORWARD_SHIFT);
         }
-        x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumers, seeThrough, backgroundColor, light);
+        x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumers, layerType, backgroundColor, light);
         return (int)x + (shadow ? 1 : 0);
     }
 
-    private int drawInternal(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int backgroundColor, int light) {
+    private int drawInternal(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, TextLayerType layerType, int backgroundColor, int light) {
         color = TextRenderer.tweakTransparency(color);
         Matrix4f matrix4f = new Matrix4f((Matrix4fc)matrix);
         if (shadow) {
-            this.drawLayer(text, x, y, color, true, matrix, vertexConsumerProvider, seeThrough, backgroundColor, light);
+            this.drawLayer(text, x, y, color, true, matrix, vertexConsumerProvider, layerType, backgroundColor, light);
             matrix4f.translate((Vector3fc)FORWARD_SHIFT);
         }
-        x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumerProvider, seeThrough, backgroundColor, light);
+        x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumerProvider, layerType, backgroundColor, light);
         return (int)x + (shadow ? 1 : 0);
     }
 
-    private float drawLayer(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int underlineColor, int light) {
-        Drawer drawer = new Drawer(vertexConsumerProvider, x, y, color, shadow, matrix, seeThrough, light);
+    private float drawLayer(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, TextLayerType layerType, int underlineColor, int light) {
+        Drawer drawer = new Drawer(vertexConsumerProvider, x, y, color, shadow, matrix, layerType, light);
         TextVisitFactory.visitFormatted(text, Style.EMPTY, (CharacterVisitor)drawer);
         return drawer.drawLayer(underlineColor, x);
     }
 
-    private float drawLayer(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int underlineColor, int light) {
-        Drawer drawer = new Drawer(vertexConsumerProvider, x, y, color, shadow, matrix, seeThrough, light);
+    private float drawLayer(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, TextLayerType layerType, int underlineColor, int light) {
+        Drawer drawer = new Drawer(vertexConsumerProvider, x, y, color, shadow, matrix, layerType, light);
         text.accept(drawer);
         return drawer.drawLayer(underlineColor, x);
     }
@@ -244,8 +243,8 @@ public class TextRenderer {
         return this.handler.trimToWidth(text, width, Style.EMPTY);
     }
 
-    public void drawTrimmed(StringVisitable text, int x, int y, int maxWidth, int color) {
-        Matrix4f matrix4f = AffineTransformation.identity().getMatrix();
+    public void drawTrimmed(MatrixStack matrices, StringVisitable text, int x, int y, int maxWidth, int color) {
+        Matrix4f matrix4f = matrices.peek().getPositionMatrix();
         for (OrderedText orderedText : this.wrapLines(text, maxWidth)) {
             this.draw(orderedText, x, y, color, matrix4f, false);
             y += 9;
@@ -273,6 +272,31 @@ public class TextRenderer {
     }
 
     @Environment(value=EnvType.CLIENT)
+    public static final class TextLayerType
+    extends Enum<TextLayerType> {
+        public static final /* enum */ TextLayerType NORMAL = new TextLayerType();
+        public static final /* enum */ TextLayerType SEE_THROUGH = new TextLayerType();
+        public static final /* enum */ TextLayerType POLYGON_OFFSET = new TextLayerType();
+        private static final /* synthetic */ TextLayerType[] field_33996;
+
+        public static TextLayerType[] values() {
+            return (TextLayerType[])field_33996.clone();
+        }
+
+        public static TextLayerType valueOf(String string) {
+            return Enum.valueOf(TextLayerType.class, string);
+        }
+
+        private static /* synthetic */ TextLayerType[] method_37344() {
+            return new TextLayerType[]{NORMAL, SEE_THROUGH, POLYGON_OFFSET};
+        }
+
+        static {
+            field_33996 = TextLayerType.method_37344();
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
     class Drawer
     implements CharacterVisitor {
         final VertexConsumerProvider vertexConsumers;
@@ -295,10 +319,6 @@ public class TextRenderer {
                 this.rectangles = Lists.newArrayList();
             }
             this.rectangles.add(rectangle);
-        }
-
-        public Drawer(VertexConsumerProvider vertexConsumers, float x, float y, int color, boolean shadow, Matrix4f matrix, boolean seeThrough, int light) {
-            this(vertexConsumers, x, y, color, shadow, matrix, seeThrough ? TextLayerType.SEE_THROUGH : TextLayerType.NORMAL, light);
         }
 
         public Drawer(VertexConsumerProvider vertexConsumers, float x, float y, int color, boolean shadow, Matrix4f matrix, TextLayerType layerType, int light) {
@@ -372,31 +392,6 @@ public class TextRenderer {
                 }
             }
             return this.x;
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static final class TextLayerType
-    extends Enum<TextLayerType> {
-        public static final /* enum */ TextLayerType NORMAL = new TextLayerType();
-        public static final /* enum */ TextLayerType SEE_THROUGH = new TextLayerType();
-        public static final /* enum */ TextLayerType POLYGON_OFFSET = new TextLayerType();
-        private static final /* synthetic */ TextLayerType[] field_33996;
-
-        public static TextLayerType[] values() {
-            return (TextLayerType[])field_33996.clone();
-        }
-
-        public static TextLayerType valueOf(String string) {
-            return Enum.valueOf(TextLayerType.class, string);
-        }
-
-        private static /* synthetic */ TextLayerType[] method_37344() {
-            return new TextLayerType[]{NORMAL, SEE_THROUGH, POLYGON_OFFSET};
-        }
-
-        static {
-            field_33996 = TextLayerType.method_37344();
         }
     }
 }

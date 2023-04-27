@@ -4,14 +4,21 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.ScreenRect;
+import net.minecraft.client.gui.navigation.GuiNavigation;
+import net.minecraft.client.gui.navigation.GuiNavigationPath;
+import net.minecraft.client.gui.navigation.Navigable;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
-public interface Element {
+public interface Element
+extends Navigable {
     public static final long MAX_DOUBLE_CLICK_INTERVAL = 250L;
 
     default public void mouseMoved(double mouseX, double mouseY) {
@@ -45,12 +52,29 @@ public interface Element {
         return false;
     }
 
-    default public boolean changeFocus(boolean lookForwards) {
-        return false;
+    @Nullable
+    default public GuiNavigationPath getNavigationPath(GuiNavigation navigation) {
+        return null;
     }
 
     default public boolean isMouseOver(double mouseX, double mouseY) {
         return false;
+    }
+
+    public void setFocused(boolean var1);
+
+    public boolean isFocused();
+
+    @Nullable
+    default public GuiNavigationPath getFocusedPath() {
+        if (this.isFocused()) {
+            return GuiNavigationPath.of(this);
+        }
+        return null;
+    }
+
+    default public ScreenRect getNavigationFocus() {
+        return ScreenRect.empty();
     }
 }
 

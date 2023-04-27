@@ -61,8 +61,8 @@ public class WorldSaveHandler {
             LOGGER.warn("Failed to load player data for {}", (Object)player.getName().getString());
         }
         if (nbtCompound != null) {
-            int i = nbtCompound.contains("DataVersion", 3) ? nbtCompound.getInt("DataVersion") : -1;
-            player.readNbt(NbtHelper.update(this.dataFixer, DataFixTypes.PLAYER, nbtCompound, i));
+            int i = NbtHelper.getDataVersion(nbtCompound, -1);
+            player.readNbt(DataFixTypes.PLAYER.update(this.dataFixer, nbtCompound, i));
         }
         return nbtCompound;
     }

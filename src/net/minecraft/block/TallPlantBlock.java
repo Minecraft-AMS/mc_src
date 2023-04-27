@@ -102,8 +102,8 @@ extends PlantBlock {
     }
 
     @Override
-    public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack stack) {
-        super.afterBreak(world, player, pos, Blocks.AIR.getDefaultState(), blockEntity, stack);
+    public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool) {
+        super.afterBreak(world, player, pos, Blocks.AIR.getDefaultState(), blockEntity, tool);
     }
 
     protected static void onBreakInCreative(World world, BlockPos pos, BlockState state, PlayerEntity player) {

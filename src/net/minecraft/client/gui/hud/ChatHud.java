@@ -12,7 +12,6 @@
 package net.minecraft.client.gui.hud;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +32,7 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Util;
+import net.minecraft.util.Nullables;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -121,10 +120,8 @@ extends DrawableHelper {
                     this.drawIndicatorIcon(matrices, aa, ab, messageIndicator.icon());
                 }
             }
-            RenderSystem.enableBlend();
             matrices.translate(0.0f, 0.0f, 50.0f);
             this.client.textRenderer.drawWithShadow(matrices, visible.content(), 0.0f, (float)y, 0xFFFFFF + (u << 24));
-            RenderSystem.disableBlend();
             matrices.pop();
         }
         long ac = this.client.getMessageHandler().getUnprocessedMessageCount();
@@ -134,11 +131,9 @@ extends DrawableHelper {
             matrices.push();
             matrices.translate(0.0f, m, 50.0f);
             ChatHud.fill(matrices, -2, 0, k + 4, 9, t << 24);
-            RenderSystem.enableBlend();
             matrices.translate(0.0f, 0.0f, 50.0f);
             this.client.textRenderer.drawWithShadow(matrices, Text.translatable("chat.queue", ac), 0.0f, 1.0f, 0xFFFFFF + (ad << 24));
             matrices.pop();
-            RenderSystem.disableBlend();
         }
         if (bl) {
             int ad = this.getLineHeight();
@@ -200,7 +195,7 @@ extends DrawableHelper {
 
     private void logChatMessage(Text message, @Nullable MessageIndicator indicator) {
         String string = message.getString().replaceAll("\r", "\\\\r").replaceAll("\n", "\\\\n");
-        String string2 = Util.map(indicator, MessageIndicator::loggedName);
+        String string2 = Nullables.map(indicator, MessageIndicator::loggedName);
         if (string2 != null) {
             LOGGER.info("[{}] [CHAT] {}", (Object)string2, (Object)string);
         } else {

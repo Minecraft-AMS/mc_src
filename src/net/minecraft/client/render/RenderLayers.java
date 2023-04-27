@@ -43,6 +43,7 @@ public class RenderLayers {
         map.put(Blocks.OAK_LEAVES, renderLayer2);
         map.put(Blocks.SPRUCE_LEAVES, renderLayer2);
         map.put(Blocks.ACACIA_LEAVES, renderLayer2);
+        map.put(Blocks.CHERRY_LEAVES, renderLayer2);
         map.put(Blocks.BIRCH_LEAVES, renderLayer2);
         map.put(Blocks.DARK_OAK_LEAVES, renderLayer2);
         map.put(Blocks.AZALEA_LEAVES, renderLayer2);
@@ -55,6 +56,7 @@ public class RenderLayers {
         map.put(Blocks.BIRCH_SAPLING, renderLayer3);
         map.put(Blocks.JUNGLE_SAPLING, renderLayer3);
         map.put(Blocks.ACACIA_SAPLING, renderLayer3);
+        map.put(Blocks.CHERRY_SAPLING, renderLayer3);
         map.put(Blocks.DARK_OAK_SAPLING, renderLayer3);
         map.put(Blocks.GLASS, renderLayer3);
         map.put(Blocks.WHITE_BED, renderLayer3);
@@ -84,6 +86,7 @@ public class RenderLayers {
         map.put(Blocks.DANDELION, renderLayer3);
         map.put(Blocks.POPPY, renderLayer3);
         map.put(Blocks.BLUE_ORCHID, renderLayer3);
+        map.put(Blocks.TORCHFLOWER, renderLayer3);
         map.put(Blocks.ALLIUM, renderLayer3);
         map.put(Blocks.AZURE_BLUET, renderLayer3);
         map.put(Blocks.RED_TULIP, renderLayer3);
@@ -119,6 +122,7 @@ public class RenderLayers {
         map.put(Blocks.BIRCH_TRAPDOOR, renderLayer3);
         map.put(Blocks.JUNGLE_TRAPDOOR, renderLayer3);
         map.put(Blocks.ACACIA_TRAPDOOR, renderLayer3);
+        map.put(Blocks.CHERRY_TRAPDOOR, renderLayer3);
         map.put(Blocks.DARK_OAK_TRAPDOOR, renderLayer3);
         map.put(Blocks.CRIMSON_TRAPDOOR, renderLayer3);
         map.put(Blocks.WARPED_TRAPDOOR, renderLayer3);
@@ -141,6 +145,7 @@ public class RenderLayers {
         map.put(Blocks.POTTED_BIRCH_SAPLING, renderLayer3);
         map.put(Blocks.POTTED_JUNGLE_SAPLING, renderLayer3);
         map.put(Blocks.POTTED_ACACIA_SAPLING, renderLayer3);
+        map.put(Blocks.POTTED_CHERRY_SAPLING, renderLayer3);
         map.put(Blocks.POTTED_DARK_OAK_SAPLING, renderLayer3);
         map.put(Blocks.POTTED_MANGROVE_PROPAGULE, renderLayer3);
         map.put(Blocks.POTTED_FERN, renderLayer3);
@@ -163,6 +168,7 @@ public class RenderLayers {
         map.put(Blocks.POTTED_CACTUS, renderLayer3);
         map.put(Blocks.POTTED_AZALEA_BUSH, renderLayer3);
         map.put(Blocks.POTTED_FLOWERING_AZALEA_BUSH, renderLayer3);
+        map.put(Blocks.POTTED_TORCHFLOWER, renderLayer3);
         map.put(Blocks.CARROTS, renderLayer3);
         map.put(Blocks.POTATOES, renderLayer3);
         map.put(Blocks.COMPARATOR, renderLayer3);
@@ -178,12 +184,14 @@ public class RenderLayers {
         map.put(Blocks.BIRCH_DOOR, renderLayer3);
         map.put(Blocks.JUNGLE_DOOR, renderLayer3);
         map.put(Blocks.ACACIA_DOOR, renderLayer3);
+        map.put(Blocks.CHERRY_DOOR, renderLayer3);
         map.put(Blocks.DARK_OAK_DOOR, renderLayer3);
         map.put(Blocks.MANGROVE_DOOR, renderLayer3);
         map.put(Blocks.BAMBOO_DOOR, renderLayer3);
         map.put(Blocks.END_ROD, renderLayer3);
         map.put(Blocks.CHORUS_PLANT, renderLayer3);
         map.put(Blocks.CHORUS_FLOWER, renderLayer3);
+        map.put(Blocks.TORCHFLOWER_CROP, renderLayer3);
         map.put(Blocks.BEETROOTS, renderLayer3);
         map.put(Blocks.KELP, renderLayer3);
         map.put(Blocks.KELP_PLANT, renderLayer3);
@@ -257,6 +265,7 @@ public class RenderLayers {
         map.put(Blocks.FLOWERING_AZALEA, renderLayer3);
         map.put(Blocks.AZALEA, renderLayer3);
         map.put(Blocks.MOSS_CARPET, renderLayer3);
+        map.put(Blocks.PINK_PETALS, renderLayer3);
         map.put(Blocks.BIG_DRIPLEAF, renderLayer3);
         map.put(Blocks.BIG_DRIPLEAF_STEM, renderLayer3);
         map.put(Blocks.SMALL_DRIPLEAF, renderLayer3);

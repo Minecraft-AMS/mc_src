@@ -52,9 +52,10 @@ implements CraftingRecipeJsonBuilder {
     private final Advancement.Builder advancementBuilder = Advancement.Builder.create();
     @Nullable
     private String group;
+    private boolean field_42956 = true;
 
-    public ShapedRecipeJsonBuilder(RecipeCategory category, ItemConvertible output, int count) {
-        this.category = category;
+    public ShapedRecipeJsonBuilder(RecipeCategory recipeCategory, ItemConvertible output, int count) {
+        this.category = recipeCategory;
         this.output = output.asItem();
         this.count = count;
     }
@@ -106,6 +107,11 @@ implements CraftingRecipeJsonBuilder {
         return this;
     }
 
+    public ShapedRecipeJsonBuilder method_49380(boolean bl) {
+        this.field_42956 = bl;
+        return this;
+    }
+
     @Override
     public Item getOutputItem() {
         return this.output;
@@ -115,7 +121,7 @@ implements CraftingRecipeJsonBuilder {
     public void offerTo(Consumer<RecipeJsonProvider> exporter, Identifier recipeId) {
         this.validate(recipeId);
         this.advancementBuilder.parent(ROOT).criterion("has_the_recipe", RecipeUnlockedCriterion.create(recipeId)).rewards(AdvancementRewards.Builder.recipe(recipeId)).criteriaMerger(CriterionMerger.OR);
-        exporter.accept(new ShapedRecipeJsonProvider(recipeId, this.output, this.count, this.group == null ? "" : this.group, ShapedRecipeJsonBuilder.getCraftingCategory(this.category), this.pattern, this.inputs, this.advancementBuilder, recipeId.withPrefixedPath("recipes/" + this.category.getName() + "/")));
+        exporter.accept(new ShapedRecipeJsonProvider(recipeId, this.output, this.count, this.group == null ? "" : this.group, ShapedRecipeJsonBuilder.getCraftingCategory(this.category), this.pattern, this.inputs, this.advancementBuilder, recipeId.withPrefixedPath("recipes/" + this.category.getName() + "/"), this.field_42956));
     }
 
     private void validate(Identifier recipeId) {
@@ -164,8 +170,9 @@ implements CraftingRecipeJsonBuilder {
         private final Map<Character, Ingredient> inputs;
         private final Advancement.Builder advancementBuilder;
         private final Identifier advancementId;
+        private final boolean field_42957;
 
-        public ShapedRecipeJsonProvider(Identifier recipeId, Item output, int resultCount, String group, CraftingRecipeCategory craftingCategory, List<String> pattern, Map<Character, Ingredient> inputs, Advancement.Builder advancementBuilder, Identifier advancementId) {
+        public ShapedRecipeJsonProvider(Identifier recipeId, Item output, int resultCount, String group, CraftingRecipeCategory craftingCategory, List<String> pattern, Map<Character, Ingredient> inputs, Advancement.Builder advancementBuilder, Identifier advancementId, boolean bl) {
             super(craftingCategory);
             this.recipeId = recipeId;
             this.output = output;
@@ -175,6 +182,7 @@ implements CraftingRecipeJsonBuilder {
             this.inputs = inputs;
             this.advancementBuilder = advancementBuilder;
             this.advancementId = advancementId;
+            this.field_42957 = bl;
         }
 
         @Override
@@ -199,6 +207,7 @@ implements CraftingRecipeJsonBuilder {
                 jsonObject2.addProperty("count", (Number)this.resultCount);
             }
             json.add("result", (JsonElement)jsonObject2);
+            json.addProperty("show_notification", Boolean.valueOf(this.field_42957));
         }
 
         @Override

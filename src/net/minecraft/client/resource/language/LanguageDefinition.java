@@ -2,75 +2,47 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.bridge.game.Language
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.resource.language;
 
-import com.mojang.bridge.game.Language;
-import java.util.Locale;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.text.Text;
+import net.minecraft.util.dynamic.Codecs;
 
 @Environment(value=EnvType.CLIENT)
-public class LanguageDefinition
-implements Language,
-Comparable<LanguageDefinition> {
-    private final String code;
-    private final String region;
-    private final String name;
-    private final boolean rightToLeft;
+public record LanguageDefinition(String region, String name, boolean rightToLeft) {
+    public static final Codec<LanguageDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codecs.NON_EMPTY_STRING.fieldOf("region").forGetter(LanguageDefinition::region), (App)Codecs.NON_EMPTY_STRING.fieldOf("name").forGetter(LanguageDefinition::name), (App)Codec.BOOL.optionalFieldOf("bidirectional", (Object)false).forGetter(LanguageDefinition::rightToLeft)).apply((Applicative)instance, LanguageDefinition::new));
 
-    public LanguageDefinition(String code, String region, String name, boolean rightToLeft) {
-        this.code = code;
-        this.region = region;
-        this.name = name;
-        this.rightToLeft = rightToLeft;
-    }
-
-    public String getCode() {
-        return this.code;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public String getRegion() {
-        return this.region;
-    }
-
-    public boolean isRightToLeft() {
-        return this.rightToLeft;
-    }
-
-    public String toString() {
-        return String.format(Locale.ROOT, "%s (%s)", this.name, this.region);
-    }
-
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof LanguageDefinition)) {
-            return false;
-        }
-        return this.code.equals(((LanguageDefinition)o).code);
-    }
-
-    public int hashCode() {
-        return this.code.hashCode();
+    public Text getDisplayText() {
+        return Text.literal(this.name + " (" + this.region + ")");
     }
 
     @Override
-    public int compareTo(LanguageDefinition languageDefinition) {
-        return this.code.compareTo(languageDefinition.code);
+    public final String toString() {
+        return ObjectMethods.bootstrap("toString", new MethodHandle[]{LanguageDefinition.class, "region;name;bidirectional", "region", "name", "rightToLeft"}, this);
     }
 
     @Override
-    public /* synthetic */ int compareTo(Object other) {
-        return this.compareTo((LanguageDefinition)other);
+    public final int hashCode() {
+        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{LanguageDefinition.class, "region;name;bidirectional", "region", "name", "rightToLeft"}, this);
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{LanguageDefinition.class, "region;name;bidirectional", "region", "name", "rightToLeft"}, this, o);
     }
 }
 

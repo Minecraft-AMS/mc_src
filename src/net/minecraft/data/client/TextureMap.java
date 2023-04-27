@@ -112,6 +112,10 @@ public class TextureMap {
         return TextureMap.of(TextureKey.WOOL, TextureMap.getId(block));
     }
 
+    public static TextureMap flowerbed(Block block) {
+        return new TextureMap().put(TextureKey.FLOWERBED, TextureMap.getId(block)).put(TextureKey.STEM, TextureMap.getSubId(block, "_stem"));
+    }
+
     public static TextureMap wool(Identifier id) {
         return TextureMap.of(TextureKey.WOOL, id);
     }
@@ -277,6 +281,14 @@ public class TextureMap {
 
     public static TextureMap layer0(Identifier id) {
         return new TextureMap().put(TextureKey.LAYER0, id);
+    }
+
+    public static TextureMap layered(Identifier layer0, Identifier layer1) {
+        return new TextureMap().put(TextureKey.LAYER0, layer0).put(TextureKey.LAYER1, layer1);
+    }
+
+    public static TextureMap layered(Identifier layer0, Identifier layer1, Identifier layer2) {
+        return new TextureMap().put(TextureKey.LAYER0, layer0).put(TextureKey.LAYER1, layer1).put(TextureKey.LAYER2, layer2);
     }
 
     public static Identifier getId(Block block) {

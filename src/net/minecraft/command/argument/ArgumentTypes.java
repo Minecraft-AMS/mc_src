@@ -38,6 +38,7 @@ import net.minecraft.command.argument.EntityAnchorArgumentType;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.GameModeArgumentType;
 import net.minecraft.command.argument.GameProfileArgumentType;
+import net.minecraft.command.argument.HeightmapArgumentType;
 import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.command.argument.ItemPredicateArgumentType;
 import net.minecraft.command.argument.ItemSlotArgumentType;
@@ -125,13 +126,14 @@ public class ArgumentTypes {
         ArgumentTypes.register(registry, "float_range", NumberRangeArgumentType.FloatRangeArgumentType.class, ConstantArgumentSerializer.of(NumberRangeArgumentType::floatRange));
         ArgumentTypes.register(registry, "dimension", DimensionArgumentType.class, ConstantArgumentSerializer.of(DimensionArgumentType::dimension));
         ArgumentTypes.register(registry, "gamemode", GameModeArgumentType.class, ConstantArgumentSerializer.of(GameModeArgumentType::gameMode));
-        ArgumentTypes.register(registry, "time", TimeArgumentType.class, ConstantArgumentSerializer.of(TimeArgumentType::time));
+        ArgumentTypes.register(registry, "time", TimeArgumentType.class, new TimeArgumentType.Serializer());
         ArgumentTypes.register(registry, "resource_or_tag", ArgumentTypes.upcast(RegistryEntryPredicateArgumentType.class), new RegistryEntryPredicateArgumentType.Serializer());
         ArgumentTypes.register(registry, "resource_or_tag_key", ArgumentTypes.upcast(RegistryPredicateArgumentType.class), new RegistryPredicateArgumentType.Serializer());
         ArgumentTypes.register(registry, "resource", ArgumentTypes.upcast(RegistryEntryArgumentType.class), new RegistryEntryArgumentType.Serializer());
         ArgumentTypes.register(registry, "resource_key", ArgumentTypes.upcast(RegistryKeyArgumentType.class), new RegistryKeyArgumentType.Serializer());
         ArgumentTypes.register(registry, "template_mirror", BlockMirrorArgumentType.class, ConstantArgumentSerializer.of(BlockMirrorArgumentType::blockMirror));
         ArgumentTypes.register(registry, "template_rotation", BlockRotationArgumentType.class, ConstantArgumentSerializer.of(BlockRotationArgumentType::blockRotation));
+        ArgumentTypes.register(registry, "heightmap", HeightmapArgumentType.class, ConstantArgumentSerializer.of(HeightmapArgumentType::heightmap));
         if (SharedConstants.isDevelopment) {
             ArgumentTypes.register(registry, "test_argument", TestFunctionArgumentType.class, ConstantArgumentSerializer.of(TestFunctionArgumentType::testFunction));
             ArgumentTypes.register(registry, "test_class", TestClassArgumentType.class, ConstantArgumentSerializer.of(TestClassArgumentType::testClass));

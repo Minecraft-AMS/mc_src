@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.gson.Gson
+ *  com.google.gson.JsonElement
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -10,6 +11,7 @@
 package net.minecraft.client.realms;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.realms.RealmsSerializable;
@@ -21,6 +23,10 @@ public class CheckedGson {
 
     public String toJson(RealmsSerializable serializable) {
         return this.GSON.toJson((Object)serializable);
+    }
+
+    public String toJson(JsonElement json) {
+        return this.GSON.toJson(json);
     }
 
     @Nullable

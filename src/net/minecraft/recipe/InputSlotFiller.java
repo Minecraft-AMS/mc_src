@@ -57,18 +57,18 @@ implements RecipeGridAligner<Integer> {
         if (this.matcher.match(recipe, null)) {
             this.fillInputSlots(recipe, craftAll);
         } else {
-            this.returnInputs(true);
+            this.returnInputs();
             entity.networkHandler.sendPacket(new CraftFailedResponseS2CPacket(entity.currentScreenHandler.syncId, recipe));
         }
         entity.getInventory().markDirty();
     }
 
-    protected void returnInputs(boolean bl) {
+    protected void returnInputs() {
         for (int i = 0; i < this.handler.getCraftingSlotCount(); ++i) {
             if (!this.handler.canInsertIntoSlot(i)) continue;
             ItemStack itemStack = this.handler.getSlot(i).getStack().copy();
             this.inventory.offer(itemStack, false);
-            this.handler.getSlot(i).setStack(itemStack);
+            this.handler.getSlot(i).setStackNoCallbacks(itemStack);
         }
         this.handler.clearCraftingSlots();
     }
@@ -96,7 +96,7 @@ implements RecipeGridAligner<Integer> {
             }
             j = k;
             if (this.matcher.match(recipe, (IntList)intList, j)) {
-                this.returnInputs(false);
+                this.returnInputs();
                 this.alignRecipeToGrid(this.handler.getCraftingWidth(), this.handler.getCraftingHeight(), this.handler.getCraftingResultSlotIndex(), recipe, intList.iterator(), j);
             }
         }
@@ -147,7 +147,7 @@ implements RecipeGridAligner<Integer> {
         }
         itemStack.setCount(1);
         if (slot.getStack().isEmpty()) {
-            slot.setStack(itemStack);
+            slot.setStackNoCallbacks(itemStack);
         } else {
             slot.getStack().increment(1);
         }

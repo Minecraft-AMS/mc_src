@@ -61,7 +61,7 @@ extends BlockWithEntity {
         BEHAVIORS.put(provider.asItem(), behavior);
     }
 
-    protected DispenserBlock(AbstractBlock.Settings settings) {
+    public DispenserBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(TRIGGERED, false));
     }

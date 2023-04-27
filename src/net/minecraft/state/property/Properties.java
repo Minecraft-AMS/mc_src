@@ -61,7 +61,6 @@ public class Properties {
     public static final BooleanProperty TRIGGERED = BooleanProperty.of("triggered");
     public static final BooleanProperty UNSTABLE = BooleanProperty.of("unstable");
     public static final BooleanProperty WATERLOGGED = BooleanProperty.of("waterlogged");
-    public static final BooleanProperty VINE_END = BooleanProperty.of("vine_end");
     public static final BooleanProperty BERRIES = BooleanProperty.of("berries");
     public static final BooleanProperty BLOOM = BooleanProperty.of("bloom");
     public static final BooleanProperty SHRIEKING = BooleanProperty.of("shrieking");
@@ -77,6 +76,7 @@ public class Properties {
     public static final DirectionProperty FACING = DirectionProperty.of("facing", Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.UP, Direction.DOWN);
     public static final DirectionProperty HOPPER_FACING = DirectionProperty.of("facing", facing -> facing != Direction.UP);
     public static final DirectionProperty HORIZONTAL_FACING = DirectionProperty.of("facing", Direction.Type.HORIZONTAL);
+    public static final IntProperty FLOWER_AMOUNT = IntProperty.of("flower_amount", 1, 4);
     public static final EnumProperty<JigsawOrientation> ORIENTATION = EnumProperty.of("orientation", JigsawOrientation.class);
     public static final EnumProperty<WallMountLocation> WALL_MOUNT_LOCATION = EnumProperty.of("face", WallMountLocation.class);
     public static final EnumProperty<Attachment> ATTACHMENT = EnumProperty.of("attachment", Attachment.class);
@@ -157,5 +157,6 @@ public class Properties {
     public static final BooleanProperty SLOT_3_OCCUPIED = BooleanProperty.of("slot_3_occupied");
     public static final BooleanProperty SLOT_4_OCCUPIED = BooleanProperty.of("slot_4_occupied");
     public static final BooleanProperty SLOT_5_OCCUPIED = BooleanProperty.of("slot_5_occupied");
+    public static final IntProperty DUSTED = IntProperty.of("dusted", 0, 3);
 }
 

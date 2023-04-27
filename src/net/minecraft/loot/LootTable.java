@@ -13,6 +13,7 @@
  *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
+ *  net.fabricmc.fabric.api.loot.v2.FabricLootTableBuilder
  *  org.apache.commons.lang3.ArrayUtils
  *  org.slf4j.Logger
  */
@@ -35,6 +36,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import net.fabricmc.fabric.api.loot.v2.FabricLootTableBuilder;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootPool;
@@ -58,8 +60,8 @@ public class LootTable {
     public static final LootTable EMPTY = new LootTable(LootContextTypes.EMPTY, new LootPool[0], new LootFunction[0]);
     public static final LootContextType GENERIC = LootContextTypes.GENERIC;
     final LootContextType type;
-    final LootPool[] pools;
-    final LootFunction[] functions;
+    public final LootPool[] pools;
+    public final LootFunction[] functions;
     private final BiFunction<ItemStack, LootContext, ItemStack> combinedFunction;
 
     LootTable(LootContextType type, LootPool[] pools, LootFunction[] functions) {
@@ -188,7 +190,8 @@ public class LootTable {
     }
 
     public static class Builder
-    implements LootFunctionConsumingBuilder<Builder> {
+    implements LootFunctionConsumingBuilder<Builder>,
+    FabricLootTableBuilder {
         private final List<LootPool> pools = Lists.newArrayList();
         private final List<LootFunction> functions = Lists.newArrayList();
         private LootContextType type = GENERIC;

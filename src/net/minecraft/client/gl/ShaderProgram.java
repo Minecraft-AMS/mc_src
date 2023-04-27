@@ -39,8 +39,8 @@ import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.GLImportProcessor;
 import net.minecraft.client.gl.GlBlendState;
+import net.minecraft.client.gl.GlImportProcessor;
 import net.minecraft.client.gl.GlProgramManager;
 import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.ShaderProgramSetupView;
@@ -101,6 +101,8 @@ AutoCloseable {
     public final GlUniform light0Direction;
     @Nullable
     public final GlUniform light1Direction;
+    @Nullable
+    public final GlUniform glintAlpha;
     @Nullable
     public final GlUniform fogStart;
     @Nullable
@@ -203,6 +205,7 @@ AutoCloseable {
         this.colorModulator = this.getUniform("ColorModulator");
         this.light0Direction = this.getUniform("Light0_Direction");
         this.light1Direction = this.getUniform("Light1_Direction");
+        this.glintAlpha = this.getUniform("GlintAlpha");
         this.fogStart = this.getUniform("FogStart");
         this.fogEnd = this.getUniform("FogEnd");
         this.fogColor = this.getUniform("FogColor");
@@ -220,7 +223,7 @@ AutoCloseable {
             Resource resource = factory.getResourceOrThrow(new Identifier(string));
             try (InputStream inputStream = resource.getInputStream();){
                 final String string2 = PathUtil.getPosixFullPath(string);
-                shaderStage2 = ShaderStage.createFromResource(type, name, inputStream, resource.getResourcePackName(), new GLImportProcessor(){
+                shaderStage2 = ShaderStage.createFromResource(type, name, inputStream, resource.getResourcePackName(), new GlImportProcessor(){
                     private final Set<String> visitedImports = Sets.newHashSet();
 
                     @Override
@@ -347,7 +350,6 @@ AutoCloseable {
             int k = GlUniform.getUniformLocation(this.glRef, string);
             GlUniform.uniform1(k, j);
             RenderSystem.activeTexture(33984 + j);
-            RenderSystem.enableTexture();
             Object object = this.samplers.get(string);
             int l = -1;
             if (object instanceof Framebuffer) {

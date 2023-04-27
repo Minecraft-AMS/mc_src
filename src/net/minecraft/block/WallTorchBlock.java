@@ -41,7 +41,7 @@ extends TorchBlock {
     protected static final float field_31285 = 2.5f;
     private static final Map<Direction, VoxelShape> BOUNDING_SHAPES = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)Block.createCuboidShape(5.5, 3.0, 11.0, 10.5, 13.0, 16.0), (Object)Direction.SOUTH, (Object)Block.createCuboidShape(5.5, 3.0, 0.0, 10.5, 13.0, 5.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(11.0, 3.0, 5.5, 16.0, 13.0, 10.5), (Object)Direction.EAST, (Object)Block.createCuboidShape(0.0, 3.0, 5.5, 5.0, 13.0, 10.5)));
 
-    protected WallTorchBlock(AbstractBlock.Settings settings, ParticleEffect particleEffect) {
+    public WallTorchBlock(AbstractBlock.Settings settings, ParticleEffect particleEffect) {
         super(settings, particleEffect);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH));
     }

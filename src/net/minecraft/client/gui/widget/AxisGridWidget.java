@@ -2,23 +2,20 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.gui.widget;
 
-import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.Positioner;
+import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.client.gui.widget.WrapperWidget;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.Divider;
 
 @Environment(value=EnvType.CLIENT)
@@ -26,7 +23,6 @@ public class AxisGridWidget
 extends WrapperWidget {
     private final DisplayAxis axis;
     private final List<Element> elements = new ArrayList<Element>();
-    private final List<ClickableWidget> children = Collections.unmodifiableList(Lists.transform(this.elements, element -> element.widget));
     private final Positioner mainPositioner = Positioner.create();
 
     public AxisGridWidget(int width, int height, DisplayAxis axis) {
@@ -34,11 +30,13 @@ extends WrapperWidget {
     }
 
     public AxisGridWidget(int x, int y, int width, int height, DisplayAxis axis) {
-        super(x, y, width, height, Text.empty());
+        super(x, y, width, height);
         this.axis = axis;
     }
 
-    public void recalculateDimensions() {
+    @Override
+    public void refreshPositions() {
+        super.refreshPositions();
         if (this.elements.isEmpty()) {
             return;
         }
@@ -66,12 +64,20 @@ extends WrapperWidget {
         for (Element element4 : this.elements) {
             this.axis.setOtherAxisCoordinate(element4, m, j);
         }
-        this.axis.setOtherAxisLength(this, j);
+        switch (this.axis) {
+            case HORIZONTAL: {
+                this.height = j;
+                break;
+            }
+            case VERTICAL: {
+                this.width = j;
+            }
+        }
     }
 
     @Override
-    protected List<? extends ClickableWidget> wrappedWidgets() {
-        return this.children;
+    public void forEachElement(Consumer<Widget> consumer) {
+        this.elements.forEach(element -> consumer.accept(element.widget));
     }
 
     public Positioner copyPositioner() {
@@ -82,11 +88,11 @@ extends WrapperWidget {
         return this.mainPositioner;
     }
 
-    public <T extends ClickableWidget> T add(T widget) {
+    public <T extends Widget> T add(T widget) {
         return this.add(widget, this.copyPositioner());
     }
 
-    public <T extends ClickableWidget> T add(T widget, Positioner positioner) {
+    public <T extends Widget> T add(T widget, Positioner positioner) {
         this.elements.add(new Element(widget, positioner));
         return widget;
     }
@@ -106,7 +112,7 @@ extends WrapperWidget {
             return Enum.valueOf(DisplayAxis.class, string);
         }
 
-        int getSameAxisLength(ClickableWidget widget) {
+        int getSameAxisLength(Widget widget) {
             return switch (this) {
                 default -> throw new IncompatibleClassChangeError();
                 case HORIZONTAL -> widget.getWidth();
@@ -122,7 +128,7 @@ extends WrapperWidget {
             };
         }
 
-        int getOtherAxisLength(ClickableWidget widget) {
+        int getOtherAxisLength(Widget widget) {
             return switch (this) {
                 default -> throw new IncompatibleClassChangeError();
                 case HORIZONTAL -> widget.getHeight();
@@ -162,7 +168,7 @@ extends WrapperWidget {
             }
         }
 
-        int getSameAxisCoordinate(ClickableWidget widget) {
+        int getSameAxisCoordinate(Widget widget) {
             return switch (this) {
                 default -> throw new IncompatibleClassChangeError();
                 case HORIZONTAL -> widget.getX();
@@ -170,24 +176,12 @@ extends WrapperWidget {
             };
         }
 
-        int getOtherAxisCoordinate(ClickableWidget widget) {
+        int getOtherAxisCoordinate(Widget widget) {
             return switch (this) {
                 default -> throw new IncompatibleClassChangeError();
                 case HORIZONTAL -> widget.getY();
                 case VERTICAL -> widget.getX();
             };
-        }
-
-        void setOtherAxisLength(ClickableWidget widget, int value) {
-            switch (this) {
-                case HORIZONTAL: {
-                    widget.height = value;
-                    break;
-                }
-                case VERTICAL: {
-                    widget.width = value;
-                }
-            }
         }
 
         private static /* synthetic */ DisplayAxis[] method_46501() {
@@ -202,8 +196,8 @@ extends WrapperWidget {
     @Environment(value=EnvType.CLIENT)
     static class Element
     extends WrapperWidget.WrappedElement {
-        protected Element(ClickableWidget clickableWidget, Positioner positioner) {
-            super(clickableWidget, positioner);
+        protected Element(Widget widget, Positioner positioner) {
+            super(widget, positioner);
         }
     }
 }

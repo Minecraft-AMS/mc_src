@@ -103,7 +103,7 @@ Bucketable {
         this.setPathfindingPenalty(PathNodeType.WATER, 0.0f);
         this.moveControl = new AxolotlMoveControl(this);
         this.lookControl = new AxolotlLookControl(this, 20);
-        this.stepHeight = 1.0f;
+        this.setStepHeight(1.0f);
     }
 
     @Override
@@ -181,7 +181,7 @@ Bucketable {
             this.setAir(air - 1);
             if (this.getAir() == -20) {
                 this.setAir(0);
-                this.damage(DamageSource.DRYOUT, 2.0f);
+                this.damage(this.getDamageSources().dryOut(), 2.0f);
             }
         } else {
             this.setAir(this.getMaxAir());
@@ -302,7 +302,7 @@ Bucketable {
 
     @Override
     public boolean tryAttack(Entity target) {
-        boolean bl = target.damage(DamageSource.mob(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
+        boolean bl = target.damage(this.getDamageSources().mobAttack(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
         if (bl) {
             this.applyDamageEffects(this, target);
             this.playSound(SoundEvents.ENTITY_AXOLOTL_ATTACK, 1.0f, 1.0f);
@@ -392,12 +392,11 @@ Bucketable {
     }
 
     public void buffPlayer(PlayerEntity player) {
-        int i;
         StatusEffectInstance statusEffectInstance = player.getStatusEffect(StatusEffects.REGENERATION);
-        int n = i = statusEffectInstance != null ? statusEffectInstance.getDuration() : 0;
-        if (i < 2400) {
-            i = Math.min(2400, 100 + i);
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, i, 0), this);
+        if (statusEffectInstance == null || statusEffectInstance.isDurationBelow(2399)) {
+            int i = statusEffectInstance != null ? statusEffectInstance.getDuration() : 0;
+            int j = Math.min(2400, 100 + i);
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, j, 0), this);
         }
         player.removeStatusEffect(StatusEffects.MINING_FATIGUE);
     }
@@ -455,7 +454,7 @@ Bucketable {
 
     @Override
     public void travel(Vec3d movementInput) {
-        if (this.canMoveVoluntarily() && this.isTouchingWater()) {
+        if (this.isLogicalSideForUpdatingMovement() && this.isTouchingWater()) {
             this.updateVelocity(this.getMovementSpeed(), movementInput);
             this.move(MovementType.SELF, this.getVelocity());
             this.setVelocity(this.getVelocity().multiply(0.9));

@@ -28,6 +28,7 @@ import net.minecraft.client.render.entity.feature.ShoulderParrotFeatureRenderer;
 import net.minecraft.client.render.entity.feature.StuckArrowsFeatureRenderer;
 import net.minecraft.client.render.entity.feature.StuckStingersFeatureRenderer;
 import net.minecraft.client.render.entity.feature.TridentRiptideFeatureRenderer;
+import net.minecraft.client.render.entity.model.ArmorEntityModel;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -38,6 +39,7 @@ import net.minecraft.item.Items;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Hand;
@@ -52,7 +54,7 @@ public class PlayerEntityRenderer
 extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>> {
     public PlayerEntityRenderer(EntityRendererFactory.Context ctx, boolean slim) {
         super(ctx, new PlayerEntityModel(ctx.getPart(slim ? EntityModelLayers.PLAYER_SLIM : EntityModelLayers.PLAYER), slim), 0.5f);
-        this.addFeature(new ArmorFeatureRenderer(this, new BipedEntityModel(ctx.getPart(slim ? EntityModelLayers.PLAYER_SLIM_INNER_ARMOR : EntityModelLayers.PLAYER_INNER_ARMOR)), new BipedEntityModel(ctx.getPart(slim ? EntityModelLayers.PLAYER_SLIM_OUTER_ARMOR : EntityModelLayers.PLAYER_OUTER_ARMOR))));
+        this.addFeature(new ArmorFeatureRenderer(this, new ArmorEntityModel(ctx.getPart(slim ? EntityModelLayers.PLAYER_SLIM_INNER_ARMOR : EntityModelLayers.PLAYER_INNER_ARMOR)), new ArmorEntityModel(ctx.getPart(slim ? EntityModelLayers.PLAYER_SLIM_OUTER_ARMOR : EntityModelLayers.PLAYER_OUTER_ARMOR)), ctx.getModelManager()));
         this.addFeature(new PlayerHeldItemFeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>>(this, ctx.getHeldItemRenderer()));
         this.addFeature(new StuckArrowsFeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>>(ctx, this));
         this.addFeature(new Deadmau5FeatureRenderer(this));
@@ -133,6 +135,9 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
             if (useAction == UseAction.TOOT_HORN) {
                 return BipedEntityModel.ArmPose.TOOT_HORN;
             }
+            if (useAction == UseAction.BRUSH) {
+                return BipedEntityModel.ArmPose.BRUSH;
+            }
         } else if (!player.handSwinging && itemStack.isOf(Items.CROSSBOW) && CrossbowItem.isCharged(itemStack)) {
             return BipedEntityModel.ArmPose.CROSSBOW_HOLD;
         }
@@ -158,7 +163,7 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         matrixStack.push();
         if (d < 100.0 && (scoreboardObjective = (scoreboard = abstractClientPlayerEntity.getScoreboard()).getObjectiveForSlot(2)) != null) {
             ScoreboardPlayerScore scoreboardPlayerScore = scoreboard.getPlayerScore(abstractClientPlayerEntity.getEntityName(), scoreboardObjective);
-            super.renderLabelIfPresent(abstractClientPlayerEntity, Text.literal(Integer.toString(scoreboardPlayerScore.getScore())).append(" ").append(scoreboardObjective.getDisplayName()), matrixStack, vertexConsumerProvider, i);
+            super.renderLabelIfPresent(abstractClientPlayerEntity, Text.literal(Integer.toString(scoreboardPlayerScore.getScore())).append(ScreenTexts.SPACE).append(scoreboardObjective.getDisplayName()), matrixStack, vertexConsumerProvider, i);
             Objects.requireNonNull(this.getTextRenderer());
             matrixStack.translate(0.0f, 9.0f * 1.15f * 0.025f, 0.0f);
         }
@@ -198,7 +203,7 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
                 matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(k * (-90.0f - abstractClientPlayerEntity.getPitch())));
             }
             Vec3d vec3d = abstractClientPlayerEntity.getRotationVec(h);
-            Vec3d vec3d2 = abstractClientPlayerEntity.getVelocity();
+            Vec3d vec3d2 = abstractClientPlayerEntity.lerpVelocity(h);
             double d = vec3d2.horizontalLengthSquared();
             double e = vec3d.horizontalLengthSquared();
             if (d > 0.0 && e > 0.0) {

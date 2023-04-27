@@ -221,7 +221,7 @@ extends Schema {
         schema.registerType(false, TypeReferences.TEAM, DSL::remainder);
         schema.registerType(true, TypeReferences.UNTAGGED_SPAWNER, DSL::remainder);
         schema.registerType(false, TypeReferences.POI_CHUNK, DSL::remainder);
-        schema.registerType(true, TypeReferences.WORLD_GEN_SETTINGS, DSL::remainder);
+        schema.registerType(false, TypeReferences.WORLD_GEN_SETTINGS, DSL::remainder);
         schema.registerType(false, TypeReferences.ENTITY_CHUNK, () -> DSL.optionalFields((String)"Entities", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ENTITY_TREE.in(schema))));
     }
 

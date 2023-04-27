@@ -15,6 +15,9 @@
  *  joptsimple.OptionSet
  *  joptsimple.OptionSpec
  *  joptsimple.OptionSpecBuilder
+ *  joptsimple.ValueConverter
+ *  joptsimple.util.PathConverter
+ *  joptsimple.util.PathProperties
  *  org.slf4j.Logger
  */
 package net.minecraft.server;
@@ -27,8 +30,12 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Lifecycle;
 import java.awt.GraphicsEnvironment;
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.net.Proxy;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -42,6 +49,9 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.OptionSpecBuilder;
+import joptsimple.ValueConverter;
+import joptsimple.util.PathConverter;
+import joptsimple.util.PathProperties;
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.Schemas;
@@ -108,7 +118,8 @@ public class Main {
         ArgumentAcceptingOptionSpec optionSpec12 = optionParser.accepts("port").withRequiredArg().ofType(Integer.class).defaultsTo((Object)-1, (Object[])new Integer[0]);
         ArgumentAcceptingOptionSpec optionSpec13 = optionParser.accepts("serverId").withRequiredArg();
         OptionSpecBuilder optionSpec14 = optionParser.accepts("jfrProfile");
-        NonOptionArgumentSpec optionSpec15 = optionParser.nonOptions();
+        ArgumentAcceptingOptionSpec optionSpec15 = optionParser.accepts("pidFile").withRequiredArg().withValuesConvertedBy((ValueConverter)new PathConverter(new PathProperties[0]));
+        NonOptionArgumentSpec optionSpec16 = optionParser.nonOptions();
         try {
             SaveLoader saveLoader;
             boolean bl;
@@ -117,6 +128,10 @@ public class Main {
                 optionParser.printHelpOn((OutputStream)System.err);
                 return;
             }
+            Path path = (Path)optionSet.valueOf((OptionSpec)optionSpec15);
+            if (path != null) {
+                Main.writePidFile(path);
+            }
             CrashReport.initCrashReport();
             if (optionSet.has((OptionSpec)optionSpec14)) {
                 FlightProfiler.INSTANCE.start(InstanceType.SERVER);
@@ -124,13 +139,13 @@ public class Main {
             Bootstrap.initialize();
             Bootstrap.logMissing();
             Util.startTimerHack();
-            Path path = Paths.get("server.properties", new String[0]);
-            ServerPropertiesLoader serverPropertiesLoader = new ServerPropertiesLoader(path);
+            Path path2 = Paths.get("server.properties", new String[0]);
+            ServerPropertiesLoader serverPropertiesLoader = new ServerPropertiesLoader(path2);
             serverPropertiesLoader.store();
-            Path path2 = Paths.get("eula.txt", new String[0]);
-            EulaReader eulaReader = new EulaReader(path2);
+            Path path3 = Paths.get("eula.txt", new String[0]);
+            EulaReader eulaReader = new EulaReader(path3);
             if (optionSet.has((OptionSpec)optionSpec2)) {
-                LOGGER.info("Initialized '{}' and '{}'", (Object)path.toAbsolutePath(), (Object)path2.toAbsolutePath());
+                LOGGER.info("Initialized '{}' and '{}'", (Object)path2.toAbsolutePath(), (Object)path3.toAbsolutePath());
                 return;
             }
             if (!eulaReader.isEulaAgreedTo()) {
@@ -171,7 +186,7 @@ public class Main {
             }
             SaveProperties saveProperties = saveLoader.saveProperties();
             session.backupLevelDataFile(immutable, saveProperties);
-            final MinecraftDedicatedServer minecraftDedicatedServer = MinecraftServer.startServer(arg_0 -> Main.method_29734(session, resourcePackManager, saveLoader, serverPropertiesLoader, apiServices, optionSet, (OptionSpec)optionSpec9, (OptionSpec)optionSpec12, (OptionSpec)optionSpec3, (OptionSpec)optionSpec13, (OptionSpec)optionSpec, (OptionSpec)optionSpec15, arg_0));
+            final MinecraftDedicatedServer minecraftDedicatedServer = MinecraftServer.startServer(arg_0 -> Main.method_29734(session, resourcePackManager, saveLoader, serverPropertiesLoader, apiServices, optionSet, (OptionSpec)optionSpec9, (OptionSpec)optionSpec12, (OptionSpec)optionSpec3, (OptionSpec)optionSpec13, (OptionSpec)optionSpec, (OptionSpec)optionSpec16, arg_0));
             Thread thread = new Thread("Server Shutdown Thread"){
 
                 @Override
@@ -184,6 +199,16 @@ public class Main {
         }
         catch (Exception exception2) {
             LOGGER.error(LogUtils.FATAL_MARKER, "Failed to start the minecraft server", (Throwable)exception2);
+        }
+    }
+
+    private static void writePidFile(Path path) {
+        try {
+            long l = ProcessHandle.current().pid();
+            Files.writeString(path, (CharSequence)Long.toString(l), new OpenOption[0]);
+        }
+        catch (IOException iOException) {
+            throw new UncheckedIOException(iOException);
         }
     }
 

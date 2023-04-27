@@ -11,7 +11,7 @@ import net.minecraft.block.StemBlock;
 
 public class MelonBlock
 extends GourdBlock {
-    protected MelonBlock(AbstractBlock.Settings settings) {
+    public MelonBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

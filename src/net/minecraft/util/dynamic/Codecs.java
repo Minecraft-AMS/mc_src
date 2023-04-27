@@ -26,7 +26,11 @@
  *  com.mojang.serialization.MapLike
  *  com.mojang.serialization.RecordBuilder
  *  com.mojang.serialization.codecs.RecordCodecBuilder
+ *  it.unimi.dsi.fastutil.floats.FloatArrayList
  *  org.apache.commons.lang3.mutable.MutableObject
+ *  org.joml.AxisAngle4f
+ *  org.joml.Matrix4f
+ *  org.joml.Quaternionf
  *  org.joml.Vector3f
  */
 package net.minecraft.util.dynamic;
@@ -53,6 +57,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.MapLike;
 import com.mojang.serialization.RecordBuilder;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -79,6 +84,9 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.Uuids;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.joml.AxisAngle4f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public class Codecs {
@@ -88,17 +96,33 @@ public class Codecs {
             return DataResult.success((Object)Text.Serializer.fromJson(element));
         }
         catch (JsonParseException jsonParseException) {
-            return DataResult.error((String)jsonParseException.getMessage());
+            return DataResult.error(jsonParseException::getMessage);
         }
     }, text -> {
         try {
             return DataResult.success((Object)Text.Serializer.toJsonTree(text));
         }
         catch (IllegalArgumentException illegalArgumentException) {
-            return DataResult.error((String)illegalArgumentException.getMessage());
+            return DataResult.error(illegalArgumentException::getMessage);
         }
     });
-    public static final Codec<Vector3f> VECTOR_3F = Codec.FLOAT.listOf().comapFlatMap(list2 -> Util.toArray(list2, 3).map(list -> new Vector3f(((Float)list.get(0)).floatValue(), ((Float)list.get(1)).floatValue(), ((Float)list.get(2)).floatValue())), vec3f -> ImmutableList.of((Object)Float.valueOf(vec3f.x()), (Object)Float.valueOf(vec3f.y()), (Object)Float.valueOf(vec3f.z())));
+    public static final Codec<Vector3f> VECTOR_3F = Codec.FLOAT.listOf().comapFlatMap(list2 -> Util.toArray(list2, 3).map(list -> new Vector3f(((Float)list.get(0)).floatValue(), ((Float)list.get(1)).floatValue(), ((Float)list.get(2)).floatValue())), vec3f -> List.of(Float.valueOf(vec3f.x()), Float.valueOf(vec3f.y()), Float.valueOf(vec3f.z())));
+    public static final Codec<Quaternionf> QUATERNIONF = Codec.FLOAT.listOf().comapFlatMap(list2 -> Util.toArray(list2, 4).map(list -> new Quaternionf(((Float)list.get(0)).floatValue(), ((Float)list.get(1)).floatValue(), ((Float)list.get(2)).floatValue(), ((Float)list.get(3)).floatValue())), quaternion -> List.of(Float.valueOf(quaternion.x), Float.valueOf(quaternion.y), Float.valueOf(quaternion.z), Float.valueOf(quaternion.w)));
+    public static final Codec<AxisAngle4f> AXIS_ANGLE4F = RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("angle").forGetter(axisAngle -> Float.valueOf(axisAngle.angle)), (App)VECTOR_3F.fieldOf("axis").forGetter(axisAngle -> new Vector3f(axisAngle.x, axisAngle.y, axisAngle.z))).apply((Applicative)instance, AxisAngle4f::new));
+    public static final Codec<Quaternionf> ROTATION = Codec.either(QUATERNIONF, (Codec)AXIS_ANGLE4F.xmap(Quaternionf::new, AxisAngle4f::new)).xmap(either -> (Quaternionf)either.map(quaternion -> quaternion, quaternion -> quaternion), com.mojang.datafixers.util.Either::left);
+    public static Codec<Matrix4f> MATRIX4F = Codec.FLOAT.listOf().comapFlatMap(list2 -> Util.toArray(list2, 16).map(list -> {
+        Matrix4f matrix4f = new Matrix4f();
+        for (int i = 0; i < list.size(); ++i) {
+            matrix4f.setRowColumn(i >> 2, i & 3, ((Float)list.get(i)).floatValue());
+        }
+        return matrix4f.determineProperties();
+    }), matrix4f -> {
+        FloatArrayList floatList = new FloatArrayList(16);
+        for (int i = 0; i < 16; ++i) {
+            floatList.add(matrix4f.getRowColumn(i >> 2, i & 3));
+        }
+        return floatList;
+    });
     public static final Codec<Integer> NONNEGATIVE_INT = Codecs.rangedInt(0, Integer.MAX_VALUE, v -> "Value must be non-negative: " + v);
     public static final Codec<Integer> POSITIVE_INT = Codecs.rangedInt(1, Integer.MAX_VALUE, v -> "Value must be positive: " + v);
     public static final Codec<Float> POSITIVE_FLOAT = Codecs.rangedFloat(0.0f, Float.MAX_VALUE, v -> "Value must be positive: " + v);
@@ -107,7 +131,7 @@ public class Codecs {
             return DataResult.success((Object)Pattern.compile(pattern));
         }
         catch (PatternSyntaxException patternSyntaxException) {
-            return DataResult.error((String)("Invalid regex pattern '" + pattern + "': " + patternSyntaxException.getMessage()));
+            return DataResult.error(() -> "Invalid regex pattern '" + pattern + "': " + patternSyntaxException.getMessage());
         }
     }, Pattern::pattern);
     public static final Codec<Instant> INSTANT = Codecs.instant(DateTimeFormatter.ISO_INSTANT);
@@ -116,7 +140,7 @@ public class Codecs {
             return DataResult.success((Object)Base64.getDecoder().decode((String)encoded));
         }
         catch (IllegalArgumentException illegalArgumentException) {
-            return DataResult.error((String)"Malformed base64 string");
+            return DataResult.error(() -> "Malformed base64 string");
         }
     }, data -> Base64.getEncoder().encodeToString((byte[])data));
     public static final Codec<TagEntryId> TAG_ENTRY_ID = Codec.STRING.comapFlatMap(tagEntry -> tagEntry.startsWith("#") ? Identifier.validate(tagEntry.substring(1)).map(id -> new TagEntryId((Identifier)id, true)) : Identifier.validate(tagEntry).map(id -> new TagEntryId((Identifier)id, false)), TagEntryId::asString);
@@ -142,6 +166,7 @@ public class Codecs {
         properties.forEach((key, property) -> profile.getProperties().put(key, property));
         return profile;
     }));
+    public static final Codec<String> NON_EMPTY_STRING = Codecs.validate(Codec.STRING, string -> string.isEmpty() ? DataResult.error(() -> "Expected non-empty string") : DataResult.success((Object)string));
 
     public static <F, S> Codec<com.mojang.datafixers.util.Either<F, S>> xor(Codec<F> first, Codec<S> second) {
         return new Xor<F, S>(first, second);
@@ -174,7 +199,7 @@ public class Codecs {
                 if (optional.isPresent()) {
                     return result;
                 }
-                return DataResult.error((String)("(" + (String)mutableObject.getValue() + " -> using default)"), (Object)Pair.of((Object)object, input));
+                return DataResult.error(() -> "(" + (String)mutableObject.getValue() + " -> using default)", (Object)Pair.of((Object)object, input));
             }
 
             public <T> DataResult<T> coApply(DynamicOps<T> ops, A input, DataResult<T> result) {
@@ -188,14 +213,14 @@ public class Codecs {
     }
 
     public static <E> Codec<E> rawIdChecked(ToIntFunction<E> elementToRawId, IntFunction<E> rawIdToElement, int errorRawId) {
-        return Codec.INT.flatXmap(rawId -> Optional.ofNullable(rawIdToElement.apply((int)rawId)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown element id: " + rawId))), element -> {
+        return Codec.INT.flatXmap(rawId -> Optional.ofNullable(rawIdToElement.apply((int)rawId)).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown element id: " + rawId)), element -> {
             int j = elementToRawId.applyAsInt(element);
-            return j == errorRawId ? DataResult.error((String)("Element with unknown id: " + element)) : DataResult.success((Object)j);
+            return j == errorRawId ? DataResult.error(() -> "Element with unknown id: " + element) : DataResult.success((Object)j);
         });
     }
 
     public static <E> Codec<E> idChecked(Function<E, String> elementToId, Function<String, E> idToElement) {
-        return Codec.STRING.flatXmap(id -> Optional.ofNullable(idToElement.apply((String)id)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown element name:" + id))), element -> Optional.ofNullable((String)elementToId.apply(element)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Element with unknown name: " + element))));
+        return Codec.STRING.flatXmap(id -> Optional.ofNullable(idToElement.apply((String)id)).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Unknown element name:" + id)), element -> Optional.ofNullable((String)elementToId.apply(element)).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Element with unknown name: " + element)));
     }
 
     public static <E> Codec<E> orCompressed(final Codec<E> uncompressedCodec, final Codec<E> compressedCodec) {
@@ -238,58 +263,43 @@ public class Codecs {
         });
     }
 
-    private static <N extends Number> Function<N, DataResult<N>> createIntRangeChecker(N min, N max, Function<N, String> messageFactory) {
-        return value -> {
-            if (((Comparable)((Object)value)).compareTo(min) >= 0 && ((Comparable)((Object)value)).compareTo(max) <= 0) {
-                return DataResult.success((Object)value);
-            }
-            return DataResult.error((String)((String)messageFactory.apply(value)));
-        };
+    public static <T> Codec<T> validate(Codec<T> codec, Function<T, DataResult<T>> validator) {
+        return codec.flatXmap(validator, validator);
     }
 
     private static Codec<Integer> rangedInt(int min, int max, Function<Integer, String> messageFactory) {
-        Function<Integer, DataResult<Integer>> function = Codecs.createIntRangeChecker(min, max, messageFactory);
-        return Codec.INT.flatXmap(function, function);
-    }
-
-    private static <N extends Number> Function<N, DataResult<N>> createFloatRangeChecker(N min, N max, Function<N, String> messageFactory) {
-        return value -> {
-            if (((Comparable)((Object)value)).compareTo(min) > 0 && ((Comparable)((Object)value)).compareTo(max) <= 0) {
+        return Codecs.validate(Codec.INT, value -> {
+            if (value.compareTo(min) >= 0 && value.compareTo(max) <= 0) {
                 return DataResult.success((Object)value);
             }
-            return DataResult.error((String)((String)messageFactory.apply(value)));
-        };
+            return DataResult.error(() -> (String)messageFactory.apply((Integer)value));
+        });
+    }
+
+    public static Codec<Integer> rangedInt(int min, int max) {
+        return Codecs.rangedInt(min, max, value -> "Value must be within range [" + min + ";" + max + "]: " + value);
     }
 
     private static Codec<Float> rangedFloat(float min, float max, Function<Float, String> messageFactory) {
-        Function<Float, DataResult<Float>> function = Codecs.createFloatRangeChecker(Float.valueOf(min), Float.valueOf(max), messageFactory);
-        return Codec.FLOAT.flatXmap(function, function);
-    }
-
-    public static <T> Function<List<T>, DataResult<List<T>>> createNonEmptyListChecker() {
-        return list -> {
-            if (list.isEmpty()) {
-                return DataResult.error((String)"List must have contents");
+        return Codecs.validate(Codec.FLOAT, value -> {
+            if (value.compareTo(Float.valueOf(min)) > 0 && value.compareTo(Float.valueOf(max)) <= 0) {
+                return DataResult.success((Object)value);
             }
-            return DataResult.success((Object)list);
-        };
+            return DataResult.error(() -> (String)messageFactory.apply((Float)value));
+        });
     }
 
     public static <T> Codec<List<T>> nonEmptyList(Codec<List<T>> originalCodec) {
-        return originalCodec.flatXmap(Codecs.createNonEmptyListChecker(), Codecs.createNonEmptyListChecker());
-    }
-
-    public static <T> Function<RegistryEntryList<T>, DataResult<RegistryEntryList<T>>> createNonEmptyEntryListChecker() {
-        return entries -> {
-            if (entries.getStorage().right().filter(List::isEmpty).isPresent()) {
-                return DataResult.error((String)"List must have contents");
-            }
-            return DataResult.success((Object)entries);
-        };
+        return Codecs.validate(originalCodec, list -> list.isEmpty() ? DataResult.error(() -> "List must have contents") : DataResult.success((Object)list));
     }
 
     public static <T> Codec<RegistryEntryList<T>> nonEmptyEntryList(Codec<RegistryEntryList<T>> originalCodec) {
-        return originalCodec.flatXmap(Codecs.createNonEmptyEntryListChecker(), Codecs.createNonEmptyEntryListChecker());
+        return Codecs.validate(originalCodec, entryList -> {
+            if (entryList.getStorage().right().filter(List::isEmpty).isPresent()) {
+                return DataResult.error(() -> "List must have contents");
+            }
+            return DataResult.success((Object)entryList);
+        });
     }
 
     public static <A> Codec<A> createLazy(Supplier<Codec<A>> supplier) {
@@ -333,7 +343,7 @@ public class Codecs {
                     Object object2 = iterator.next();
                     Object object3 = typeGetter.apply(object2);
                     if (object3 == object) continue;
-                    return DataResult.error((String)("Mixed type list: element " + object2 + " had type " + object3 + ", but list is of type " + object));
+                    return DataResult.error(() -> "Mixed type list: element " + object2 + " had type " + object3 + ", but list is of type " + object);
                 }
             }
             return DataResult.success((Object)collection, (Lifecycle)Lifecycle.stable());
@@ -348,7 +358,7 @@ public class Codecs {
                     return codec.decode(ops, input);
                 }
                 catch (Exception exception) {
-                    return DataResult.error((String)("Cauch exception decoding " + input + ": " + exception.getMessage()));
+                    return DataResult.error(() -> "Caught exception decoding " + input + ": " + exception.getMessage());
                 }
             }
         });
@@ -360,7 +370,7 @@ public class Codecs {
                 return DataResult.success((Object)Instant.from(formatter.parse((CharSequence)dateTimeString)));
             }
             catch (Exception exception) {
-                return DataResult.error((String)exception.getMessage());
+                return DataResult.error(exception::getMessage);
             }
         }, formatter::format);
     }
@@ -374,12 +384,25 @@ public class Codecs {
             return DataResult.success((Object)new GameProfile((UUID)((Optional)pair.getFirst()).orElse(null), (String)((Optional)pair.getSecond()).orElse(null)));
         }
         catch (Throwable throwable) {
-            return DataResult.error((String)throwable.getMessage());
+            return DataResult.error(throwable::getMessage);
         }
     }
 
     private static DataResult<Pair<Optional<UUID>, Optional<String>>> createPairFromGameProfile(GameProfile profile) {
         return DataResult.success((Object)Pair.of(Optional.ofNullable(profile.getId()), Optional.ofNullable(profile.getName())));
+    }
+
+    public static Codec<String> string(int minLength, int maxLength) {
+        return Codecs.validate(Codec.STRING, string -> {
+            int k = string.length();
+            if (k < minLength) {
+                return DataResult.error(() -> "String \"" + string + "\" is too short: " + k + ", expected range [" + minLength + "-" + maxLength + "]");
+            }
+            if (k > maxLength) {
+                return DataResult.error(() -> "String \"" + string + "\" is too long: " + k + ", expected range [" + minLength + "-" + maxLength + "]");
+            }
+            return DataResult.success((Object)string);
+        });
     }
 
     static final class Xor<F, S>
@@ -398,7 +421,7 @@ public class Codecs {
             Optional optional = dataResult.result();
             Optional optional2 = dataResult2.result();
             if (optional.isPresent() && optional2.isPresent()) {
-                return DataResult.error((String)("Both alternatives read successfully, can not pick the correct one; first: " + optional.get() + " second: " + optional2.get()), (Object)((Pair)optional.get()));
+                return DataResult.error(() -> "Both alternatives read successfully, can not pick the correct one; first: " + optional.get() + " second: " + optional2.get(), (Object)((Pair)optional.get()));
             }
             return optional.isPresent() ? dataResult : dataResult2;
         }

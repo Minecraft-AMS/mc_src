@@ -61,7 +61,7 @@ extends LandPathNodeMaker {
         } else {
             i = MathHelper.floor(this.entity.getY() + 0.5);
         }
-        if (!this.canPathThrough(blockPos = new BlockPos(this.entity.getX(), (double)i, this.entity.getZ()))) {
+        if (!this.canPathThrough(blockPos = BlockPos.ofFloored(this.entity.getX(), i, this.entity.getZ()))) {
             for (BlockPos blockPos2 : this.getPotentialEscapePositions(this.entity)) {
                 if (!this.canPathThrough(blockPos2)) continue;
                 return super.getStart(blockPos2);
@@ -216,15 +216,15 @@ extends LandPathNodeMaker {
     }
 
     private PathNodeType getNodeType(int x, int y, int z) {
-        return (PathNodeType)((Object)this.pathNodes.computeIfAbsent(BlockPos.asLong(x, y, z), pos -> this.getNodeType(this.cachedWorld, x, y, z, this.entity, this.entityBlockXSize, this.entityBlockYSize, this.entityBlockZSize, this.canOpenDoors(), this.canEnterOpenDoors())));
+        return (PathNodeType)((Object)this.pathNodes.computeIfAbsent(BlockPos.asLong(x, y, z), pos -> this.getNodeType(this.cachedWorld, x, y, z, this.entity)));
     }
 
     @Override
-    public PathNodeType getNodeType(BlockView world, int x, int y, int z, MobEntity mob, int sizeX, int sizeY, int sizeZ, boolean canOpenDoors, boolean canEnterOpenDoors) {
+    public PathNodeType getNodeType(BlockView world, int x, int y, int z, MobEntity mob) {
         EnumSet<PathNodeType> enumSet = EnumSet.noneOf(PathNodeType.class);
         PathNodeType pathNodeType = PathNodeType.BLOCKED;
         BlockPos blockPos = mob.getBlockPos();
-        pathNodeType = super.findNearbyNodeTypes(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
+        pathNodeType = super.findNearbyNodeTypes(world, x, y, z, enumSet, pathNodeType, blockPos);
         if (enumSet.contains((Object)PathNodeType.FENCE)) {
             return PathNodeType.FENCE;
         }
@@ -250,8 +250,6 @@ extends LandPathNodeMaker {
             PathNodeType pathNodeType2 = BirdPathNodeMaker.getCommonNodeType(world, mutable.set(x, y - 1, z));
             if (pathNodeType2 == PathNodeType.DAMAGE_FIRE || pathNodeType2 == PathNodeType.LAVA) {
                 pathNodeType = PathNodeType.DAMAGE_FIRE;
-            } else if (pathNodeType2 == PathNodeType.DAMAGE_CACTUS) {
-                pathNodeType = PathNodeType.DAMAGE_CACTUS;
             } else if (pathNodeType2 == PathNodeType.DAMAGE_OTHER) {
                 pathNodeType = PathNodeType.DAMAGE_OTHER;
             } else if (pathNodeType2 == PathNodeType.COCOA) {
@@ -276,7 +274,7 @@ extends LandPathNodeMaker {
         Box box = entity.getBoundingBox();
         boolean bl2 = bl = box.getAverageSideLength() < 1.0;
         if (!bl) {
-            return List.of(new BlockPos(box.minX, (double)entity.getBlockY(), box.minZ), new BlockPos(box.minX, (double)entity.getBlockY(), box.maxZ), new BlockPos(box.maxX, (double)entity.getBlockY(), box.minZ), new BlockPos(box.maxX, (double)entity.getBlockY(), box.maxZ));
+            return List.of(BlockPos.ofFloored(box.minX, entity.getBlockY(), box.minZ), BlockPos.ofFloored(box.minX, entity.getBlockY(), box.maxZ), BlockPos.ofFloored(box.maxX, entity.getBlockY(), box.minZ), BlockPos.ofFloored(box.maxX, entity.getBlockY(), box.maxZ));
         }
         double d = Math.max(0.0, (1.5 - box.getZLength()) / 2.0);
         double e = Math.max(0.0, (1.5 - box.getXLength()) / 2.0);

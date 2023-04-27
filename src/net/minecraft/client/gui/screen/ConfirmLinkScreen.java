@@ -11,12 +11,15 @@ package net.minecraft.client.gui.screen;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ConfirmScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
 public class ConfirmLinkScreen
@@ -26,8 +29,8 @@ extends ConfirmScreen {
     private final String link;
     private final boolean drawWarning;
 
-    public ConfirmLinkScreen(BooleanConsumer callback, String link, boolean trusted) {
-        this(callback, ConfirmLinkScreen.getConfirmText(trusted), Text.literal(link), link, trusted ? ScreenTexts.CANCEL : ScreenTexts.NO, trusted);
+    public ConfirmLinkScreen(BooleanConsumer callback, String link, boolean linkTrusted) {
+        this(callback, ConfirmLinkScreen.getConfirmText(linkTrusted), Text.literal(link), link, linkTrusted ? ScreenTexts.CANCEL : ScreenTexts.NO, linkTrusted);
     }
 
     public ConfirmLinkScreen(BooleanConsumer callback, Text title, String link, boolean linkTrusted) {
@@ -47,7 +50,7 @@ extends ConfirmScreen {
     }
 
     protected static MutableText getConfirmText(boolean linkTrusted, String link) {
-        return ConfirmLinkScreen.getConfirmText(linkTrusted).append(" ").append(Text.literal(link));
+        return ConfirmLinkScreen.getConfirmText(linkTrusted).append(ScreenTexts.SPACE).append(Text.literal(link));
     }
 
     protected static MutableText getConfirmText(boolean linkTrusted) {
@@ -72,8 +75,22 @@ extends ConfirmScreen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         super.render(matrices, mouseX, mouseY, delta);
         if (this.drawWarning) {
-            ConfirmLinkScreen.drawCenteredText(matrices, this.textRenderer, WARNING, this.width / 2, 110, 0xFFCCCC);
+            ConfirmLinkScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, WARNING, this.width / 2, 110, 0xFFCCCC);
         }
+    }
+
+    public static void open(String url, Screen parent, boolean linkTrusted) {
+        MinecraftClient minecraftClient = MinecraftClient.getInstance();
+        minecraftClient.setScreen(new ConfirmLinkScreen(confirmed -> {
+            if (confirmed) {
+                Util.getOperatingSystem().open(url);
+            }
+            minecraftClient.setScreen(parent);
+        }, url, linkTrusted));
+    }
+
+    public static ButtonWidget.PressAction opening(String url, Screen parent, boolean linkTrusted) {
+        return button -> ConfirmLinkScreen.open(url, parent, linkTrusted);
     }
 }
 

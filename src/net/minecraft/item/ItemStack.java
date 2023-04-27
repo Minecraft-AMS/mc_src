@@ -11,6 +11,7 @@
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
+ *  net.fabricmc.fabric.api.item.v1.FabricItemStack
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -37,6 +38,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import net.fabricmc.fabric.api.item.v1.FabricItemStack;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -65,6 +67,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.Items;
+import net.minecraft.item.trim.ArmorTrim;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -99,7 +102,8 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-public final class ItemStack {
+public final class ItemStack
+implements FabricItemStack {
     public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registries.ITEM.getCodec().fieldOf("id").forGetter(stack -> stack.item), (App)Codec.INT.fieldOf("Count").forGetter(stack -> stack.count), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.nbt))).apply((Applicative)instance, ItemStack::new));
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final ItemStack EMPTY = new ItemStack((ItemConvertible)null);
@@ -623,6 +627,9 @@ public final class ItemStack {
             this.getItem().appendTooltip(this, player == null ? null : player.world, list, context);
         }
         if (this.hasNbt()) {
+            if (ItemStack.isSectionVisible(i, TooltipSection.UPGRADES) && player != null) {
+                ArmorTrim.appendTooltip(this, player.world.getRegistryManager(), list);
+            }
             if (ItemStack.isSectionVisible(i, TooltipSection.ENCHANTMENTS)) {
                 ItemStack.appendEnchantments(list, this.getEnchantments());
             }
@@ -674,7 +681,7 @@ public final class ItemStack {
                     }
                     double e = entityAttributeModifier.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_BASE || entityAttributeModifier.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_TOTAL ? d * 100.0 : (((EntityAttribute)entry.getKey()).equals(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE) ? d * 10.0 : d);
                     if (bl) {
-                        list.add(Text.literal(" ").append(Text.translatable("attribute.modifier.equals." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e), Text.translatable(((EntityAttribute)entry.getKey()).getTranslationKey()))).formatted(Formatting.DARK_GREEN));
+                        list.add(ScreenTexts.space().append(Text.translatable("attribute.modifier.equals." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e), Text.translatable(((EntityAttribute)entry.getKey()).getTranslationKey()))).formatted(Formatting.DARK_GREEN));
                         continue;
                     }
                     if (d > 0.0) {
@@ -920,11 +927,6 @@ public final class ItemStack {
         return this.getItem().getEatSound();
     }
 
-    @Nullable
-    public SoundEvent getEquipSound() {
-        return this.getItem().getEquipSound();
-    }
-
     public static final class TooltipSection
     extends Enum<TooltipSection> {
         public static final /* enum */ TooltipSection ENCHANTMENTS = new TooltipSection();
@@ -934,6 +936,7 @@ public final class ItemStack {
         public static final /* enum */ TooltipSection CAN_PLACE = new TooltipSection();
         public static final /* enum */ TooltipSection ADDITIONAL = new TooltipSection();
         public static final /* enum */ TooltipSection DYE = new TooltipSection();
+        public static final /* enum */ TooltipSection UPGRADES = new TooltipSection();
         private final int flag = 1 << this.ordinal();
         private static final /* synthetic */ TooltipSection[] field_25776;
 
@@ -950,7 +953,7 @@ public final class ItemStack {
         }
 
         private static /* synthetic */ TooltipSection[] method_36678() {
-            return new TooltipSection[]{ENCHANTMENTS, MODIFIERS, UNBREAKABLE, CAN_DESTROY, CAN_PLACE, ADDITIONAL, DYE};
+            return new TooltipSection[]{ENCHANTMENTS, MODIFIERS, UNBREAKABLE, CAN_DESTROY, CAN_PLACE, ADDITIONAL, DYE, UPGRADES};
         }
 
         static {

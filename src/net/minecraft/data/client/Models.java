@@ -83,6 +83,10 @@ public class Models {
     public static final Model TEMPLATE_RAIL_RAISED_NE = Models.block("template_rail_raised_ne", "_raised_ne", TextureKey.RAIL);
     public static final Model TEMPLATE_RAIL_RAISED_SW = Models.block("template_rail_raised_sw", "_raised_sw", TextureKey.RAIL);
     public static final Model CARPET = Models.block("carpet", TextureKey.WOOL);
+    public static final Model FLOWERBED_1 = Models.block("flowerbed_1", "_1", TextureKey.FLOWERBED, TextureKey.STEM);
+    public static final Model FLOWERBED_2 = Models.block("flowerbed_2", "_2", TextureKey.FLOWERBED, TextureKey.STEM);
+    public static final Model FLOWERBED_3 = Models.block("flowerbed_3", "_3", TextureKey.FLOWERBED, TextureKey.STEM);
+    public static final Model FLOWERBED_4 = Models.block("flowerbed_4", "_4", TextureKey.FLOWERBED, TextureKey.STEM);
     public static final Model CORAL_FAN = Models.block("coral_fan", TextureKey.FAN);
     public static final Model CORAL_WALL_FAN = Models.block("coral_wall_fan", TextureKey.FAN);
     public static final Model TEMPLATE_GLAZED_TERRACOTTA = Models.block("template_glazed_terracotta", TextureKey.PATTERN);
@@ -132,6 +136,8 @@ public class Models {
     public static final Model GENERATED = Models.item("generated", TextureKey.LAYER0);
     public static final Model HANDHELD = Models.item("handheld", TextureKey.LAYER0);
     public static final Model HANDHELD_ROD = Models.item("handheld_rod", TextureKey.LAYER0);
+    public static final Model GENERATED_TWO_LAYERS = Models.item("generated", TextureKey.LAYER0, TextureKey.LAYER1);
+    public static final Model GENERATED_THREE_LAYERS = Models.item("generated", TextureKey.LAYER0, TextureKey.LAYER1, TextureKey.LAYER2);
     public static final Model TEMPLATE_SHULKER_BOX = Models.item("template_shulker_box", TextureKey.PARTICLE);
     public static final Model TEMPLATE_BED = Models.item("template_bed", TextureKey.PARTICLE);
     public static final Model TEMPLATE_BANNER = Models.item("template_banner", new TextureKey[0]);

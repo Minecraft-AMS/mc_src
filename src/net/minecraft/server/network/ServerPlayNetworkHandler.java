@@ -27,6 +27,7 @@ import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -81,7 +82,6 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkThreadUtils;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.network.encryption.PublicPlayerSession;
@@ -98,6 +98,7 @@ import net.minecraft.network.message.MessageSignatureStorage;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedCommandArguments;
 import net.minecraft.network.message.SignedMessage;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.AdvancementTabC2SPacket;
 import net.minecraft.network.packet.c2s.play.BoatPaddleStateC2SPacket;
 import net.minecraft.network.packet.c2s.play.BookUpdateC2SPacket;
@@ -156,6 +157,7 @@ import net.minecraft.network.packet.s2c.play.NbtQueryResponseS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerActionResponseS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
+import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.network.packet.s2c.play.ProfilelessChatMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
@@ -214,7 +216,7 @@ ServerPlayPacketListener {
     private static final int DEFAULT_SEQUENCE = -1;
     private static final int MAX_PENDING_ACKNOWLEDGMENTS = 4096;
     private static final Text CHAT_VALIDATION_FAILED_TEXT = Text.translatable("multiplayer.disconnect.chat_validation_failed");
-    public final ClientConnection connection;
+    private final ClientConnection connection;
     private final MinecraftServer server;
     public ServerPlayerEntity player;
     private int ticks;
@@ -282,7 +284,7 @@ ServerPlayPacketListener {
         this.player.updatePositionAndAngles(this.lastTickX, this.lastTickY, this.lastTickZ, this.player.getYaw(), this.player.getPitch());
         ++this.ticks;
         this.lastTickMovePacketsCount = this.movePacketsCount;
-        if (this.floating && !this.player.isSleeping() && !this.player.hasVehicle()) {
+        if (this.floating && !this.player.isSleeping() && !this.player.hasVehicle() && !this.player.isDead()) {
             if (++this.floatingTicks > 80) {
                 LOGGER.warn("{} was kicked for floating too long!", (Object)this.player.getName().getString());
                 this.disconnect(Text.translatable("multiplayer.disconnect.flying"));
@@ -293,7 +295,7 @@ ServerPlayPacketListener {
             this.floatingTicks = 0;
         }
         this.topmostRiddenEntity = this.player.getRootVehicle();
-        if (this.topmostRiddenEntity == this.player || this.topmostRiddenEntity.getPrimaryPassenger() != this.player) {
+        if (this.topmostRiddenEntity == this.player || this.topmostRiddenEntity.getControllingPassenger() != this.player) {
             this.topmostRiddenEntity = null;
             this.vehicleFloating = false;
             this.vehicleFloatingTicks = 0;
@@ -304,7 +306,7 @@ ServerPlayPacketListener {
             this.updatedRiddenX = this.topmostRiddenEntity.getX();
             this.updatedRiddenY = this.topmostRiddenEntity.getY();
             this.updatedRiddenZ = this.topmostRiddenEntity.getZ();
-            if (this.vehicleFloating && this.player.getRootVehicle().getPrimaryPassenger() == this.player) {
+            if (this.vehicleFloating && this.player.getRootVehicle().getControllingPassenger() == this.player) {
                 if (++this.vehicleFloatingTicks > 80) {
                     LOGGER.warn("{} was kicked for floating a vehicle too long!", (Object)this.player.getName().getString());
                     this.disconnect(Text.translatable("multiplayer.disconnect.flying"));
@@ -349,8 +351,8 @@ ServerPlayPacketListener {
     }
 
     @Override
-    public ClientConnection getConnection() {
-        return this.connection;
+    public boolean isConnectionOpen() {
+        return this.connection.isOpen();
     }
 
     private boolean isHost() {
@@ -365,7 +367,7 @@ ServerPlayPacketListener {
 
     private <T, R> CompletableFuture<R> filterText(T text, BiFunction<TextStream, T, CompletableFuture<R>> filterer) {
         return filterer.apply(this.player.getTextStream(), (TextStream)text).thenApply(filtered -> {
-            if (!this.getConnection().isOpen()) {
+            if (!this.isConnectionOpen()) {
                 LOGGER.debug("Ignoring packet due to disconnection");
                 throw new CancellationException("disconnected");
             }
@@ -407,7 +409,7 @@ ServerPlayPacketListener {
             return;
         }
         Entity entity = this.player.getRootVehicle();
-        if (entity != this.player && entity.getPrimaryPassenger() == this.player && entity == this.topmostRiddenEntity) {
+        if (entity != this.player && entity.getControllingPassenger() == this.player && entity == this.topmostRiddenEntity) {
             ServerWorld serverWorld = this.player.getWorld();
             double d = entity.getX();
             double e = entity.getY();
@@ -942,31 +944,23 @@ ServerPlayPacketListener {
         return false;
     }
 
-    public void requestTeleportAndDismount(double x, double y, double z, float yaw, float pitch) {
-        this.requestTeleport(x, y, z, yaw, pitch, Collections.emptySet(), true);
-    }
-
     public void requestTeleport(double x, double y, double z, float yaw, float pitch) {
-        this.requestTeleport(x, y, z, yaw, pitch, Collections.emptySet(), false);
+        this.requestTeleport(x, y, z, yaw, pitch, Collections.emptySet());
     }
 
-    public void requestTeleport(double x, double y, double z, float yaw, float pitch, Set<PlayerPositionLookS2CPacket.Flag> flags) {
-        this.requestTeleport(x, y, z, yaw, pitch, flags, false);
-    }
-
-    public void requestTeleport(double x, double y, double z, float yaw, float pitch, Set<PlayerPositionLookS2CPacket.Flag> flags, boolean shouldDismount) {
-        double d = flags.contains((Object)PlayerPositionLookS2CPacket.Flag.X) ? this.player.getX() : 0.0;
-        double e = flags.contains((Object)PlayerPositionLookS2CPacket.Flag.Y) ? this.player.getY() : 0.0;
-        double f = flags.contains((Object)PlayerPositionLookS2CPacket.Flag.Z) ? this.player.getZ() : 0.0;
-        float g = flags.contains((Object)PlayerPositionLookS2CPacket.Flag.Y_ROT) ? this.player.getYaw() : 0.0f;
-        float h = flags.contains((Object)PlayerPositionLookS2CPacket.Flag.X_ROT) ? this.player.getPitch() : 0.0f;
+    public void requestTeleport(double x, double y, double z, float yaw, float pitch, Set<PositionFlag> set) {
+        double d = set.contains((Object)PositionFlag.X) ? this.player.getX() : 0.0;
+        double e = set.contains((Object)PositionFlag.Y) ? this.player.getY() : 0.0;
+        double f = set.contains((Object)PositionFlag.Z) ? this.player.getZ() : 0.0;
+        float g = set.contains((Object)PositionFlag.Y_ROT) ? this.player.getYaw() : 0.0f;
+        float h = set.contains((Object)PositionFlag.X_ROT) ? this.player.getPitch() : 0.0f;
         this.requestedTeleportPos = new Vec3d(x, y, z);
         if (++this.requestedTeleportId == Integer.MAX_VALUE) {
             this.requestedTeleportId = 0;
         }
         this.teleportRequestTick = this.ticks;
         this.player.updatePositionAndAngles(x, y, z, yaw, pitch);
-        this.player.networkHandler.sendPacket(new PlayerPositionLookS2CPacket(x - d, y - e, z - f, yaw - g, pitch - h, flags, this.requestedTeleportId, shouldDismount));
+        this.player.networkHandler.sendPacket(new PlayerPositionLookS2CPacket(x - d, y - e, z - f, yaw - g, pitch - h, set, this.requestedTeleportId));
     }
 
     @Override
@@ -1106,9 +1100,10 @@ ServerPlayPacketListener {
     @Override
     public void onBoatPaddleState(BoatPaddleStateC2SPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.player.getWorld());
-        Entity entity = this.player.getVehicle();
+        Entity entity = this.player.getControllingVehicle();
         if (entity instanceof BoatEntity) {
-            ((BoatEntity)entity).setPaddleMovings(packet.isLeftPaddling(), packet.isRightPaddling());
+            BoatEntity boatEntity = (BoatEntity)entity;
+            boatEntity.setPaddleMovings(packet.isLeftPaddling(), packet.isRightPaddling());
         }
     }
 
@@ -1255,11 +1250,11 @@ ServerPlayPacketListener {
             this.disconnect(Text.translatable("multiplayer.disconnect.out_of_order_chat"));
             return Optional.empty();
         }
+        Optional<LastSeenMessageList> optional = this.validateAcknowledgment(acknowledgment);
         if (this.player.getClientChatVisibility() == ChatVisibility.HIDDEN) {
             this.sendPacket(new GameMessageS2CPacket(Text.translatable("chat.disabled.options").formatted(Formatting.RED), false));
             return Optional.empty();
         }
-        Optional<LastSeenMessageList> optional = this.validateAcknowledgment(acknowledgment);
         this.player.updateLastActionTime();
         return optional;
     }
@@ -1362,16 +1357,18 @@ ServerPlayPacketListener {
                 break;
             }
             case START_RIDING_JUMP: {
-                if (!(this.player.getVehicle() instanceof JumpingMount)) break;
-                JumpingMount jumpingMount = (JumpingMount)((Object)this.player.getVehicle());
+                Entity entity = this.player.getControllingVehicle();
+                if (!(entity instanceof JumpingMount)) break;
+                JumpingMount jumpingMount = (JumpingMount)((Object)entity);
                 int i = packet.getMountJumpHeight();
-                if (!jumpingMount.canJump(this.player) || i <= 0) break;
+                if (!jumpingMount.canJump() || i <= 0) break;
                 jumpingMount.startJumping(i);
                 break;
             }
             case STOP_RIDING_JUMP: {
-                if (!(this.player.getVehicle() instanceof JumpingMount)) break;
-                JumpingMount jumpingMount = (JumpingMount)((Object)this.player.getVehicle());
+                Entity entity = this.player.getControllingVehicle();
+                if (!(entity instanceof JumpingMount)) break;
+                JumpingMount jumpingMount = (JumpingMount)((Object)entity);
                 jumpingMount.stopJumping();
                 break;
             }
@@ -1422,6 +1419,10 @@ ServerPlayPacketListener {
         this.sendPacket(new ProfilelessChatMessageS2CPacket(message, params.toSerialized(this.player.world.getRegistryManager())));
     }
 
+    public SocketAddress getConnectionAddress() {
+        return this.connection.getAddress();
+    }
+
     @Override
     public void onPlayerInteractEntity(PlayerInteractEntityC2SPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.player.getWorld());
@@ -1433,7 +1434,8 @@ ServerPlayPacketListener {
             if (!serverWorld.getWorldBorder().contains(entity.getBlockPos())) {
                 return;
             }
-            if (entity.squaredDistanceTo(this.player.getEyePos()) < MAX_BREAK_SQUARED_DISTANCE) {
+            Box box = entity.getBoundingBox();
+            if (box.squaredMagnitude(this.player.getEyePos()) < MAX_BREAK_SQUARED_DISTANCE) {
                 packet.handle(new PlayerInteractEntityC2SPacket.Handler(){
 
                     private void processInteract(Hand hand, Interaction action) {
@@ -1510,7 +1512,7 @@ ServerPlayPacketListener {
     @Override
     public void onCloseHandledScreen(CloseHandledScreenC2SPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.player.getWorld());
-        this.player.closeScreenHandler();
+        this.player.onHandledScreenClosed();
     }
 
     @Override

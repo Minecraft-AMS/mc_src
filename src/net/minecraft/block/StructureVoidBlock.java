@@ -18,7 +18,7 @@ extends Block {
     private static final double field_31257 = 5.0;
     private static final VoxelShape SHAPE = Block.createCuboidShape(5.0, 5.0, 5.0, 11.0, 11.0, 11.0);
 
-    protected StructureVoidBlock(AbstractBlock.Settings settings) {
+    public StructureVoidBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

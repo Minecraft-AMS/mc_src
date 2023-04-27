@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class EndGatewayBlock
 extends BlockWithEntity {
-    protected EndGatewayBlock(AbstractBlock.Settings settings) {
+    public EndGatewayBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

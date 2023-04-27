@@ -22,7 +22,7 @@ import net.minecraft.world.WorldView;
 
 public class ChorusPlantBlock
 extends ConnectingBlock {
-    protected ChorusPlantBlock(AbstractBlock.Settings settings) {
+    public ChorusPlantBlock(AbstractBlock.Settings settings) {
         super(0.3125f, settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(NORTH, false)).with(EAST, false)).with(SOUTH, false)).with(WEST, false)).with(UP, false)).with(DOWN, false));
     }

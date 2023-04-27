@@ -192,8 +192,8 @@ public class EnchantmentHelper {
         return i;
     }
 
-    public static float getSwiftSneakSpeedBoost(LivingEntity livingEntity) {
-        return (float)EnchantmentHelper.getEquipmentLevel(Enchantments.SWIFT_SNEAK, livingEntity) * 0.15f;
+    public static float getSwiftSneakSpeedBoost(LivingEntity entity) {
+        return (float)EnchantmentHelper.getEquipmentLevel(Enchantments.SWIFT_SNEAK, entity) * 0.15f;
     }
 
     public static int getKnockback(LivingEntity entity) {
@@ -246,6 +246,10 @@ public class EnchantmentHelper {
 
     public static boolean hasVanishingCurse(ItemStack stack) {
         return EnchantmentHelper.getLevel(Enchantments.VANISHING_CURSE, stack) > 0;
+    }
+
+    public static boolean hasSilkTouch(ItemStack stack) {
+        return EnchantmentHelper.getLevel(Enchantments.SILK_TOUCH, stack) > 0;
     }
 
     public static int getLoyalty(ItemStack stack) {
@@ -360,7 +364,7 @@ public class EnchantmentHelper {
         Item item = stack.getItem();
         boolean bl = stack.isOf(Items.BOOK);
         block0: for (Enchantment enchantment : Registries.ENCHANTMENT) {
-            if (enchantment.isTreasure() && !treasureAllowed || !enchantment.isAvailableForRandomSelection() || !enchantment.type.isAcceptableItem(item) && !bl) continue;
+            if (enchantment.isTreasure() && !treasureAllowed || !enchantment.isAvailableForRandomSelection() || !enchantment.target.isAcceptableItem(item) && !bl) continue;
             for (int i = enchantment.getMaxLevel(); i > enchantment.getMinLevel() - 1; --i) {
                 if (power < enchantment.getMinPower(i) || power > enchantment.getMaxPower(i)) continue;
                 list.add(new EnchantmentLevelEntry(enchantment, i));

@@ -131,8 +131,12 @@ public class DataTracker {
     }
 
     public <T> void set(TrackedData<T> key, T value) {
+        this.set(key, value, false);
+    }
+
+    public <T> void set(TrackedData<T> key, T value, boolean force) {
         Entry<T> entry = this.getEntry(key);
-        if (ObjectUtils.notEqual(value, entry.get())) {
+        if (force || ObjectUtils.notEqual(value, entry.get())) {
             entry.set(value);
             this.trackedEntity.onTrackedDataSet(key);
             entry.setDirty(true);
@@ -194,6 +198,7 @@ public class DataTracker {
         finally {
             this.lock.writeLock().unlock();
         }
+        this.trackedEntity.onDataTrackerUpdate(entries);
     }
 
     private <T> void copyToFrom(Entry<T> to, SerializedEntry<?> from) {

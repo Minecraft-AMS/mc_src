@@ -26,7 +26,7 @@ implements Fertilizable {
     private static final AzaleaSaplingGenerator GENERATOR = new AzaleaSaplingGenerator();
     private static final VoxelShape SHAPE = VoxelShapes.union(Block.createCuboidShape(0.0, 8.0, 0.0, 16.0, 16.0, 16.0), Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 8.0, 10.0));
 
-    protected AzaleaBlock(AbstractBlock.Settings settings) {
+    public AzaleaBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

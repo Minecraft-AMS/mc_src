@@ -40,7 +40,7 @@ extends SkullBlock {
     @Nullable
     private static BlockPattern witherDispenserPattern;
 
-    protected WitherSkullBlock(AbstractBlock.Settings settings) {
+    public WitherSkullBlock(AbstractBlock.Settings settings) {
         super(SkullBlock.Type.WITHER_SKELETON, settings);
     }
 

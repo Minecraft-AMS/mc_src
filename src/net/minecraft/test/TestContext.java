@@ -43,6 +43,7 @@ import net.minecraft.test.GameTestException;
 import net.minecraft.test.GameTestState;
 import net.minecraft.test.PositionedException;
 import net.minecraft.test.TimedTaskRunner;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -174,7 +175,26 @@ public class TestContext {
     public void useBlock(BlockPos pos, PlayerEntity player, BlockHitResult result) {
         BlockPos blockPos = this.getAbsolutePos(pos);
         BlockState blockState = this.getWorld().getBlockState(blockPos);
-        blockState.onUse(this.getWorld(), player, Hand.MAIN_HAND, result);
+        ActionResult actionResult = blockState.onUse(this.getWorld(), player, Hand.MAIN_HAND, result);
+        if (!actionResult.isAccepted()) {
+            ItemUsageContext itemUsageContext = new ItemUsageContext(player, Hand.MAIN_HAND, result);
+            player.getStackInHand(Hand.MAIN_HAND).useOnBlock(itemUsageContext);
+        }
+    }
+
+    public void useToolOnBlock(BlockPos pos, PlayerEntity player, BlockHitResult result) {
+        BlockPos blockPos = this.getAbsolutePos(pos);
+        BlockState blockState = this.getWorld().getBlockState(blockPos);
+        ActionResult actionResult = blockState.onUse(this.getWorld(), player, Hand.MAIN_HAND, result);
+        if (!actionResult.isAccepted()) {
+            ItemUsageContext itemUsageContext = new ItemUsageContext(player, Hand.MAIN_HAND, result);
+            ItemStack itemStack = player.getStackInHand(Hand.MAIN_HAND);
+            if (player.isUsingItem()) {
+                itemStack.usageTick(this.getWorld(), player, player.getItemUseTimeLeft());
+            } else {
+                itemStack.useOnBlock(itemUsageContext);
+            }
+        }
     }
 
     public LivingEntity drown(LivingEntity entity) {
@@ -339,7 +359,7 @@ public class TestContext {
     public void expectEntityInside(EntityType<?> type, Vec3d pos1, Vec3d pos2) {
         List<Entity> list = this.getWorld().getEntitiesByType(type, new Box(pos1, pos2), Entity::isAlive);
         if (list.isEmpty()) {
-            throw new PositionedException("Expected " + type.getUntranslatedName() + " between ", new BlockPos(pos1), new BlockPos(pos2), this.test.getTick());
+            throw new PositionedException("Expected " + type.getUntranslatedName() + " between ", BlockPos.ofFloored(pos1), BlockPos.ofFloored(pos2), this.test.getTick());
         }
     }
 

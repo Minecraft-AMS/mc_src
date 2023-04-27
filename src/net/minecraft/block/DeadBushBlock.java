@@ -18,7 +18,7 @@ extends PlantBlock {
     protected static final float field_31080 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 13.0, 14.0);
 
-    protected DeadBushBlock(AbstractBlock.Settings settings) {
+    public DeadBushBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

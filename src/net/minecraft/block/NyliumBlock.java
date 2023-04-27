@@ -25,7 +25,7 @@ import net.minecraft.world.gen.feature.NetherConfiguredFeatures;
 public class NyliumBlock
 extends Block
 implements Fertilizable {
-    protected NyliumBlock(AbstractBlock.Settings settings) {
+    public NyliumBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

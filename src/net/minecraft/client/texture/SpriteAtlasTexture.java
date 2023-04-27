@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -25,6 +24,7 @@ import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.DynamicTexture;
 import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteContents;
@@ -41,7 +41,8 @@ import org.slf4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class SpriteAtlasTexture
 extends AbstractTexture
-implements TextureTickListener {
+implements DynamicTexture,
+TextureTickListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     @Deprecated
     public static final Identifier BLOCK_ATLAS_TEXTURE = PlayerScreenHandler.BLOCK_ATLAS_TEXTURE;
@@ -52,6 +53,9 @@ implements TextureTickListener {
     private Map<Identifier, Sprite> sprites = Map.of();
     private final Identifier id;
     private final int maxTextureSize;
+    private int width;
+    private int height;
+    private int mipLevel;
 
     public SpriteAtlasTexture(Identifier id) {
         this.id = id;
@@ -65,6 +69,9 @@ implements TextureTickListener {
     public void upload(SpriteLoader.StitchResult stitchResult) {
         LOGGER.info("Created: {}x{}x{} {}-atlas", new Object[]{stitchResult.width(), stitchResult.height(), stitchResult.mipLevel(), this.id});
         TextureUtil.prepareImage(this.getGlId(), stitchResult.mipLevel(), stitchResult.width(), stitchResult.height());
+        this.width = stitchResult.width();
+        this.height = stitchResult.height();
+        this.mipLevel = stitchResult.mipLevel();
         this.clear();
         this.sprites = Map.copyOf(stitchResult.regions());
         ArrayList<SpriteContents> list = new ArrayList<SpriteContents>();
@@ -89,23 +96,17 @@ implements TextureTickListener {
         this.animatedSprites = List.copyOf(list2);
     }
 
-    private void dumpAtlasTextureAndInfo(int scales, int width, int height) {
-        String string = this.id.toUnderscoreSeparatedString();
-        Path path = TextureUtil.getDebugTexturePath();
-        try {
-            Files.createDirectories(path, new FileAttribute[0]);
-            TextureUtil.writeAsPNG(path, string, this.getGlId(), scales, width, height);
-            SpriteAtlasTexture.dumpAtlasInfos(path, string, this.sprites);
-        }
-        catch (IOException iOException) {
-            LOGGER.warn("Failed to dump atlas contents to {}", (Object)path);
-        }
+    @Override
+    public void save(Identifier id, Path path) throws IOException {
+        String string = id.toUnderscoreSeparatedString();
+        TextureUtil.writeAsPNG(path, string, this.getGlId(), this.mipLevel, this.width, this.height);
+        SpriteAtlasTexture.dumpAtlasInfos(path, string, this.sprites);
     }
 
-    private static void dumpAtlasInfos(Path path, String string, Map<Identifier, Sprite> map) {
-        Path path2 = path.resolve(string + ".txt");
+    private static void dumpAtlasInfos(Path path, String id, Map<Identifier, Sprite> sprites) {
+        Path path2 = path.resolve(id + ".txt");
         try (BufferedWriter writer = Files.newBufferedWriter(path2, new OpenOption[0]);){
-            for (Map.Entry entry : map.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
+            for (Map.Entry entry : sprites.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
                 Sprite sprite = (Sprite)entry.getValue();
                 writer.write(String.format(Locale.ROOT, "%s\tx=%d\ty=%d\tw=%d\th=%d%n", entry.getKey(), sprite.getX(), sprite.getY(), sprite.getContents().getWidth(), sprite.getContents().getHeight()));
             }
@@ -153,6 +154,14 @@ implements TextureTickListener {
 
     public int getMaxTextureSize() {
         return this.maxTextureSize;
+    }
+
+    int getWidth() {
+        return this.width;
+    }
+
+    int getHeight() {
+        return this.height;
     }
 
     public void applyTextureFilter(SpriteLoader.StitchResult data) {

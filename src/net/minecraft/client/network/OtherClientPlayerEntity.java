@@ -17,13 +17,17 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 
 @Environment(value=EnvType.CLIENT)
 public class OtherClientPlayerEntity
 extends AbstractClientPlayerEntity {
+    private Vec3d clientVelocity = Vec3d.ZERO;
+    private int velocityLerpDivisor;
+
     public OtherClientPlayerEntity(ClientWorld clientWorld, GameProfile gameProfile) {
         super(clientWorld, gameProfile);
-        this.stepHeight = 1.0f;
+        this.setStepHeight(1.0f);
         this.noClip = true;
     }
 
@@ -44,7 +48,7 @@ extends AbstractClientPlayerEntity {
     @Override
     public void tick() {
         super.tick();
-        this.updateLimbs(this, false);
+        this.updateLimbs(false);
     }
 
     @Override
@@ -63,6 +67,10 @@ extends AbstractClientPlayerEntity {
             this.headYaw += (float)(MathHelper.wrapDegrees(this.serverHeadYaw - (double)this.headYaw) / (double)this.headTrackingIncrements);
             --this.headTrackingIncrements;
         }
+        if (this.velocityLerpDivisor > 0) {
+            this.addVelocity(new Vec3d((this.clientVelocity.x - this.getVelocity().x) / (double)this.velocityLerpDivisor, (this.clientVelocity.y - this.getVelocity().y) / (double)this.velocityLerpDivisor, (this.clientVelocity.z - this.getVelocity().z) / (double)this.velocityLerpDivisor));
+            --this.velocityLerpDivisor;
+        }
         this.prevStrideDistance = this.strideDistance;
         this.tickHandSwing();
         float g = !this.onGround || this.isDead() ? 0.0f : (float)Math.min(0.1, this.getVelocity().horizontalLength());
@@ -70,6 +78,12 @@ extends AbstractClientPlayerEntity {
         this.world.getProfiler().push("push");
         this.tickCramming();
         this.world.getProfiler().pop();
+    }
+
+    @Override
+    public void setVelocityClient(double x, double y, double z) {
+        this.clientVelocity = new Vec3d(x, y, z);
+        this.velocityLerpDivisor = this.getType().getTrackTickInterval() + 1;
     }
 
     @Override

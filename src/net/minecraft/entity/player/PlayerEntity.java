@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Predicate;
-import net.minecraft.SharedConstants;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.BedBlock;
 import net.minecraft.block.Block;
@@ -85,6 +84,7 @@ import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.item.SwordItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
@@ -92,6 +92,7 @@ import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Scoreboard;
@@ -130,6 +131,7 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -186,6 +188,7 @@ extends LivingEntity {
     private Optional<GlobalPos> lastDeathPos = Optional.empty();
     @Nullable
     public FishingBobberEntity fishHook;
+    protected float damageTiltYaw;
 
     public PlayerEntity(World world, BlockPos pos, float yaw, GameProfile gameProfile) {
         super((EntityType<? extends LivingEntity>)EntityType.PLAYER, world);
@@ -428,7 +431,7 @@ extends LivingEntity {
         this.currentScreenHandler = this.playerScreenHandler;
     }
 
-    protected void closeScreenHandler() {
+    protected void onHandledScreenClosed() {
     }
 
     @Override
@@ -470,10 +473,6 @@ extends LivingEntity {
         this.inventory.updateItems();
         this.prevStrideDistance = this.strideDistance;
         super.tickMovement();
-        this.airStrafingSpeed = 0.02f;
-        if (this.isSprinting()) {
-            this.airStrafingSpeed += 0.006f;
-        }
         this.setMovementSpeed((float)this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
         float f = !this.onGround || this.isDead() || this.isSwimming() ? 0.0f : Math.min(0.1f, (float)this.getVelocity().horizontalLength());
         this.strideDistance += (f - this.strideDistance) * 0.4f;
@@ -545,7 +544,7 @@ extends LivingEntity {
             this.drop(damageSource);
         }
         if (damageSource != null) {
-            this.setVelocity(-MathHelper.cos((this.knockbackVelocity + this.getYaw()) * ((float)Math.PI / 180)) * 0.1f, 0.1f, -MathHelper.sin((this.knockbackVelocity + this.getYaw()) * ((float)Math.PI / 180)) * 0.1f);
+            this.setVelocity(-MathHelper.cos((this.getDamageTiltYaw() + this.getYaw()) * ((float)Math.PI / 180)) * 0.1f, 0.1f, -MathHelper.sin((this.getDamageTiltYaw() + this.getYaw()) * ((float)Math.PI / 180)) * 0.1f);
         } else {
             this.setVelocity(0.0, 0.1, 0.0);
         }
@@ -576,19 +575,7 @@ extends LivingEntity {
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        if (source == DamageSource.ON_FIRE) {
-            return SoundEvents.ENTITY_PLAYER_HURT_ON_FIRE;
-        }
-        if (source == DamageSource.DROWN) {
-            return SoundEvents.ENTITY_PLAYER_HURT_DROWN;
-        }
-        if (source == DamageSource.SWEET_BERRY_BUSH) {
-            return SoundEvents.ENTITY_PLAYER_HURT_SWEET_BERRY_BUSH;
-        }
-        if (source == DamageSource.FREEZE) {
-            return SoundEvents.ENTITY_PLAYER_HURT_FREEZE;
-        }
-        return SoundEvents.ENTITY_PLAYER_HURT;
+        return source.getType().effects().getSound();
     }
 
     @Override
@@ -701,7 +688,7 @@ extends LivingEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
+        NbtHelper.putDataVersion(nbt);
         nbt.put("Inventory", this.inventory.writeNbt(new NbtList()));
         nbt.putInt("SelectedItemSlot", this.inventory.selectedSlot);
         nbt.putShort("SleepTimer", (short)this.sleepTimer);
@@ -727,16 +714,16 @@ extends LivingEntity {
         if (super.isInvulnerableTo(damageSource)) {
             return true;
         }
-        if (damageSource == DamageSource.DROWN) {
+        if (damageSource.isIn(DamageTypeTags.IS_DROWNING)) {
             return !this.world.getGameRules().getBoolean(GameRules.DROWNING_DAMAGE);
         }
-        if (damageSource.isFromFalling()) {
+        if (damageSource.isIn(DamageTypeTags.IS_FALL)) {
             return !this.world.getGameRules().getBoolean(GameRules.FALL_DAMAGE);
         }
-        if (damageSource.isFire()) {
+        if (damageSource.isIn(DamageTypeTags.IS_FIRE)) {
             return !this.world.getGameRules().getBoolean(GameRules.FIRE_DAMAGE);
         }
-        if (damageSource == DamageSource.FREEZE) {
+        if (damageSource.isIn(DamageTypeTags.IS_FREEZING)) {
             return !this.world.getGameRules().getBoolean(GameRules.FREEZE_DAMAGE);
         }
         return false;
@@ -747,7 +734,7 @@ extends LivingEntity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (this.abilities.invulnerable && !source.isOutOfWorld()) {
+        if (this.abilities.invulnerable && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return false;
         }
         this.despawnCounter = 0;
@@ -851,8 +838,8 @@ extends LivingEntity {
         }
         this.addExhaustion(source.getExhaustion());
         float h = this.getHealth();
-        this.setHealth(this.getHealth() - amount);
         this.getDamageTracker().onDamage(source, h, amount);
+        this.setHealth(this.getHealth() - amount);
         if (amount < 3.4028235E37f) {
             this.increaseStat(Stats.DAMAGE_TAKEN, Math.round(amount * 10.0f));
         }
@@ -917,6 +904,7 @@ extends LivingEntity {
                 itemStack = itemStack2;
             }
             if ((actionResult2 = itemStack.useOnEntity(this, (LivingEntity)entity, hand)).isAccepted()) {
+                this.world.emitGameEvent(GameEvent.ENTITY_INTERACT, entity.getPos(), GameEvent.Emitter.of(this));
                 if (itemStack.isEmpty() && !this.abilities.creativeMode) {
                     this.setStackInHand(hand, ItemStack.EMPTY);
                 }
@@ -953,7 +941,7 @@ extends LivingEntity {
             double d = movement.x;
             double e = movement.z;
             double f = 0.05;
-            while (d != 0.0 && this.world.isSpaceEmpty(this, this.getBoundingBox().offset(d, -this.stepHeight, 0.0))) {
+            while (d != 0.0 && this.world.isSpaceEmpty(this, this.getBoundingBox().offset(d, -this.getStepHeight(), 0.0))) {
                 if (d < 0.05 && d >= -0.05) {
                     d = 0.0;
                     continue;
@@ -964,7 +952,7 @@ extends LivingEntity {
                 }
                 d += 0.05;
             }
-            while (e != 0.0 && this.world.isSpaceEmpty(this, this.getBoundingBox().offset(0.0, -this.stepHeight, e))) {
+            while (e != 0.0 && this.world.isSpaceEmpty(this, this.getBoundingBox().offset(0.0, -this.getStepHeight(), e))) {
                 if (e < 0.05 && e >= -0.05) {
                     e = 0.0;
                     continue;
@@ -975,7 +963,7 @@ extends LivingEntity {
                 }
                 e += 0.05;
             }
-            while (d != 0.0 && e != 0.0 && this.world.isSpaceEmpty(this, this.getBoundingBox().offset(d, -this.stepHeight, e))) {
+            while (d != 0.0 && e != 0.0 && this.world.isSpaceEmpty(this, this.getBoundingBox().offset(d, -this.getStepHeight(), e))) {
                 d = d < 0.05 && d >= -0.05 ? 0.0 : (d > 0.0 ? (d -= 0.05) : (d += 0.05));
                 if (e < 0.05 && e >= -0.05) {
                     e = 0.0;
@@ -993,7 +981,7 @@ extends LivingEntity {
     }
 
     private boolean method_30263() {
-        return this.onGround || this.fallDistance < this.stepHeight && !this.world.isSpaceEmpty(this, this.getBoundingBox().offset(0.0, this.fallDistance - this.stepHeight, 0.0));
+        return this.onGround || this.fallDistance < this.getStepHeight() && !this.world.isSpaceEmpty(this, this.getBoundingBox().offset(0.0, this.fallDistance - this.getStepHeight(), 0.0));
     }
 
     public void attack(Entity target) {
@@ -1041,7 +1029,7 @@ extends LivingEntity {
                 }
             }
             Vec3d vec3d = target.getVelocity();
-            boolean bl6 = target.damage(DamageSource.player(this), f);
+            boolean bl6 = target.damage(this.getDamageSources().playerAttack(this), f);
             if (bl6) {
                 if (i > 0) {
                     if (target instanceof LivingEntity) {
@@ -1058,7 +1046,7 @@ extends LivingEntity {
                     for (LivingEntity livingEntity : list) {
                         if (livingEntity == this || livingEntity == target || this.isTeammate(livingEntity) || livingEntity instanceof ArmorStandEntity && ((ArmorStandEntity)livingEntity).isMarker() || !(this.squaredDistanceTo(livingEntity) < 9.0)) continue;
                         livingEntity.takeKnockback(0.4f, MathHelper.sin(this.getYaw() * ((float)Math.PI / 180)), -MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)));
-                        livingEntity.damage(DamageSource.player(this), l);
+                        livingEntity.damage(this.getDamageSources().playerAttack(this), l);
                     }
                     this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, this.getSoundCategory(), 1.0f, 1.0f);
                     this.spawnSweepAttackParticles();
@@ -1156,9 +1144,9 @@ extends LivingEntity {
     @Override
     public void remove(Entity.RemovalReason reason) {
         super.remove(reason);
-        this.playerScreenHandler.close(this);
+        this.playerScreenHandler.onClosed(this);
         if (this.currentScreenHandler != null && this.shouldCloseHandledScreenOnRespawn()) {
-            this.closeScreenHandler();
+            this.onHandledScreenClosed();
         }
     }
 
@@ -1289,19 +1277,16 @@ extends LivingEntity {
             double h;
             g = this.getRotationVector().y;
             double d2 = h = g < -0.2 ? 0.085 : 0.06;
-            if (g <= 0.0 || this.jumping || !this.world.getBlockState(new BlockPos(this.getX(), this.getY() + 1.0 - 0.1, this.getZ())).getFluidState().isEmpty()) {
+            if (g <= 0.0 || this.jumping || !this.world.getBlockState(BlockPos.ofFloored(this.getX(), this.getY() + 1.0 - 0.1, this.getZ())).getFluidState().isEmpty()) {
                 Vec3d vec3d = this.getVelocity();
                 this.setVelocity(vec3d.add(0.0, (g - vec3d.y) * h, 0.0));
             }
         }
         if (this.abilities.flying && !this.hasVehicle()) {
             g = this.getVelocity().y;
-            float i = this.airStrafingSpeed;
-            this.airStrafingSpeed = this.abilities.getFlySpeed() * (float)(this.isSprinting() ? 2 : 1);
             super.travel(movementInput);
             Vec3d vec3d2 = this.getVelocity();
             this.setVelocity(vec3d2.x, g * 0.6, vec3d2.z);
-            this.airStrafingSpeed = i;
             this.onLanding();
             this.setFlag(7, false);
         } else {
@@ -1674,6 +1659,11 @@ extends LivingEntity {
     public abstract boolean isSpectator();
 
     @Override
+    public boolean canBeHitByProjectile() {
+        return !this.isSpectator() && super.canBeHitByProjectile();
+    }
+
+    @Override
     public boolean isSwimming() {
         return !this.abilities.flying && !this.isSpectator() && super.isSwimming();
     }
@@ -1833,7 +1823,7 @@ extends LivingEntity {
     }
 
     @Override
-    public ItemStack getArrowType(ItemStack stack) {
+    public ItemStack getProjectileType(ItemStack stack) {
         if (!(stack.getItem() instanceof RangedWeaponItem)) {
             return ItemStack.EMPTY;
         }
@@ -1915,6 +1905,30 @@ extends LivingEntity {
 
     public void setLastDeathPos(Optional<GlobalPos> lastDeathPos) {
         this.lastDeathPos = lastDeathPos;
+    }
+
+    @Override
+    public float getDamageTiltYaw() {
+        return this.damageTiltYaw;
+    }
+
+    @Override
+    public void animateDamage(float yaw) {
+        super.animateDamage(yaw);
+        this.damageTiltYaw = yaw;
+    }
+
+    @Override
+    public boolean canSprintAsVehicle() {
+        return true;
+    }
+
+    @Override
+    protected float getOffGroundSpeed() {
+        if (this.abilities.flying && !this.hasVehicle()) {
+            return this.isSprinting() ? this.abilities.getFlySpeed() * 2.0f : this.abilities.getFlySpeed();
+        }
+        return this.isSprinting() ? 0.025999999f : 0.02f;
     }
 
     public static final class SleepFailureReason

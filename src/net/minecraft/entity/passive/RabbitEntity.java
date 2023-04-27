@@ -298,9 +298,9 @@ implements VariantHolder<RabbitType> {
     public boolean tryAttack(Entity target) {
         if (this.getVariant() == RabbitType.EVIL) {
             this.playSound(SoundEvents.ENTITY_RABBIT_ATTACK, 1.0f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
-            return target.damage(DamageSource.mob(this), 8.0f);
+            return target.damage(this.getDamageSources().mobAttack(this), 8.0f);
         }
-        return target.damage(DamageSource.mob(this), 3.0f);
+        return target.damage(this.getDamageSources().mobAttack(this), 3.0f);
     }
 
     @Override
@@ -381,10 +381,10 @@ implements VariantHolder<RabbitType> {
     private static RabbitType getTypeFromPos(WorldAccess world, BlockPos pos) {
         RegistryEntry<Biome> registryEntry = world.getBiome(pos);
         int i = world.getRandom().nextInt(100);
-        if (registryEntry.value().getPrecipitation() == Biome.Precipitation.SNOW) {
+        if (registryEntry.isIn(BiomeTags.SPAWNS_WHITE_RABBITS)) {
             return i < 80 ? RabbitType.WHITE : RabbitType.WHITE_SPLOTCHED;
         }
-        if (registryEntry.isIn(BiomeTags.ONLY_ALLOWS_SNOW_AND_GOLD_RABBITS)) {
+        if (registryEntry.isIn(BiomeTags.SPAWNS_GOLD_RABBITS)) {
             return RabbitType.GOLD;
         }
         return i < 50 ? RabbitType.BROWN : (i < 90 ? RabbitType.SALT : RabbitType.BLACK);

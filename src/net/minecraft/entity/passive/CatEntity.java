@@ -23,6 +23,7 @@ import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.AttackGoal;
 import net.minecraft.entity.ai.goal.CatSitOnBlockGoal;
+import net.minecraft.entity.ai.goal.EscapeDangerGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.GoToBedAndSleepGoal;
@@ -114,9 +115,10 @@ implements VariantHolder<CatVariant> {
     protected void initGoals() {
         this.temptGoal = new TemptGoal(this, 0.6, TAMING_INGREDIENT, true);
         this.goalSelector.add(1, new SwimGoal(this));
-        this.goalSelector.add(1, new SitGoal(this));
-        this.goalSelector.add(2, new SleepWithOwnerGoal(this));
-        this.goalSelector.add(3, this.temptGoal);
+        this.goalSelector.add(1, new EscapeDangerGoal(this, 1.5));
+        this.goalSelector.add(2, new SitGoal(this));
+        this.goalSelector.add(3, new SleepWithOwnerGoal(this));
+        this.goalSelector.add(4, this.temptGoal);
         this.goalSelector.add(5, new GoToBedAndSleepGoal(this, 1.1, 8));
         this.goalSelector.add(6, new FollowOwnerGoal(this, 1.0, 10.0f, 5.0f, false));
         this.goalSelector.add(7, new CatSitOnBlockGoal(this, 0.8));
@@ -250,11 +252,6 @@ implements VariantHolder<CatVariant> {
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
-        return false;
-    }
-
-    @Override
     protected void eat(PlayerEntity player, Hand hand, ItemStack stack) {
         if (this.isBreedingItem(stack)) {
             this.playSound(SoundEvents.ENTITY_CAT_EAT, 1.0f, 1.0f);
@@ -268,7 +265,7 @@ implements VariantHolder<CatVariant> {
 
     @Override
     public boolean tryAttack(Entity target) {
-        return target.damage(DamageSource.mob(this), this.getAttackDamage());
+        return target.damage(this.getDamageSources().mobAttack(this), this.getAttackDamage());
     }
 
     @Override

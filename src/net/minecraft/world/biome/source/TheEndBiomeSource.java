@@ -2,18 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.biome.source;
 
-import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.List;
+import java.util.stream.Stream;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryOps;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -39,12 +37,16 @@ extends BiomeSource {
     }
 
     private TheEndBiomeSource(RegistryEntry<Biome> centerBiome, RegistryEntry<Biome> highlandsBiome, RegistryEntry<Biome> midlandsBiome, RegistryEntry<Biome> smallIslandsBiome, RegistryEntry<Biome> barrensBiome) {
-        super((List<RegistryEntry<Biome>>)ImmutableList.of(centerBiome, highlandsBiome, midlandsBiome, smallIslandsBiome, barrensBiome));
         this.centerBiome = centerBiome;
         this.highlandsBiome = highlandsBiome;
         this.midlandsBiome = midlandsBiome;
         this.smallIslandsBiome = smallIslandsBiome;
         this.barrensBiome = barrensBiome;
+    }
+
+    @Override
+    protected Stream<RegistryEntry<Biome>> biomeStream() {
+        return Stream.of(this.centerBiome, this.highlandsBiome, this.midlandsBiome, this.smallIslandsBiome, this.barrensBiome);
     }
 
     @Override

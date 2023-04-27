@@ -83,7 +83,7 @@ public class FeatureManager {
             HashSet set = new HashSet();
             FeatureSet featureSet = this.featureSetOf((Iterable<Identifier>)featureIds, set::add);
             if (!set.isEmpty()) {
-                return DataResult.error((String)("Unknown feature ids: " + set), (Object)featureSet);
+                return DataResult.error(() -> "Unknown feature ids: " + set, (Object)featureSet);
             }
             return DataResult.success((Object)featureSet);
         }, features -> List.copyOf(this.toId((FeatureSet)features)));

@@ -24,7 +24,7 @@ public final class TextColor {
     private static final String RGB_PREFIX = "#";
     public static final Codec<TextColor> CODEC = Codec.STRING.comapFlatMap(color -> {
         TextColor textColor = TextColor.parse(color);
-        return textColor != null ? DataResult.success((Object)textColor) : DataResult.error((String)"String is not a valid color name or hex color code");
+        return textColor != null ? DataResult.success((Object)textColor) : DataResult.error(() -> "String is not a valid color name or hex color code");
     }, TextColor::getName);
     private static final Map<Formatting, TextColor> FORMATTING_TO_COLOR = (Map)Stream.of(Formatting.values()).filter(Formatting::isColor).collect(ImmutableMap.toImmutableMap(Function.identity(), formatting -> new TextColor(formatting.getColorValue(), formatting.getName())));
     private static final Map<String, TextColor> BY_NAME = (Map)FORMATTING_TO_COLOR.values().stream().collect(ImmutableMap.toImmutableMap(textColor -> textColor.name, Function.identity()));
@@ -53,7 +53,7 @@ public final class TextColor {
         return this.getHexCode();
     }
 
-    private String getHexCode() {
+    public final String getHexCode() {
         return String.format(Locale.ROOT, "#%06X", this.rgb);
     }
 

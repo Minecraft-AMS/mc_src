@@ -107,7 +107,7 @@ extends JsonDataLoader {
     }
 
     public <C extends Inventory, T extends Recipe<C>> List<T> getAllMatches(RecipeType<T> type, C inventory, World world) {
-        return this.getAllOfType(type).values().stream().filter(recipe -> recipe.matches(inventory, world)).sorted(Comparator.comparing(recipe -> recipe.getOutput().getTranslationKey())).collect(Collectors.toList());
+        return this.getAllOfType(type).values().stream().filter(recipe -> recipe.matches(inventory, world)).sorted(Comparator.comparing(recipe -> recipe.getOutput(world.getRegistryManager()).getTranslationKey())).collect(Collectors.toList());
     }
 
     private <C extends Inventory, T extends Recipe<C>> Map<Identifier, T> getAllOfType(RecipeType<T> type) {

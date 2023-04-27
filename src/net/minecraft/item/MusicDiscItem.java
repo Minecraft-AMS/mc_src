@@ -13,6 +13,8 @@ import java.util.Map;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.JukeboxBlock;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.JukeboxBlockEntity;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -26,6 +28,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class MusicDiscItem
@@ -35,7 +38,7 @@ extends Item {
     private final SoundEvent sound;
     private final int lengthInTicks;
 
-    protected MusicDiscItem(int comparatorOutput, SoundEvent sound, Item.Settings settings, int lengthInSeconds) {
+    public MusicDiscItem(int comparatorOutput, SoundEvent sound, Item.Settings settings, int lengthInSeconds) {
         super(settings);
         this.comparatorOutput = comparatorOutput;
         this.sound = sound;
@@ -53,10 +56,14 @@ extends Item {
         }
         ItemStack itemStack = context.getStack();
         if (!world.isClient) {
-            ((JukeboxBlock)Blocks.JUKEBOX).setRecord(context.getPlayer(), world, blockPos, blockState, itemStack);
-            world.syncWorldEvent(null, 1010, blockPos, Item.getRawId(this));
-            itemStack.decrement(1);
             PlayerEntity playerEntity = context.getPlayer();
+            BlockEntity blockEntity = world.getBlockEntity(blockPos);
+            if (blockEntity instanceof JukeboxBlockEntity) {
+                JukeboxBlockEntity jukeboxBlockEntity = (JukeboxBlockEntity)blockEntity;
+                jukeboxBlockEntity.setStack(itemStack.copy());
+                world.emitGameEvent(GameEvent.BLOCK_CHANGE, blockPos, GameEvent.Emitter.of(playerEntity, blockState));
+            }
+            itemStack.decrement(1);
             if (playerEntity != null) {
                 playerEntity.incrementStat(Stats.PLAY_RECORD);
             }

@@ -10,7 +10,6 @@
 package net.minecraft.client.toast;
 
 import com.google.common.collect.Queues;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Deque;
@@ -111,6 +110,10 @@ extends DrawableHelper {
         return this.client;
     }
 
+    public double getNotificationDisplayTimeMultiplier() {
+        return this.client.options.getNotificationDisplayTime().getValue();
+    }
+
     @Environment(value=EnvType.CLIENT)
     class Entry<T extends Toast> {
         private static final long DISAPPEAR_TIME = 600L;
@@ -154,13 +157,10 @@ extends DrawableHelper {
             if (this.visibility == Toast.Visibility.SHOW && l - this.startTime <= 600L) {
                 this.showTime = l;
             }
-            MatrixStack matrixStack = RenderSystem.getModelViewStack();
-            matrixStack.push();
-            matrixStack.translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), this.topIndex * 32, 800.0f);
-            RenderSystem.applyModelViewMatrix();
+            matrices.push();
+            matrices.translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), this.topIndex * 32, 800.0f);
             Toast.Visibility visibility = this.instance.draw(matrices, this.field_2245, l - this.showTime);
-            matrixStack.pop();
-            RenderSystem.applyModelViewMatrix();
+            matrices.pop();
             if (visibility != this.visibility) {
                 this.startTime = l - (long)((int)((1.0f - this.getDisappearProgress(l)) * 600.0f));
                 this.visibility = visibility;

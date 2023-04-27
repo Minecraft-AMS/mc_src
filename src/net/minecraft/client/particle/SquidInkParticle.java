@@ -15,6 +15,7 @@ import net.minecraft.client.particle.ParticleFactory;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.ParticleEffect;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ColorHelper;
 
@@ -43,7 +44,7 @@ extends AnimatedParticle {
             if (this.age > this.maxAge / 2) {
                 this.setAlpha(1.0f - ((float)this.age - (float)(this.maxAge / 2)) / (float)this.maxAge);
             }
-            if (this.world.getBlockState(new BlockPos(this.x, this.y, this.z)).isAir()) {
+            if (this.world.getBlockState(BlockPos.ofFloored(this.x, this.y, this.z)).isAir()) {
                 this.velocityY -= (double)0.0074f;
             }
         }
@@ -62,6 +63,11 @@ extends AnimatedParticle {
         public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             return new SquidInkParticle(clientWorld, d, e, f, g, h, i, ColorHelper.Argb.getArgb(255, 204, 31, 102), this.spriteProvider);
         }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -76,6 +82,11 @@ extends AnimatedParticle {
         @Override
         public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
             return new SquidInkParticle(clientWorld, d, e, f, g, h, i, ColorHelper.Argb.getArgb(255, 255, 255, 255), this.spriteProvider);
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
         }
     }
 }

@@ -15,7 +15,7 @@ import net.minecraft.util.shape.PairList;
 
 public class SimplePairList
 implements PairList {
-    private static final DoubleList field_27346 = DoubleLists.unmodifiable((DoubleList)DoubleArrayList.wrap((double[])new double[]{0.0}));
+    private static final DoubleList ZERO = DoubleLists.unmodifiable((DoubleList)DoubleArrayList.wrap((double[])new double[]{0.0}));
     private final double[] valueIndices;
     private final int[] minValues;
     private final int[] maxValues;
@@ -85,7 +85,7 @@ implements PairList {
 
     @Override
     public DoubleList getPairs() {
-        return this.size <= 1 ? field_27346 : DoubleArrayList.wrap((double[])this.valueIndices, (int)this.size);
+        return this.size <= 1 ? ZERO : DoubleArrayList.wrap((double[])this.valueIndices, (int)this.size);
     }
 }
 

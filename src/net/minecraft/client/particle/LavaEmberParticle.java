@@ -16,6 +16,7 @@ import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 
 @Environment(value=EnvType.CLIENT)
@@ -77,6 +78,11 @@ extends SpriteBillboardParticle {
             LavaEmberParticle lavaEmberParticle = new LavaEmberParticle(clientWorld, d, e, f);
             lavaEmberParticle.setSprite(this.spriteProvider);
             return lavaEmberParticle;
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
         }
     }
 }

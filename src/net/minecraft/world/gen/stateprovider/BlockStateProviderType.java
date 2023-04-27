@@ -32,7 +32,7 @@ public class BlockStateProviderType<P extends BlockStateProvider> {
         return Registry.register(Registries.BLOCK_STATE_PROVIDER_TYPE, id, new BlockStateProviderType<P>(codec));
     }
 
-    private BlockStateProviderType(Codec<P> codec) {
+    public BlockStateProviderType(Codec<P> codec) {
         this.codec = codec;
     }
 

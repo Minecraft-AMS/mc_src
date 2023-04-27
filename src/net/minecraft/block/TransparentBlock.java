@@ -10,7 +10,7 @@ import net.minecraft.util.math.Direction;
 
 public class TransparentBlock
 extends Block {
-    protected TransparentBlock(AbstractBlock.Settings settings) {
+    public TransparentBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

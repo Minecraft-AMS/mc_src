@@ -568,7 +568,7 @@ public abstract class ScreenHandler {
         return true;
     }
 
-    public void close(PlayerEntity player) {
+    public void onClosed(PlayerEntity player) {
         ItemStack itemStack;
         if (player instanceof ServerPlayerEntity && !(itemStack = this.getCursorStack()).isEmpty()) {
             if (!player.isAlive() || ((ServerPlayerEntity)player).isDisconnected()) {
@@ -599,7 +599,7 @@ public abstract class ScreenHandler {
     }
 
     public void setStackInSlot(int slot, int revision, ItemStack stack) {
-        this.getSlot(slot).setStack(stack);
+        this.getSlot(slot).setStackNoCallbacks(stack);
         this.revision = revision;
     }
 

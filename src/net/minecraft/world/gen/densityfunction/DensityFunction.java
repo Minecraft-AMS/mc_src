@@ -30,7 +30,7 @@ public interface DensityFunction {
 
     public double sample(NoisePos var1);
 
-    public void applyEach(double[] var1, EachApplier var2);
+    public void fill(double[] var1, EachApplier var2);
 
     public DensityFunction apply(DensityFunctionVisitor var1);
 
@@ -87,8 +87,8 @@ public interface DensityFunction {
     public static interface Base
     extends DensityFunction {
         @Override
-        default public void applyEach(double[] densities, EachApplier applier) {
-            applier.applyEach(densities, this);
+        default public void fill(double[] densities, EachApplier applier) {
+            applier.fill(densities, this);
         }
 
         @Override
@@ -122,9 +122,9 @@ public interface DensityFunction {
     }
 
     public static interface EachApplier {
-        public NoisePos getPosAt(int var1);
+        public NoisePos at(int var1);
 
-        public void applyEach(double[] var1, DensityFunction var2);
+        public void fill(double[] var1, DensityFunction var2);
     }
 }
 

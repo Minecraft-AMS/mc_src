@@ -17,7 +17,7 @@ import net.minecraft.world.World;
 
 public class WetSpongeBlock
 extends Block {
-    protected WetSpongeBlock(AbstractBlock.Settings settings) {
+    public WetSpongeBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

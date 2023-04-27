@@ -24,7 +24,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -77,7 +76,6 @@ public class StructureTemplate {
     public static final String ENTITIES_BLOCK_POS_KEY = "blockPos";
     public static final String ENTITIES_NBT_KEY = "nbt";
     public static final String SIZE_KEY = "size";
-    static final int field_31698 = 16;
     private final List<PalettedBlockInfoList> blockInfoLists = Lists.newArrayList();
     private final List<StructureEntityInfo> entities = Lists.newArrayList();
     private Vec3i size = Vec3i.ZERO;
@@ -153,7 +151,7 @@ public class StructureTemplate {
             Vec3d vec3d = new Vec3d(entity2.getX() - (double)firstCorner.getX(), entity2.getY() - (double)firstCorner.getY(), entity2.getZ() - (double)firstCorner.getZ());
             NbtCompound nbtCompound = new NbtCompound();
             entity2.saveNbt(nbtCompound);
-            BlockPos blockPos = entity2 instanceof PaintingEntity ? ((PaintingEntity)entity2).getDecorationBlockPos().subtract(firstCorner) : new BlockPos(vec3d);
+            BlockPos blockPos = entity2 instanceof PaintingEntity ? ((PaintingEntity)entity2).getDecorationBlockPos().subtract(firstCorner) : BlockPos.ofFloored(vec3d);
             this.entities.add(new StructureEntityInfo(vec3d, blockPos, nbtCompound.copy()));
         }
     }
@@ -325,6 +323,9 @@ public class StructureTemplate {
             if (structureBlockInfo2 == null) continue;
             list.add(structureBlockInfo2);
         }
+        for (StructureProcessor structureProcessor : placementData.getProcessors()) {
+            structureProcessor.reprocess(world, pos, pivot, placementData, list);
+        }
         return list;
     }
 
@@ -345,7 +346,7 @@ public class StructureTemplate {
                 float f = entity.applyRotation(rotation);
                 entity.refreshPositionAndAngles(vec3d.x, vec3d.y, vec3d.z, f += entity.applyMirror(mirror) - entity.getYaw(), entity.getPitch());
                 if (initializeMobs && entity instanceof MobEntity) {
-                    ((MobEntity)entity).initialize(world, world.getLocalDifficulty(new BlockPos(vec3d2)), SpawnReason.STRUCTURE, null, nbtCompound);
+                    ((MobEntity)entity).initialize(world, world.getLocalDifficulty(BlockPos.ofFloored(vec3d2)), SpawnReason.STRUCTURE, null, nbtCompound);
                 }
                 world.spawnEntityAndPassengers((Entity)entity);
             });
@@ -542,8 +543,7 @@ public class StructureTemplate {
         }
         nbt.put(ENTITIES_KEY, nbtList4);
         nbt.put(SIZE_KEY, this.createNbtIntList(this.size.getX(), this.size.getY(), this.size.getZ()));
-        nbt.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
-        return nbt;
+        return NbtHelper.putDataVersion(nbt);
     }
 
     public void readNbt(RegistryEntryLookup<Block> blockLookup, NbtCompound nbt) {

@@ -5,7 +5,6 @@
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.lwjgl.opengl.GL11
  *  org.lwjgl.system.MemoryUtil
  *  org.slf4j.Logger
  */
@@ -14,14 +13,13 @@ package com.mojang.blaze3d.platform;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.util.concurrent.ThreadLocalRandom;
 import net.fabricmc.api.EnvType;
@@ -29,7 +27,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.util.annotation.DeobfuscateClass;
-import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 
@@ -89,22 +86,27 @@ public class TextureUtil {
     }
 
     public static ByteBuffer readResource(InputStream inputStream) throws IOException {
-        ByteBuffer byteBuffer;
-        if (inputStream instanceof FileInputStream) {
-            FileInputStream fileInputStream = (FileInputStream)inputStream;
-            FileChannel fileChannel = fileInputStream.getChannel();
-            byteBuffer = MemoryUtil.memAlloc((int)((int)fileChannel.size() + 1));
-            while (fileChannel.read(byteBuffer) != -1) {
-            }
-        } else {
-            byteBuffer = MemoryUtil.memAlloc((int)8192);
-            ReadableByteChannel readableByteChannel = Channels.newChannel(inputStream);
-            while (readableByteChannel.read(byteBuffer) != -1) {
-                if (byteBuffer.remaining() != 0) continue;
+        ReadableByteChannel readableByteChannel = Channels.newChannel(inputStream);
+        if (readableByteChannel instanceof SeekableByteChannel) {
+            SeekableByteChannel seekableByteChannel = (SeekableByteChannel)readableByteChannel;
+            return TextureUtil.readResource(readableByteChannel, (int)seekableByteChannel.size() + 1);
+        }
+        return TextureUtil.readResource(readableByteChannel, 8192);
+    }
+
+    private static ByteBuffer readResource(ReadableByteChannel channel, int bufSize) throws IOException {
+        ByteBuffer byteBuffer = MemoryUtil.memAlloc((int)bufSize);
+        try {
+            while (channel.read(byteBuffer) != -1) {
+                if (byteBuffer.hasRemaining()) continue;
                 byteBuffer = MemoryUtil.memRealloc((ByteBuffer)byteBuffer, (int)(byteBuffer.capacity() * 2));
             }
+            return byteBuffer;
         }
-        return byteBuffer;
+        catch (IOException iOException) {
+            MemoryUtil.memFree((Buffer)byteBuffer);
+            throw iOException;
+        }
     }
 
     public static void writeAsPNG(Path directory, String prefix, int textureId, int scales, int width, int height) {
@@ -124,19 +126,6 @@ public class TextureUtil {
                 LOGGER.debug("Unable to write: ", (Throwable)iOException);
             }
         }
-    }
-
-    public static void initTexture(IntBuffer imageData, int width, int height) {
-        RenderSystem.assertOnRenderThread();
-        GL11.glPixelStorei((int)3312, (int)0);
-        GL11.glPixelStorei((int)3313, (int)0);
-        GL11.glPixelStorei((int)3314, (int)0);
-        GL11.glPixelStorei((int)3315, (int)0);
-        GL11.glPixelStorei((int)3316, (int)0);
-        GL11.glPixelStorei((int)3317, (int)4);
-        GL11.glTexImage2D((int)3553, (int)0, (int)6408, (int)width, (int)height, (int)0, (int)32993, (int)33639, (IntBuffer)imageData);
-        GL11.glTexParameteri((int)3553, (int)10240, (int)9728);
-        GL11.glTexParameteri((int)3553, (int)10241, (int)9729);
     }
 
     public static Path getDebugTexturePath(Path path) {

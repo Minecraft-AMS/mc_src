@@ -49,7 +49,7 @@ extends Structure {
     private static final float field_31512 = 0.05f;
     private static final int field_31511 = 15;
     private final List<Setup> setups;
-    public static final Codec<RuinedPortalStructure> CODEC = RecordCodecBuilder.create(instance -> instance.group(RuinedPortalStructure.configCodecBuilder(instance), (App)Codecs.nonEmptyList(Setup.field_37814.listOf()).fieldOf("setups").forGetter(structure -> structure.setups)).apply((Applicative)instance, RuinedPortalStructure::new));
+    public static final Codec<RuinedPortalStructure> CODEC = RecordCodecBuilder.create(instance -> instance.group(RuinedPortalStructure.configCodecBuilder(instance), (App)Codecs.nonEmptyList(Setup.CODEC.listOf()).fieldOf("setups").forGetter(structure -> structure.setups)).apply((Applicative)instance, RuinedPortalStructure::new));
 
     public RuinedPortalStructure(Structure.Config config, List<Setup> setups) {
         super(config);
@@ -83,7 +83,7 @@ extends Structure {
             throw new IllegalStateException();
         }
         Setup setup4 = setup;
-        properties.airPocket = RuinedPortalStructure.method_41682(chunkRandom, setup4.airPocketProbability());
+        properties.airPocket = RuinedPortalStructure.shouldPlaceAirPocket(chunkRandom, setup4.airPocketProbability());
         properties.mossiness = setup4.mossiness();
         properties.overgrown = setup4.overgrown();
         properties.vines = setup4.vines();
@@ -102,22 +102,22 @@ extends Structure {
         int i = chunkGenerator.getHeight(blockPos3.getX(), blockPos3.getZ(), RuinedPortalStructurePiece.getHeightmapType(setup4.placement()), heightLimitView, noiseConfig) - 1;
         int j = RuinedPortalStructure.getFloorHeight(chunkRandom, chunkGenerator, setup4.placement(), properties.airPocket, i, blockBox.getBlockCountY(), blockBox, heightLimitView, noiseConfig);
         BlockPos blockPos4 = new BlockPos(blockPos2.getX(), j, blockPos2.getZ());
-        return Optional.of(new Structure.StructurePosition(blockPos4, structurePiecesCollector -> {
+        return Optional.of(new Structure.StructurePosition(blockPos4, collector -> {
             if (setup4.canBeCold()) {
                 properties.cold = RuinedPortalStructure.isColdAt(blockPos4, context.chunkGenerator().getBiomeSource().getBiome(BiomeCoords.fromBlock(blockPos4.getX()), BiomeCoords.fromBlock(blockPos4.getY()), BiomeCoords.fromBlock(blockPos4.getZ()), noiseConfig.getMultiNoiseSampler()));
             }
-            structurePiecesCollector.addPiece(new RuinedPortalStructurePiece(context.structureTemplateManager(), blockPos4, setup4.placement(), properties, identifier, structureTemplate, blockRotation, blockMirror, blockPos));
+            collector.addPiece(new RuinedPortalStructurePiece(context.structureTemplateManager(), blockPos4, setup4.placement(), properties, identifier, structureTemplate, blockRotation, blockMirror, blockPos));
         }));
     }
 
-    private static boolean method_41682(ChunkRandom chunkRandom, float f) {
-        if (f == 0.0f) {
+    private static boolean shouldPlaceAirPocket(ChunkRandom random, float probability) {
+        if (probability == 0.0f) {
             return false;
         }
-        if (f == 1.0f) {
+        if (probability == 1.0f) {
             return true;
         }
-        return chunkRandom.nextFloat() < f;
+        return random.nextFloat() < probability;
     }
 
     private static boolean isColdAt(BlockPos pos, RegistryEntry<Biome> biome) {
@@ -139,7 +139,7 @@ extends Structure {
             j = verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.PARTLY_BURIED ? height - blockCountY + MathHelper.nextBetween(random, 2, 8) : height;
         }
         ImmutableList list = ImmutableList.of((Object)new BlockPos(box.getMinX(), 0, box.getMinZ()), (Object)new BlockPos(box.getMaxX(), 0, box.getMinZ()), (Object)new BlockPos(box.getMinX(), 0, box.getMaxZ()), (Object)new BlockPos(box.getMaxX(), 0, box.getMaxZ()));
-        List list2 = list.stream().map(blockPos -> chunkGenerator.getColumnSample(blockPos.getX(), blockPos.getZ(), world, noiseConfig)).collect(Collectors.toList());
+        List list2 = list.stream().map(pos -> chunkGenerator.getColumnSample(pos.getX(), pos.getZ(), world, noiseConfig)).collect(Collectors.toList());
         Heightmap.Type type = verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.ON_OCEAN_FLOOR ? Heightmap.Type.OCEAN_FLOOR_WG : Heightmap.Type.WORLD_SURFACE_WG;
         block0: for (l = j; l > i; --l) {
             int m = 0;
@@ -165,7 +165,7 @@ extends Structure {
     }
 
     public record Setup(RuinedPortalStructurePiece.VerticalPlacement placement, float airPocketProbability, float mossiness, boolean overgrown, boolean vines, boolean canBeCold, boolean replaceWithBlackstone, float weight) {
-        public static final Codec<Setup> field_37814 = RecordCodecBuilder.create(instance -> instance.group((App)RuinedPortalStructurePiece.VerticalPlacement.CODEC.fieldOf("placement").forGetter(Setup::placement), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("air_pocket_probability").forGetter(Setup::airPocketProbability), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("mossiness").forGetter(Setup::mossiness), (App)Codec.BOOL.fieldOf("overgrown").forGetter(Setup::overgrown), (App)Codec.BOOL.fieldOf("vines").forGetter(Setup::vines), (App)Codec.BOOL.fieldOf("can_be_cold").forGetter(Setup::canBeCold), (App)Codec.BOOL.fieldOf("replace_with_blackstone").forGetter(Setup::replaceWithBlackstone), (App)Codecs.POSITIVE_FLOAT.fieldOf("weight").forGetter(Setup::weight)).apply((Applicative)instance, Setup::new));
+        public static final Codec<Setup> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RuinedPortalStructurePiece.VerticalPlacement.CODEC.fieldOf("placement").forGetter(Setup::placement), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("air_pocket_probability").forGetter(Setup::airPocketProbability), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("mossiness").forGetter(Setup::mossiness), (App)Codec.BOOL.fieldOf("overgrown").forGetter(Setup::overgrown), (App)Codec.BOOL.fieldOf("vines").forGetter(Setup::vines), (App)Codec.BOOL.fieldOf("can_be_cold").forGetter(Setup::canBeCold), (App)Codec.BOOL.fieldOf("replace_with_blackstone").forGetter(Setup::replaceWithBlackstone), (App)Codecs.POSITIVE_FLOAT.fieldOf("weight").forGetter(Setup::weight)).apply((Applicative)instance, Setup::new));
     }
 }
 

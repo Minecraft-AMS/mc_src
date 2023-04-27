@@ -11,6 +11,7 @@
  *  com.mojang.brigadier.exceptions.SimpleCommandExceptionType
  *  com.mojang.brigadier.suggestion.Suggestions
  *  com.mojang.brigadier.suggestion.SuggestionsBuilder
+ *  net.fabricmc.fabric.api.command.v2.FabricEntitySelectorReader
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.command;
@@ -34,6 +35,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
+import net.fabricmc.fabric.api.command.v2.FabricEntitySelectorReader;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.EntitySelectorOptions;
 import net.minecraft.command.FloatRangeArgument;
@@ -47,7 +49,8 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
-public class EntitySelectorReader {
+public class EntitySelectorReader
+implements FabricEntitySelectorReader {
     public static final char SELECTOR_PREFIX = '@';
     private static final char ARGUMENTS_OPENING = '[';
     private static final char ARGUMENTS_CLOSING = ']';

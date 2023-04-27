@@ -16,7 +16,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.passive.AxolotlEntity;
@@ -121,7 +120,7 @@ implements FlyingItemEntity {
             double d = this.squaredDistanceTo(livingEntity);
             if (!(d < 16.0)) continue;
             if (livingEntity.hurtByWater()) {
-                livingEntity.damage(DamageSource.magic(this, this.getOwner()), 1.0f);
+                livingEntity.damage(this.getDamageSources().indirectMagic(this, this.getOwner()), 1.0f);
             }
             if (!livingEntity.isOnFire() || !livingEntity.isAlive()) continue;
             livingEntity.extinguishWithSound();
@@ -140,19 +139,17 @@ implements FlyingItemEntity {
             for (LivingEntity livingEntity : list) {
                 double d;
                 if (!livingEntity.isAffectedBySplashPotions() || !((d = this.squaredDistanceTo(livingEntity)) < 16.0)) continue;
-                double e = 1.0 - Math.sqrt(d) / 4.0;
-                if (livingEntity == entity) {
-                    e = 1.0;
-                }
+                double e = livingEntity == entity ? 1.0 : 1.0 - Math.sqrt(d) / 4.0;
                 for (StatusEffectInstance statusEffectInstance : statusEffects) {
                     StatusEffect statusEffect = statusEffectInstance.getEffectType();
                     if (statusEffect.isInstant()) {
                         statusEffect.applyInstantEffect(this, this.getOwner(), livingEntity, statusEffectInstance.getAmplifier(), e);
                         continue;
                     }
-                    int i = (int)(e * (double)statusEffectInstance.getDuration() + 0.5);
-                    if (i <= 20) continue;
-                    livingEntity.addStatusEffect(new StatusEffectInstance(statusEffect, i, statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()), entity2);
+                    int i2 = statusEffectInstance.mapDuration(i -> (int)(e * (double)i + 0.5));
+                    StatusEffectInstance statusEffectInstance2 = new StatusEffectInstance(statusEffect, i2, statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles());
+                    if (statusEffectInstance2.isDurationBelow(20)) continue;
+                    livingEntity.addStatusEffect(statusEffectInstance2, entity2);
                 }
             }
         }

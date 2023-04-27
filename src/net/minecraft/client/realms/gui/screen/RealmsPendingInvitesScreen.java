@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -29,7 +28,6 @@ import net.minecraft.client.realms.exception.RealmsServiceException;
 import net.minecraft.client.realms.gui.screen.RealmsAcceptRejectButton;
 import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
-import net.minecraft.client.realms.util.RealmsTextureManager;
 import net.minecraft.client.realms.util.RealmsUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
@@ -156,12 +154,12 @@ extends RealmsScreen {
         this.tooltip = null;
         this.renderBackground(matrices);
         this.pendingInvitationSelectionList.render(matrices, mouseX, mouseY, delta);
-        RealmsPendingInvitesScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
+        RealmsPendingInvitesScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
         if (this.tooltip != null) {
             this.renderMousehoverTooltip(matrices, this.tooltip, mouseX, mouseY);
         }
         if (this.pendingInvitationSelectionList.getEntryCount() == 0 && this.loaded) {
-            RealmsPendingInvitesScreen.drawCenteredText(matrices, this.textRenderer, NO_PENDING_TEXT, this.width / 2, this.height / 2 - 20, 0xFFFFFF);
+            RealmsPendingInvitesScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, NO_PENDING_TEXT, this.width / 2, this.height / 2 - 20, 0xFFFFFF);
         }
         super.render(matrices, mouseX, mouseY, delta);
     }
@@ -173,7 +171,7 @@ extends RealmsScreen {
         int i = mouseX + 12;
         int j = mouseY - 12;
         int k = this.textRenderer.getWidth(tooltip);
-        this.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        RealmsPendingInvitesScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
         this.textRenderer.drawWithShadow(matrices, tooltip, (float)i, (float)j, 0xFFFFFF);
     }
 
@@ -205,11 +203,6 @@ extends RealmsScreen {
         @Override
         public int getRowWidth() {
             return 260;
-        }
-
-        @Override
-        public boolean isFocused() {
-            return RealmsPendingInvitesScreen.this.getFocused() == this;
         }
 
         @Override
@@ -264,10 +257,7 @@ extends RealmsScreen {
             RealmsPendingInvitesScreen.this.textRenderer.draw(matrices, invite.worldOwnerName, (float)(x + 38), (float)(y + 12), 0x6C6C6C);
             RealmsPendingInvitesScreen.this.textRenderer.draw(matrices, RealmsUtil.convertToAgePresentation(invite.date), (float)(x + 38), (float)(y + 24), 0x6C6C6C);
             RealmsAcceptRejectButton.render(matrices, this.buttons, RealmsPendingInvitesScreen.this.pendingInvitationSelectionList, x, y, mouseX, mouseY);
-            RealmsTextureManager.withBoundFace(invite.worldOwnerUuid, () -> {
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-                PlayerSkinDrawer.draw(matrices, x, y, 32);
-            });
+            RealmsUtil.drawPlayerHead(matrices, x, y, 32, invite.worldOwnerUuid);
         }
 
         @Override
@@ -286,7 +276,6 @@ extends RealmsScreen {
             @Override
             protected void render(MatrixStack matrices, int x, int y, boolean showTooltip) {
                 RenderSystem.setShaderTexture(0, ACCEPT_ICON);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 float f = showTooltip ? 19.0f : 0.0f;
                 DrawableHelper.drawTexture(matrices, x, y, f, 0.0f, 18, 18, 37, 18);
                 if (showTooltip) {
@@ -310,7 +299,6 @@ extends RealmsScreen {
             @Override
             protected void render(MatrixStack matrices, int x, int y, boolean showTooltip) {
                 RenderSystem.setShaderTexture(0, REJECT_ICON);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 float f = showTooltip ? 19.0f : 0.0f;
                 DrawableHelper.drawTexture(matrices, x, y, f, 0.0f, 18, 18, 37, 18);
                 if (showTooltip) {

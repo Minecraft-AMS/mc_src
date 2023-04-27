@@ -3,29 +3,69 @@
  */
 package net.minecraft.item;
 
+import java.util.EnumMap;
 import java.util.function.Supplier;
-import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ArmorMaterial;
 import net.minecraft.item.Items;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Lazy;
+import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.Util;
 
 public final class ArmorMaterials
 extends Enum<ArmorMaterials>
-implements ArmorMaterial {
-    public static final /* enum */ ArmorMaterials LEATHER = new ArmorMaterials("leather", 5, new int[]{1, 2, 3, 1}, 15, SoundEvents.ITEM_ARMOR_EQUIP_LEATHER, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.LEATHER));
-    public static final /* enum */ ArmorMaterials CHAIN = new ArmorMaterials("chainmail", 15, new int[]{1, 4, 5, 2}, 12, SoundEvents.ITEM_ARMOR_EQUIP_CHAIN, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.IRON_INGOT));
-    public static final /* enum */ ArmorMaterials IRON = new ArmorMaterials("iron", 15, new int[]{2, 5, 6, 2}, 9, SoundEvents.ITEM_ARMOR_EQUIP_IRON, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.IRON_INGOT));
-    public static final /* enum */ ArmorMaterials GOLD = new ArmorMaterials("gold", 7, new int[]{1, 3, 5, 2}, 25, SoundEvents.ITEM_ARMOR_EQUIP_GOLD, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.GOLD_INGOT));
-    public static final /* enum */ ArmorMaterials DIAMOND = new ArmorMaterials("diamond", 33, new int[]{3, 6, 8, 3}, 10, SoundEvents.ITEM_ARMOR_EQUIP_DIAMOND, 2.0f, 0.0f, () -> Ingredient.ofItems(Items.DIAMOND));
-    public static final /* enum */ ArmorMaterials TURTLE = new ArmorMaterials("turtle", 25, new int[]{2, 5, 6, 2}, 9, SoundEvents.ITEM_ARMOR_EQUIP_TURTLE, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.SCUTE));
-    public static final /* enum */ ArmorMaterials NETHERITE = new ArmorMaterials("netherite", 37, new int[]{3, 6, 8, 3}, 15, SoundEvents.ITEM_ARMOR_EQUIP_NETHERITE, 3.0f, 0.1f, () -> Ingredient.ofItems(Items.NETHERITE_INGOT));
-    private static final int[] BASE_DURABILITY;
+implements StringIdentifiable,
+ArmorMaterial {
+    public static final /* enum */ ArmorMaterials LEATHER = new ArmorMaterials("leather", 5, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 1);
+        map.put(ArmorItem.Type.LEGGINGS, 2);
+        map.put(ArmorItem.Type.CHESTPLATE, 3);
+        map.put(ArmorItem.Type.HELMET, 1);
+    }), 15, SoundEvents.ITEM_ARMOR_EQUIP_LEATHER, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.LEATHER));
+    public static final /* enum */ ArmorMaterials CHAIN = new ArmorMaterials("chainmail", 15, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 1);
+        map.put(ArmorItem.Type.LEGGINGS, 4);
+        map.put(ArmorItem.Type.CHESTPLATE, 5);
+        map.put(ArmorItem.Type.HELMET, 2);
+    }), 12, SoundEvents.ITEM_ARMOR_EQUIP_CHAIN, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.IRON_INGOT));
+    public static final /* enum */ ArmorMaterials IRON = new ArmorMaterials("iron", 15, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 2);
+        map.put(ArmorItem.Type.LEGGINGS, 5);
+        map.put(ArmorItem.Type.CHESTPLATE, 6);
+        map.put(ArmorItem.Type.HELMET, 2);
+    }), 9, SoundEvents.ITEM_ARMOR_EQUIP_IRON, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.IRON_INGOT));
+    public static final /* enum */ ArmorMaterials GOLD = new ArmorMaterials("gold", 7, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 1);
+        map.put(ArmorItem.Type.LEGGINGS, 3);
+        map.put(ArmorItem.Type.CHESTPLATE, 5);
+        map.put(ArmorItem.Type.HELMET, 2);
+    }), 25, SoundEvents.ITEM_ARMOR_EQUIP_GOLD, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.GOLD_INGOT));
+    public static final /* enum */ ArmorMaterials DIAMOND = new ArmorMaterials("diamond", 33, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 3);
+        map.put(ArmorItem.Type.LEGGINGS, 6);
+        map.put(ArmorItem.Type.CHESTPLATE, 8);
+        map.put(ArmorItem.Type.HELMET, 3);
+    }), 10, SoundEvents.ITEM_ARMOR_EQUIP_DIAMOND, 2.0f, 0.0f, () -> Ingredient.ofItems(Items.DIAMOND));
+    public static final /* enum */ ArmorMaterials TURTLE = new ArmorMaterials("turtle", 25, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 2);
+        map.put(ArmorItem.Type.LEGGINGS, 5);
+        map.put(ArmorItem.Type.CHESTPLATE, 6);
+        map.put(ArmorItem.Type.HELMET, 2);
+    }), 9, SoundEvents.ITEM_ARMOR_EQUIP_TURTLE, 0.0f, 0.0f, () -> Ingredient.ofItems(Items.SCUTE));
+    public static final /* enum */ ArmorMaterials NETHERITE = new ArmorMaterials("netherite", 37, Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+        map.put(ArmorItem.Type.BOOTS, 3);
+        map.put(ArmorItem.Type.LEGGINGS, 6);
+        map.put(ArmorItem.Type.CHESTPLATE, 8);
+        map.put(ArmorItem.Type.HELMET, 3);
+    }), 15, SoundEvents.ITEM_ARMOR_EQUIP_NETHERITE, 3.0f, 0.1f, () -> Ingredient.ofItems(Items.NETHERITE_INGOT));
+    public static final StringIdentifiable.Codec<ArmorMaterials> CODEC;
+    private static final EnumMap<ArmorItem.Type, Integer> BASE_DURABILITY;
     private final String name;
     private final int durabilityMultiplier;
-    private final int[] protectionAmounts;
+    private final EnumMap<ArmorItem.Type, Integer> protectionAmounts;
     private final int enchantability;
     private final SoundEvent equipSound;
     private final float toughness;
@@ -41,7 +81,7 @@ implements ArmorMaterial {
         return Enum.valueOf(ArmorMaterials.class, string);
     }
 
-    private ArmorMaterials(String name, int durabilityMultiplier, int[] protectionAmounts, int enchantability, SoundEvent equipSound, float toughness, float knockbackResistance, Supplier<Ingredient> repairIngredientSupplier) {
+    private ArmorMaterials(String name, int durabilityMultiplier, EnumMap<ArmorItem.Type, Integer> protectionAmounts, int enchantability, SoundEvent equipSound, float toughness, float knockbackResistance, Supplier<Ingredient> repairIngredientSupplier) {
         this.name = name;
         this.durabilityMultiplier = durabilityMultiplier;
         this.protectionAmounts = protectionAmounts;
@@ -53,13 +93,13 @@ implements ArmorMaterial {
     }
 
     @Override
-    public int getDurability(EquipmentSlot slot) {
-        return BASE_DURABILITY[slot.getEntitySlotId()] * this.durabilityMultiplier;
+    public int getDurability(ArmorItem.Type type) {
+        return BASE_DURABILITY.get((Object)type) * this.durabilityMultiplier;
     }
 
     @Override
-    public int getProtectionAmount(EquipmentSlot slot) {
-        return this.protectionAmounts[slot.getEntitySlotId()];
+    public int getProtection(ArmorItem.Type type) {
+        return this.protectionAmounts.get((Object)type);
     }
 
     @Override
@@ -92,13 +132,24 @@ implements ArmorMaterial {
         return this.knockbackResistance;
     }
 
+    @Override
+    public String asString() {
+        return this.name;
+    }
+
     private static /* synthetic */ ArmorMaterials[] method_36675() {
         return new ArmorMaterials[]{LEATHER, CHAIN, IRON, GOLD, DIAMOND, TURTLE, NETHERITE};
     }
 
     static {
         field_7888 = ArmorMaterials.method_36675();
-        BASE_DURABILITY = new int[]{13, 15, 16, 11};
+        CODEC = StringIdentifiable.createCodec(ArmorMaterials::values);
+        BASE_DURABILITY = Util.make(new EnumMap(ArmorItem.Type.class), map -> {
+            map.put(ArmorItem.Type.BOOTS, 13);
+            map.put(ArmorItem.Type.LEGGINGS, 15);
+            map.put(ArmorItem.Type.CHESTPLATE, 16);
+            map.put(ArmorItem.Type.HELMET, 11);
+        });
     }
 }
 

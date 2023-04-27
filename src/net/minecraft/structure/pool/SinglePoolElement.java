@@ -61,7 +61,7 @@ extends StructurePoolElement {
     private static <T> DataResult<T> encodeLocation(Either<Identifier, StructureTemplate> location, DynamicOps<T> ops, T prefix) {
         Optional optional = location.left();
         if (!optional.isPresent()) {
-            return DataResult.error((String)"Can not serialize a runtime pool element");
+            return DataResult.error(() -> "Can not serialize a runtime pool element");
         }
         return Identifier.CODEC.encode((Object)((Identifier)optional.get()), ops, prefix);
     }

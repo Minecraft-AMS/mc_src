@@ -236,7 +236,7 @@ Flutterer {
 
     @Override
     public boolean tryAttack(Entity target) {
-        boolean bl = target.damage(DamageSource.sting(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
+        boolean bl = target.damage(this.getDamageSources().sting(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
         if (bl) {
             this.applyDamageEffects(this, target);
             if (target instanceof LivingEntity) {
@@ -351,12 +351,12 @@ Flutterer {
         boolean bl = this.hasStung();
         this.ticksInsideWater = this.isInsideWaterOrBubbleColumn() ? ++this.ticksInsideWater : 0;
         if (this.ticksInsideWater > 20) {
-            this.damage(DamageSource.DROWN, 1.0f);
+            this.damage(this.getDamageSources().drown(), 1.0f);
         }
         if (bl) {
             ++this.ticksSinceSting;
             if (this.ticksSinceSting % 5 == 0 && this.random.nextInt(MathHelper.clamp(1200 - this.ticksSinceSting, 1, 1200)) == 0) {
-                this.damage(DamageSource.GENERIC, this.getHealth());
+                this.damage(this.getDamageSources().generic(), this.getHealth());
             }
         }
         if (!this.hasNectar()) {
@@ -594,11 +594,6 @@ Flutterer {
             return dimensions.height * 0.5f;
         }
         return dimensions.height * 0.5f;
-    }
-
-    @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
-        return false;
     }
 
     @Override
@@ -1226,7 +1221,7 @@ Flutterer {
         public void start() {
             Vec3d vec3d = this.getRandomLocation();
             if (vec3d != null) {
-                BeeEntity.this.navigation.startMovingAlong(BeeEntity.this.navigation.findPathTo(new BlockPos(vec3d), 1), 1.0);
+                BeeEntity.this.navigation.startMovingAlong(BeeEntity.this.navigation.findPathTo(BlockPos.ofFloored(vec3d), 1), 1.0);
             }
         }
 

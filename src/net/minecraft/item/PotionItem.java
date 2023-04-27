@@ -136,10 +136,5 @@ extends Item {
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         PotionUtil.buildTooltip(stack, tooltip, 1.0f);
     }
-
-    @Override
-    public boolean hasGlint(ItemStack stack) {
-        return super.hasGlint(stack) || !PotionUtil.getPotionEffects(stack).isEmpty();
-    }
 }
 

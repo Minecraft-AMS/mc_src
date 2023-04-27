@@ -36,7 +36,6 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.ProjectileDamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -60,6 +59,7 @@ import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
@@ -98,7 +98,7 @@ implements Angerable {
 
     public EndermanEntity(EntityType<? extends EndermanEntity> entityType, World world) {
         super((EntityType<? extends HostileEntity>)entityType, world);
-        this.stepHeight = 1.0f;
+        this.setStepHeight(1.0f);
         this.setPathfindingPenalty(PathNodeType.WATER, -1.0f);
     }
 
@@ -348,14 +348,14 @@ implements Angerable {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (source instanceof ProjectileDamageSource) {
-            Entity entity = source.getSource();
-            boolean bl = entity instanceof PotionEntity ? this.damageFromPotion(source, (PotionEntity)entity, amount) : false;
+        boolean bl = source.getSource() instanceof PotionEntity;
+        if (source.isIn(DamageTypeTags.IS_PROJECTILE) || bl) {
+            boolean bl2 = bl && this.damageFromPotion(source, (PotionEntity)source.getSource(), amount);
             for (int i = 0; i < 64; ++i) {
                 if (!this.teleportRandomly()) continue;
                 return true;
             }
-            return bl;
+            return bl2;
         }
         boolean bl2 = super.damage(source, amount);
         if (!this.world.isClient() && !(source.getAttacker() instanceof LivingEntity) && this.random.nextInt(10) != 0) {
@@ -528,7 +528,7 @@ implements Angerable {
         public TeleportTowardsPlayerGoal(EndermanEntity enderman, @Nullable Predicate<LivingEntity> targetPredicate) {
             super(enderman, PlayerEntity.class, 10, false, false, targetPredicate);
             this.enderman = enderman;
-            this.angerPredicate = playerEntity -> enderman.isPlayerStaring((PlayerEntity)playerEntity) || enderman.shouldAngerAt((LivingEntity)playerEntity);
+            this.angerPredicate = playerEntity -> (enderman.isPlayerStaring((PlayerEntity)playerEntity) || enderman.shouldAngerAt((LivingEntity)playerEntity)) && !enderman.hasPassengerDeep((Entity)playerEntity);
             this.staringPlayerPredicate = TargetPredicate.createAttackable().setBaseMaxDistance(this.getFollowRange()).setPredicate(this.angerPredicate);
         }
 
@@ -560,8 +560,13 @@ implements Angerable {
                 this.enderman.lookAtEntity(this.targetPlayer, 10.0f, 10.0f);
                 return true;
             }
-            if (this.targetEntity != null && this.validTargetPredicate.test(this.enderman, this.targetEntity)) {
-                return true;
+            if (this.targetEntity != null) {
+                if (this.enderman.hasPassengerDeep(this.targetEntity)) {
+                    return false;
+                }
+                if (this.validTargetPredicate.test(this.enderman, this.targetEntity)) {
+                    return true;
+                }
             }
             return super.shouldContinue();
         }

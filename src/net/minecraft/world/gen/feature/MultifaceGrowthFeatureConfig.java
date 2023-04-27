@@ -48,7 +48,7 @@ implements FeatureConfig {
             MultifaceGrowthBlock multifaceGrowthBlock = (MultifaceGrowthBlock)block;
             dataResult = DataResult.success((Object)multifaceGrowthBlock);
         } else {
-            dataResult = DataResult.error((String)"Growth block should be a multiface block");
+            dataResult = DataResult.error(() -> "Growth block should be a multiface block");
         }
         return dataResult;
     }

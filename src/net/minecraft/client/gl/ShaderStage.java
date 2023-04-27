@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gl.GLImportProcessor;
+import net.minecraft.client.gl.GlImportProcessor;
 import net.minecraft.client.gl.ShaderProgramSetupView;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -57,7 +57,7 @@ public class ShaderStage {
         return this.name;
     }
 
-    public static ShaderStage createFromResource(Type type, String name, InputStream stream, String domain, GLImportProcessor loader) throws IOException {
+    public static ShaderStage createFromResource(Type type, String name, InputStream stream, String domain, GlImportProcessor loader) throws IOException {
         RenderSystem.assertOnRenderThread();
         int i = ShaderStage.load(type, name, stream, domain, loader);
         ShaderStage shaderStage = new ShaderStage(type, i, name);
@@ -65,7 +65,7 @@ public class ShaderStage {
         return shaderStage;
     }
 
-    protected static int load(Type type, String name, InputStream stream, String domain, GLImportProcessor loader) throws IOException {
+    protected static int load(Type type, String name, InputStream stream, String domain, GlImportProcessor loader) throws IOException {
         String string = IOUtils.toString((InputStream)stream, (Charset)StandardCharsets.UTF_8);
         if (string == null) {
             throw new IOException("Could not load program " + type.getName());

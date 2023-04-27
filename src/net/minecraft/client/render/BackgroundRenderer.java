@@ -58,7 +58,7 @@ public class BackgroundRenderer {
         Entity entity = camera.getFocusedEntity();
         if (cameraSubmersionType == CameraSubmersionType.WATER) {
             long l = Util.getMeasuringTimeMs();
-            int i = world.getBiome(new BlockPos(camera.getPos())).value().getWaterFogColor();
+            int i = world.getBiome(BlockPos.ofFloored(camera.getPos())).value().getWaterFogColor();
             if (lastWaterFogColorUpdateTime < 0L) {
                 waterFogColor = i;
                 nextWaterFogColor = i;
@@ -71,9 +71,9 @@ public class BackgroundRenderer {
             int o = nextWaterFogColor >> 8 & 0xFF;
             int p = nextWaterFogColor & 0xFF;
             float f = MathHelper.clamp((float)(l - lastWaterFogColorUpdateTime) / 5000.0f, 0.0f, 1.0f);
-            float g = MathHelper.lerp(f, n, j);
-            float h = MathHelper.lerp(f, o, k);
-            float q = MathHelper.lerp(f, p, m);
+            float g = MathHelper.lerp(f, (float)n, (float)j);
+            float h = MathHelper.lerp(f, (float)o, (float)k);
+            float q = MathHelper.lerp(f, (float)p, (float)m);
             red = g / 255.0f;
             green = h / 255.0f;
             blue = q / 255.0f;
@@ -272,7 +272,7 @@ public class BackgroundRenderer {
         default public float applyColorModifier(LivingEntity entity, StatusEffectInstance effect, float f, float tickDelta) {
             StatusEffectInstance statusEffectInstance = entity.getStatusEffect(this.getStatusEffect());
             if (statusEffectInstance != null) {
-                f = statusEffectInstance.getDuration() < 20 ? 1.0f - (float)statusEffectInstance.getDuration() / 20.0f : 0.0f;
+                f = statusEffectInstance.isDurationBelow(19) ? 1.0f - (float)statusEffectInstance.getDuration() / 20.0f : 0.0f;
             }
             return f;
         }
@@ -327,7 +327,8 @@ public class BackgroundRenderer {
 
         @Override
         public void applyStartEndModifier(FogData fogData, LivingEntity entity, StatusEffectInstance effect, float viewDistance, float tickDelta) {
-            float f = MathHelper.lerp(Math.min(1.0f, (float)effect.getDuration() / 20.0f), viewDistance, 5.0f);
+            float f;
+            float f2 = f = effect.isInfinite() ? 5.0f : MathHelper.lerp(Math.min(1.0f, (float)effect.getDuration() / 20.0f), viewDistance, 5.0f);
             if (fogData.fogType == FogType.FOG_SKY) {
                 fogData.fogStart = 0.0f;
                 fogData.fogEnd = f * 0.8f;

@@ -190,18 +190,18 @@ extends RealmsScreen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.tooltip = null;
         this.renderBackground(matrices);
-        RealmsConfigureWorldScreen.drawCenteredText(matrices, this.textRenderer, WORLDS_TITLE, this.width / 2, RealmsConfigureWorldScreen.row(4), 0xFFFFFF);
+        RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, WORLDS_TITLE, this.width / 2, RealmsConfigureWorldScreen.row(4), 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
         if (this.server == null) {
-            RealmsConfigureWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+            RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
             return;
         }
         String string = this.server.getName();
         int i = this.textRenderer.getWidth(string);
         int j = this.server.state == RealmsServer.State.CLOSED ? 0xA0A0A0 : 0x7FFF7F;
         int k = this.textRenderer.getWidth(this.title);
-        RealmsConfigureWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
-        RealmsConfigureWorldScreen.drawCenteredText(matrices, this.textRenderer, string, this.width / 2, 24, j);
+        RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
+        RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, string, this.width / 2, 24, j);
         int l = Math.min(this.buttonCenter(2, 3) + 80 - 11, this.width / 2 + i / 2 + k / 2 + 10);
         this.drawServerStatus(matrices, l, 7, mouseX, mouseY);
         if (this.isMinigame()) {
@@ -313,7 +313,7 @@ extends RealmsScreen {
         if (i + k + 3 > this.right_x) {
             i = i - k - 20;
         }
-        this.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        RealmsConfigureWorldScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
         this.textRenderer.drawWithShadow(matrices, text, (float)i, (float)j, 0xFFFFFF);
     }
 
@@ -333,7 +333,6 @@ extends RealmsScreen {
 
     private void drawExpired(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
         RenderSystem.setShaderTexture(0, EXPIRED_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = EXPIRED_TEXT;
@@ -342,7 +341,6 @@ extends RealmsScreen {
 
     private void drawExpiring(MatrixStack matrices, int x, int y, int mouseX, int mouseY, int remainingDays) {
         RenderSystem.setShaderTexture(0, EXPIRES_SOON_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         if (this.animTick % 20 < 10) {
             DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 20, 28);
         } else {
@@ -355,7 +353,6 @@ extends RealmsScreen {
 
     private void drawOpen(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
         RenderSystem.setShaderTexture(0, ON_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = OPEN_TEXT;
@@ -364,7 +361,6 @@ extends RealmsScreen {
 
     private void drawClosed(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
         RenderSystem.setShaderTexture(0, OFF_ICON);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = CLOSED_TEXT;

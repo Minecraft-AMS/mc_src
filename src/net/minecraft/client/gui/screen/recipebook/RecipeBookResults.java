@@ -59,7 +59,7 @@ public class RecipeBookResults {
         this.client = client;
         this.recipeBook = client.player.getRecipeBook();
         for (int i = 0; i < this.resultButtons.size(); ++i) {
-            this.resultButtons.get(i).setPos(parentLeft + 11 + 25 * (i % 5), parentTop + 31 + 25 * (i / 5));
+            this.resultButtons.get(i).setPosition(parentLeft + 11 + 25 * (i % 5), parentTop + 31 + 25 * (i / 5));
         }
         this.nextPageButton = new ToggleButtonWidget(parentLeft + 93, parentTop + 137, 12, 17, false);
         this.nextPageButton.setTextureUV(1, 208, 13, 18, RecipeBookWidget.TEXTURE);
@@ -110,7 +110,7 @@ public class RecipeBookResults {
         this.hoveredResultButton = null;
         for (AnimatedResultButton animatedResultButton : this.resultButtons) {
             animatedResultButton.render(matrices, mouseX, mouseY, delta);
-            if (!animatedResultButton.visible || !animatedResultButton.isHovered()) continue;
+            if (!animatedResultButton.visible || !animatedResultButton.isSelected()) continue;
             this.hoveredResultButton = animatedResultButton;
         }
         this.prevPageButton.render(matrices, mouseX, mouseY, delta);

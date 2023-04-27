@@ -16,6 +16,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import org.joml.Vector3f;
 
 public class Vec3d
@@ -33,20 +34,24 @@ implements Position {
         return new Vec3d(d, e, f);
     }
 
-    public static Vec3d ofCenter(Vec3i vec) {
-        return new Vec3d((double)vec.getX() + 0.5, (double)vec.getY() + 0.5, (double)vec.getZ() + 0.5);
-    }
-
     public static Vec3d of(Vec3i vec) {
         return new Vec3d(vec.getX(), vec.getY(), vec.getZ());
     }
 
+    public static Vec3d add(Vec3i vec, double deltaX, double deltaY, double deltaZ) {
+        return new Vec3d((double)vec.getX() + deltaX, (double)vec.getY() + deltaY, (double)vec.getZ() + deltaZ);
+    }
+
+    public static Vec3d ofCenter(Vec3i vec) {
+        return Vec3d.add(vec, 0.5, 0.5, 0.5);
+    }
+
     public static Vec3d ofBottomCenter(Vec3i vec) {
-        return new Vec3d((double)vec.getX() + 0.5, vec.getY(), (double)vec.getZ() + 0.5);
+        return Vec3d.add(vec, 0.5, 0.0, 0.5);
     }
 
     public static Vec3d ofCenter(Vec3i vec, double deltaY) {
-        return new Vec3d((double)vec.getX() + 0.5, (double)vec.getY() + deltaY, (double)vec.getZ() + 0.5);
+        return Vec3d.add(vec, 0.5, deltaY, 0.5);
     }
 
     public Vec3d(double x, double y, double z) {
@@ -134,6 +139,10 @@ implements Position {
 
     public Vec3d multiply(double x, double y, double z) {
         return new Vec3d(this.x * x, this.y * y, this.z * z);
+    }
+
+    public Vec3d addRandom(Random random, float multiplier) {
+        return this.add((random.nextFloat() - 0.5f) * multiplier, (random.nextFloat() - 0.5f) * multiplier, (random.nextFloat() - 0.5f) * multiplier);
     }
 
     public double length() {
@@ -244,7 +253,7 @@ implements Position {
         return new Vec3d(d, e, f);
     }
 
-    public Vec3d withBias(Direction direction, double value) {
+    public Vec3d offset(Direction direction, double value) {
         Vec3i vec3i = direction.getVector();
         return new Vec3d(this.x + value * (double)vec3i.getX(), this.y + value * (double)vec3i.getY(), this.z + value * (double)vec3i.getZ());
     }

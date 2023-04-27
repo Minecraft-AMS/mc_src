@@ -104,7 +104,7 @@ extends ScrollableWidget {
         int j = this.getX() + this.getPadding();
         matrices.push();
         matrices.translate((double)j, (double)i, 0.0);
-        this.contents.grid().render(matrices, mouseX, mouseY, delta);
+        this.contents.grid().forEachChild(widget -> widget.render(matrices, mouseX, mouseY, delta));
         matrices.pop();
     }
 
@@ -172,12 +172,12 @@ extends ScrollableWidget {
         }
 
         public void appendTitle(TextRenderer textRenderer, Text title, int marginBottom) {
-            this.widgetAdder.add(MultilineTextWidget.createNonCentered(this.gridWidth, textRenderer, title), this.widgetAdder.copyPositioner().marginBottom(marginBottom));
+            this.widgetAdder.add(new MultilineTextWidget(title, textRenderer).setMaxWidth(this.gridWidth), this.widgetAdder.copyPositioner().marginBottom(marginBottom));
             this.narration.append(title).append("\n");
         }
 
         public void appendText(TextRenderer textRenderer, Text text) {
-            this.widgetAdder.add(MultilineTextWidget.createCentered(this.gridWidth - 64, textRenderer, text), this.positioner);
+            this.widgetAdder.add(new MultilineTextWidget(text, textRenderer).setMaxWidth(this.gridWidth - 64).setCentered(true), this.positioner);
             this.narration.append(text).append("\n");
         }
 
@@ -186,7 +186,7 @@ extends ScrollableWidget {
         }
 
         public Contents build() {
-            this.grid.recalculateDimensions();
+            this.grid.refreshPositions();
             return new Contents(this.grid, this.narration);
         }
     }

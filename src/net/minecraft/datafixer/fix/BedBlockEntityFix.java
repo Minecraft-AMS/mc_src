@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.google.common.collect.Streams
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
  *  com.mojang.datafixers.OpticFinder
@@ -19,6 +20,7 @@ package net.minecraft.datafixer.fix;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Streams;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
@@ -31,11 +33,9 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 import net.minecraft.datafixer.TypeReferences;
 
 public class BedBlockEntityFix
@@ -62,33 +62,34 @@ extends DataFix {
         int i = 416;
         return TypeRewriteRule.seq((TypeRewriteRule)this.fixTypeEverywhere("InjectBedBlockEntityType", (Type)this.getInputSchema().findChoiceType(TypeReferences.BLOCK_ENTITY), (Type)this.getOutputSchema().findChoiceType(TypeReferences.BLOCK_ENTITY), dynamicOps -> pair -> pair), (TypeRewriteRule)this.fixTypeEverywhereTyped("BedBlockEntityInjecter", this.getOutputSchema().getType(TypeReferences.CHUNK), typed -> {
             Typed typed2 = typed.getTyped(opticFinder);
-            Dynamic dynamic2 = (Dynamic)typed2.get(DSL.remainderFinder());
-            int i = dynamic2.get("xPos").asInt(0);
-            int j = dynamic2.get("zPos").asInt(0);
+            Dynamic dynamic = (Dynamic)typed2.get(DSL.remainderFinder());
+            int i = dynamic.get("xPos").asInt(0);
+            int j = dynamic.get("zPos").asInt(0);
             ArrayList list = Lists.newArrayList((Iterable)((Iterable)typed2.getOrCreate(opticFinder2)));
-            List list2 = dynamic2.get("Sections").asList(Function.identity());
+            List list2 = dynamic.get("Sections").asList(Function.identity());
             for (int k = 0; k < list2.size(); ++k) {
-                Dynamic dynamic22 = (Dynamic)list2.get(k);
-                int l = dynamic22.get("Y").asInt(0);
-                Stream<Integer> stream = dynamic22.get("Blocks").asStream().map(dynamic -> dynamic.asInt(0));
-                int m = 0;
-                Iterator iterator = ((Iterable)stream::iterator).iterator();
-                while (iterator.hasNext()) {
-                    int n = (Integer)iterator.next();
-                    if (416 == (n & 0xFF) << 4) {
-                        int o = m & 0xF;
-                        int p = m >> 8 & 0xF;
-                        int q = m >> 4 & 0xF;
+                Dynamic dynamic2 = (Dynamic)list2.get(k);
+                int l2 = dynamic2.get("Y").asInt(0);
+                Streams.mapWithIndex((IntStream)dynamic2.get("Blocks").asIntStream(), (l, m) -> {
+                    if (416 == (l & 0xFF) << 4) {
+                        int n = (int)m;
+                        int o = n & 0xF;
+                        int p = n >> 8 & 0xF;
+                        int q = n >> 4 & 0xF;
                         HashMap map = Maps.newHashMap();
-                        map.put(dynamic22.createString("id"), dynamic22.createString("minecraft:bed"));
-                        map.put(dynamic22.createString("x"), dynamic22.createInt(o + (i << 4)));
-                        map.put(dynamic22.createString("y"), dynamic22.createInt(p + (l << 4)));
-                        map.put(dynamic22.createString("z"), dynamic22.createInt(q + (j << 4)));
-                        map.put(dynamic22.createString("color"), dynamic22.createShort((short)14));
-                        list.add(((Pair)type.read(dynamic22.createMap((Map)map)).result().orElseThrow(() -> new IllegalStateException("Could not parse newly created bed block entity."))).getFirst());
+                        map.put(dynamic2.createString("id"), dynamic2.createString("minecraft:bed"));
+                        map.put(dynamic2.createString("x"), dynamic2.createInt(o + (i << 4)));
+                        map.put(dynamic2.createString("y"), dynamic2.createInt(p + (l2 << 4)));
+                        map.put(dynamic2.createString("z"), dynamic2.createInt(q + (j << 4)));
+                        map.put(dynamic2.createString("color"), dynamic2.createShort((short)14));
+                        return map;
                     }
-                    ++m;
-                }
+                    return null;
+                }).forEachOrdered(map -> {
+                    if (map != null) {
+                        list.add(((Pair)type.read(dynamic2.createMap(map)).result().orElseThrow(() -> new IllegalStateException("Could not parse newly created bed block entity."))).getFirst());
+                    }
+                });
             }
             if (!list.isEmpty()) {
                 return typed.set(opticFinder, typed2.set(opticFinder2, (Object)list));

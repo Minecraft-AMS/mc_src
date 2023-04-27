@@ -103,6 +103,9 @@ extends MinecraftServer {
             this.incrementTotalWorldTimeStat();
             return;
         }
+        if (bl && !this.paused) {
+            this.sendTimeUpdatePackets();
+        }
         super.tick(shouldKeepTicking);
         int i = Math.max(2, this.client.options.getViewDistance().getValue());
         if (i != this.getPlayerManager().getViewDistance()) {

@@ -12,6 +12,7 @@ import java.util.UUID;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.MovementType;
+import net.minecraft.entity.Ownable;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -21,13 +22,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.Text;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -36,7 +37,8 @@ import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemEntity
-extends Entity {
+extends Entity
+implements Ownable {
     private static final TrackedData<ItemStack> STACK = DataTracker.registerData(ItemEntity.class, TrackedDataHandlerRegistry.ITEM_STACK);
     private static final int DESPAWN_AGE = 6000;
     private static final int CANNOT_PICK_UP_DELAY = Short.MAX_VALUE;
@@ -80,8 +82,15 @@ extends Entity {
         return this.getStack().isIn(ItemTags.DAMPENS_VIBRATIONS);
     }
 
-    public Entity getEventSource() {
-        return Util.map(this.getThrower(), this.world::getPlayerByUuid);
+    @Override
+    @Nullable
+    public Entity getOwner() {
+        World world;
+        if (this.thrower != null && (world = this.world) instanceof ServerWorld) {
+            ServerWorld serverWorld = (ServerWorld)world;
+            return serverWorld.getEntity(this.thrower);
+        }
+        return null;
     }
 
     @Override
@@ -130,7 +139,7 @@ extends Entity {
             this.move(MovementType.SELF, this.getVelocity());
             float g = 0.98f;
             if (this.onGround) {
-                g = this.world.getBlockState(new BlockPos(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
+                g = this.world.getBlockState(BlockPos.ofFloored(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
             }
             this.setVelocity(this.getVelocity().multiply(g, 0.98, g));
             if (this.onGround) {
@@ -188,7 +197,7 @@ extends Entity {
     private void tryMerge(ItemEntity other) {
         ItemStack itemStack = this.getStack();
         ItemStack itemStack2 = other.getStack();
-        if (!Objects.equals(this.getOwner(), other.getOwner()) || !ItemEntity.canMerge(itemStack, itemStack2)) {
+        if (!Objects.equals(this.owner, other.owner) || !ItemEntity.canMerge(itemStack, itemStack2)) {
             return;
         }
         if (itemStack2.getCount() < itemStack.getCount()) {
@@ -243,7 +252,7 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (!this.getStack().isEmpty() && this.getStack().isOf(Items.NETHER_STAR) && source.isExplosive()) {
+        if (!this.getStack().isEmpty() && this.getStack().isOf(Items.NETHER_STAR) && source.isIn(DamageTypeTags.IS_EXPLOSION)) {
             return false;
         }
         if (!this.getStack().getItem().damage(source)) {
@@ -267,11 +276,11 @@ extends Entity {
         nbt.putShort("Health", (short)this.health);
         nbt.putShort("Age", (short)this.itemAge);
         nbt.putShort("PickupDelay", (short)this.pickupDelay);
-        if (this.getThrower() != null) {
-            nbt.putUuid("Thrower", this.getThrower());
+        if (this.thrower != null) {
+            nbt.putUuid("Thrower", this.thrower);
         }
-        if (this.getOwner() != null) {
-            nbt.putUuid("Owner", this.getOwner());
+        if (this.owner != null) {
+            nbt.putUuid("Owner", this.owner);
         }
         if (!this.getStack().isEmpty()) {
             nbt.put("Item", this.getStack().writeNbt(new NbtCompound()));
@@ -357,18 +366,8 @@ extends Entity {
         }
     }
 
-    @Nullable
-    public UUID getOwner() {
-        return this.owner;
-    }
-
     public void setOwner(@Nullable UUID owner) {
         this.owner = owner;
-    }
-
-    @Nullable
-    public UUID getThrower() {
-        return this.thrower;
     }
 
     public void setThrower(@Nullable UUID thrower) {

@@ -75,9 +75,11 @@ public class RegistryBuilder {
 
     public RegistryWrapper.WrapperLookup createWrapperLookup(DynamicRegistryManager baseRegistryManager, RegistryWrapper.WrapperLookup wrapperLookup) {
         Registries registries = this.createBootstrappedRegistries(baseRegistryManager);
+        HashMap map = new HashMap();
+        registries.streamRegistries().forEach(registry -> map.put(registry.key, registry));
+        this.registries.stream().map(info -> info.init(registries)).forEach(registry -> map.put(registry.key, registry));
         Stream<RegistryWrapper.Impl> stream = baseRegistryManager.streamAllRegistries().map(entry -> entry.value().getReadOnlyWrapper());
-        Stream<RegistryWrapper.Impl> stream2 = this.registries.stream().map(info -> info.init(registries).toWrapper());
-        RegistryWrapper.WrapperLookup wrapperLookup2 = RegistryWrapper.WrapperLookup.of(Stream.concat(stream, stream2.peek(registries::addOwner)));
+        RegistryWrapper.WrapperLookup wrapperLookup2 = RegistryWrapper.WrapperLookup.of(Stream.concat(stream, map.values().stream().map(InitializedRegistry::toWrapper).peek(registries::addOwner)));
         registries.setReferenceEntryValues(wrapperLookup);
         registries.validateReferences();
         registries.throwErrors();
@@ -102,7 +104,7 @@ public class RegistryBuilder {
                 map.put(registryKey2, new EntryAssociatedValue(registeredValue, Optional.ofNullable(reference)));
                 iterator.remove();
             }
-            return new InitializedRegistry(this, map);
+            return new InitializedRegistry(this.key, this.lifecycle, map);
         }
     }
 
@@ -191,6 +193,10 @@ public class RegistryBuilder {
             }
         }
 
+        public Stream<InitializedRegistry<?>> streamRegistries() {
+            return this.lookup.keysToEntries.keySet().stream().map(RegistryKey::getRegistry).distinct().map(registry -> new InitializedRegistry(RegistryKey.ofRegistry(registry), Lifecycle.stable(), Map.of()));
+        }
+
         @Override
         public final String toString() {
             return ObjectMethods.bootstrap("toString", new MethodHandle[]{Registries.class, "owner;lookup;registries;registeredValues;errors", "owner", "lookup", "registries", "registeredValues", "errors"}, this);
@@ -229,11 +235,13 @@ public class RegistryBuilder {
 
     static final class InitializedRegistry<T>
     extends Record {
-        final RegistryInfo<T> stub;
+        final RegistryKey<? extends Registry<? extends T>> key;
+        final Lifecycle lifecycle;
         final Map<RegistryKey<T>, EntryAssociatedValue<T>> values;
 
-        InitializedRegistry(RegistryInfo<T> registryInfo, Map<RegistryKey<T>, EntryAssociatedValue<T>> map) {
-            this.stub = registryInfo;
+        InitializedRegistry(RegistryKey<? extends Registry<? extends T>> registryKey, Lifecycle lifecycle, Map<RegistryKey<T>, EntryAssociatedValue<T>> map) {
+            this.key = registryKey;
+            this.lifecycle = lifecycle;
             this.values = map;
         }
 
@@ -251,12 +259,12 @@ public class RegistryBuilder {
 
                 @Override
                 public RegistryKey<? extends Registry<? extends T>> getRegistryKey() {
-                    return stub.key();
+                    return key;
                 }
 
                 @Override
                 public Lifecycle getLifecycle() {
-                    return stub.lifecycle();
+                    return lifecycle;
                 }
 
                 @Override
@@ -283,21 +291,25 @@ public class RegistryBuilder {
 
         @Override
         public final String toString() {
-            return ObjectMethods.bootstrap("toString", new MethodHandle[]{InitializedRegistry.class, "stub;values", "stub", "values"}, this);
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{InitializedRegistry.class, "key;lifecycle;values", "key", "lifecycle", "values"}, this);
         }
 
         @Override
         public final int hashCode() {
-            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{InitializedRegistry.class, "stub;values", "stub", "values"}, this);
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{InitializedRegistry.class, "key;lifecycle;values", "key", "lifecycle", "values"}, this);
         }
 
         @Override
         public final boolean equals(Object object) {
-            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{InitializedRegistry.class, "stub;values", "stub", "values"}, this, object);
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{InitializedRegistry.class, "key;lifecycle;values", "key", "lifecycle", "values"}, this, object);
         }
 
-        public RegistryInfo<T> stub() {
-            return this.stub;
+        public RegistryKey<? extends Registry<? extends T>> key() {
+            return this.key;
+        }
+
+        public Lifecycle lifecycle() {
+            return this.lifecycle;
         }
 
         public Map<RegistryKey<T>, EntryAssociatedValue<T>> values() {

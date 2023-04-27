@@ -9,6 +9,7 @@ package net.minecraft.client.realms.gui.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
@@ -37,16 +38,16 @@ extends RealmsScreen {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        RealmsClientOutdatedScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, RealmsClientOutdatedScreen.row(3), 0xFF0000);
+        RealmsClientOutdatedScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, RealmsClientOutdatedScreen.row(3), 0xFF0000);
         Text[] texts = this.getLines();
         for (int i = 0; i < texts.length; ++i) {
-            RealmsClientOutdatedScreen.drawCenteredText(matrices, this.textRenderer, texts[i], this.width / 2, RealmsClientOutdatedScreen.row(5) + i * 12, 0xFFFFFF);
+            RealmsClientOutdatedScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, texts[i], this.width / 2, RealmsClientOutdatedScreen.row(5) + i * 12, 0xFFFFFF);
         }
         super.render(matrices, mouseX, mouseY, delta);
     }
 
     private Text[] getLines() {
-        if (this.client.getGame().getVersion().isStable()) {
+        if (SharedConstants.getGameVersion().isStable()) {
             return INCOMPATIBLE_LINES;
         }
         return INCOMPATIBLE_LINES_UNSTABLE;

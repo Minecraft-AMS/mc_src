@@ -70,7 +70,7 @@ public class PersistentStateManager {
         try {
             File file = this.getFile(id);
             if (file.exists()) {
-                NbtCompound nbtCompound = this.readNbt(id, SharedConstants.getGameVersion().getWorldVersion());
+                NbtCompound nbtCompound = this.readNbt(id, SharedConstants.getGameVersion().getSaveVersion().getId());
                 return (T)((PersistentState)readFunction.apply(nbtCompound.getCompound("data")));
             }
         }
@@ -97,8 +97,8 @@ public class PersistentStateManager {
                         nbtCompound2 = NbtIo.read(dataInputStream);
                     }
                 }
-                int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : 1343;
-                nbtCompound = NbtHelper.update(this.dataFixer, DataFixTypes.SAVED_DATA, nbtCompound2, i, dataVersion);
+                int i = NbtHelper.getDataVersion(nbtCompound2, 1343);
+                nbtCompound = DataFixTypes.SAVED_DATA.update(this.dataFixer, nbtCompound2, i, dataVersion);
             }
             return nbtCompound;
         }

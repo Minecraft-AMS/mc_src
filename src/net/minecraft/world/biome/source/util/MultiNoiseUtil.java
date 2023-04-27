@@ -10,6 +10,7 @@
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
+ *  com.mojang.serialization.MapCodec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  org.jetbrains.annotations.Nullable
  */
@@ -23,6 +24,7 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
@@ -154,7 +156,7 @@ public class MultiNoiseUtil {
     public record ParameterRange(long min, long max) {
         public static final Codec<ParameterRange> CODEC = Codecs.createCodecForPairObject(Codec.floatRange((float)-2.0f, (float)2.0f), "min", "max", (min, max) -> {
             if (min.compareTo((Float)max) > 0) {
-                return DataResult.error((String)("Cannon construct interval, min > max (" + min + " > " + max + ")"));
+                return DataResult.error(() -> "Cannon construct interval, min > max (" + min + " > " + max + ")");
             }
             return DataResult.success((Object)new ParameterRange(MultiNoiseUtil.toLong(min.floatValue()), MultiNoiseUtil.toLong(max.floatValue())));
         }, parameterRange -> Float.valueOf(MultiNoiseUtil.toFloat(parameterRange.min())), parameterRange -> Float.valueOf(MultiNoiseUtil.toFloat(parameterRange.max())));
@@ -268,6 +270,10 @@ public class MultiNoiseUtil {
     public static class Entries<T> {
         private final List<Pair<NoiseHypercube, T>> entries;
         private final SearchTree<T> tree;
+
+        public static <T> Codec<Entries<T>> createCodec(MapCodec<T> entryCodec) {
+            return Codecs.nonEmptyList(RecordCodecBuilder.create(instance -> instance.group((App)NoiseHypercube.CODEC.fieldOf("parameters").forGetter(Pair::getFirst), (App)entryCodec.forGetter(Pair::getSecond)).apply((Applicative)instance, Pair::of)).listOf()).xmap(Entries::new, Entries::getEntries);
+        }
 
         public Entries(List<Pair<NoiseHypercube, T>> entries) {
             this.entries = entries;

@@ -82,7 +82,6 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SkullBlockEntity;
 import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.Keyboard;
-import net.minecraft.client.MinecraftClientGame;
 import net.minecraft.client.Mouse;
 import net.minecraft.client.RunArgs;
 import net.minecraft.client.WindowEventHandler;
@@ -98,6 +97,8 @@ import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.gl.WindowFramebuffer;
 import net.minecraft.client.gui.WorldGenerationProgressTracker;
 import net.minecraft.client.gui.hud.InGameHud;
+import net.minecraft.client.gui.navigation.GuiNavigationType;
+import net.minecraft.client.gui.screen.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.ConnectScreen;
@@ -120,7 +121,6 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsScreen;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.item.TooltipContext;
-import net.minecraft.client.network.Bans;
 import net.minecraft.client.network.ClientLoginNetworkHandler;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -190,6 +190,7 @@ import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.toast.ToastManager;
 import net.minecraft.client.toast.TutorialToast;
 import net.minecraft.client.tutorial.TutorialManager;
+import net.minecraft.client.util.Bans;
 import net.minecraft.client.util.ClientSamplerSource;
 import net.minecraft.client.util.MacWindowUtil;
 import net.minecraft.client.util.NarratorManager;
@@ -251,6 +252,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.MetricsData;
 import net.minecraft.util.ModStatus;
+import net.minecraft.util.Nullables;
 import net.minecraft.util.PathUtil;
 import net.minecraft.util.SystemDetails;
 import net.minecraft.util.TickDurationMonitor;
@@ -328,6 +330,7 @@ implements WindowEventHandler {
     private final HotbarStorage creativeHotbarStorage;
     public final Mouse mouse;
     public final Keyboard keyboard;
+    private GuiNavigationType navigationType = GuiNavigationType.NONE;
     public final File runDirectory;
     private final String gameVersion;
     private final String versionType;
@@ -362,7 +365,6 @@ implements WindowEventHandler {
     private final PaintingManager paintingManager;
     private final StatusEffectSpriteManager statusEffectSpriteManager;
     private final ToastManager toastManager;
-    private final MinecraftClientGame game = new MinecraftClientGame(this);
     private final TutorialManager tutorialManager;
     private final SocialInteractionsManager socialInteractionsManager;
     private final EntityModelLoader entityModelLoader;
@@ -475,6 +477,7 @@ implements WindowEventHandler {
         this.toastManager = new ToastManager(this);
         this.thread = Thread.currentThread();
         this.options = new GameOptions(this, this.runDirectory);
+        RenderSystem.setShaderGlintAlpha(this.options.getGlintStrength().getValue());
         this.running = true;
         this.tutorialManager = new TutorialManager(this, this.options);
         this.creativeHotbarStorage = new HotbarStorage(this.runDirectory, this.dataFixer);
@@ -537,7 +540,7 @@ implements WindowEventHandler {
         this.resourceManager.registerReloader(this.blockEntityRenderDispatcher);
         BuiltinModelItemRenderer builtinModelItemRenderer = new BuiltinModelItemRenderer(this.blockEntityRenderDispatcher, this.entityModelLoader);
         this.resourceManager.registerReloader(builtinModelItemRenderer);
-        this.itemRenderer = new ItemRenderer(this.textureManager, this.bakedModelManager, this.itemColors, builtinModelItemRenderer);
+        this.itemRenderer = new ItemRenderer(this, this.textureManager, this.bakedModelManager, this.itemColors, builtinModelItemRenderer);
         this.resourceManager.registerReloader(this.itemRenderer);
         this.bufferBuilders = new BufferBuilderStorage();
         this.socialInteractionsManager = new SocialInteractionsManager(this, this.userApiService);
@@ -607,6 +610,8 @@ implements WindowEventHandler {
                 }
                 this.setScreen(new TitleScreen(true));
             }, this.getMultiplayerBanDetails()));
+        } else if (this.options.onboardAccessibility) {
+            this.setScreen(new AccessibilityOnboardingScreen(this.options));
         } else {
             this.setScreen(new TitleScreen(true));
         }
@@ -685,10 +690,22 @@ implements WindowEventHandler {
         this.options.resourcePacks.clear();
         this.options.incompatibleResourcePacks.clear();
         this.options.write();
-        this.reloadResources(true).thenRun(() -> {
-            ToastManager toastManager = this.getToastManager();
-            SystemToast.show(toastManager, SystemToast.Type.PACK_LOAD_FAILURE, Text.translatable("resourcePack.load_fail"), resourceName);
-        });
+        this.reloadResources(true).thenRun(() -> this.showResourceReloadFailureToast(resourceName));
+    }
+
+    private void onForcedResourceReloadFailure() {
+        this.setOverlay(null);
+        if (this.world != null) {
+            this.world.disconnect();
+            this.disconnect();
+        }
+        this.setScreen(new TitleScreen());
+        this.showResourceReloadFailureToast(null);
+    }
+
+    private void showResourceReloadFailureToast(@Nullable Text description) {
+        ToastManager toastManager = this.getToastManager();
+        SystemToast.show(toastManager, SystemToast.Type.PACK_LOAD_FAILURE, Text.translatable("resourcePack.load_fail"), description);
     }
 
     public void run() {
@@ -747,7 +764,7 @@ implements WindowEventHandler {
     private void initializeSearchProviders() {
         this.searchManager.put(SearchManager.ITEM_TOOLTIP, stacks -> new TextSearchProvider<ItemStack>(stack -> stack.getTooltip(null, TooltipContext.Default.BASIC.withCreative()).stream().map(tooltip -> Formatting.strip(tooltip.getString()).trim()).filter(string -> !string.isEmpty()), stack -> Stream.of(Registries.ITEM.getId(stack.getItem())), (List<ItemStack>)stacks));
         this.searchManager.put(SearchManager.ITEM_TAG, stacks -> new IdentifierSearchProvider<ItemStack>(stack -> stack.streamTags().map(TagKey::id), (List<ItemStack>)stacks));
-        this.searchManager.put(SearchManager.RECIPE_OUTPUT, resultCollections -> new TextSearchProvider<RecipeResultCollection>(resultCollection -> resultCollection.getAllRecipes().stream().flatMap(recipe -> recipe.getOutput().getTooltip(null, TooltipContext.Default.BASIC).stream()).map(text -> Formatting.strip(text.getString()).trim()).filter(text -> !text.isEmpty()), resultCollection -> resultCollection.getAllRecipes().stream().map(recipe -> Registries.ITEM.getId(recipe.getOutput().getItem())), (List<RecipeResultCollection>)resultCollections));
+        this.searchManager.put(SearchManager.RECIPE_OUTPUT, resultCollections -> new TextSearchProvider<RecipeResultCollection>(resultCollection -> resultCollection.getAllRecipes().stream().flatMap(recipe -> recipe.getOutput(resultCollection.getRegistryManager()).getTooltip(null, TooltipContext.Default.BASIC).stream()).map(text -> Formatting.strip(text.getString()).trim()).filter(text -> !text.isEmpty()), resultCollection -> resultCollection.getAllRecipes().stream().map(recipe -> Registries.ITEM.getId(recipe.getOutput(resultCollection.getRegistryManager()).getItem())), (List<RecipeResultCollection>)resultCollections));
         ItemGroups.getSearchGroup().setSearchProviderReloader(stacks -> {
             this.reloadSearchProvider(SearchManager.ITEM_TOOLTIP, (List)stacks);
             this.reloadSearchProvider(SearchManager.ITEM_TAG, (List)stacks);
@@ -827,7 +844,13 @@ implements WindowEventHandler {
         if (!force) {
             this.resourceReloadLogger.reload(ResourceReloadLogger.ReloadReason.MANUAL, list);
         }
-        this.setOverlay(new SplashOverlay(this, this.resourceManager.reload(Util.getMainWorkerExecutor(), this, COMPLETED_UNIT_FUTURE, list), throwable -> Util.ifPresentOrElse(throwable, this::handleResourceReloadException, () -> {
+        this.setOverlay(new SplashOverlay(this, this.resourceManager.reload(Util.getMainWorkerExecutor(), this, COMPLETED_UNIT_FUTURE, list), error -> Util.ifPresentOrElse(error, throwable -> {
+            if (force) {
+                this.onForcedResourceReloadFailure();
+            } else {
+                this.handleResourceReloadException((Throwable)throwable);
+            }
+        }, () -> {
             this.worldRenderer.reload();
             this.resourceReloadLogger.finish();
             completableFuture.complete(null);
@@ -912,6 +935,9 @@ implements WindowEventHandler {
             }
         }
         this.currentScreen = screen;
+        if (this.currentScreen != null) {
+            this.currentScreen.onDisplayed();
+        }
         BufferRenderer.reset();
         if (screen != null) {
             this.mouse.unlockCursor();
@@ -1035,21 +1061,15 @@ implements WindowEventHandler {
             bl = false;
             this.gpuUtilizationPercentage = 0.0;
         }
-        MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        matrixStack.push();
-        RenderSystem.applyModelViewMatrix();
         RenderSystem.clear(16640, IS_SYSTEM_MAC);
         this.framebuffer.beginWrite(true);
         BackgroundRenderer.clearFog();
         this.profiler.push("display");
-        RenderSystem.enableTexture();
         RenderSystem.enableCull();
         this.profiler.pop();
         if (!this.skipGameRender) {
             this.profiler.swap("gameRenderer");
             this.gameRenderer.render(this.paused ? this.pausedTickDelta : this.renderTickCounter.tickDelta, l, tick);
-            this.profiler.swap("toasts");
-            this.toastManager.draw(new MatrixStack());
             this.profiler.pop();
         }
         if (this.tickProfilerResult != null) {
@@ -1059,9 +1079,6 @@ implements WindowEventHandler {
         }
         this.profiler.push("blit");
         this.framebuffer.endWrite();
-        matrixStack.pop();
-        matrixStack.push();
-        RenderSystem.applyModelViewMatrix();
         this.framebuffer.draw(this.window.getFramebufferWidth(), this.window.getFramebufferHeight());
         this.renderTime = Util.getMeasuringTimeNano() - m;
         if (bl) {
@@ -1069,8 +1086,6 @@ implements WindowEventHandler {
                 this.currentGlTimerQuery = glTimer.endProfile();
             });
         }
-        matrixStack.pop();
-        RenderSystem.applyModelViewMatrix();
         this.profiler.swap("updateDisplay");
         this.window.swapBuffers();
         int k = this.getFramerateLimit();
@@ -1320,11 +1335,11 @@ implements WindowEventHandler {
         Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, (float)this.window.getFramebufferWidth(), (float)this.window.getFramebufferHeight(), 0.0f, 1000.0f, 3000.0f);
         RenderSystem.setProjectionMatrix(matrix4f);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
         matrixStack.loadIdentity();
         matrixStack.translate(0.0f, 0.0f, -2000.0f);
         RenderSystem.applyModelViewMatrix();
         RenderSystem.lineWidth(1.0f);
-        RenderSystem.disableTexture();
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         int i = 160;
@@ -1372,7 +1387,6 @@ implements WindowEventHandler {
         }
         DecimalFormat decimalFormat = new DecimalFormat("##0.00");
         decimalFormat.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.ROOT));
-        RenderSystem.enableTexture();
         String string = ProfileResult.getHumanReadableName(profilerTiming.name);
         Object string2 = "";
         if (!"unspecified".equals(string)) {
@@ -1398,6 +1412,8 @@ implements WindowEventHandler {
             string3 = decimalFormat.format(profilerTiming3.totalUsagePercentage) + "%";
             this.textRenderer.drawWithShadow(matrices, (String)string3, (float)(j + 160 - this.textRenderer.getWidth((String)string3)), (float)(k + 80 + r * 8 + 20), profilerTiming3.getColor());
         }
+        matrixStack.pop();
+        RenderSystem.applyModelViewMatrix();
     }
 
     public void scheduleStop() {
@@ -1877,7 +1893,6 @@ implements WindowEventHandler {
             this.serverResourcePackProvider.clear();
             this.inGameHud.clear();
             this.integratedServerRunning = false;
-            this.game.onLeaveGameSession();
         }
         this.world = null;
         this.setWorld(null);
@@ -2110,7 +2125,7 @@ implements WindowEventHandler {
             });
         }
         if (languageManager != null) {
-            systemDetails.addSection("Current Language", () -> languageManager.getLanguage().toString());
+            systemDetails.addSection("Current Language", () -> languageManager.getLanguage());
         }
         systemDetails.addSection("CPU", GlDebugInfo::getCpuInfo);
         return systemDetails;
@@ -2132,7 +2147,7 @@ implements WindowEventHandler {
 
     @Nullable
     public ServerInfo getCurrentServerEntry() {
-        return Util.map(this.getNetworkHandler(), ClientPlayNetworkHandler::getServerInfo);
+        return Nullables.map(this.getNetworkHandler(), ClientPlayNetworkHandler::getServerInfo);
     }
 
     public boolean isInSingleplayer() {
@@ -2487,10 +2502,6 @@ implements WindowEventHandler {
         return this.profiler;
     }
 
-    public MinecraftClientGame getGame() {
-        return this.game;
-    }
-
     @Nullable
     public WorldGenerationProgressTracker getWorldGenerationProgressTracker() {
         return this.worldGenProgressTracker.get();
@@ -2544,6 +2555,14 @@ implements WindowEventHandler {
 
     public SignatureVerifier getServicesSignatureVerifier() {
         return this.servicesSignatureVerifier;
+    }
+
+    public GuiNavigationType getNavigationType() {
+        return this.navigationType;
+    }
+
+    public void setNavigationType(GuiNavigationType navigationType) {
+        this.navigationType = navigationType;
     }
 
     public NarratorManager getNarratorManager() {
@@ -2608,7 +2627,6 @@ implements WindowEventHandler {
             }
         };
         static final Text MORE_INFO_TEXT;
-        private static final String JAVA_ACCOUNT_SETTINGS_URL = "https://aka.ms/JavaAccountSettings";
         private final Text description;
         private static final /* synthetic */ ChatRestriction[] field_28945;
 

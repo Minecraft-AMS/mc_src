@@ -17,6 +17,7 @@ import net.minecraft.block.AbstractSignBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.SignBlock;
 import net.minecraft.block.WallSignBlock;
+import net.minecraft.block.WoodType;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -36,14 +37,13 @@ import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.EntityModelLoader;
-import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.util.DyeColor;
-import net.minecraft.util.SignType;
+import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.RotationPropertyHelper;
@@ -55,7 +55,7 @@ implements BlockEntityRenderer<SignBlockEntity> {
     private static final String STICK = "stick";
     private static final int GLOWING_BLACK_COLOR = -988212;
     private static final int RENDER_DISTANCE = MathHelper.square(16);
-    private final Map<SignType, SignModel> typeToModel = (Map)SignType.stream().collect(ImmutableMap.toImmutableMap(signType -> signType, signType -> new SignModel(ctx.getLayerModelPart(EntityModelLayers.createSign(signType)))));
+    private final Map<WoodType, SignModel> typeToModel = (Map)WoodType.stream().collect(ImmutableMap.toImmutableMap(signType -> signType, signType -> new SignModel(ctx.getLayerModelPart(EntityModelLayers.createSign(signType)))));
     private final TextRenderer textRenderer;
 
     public SignBlockEntityRenderer(BlockEntityRendererFactory.Context ctx) {
@@ -67,8 +67,8 @@ implements BlockEntityRenderer<SignBlockEntity> {
         BlockState blockState = signBlockEntity.getCachedState();
         matrixStack.push();
         float g = 0.6666667f;
-        SignType signType = AbstractSignBlock.getSignType(blockState.getBlock());
-        SignModel signModel = this.typeToModel.get(signType);
+        WoodType woodType = AbstractSignBlock.getWoodType(blockState.getBlock());
+        SignModel signModel = this.typeToModel.get(woodType);
         if (blockState.getBlock() instanceof SignBlock) {
             matrixStack.translate(0.5f, 0.5f, 0.5f);
             float h = -RotationPropertyHelper.toDegrees(blockState.get(SignBlock.ROTATION));
@@ -81,11 +81,11 @@ implements BlockEntityRenderer<SignBlockEntity> {
             matrixStack.translate(0.0f, -0.3125f, -0.4375f);
             signModel.stick.visible = false;
         }
-        this.renderSign(matrixStack, vertexConsumerProvider, i, j, 0.6666667f, signType, signModel);
+        this.renderSign(matrixStack, vertexConsumerProvider, i, j, 0.6666667f, woodType, signModel);
         this.renderText(signBlockEntity, matrixStack, vertexConsumerProvider, i, 0.6666667f);
     }
 
-    void renderSign(MatrixStack matrices, VertexConsumerProvider verticesProvider, int light, int overlay, float scale, SignType type, Model model) {
+    void renderSign(MatrixStack matrices, VertexConsumerProvider verticesProvider, int light, int overlay, float scale, WoodType type, Model model) {
         matrices.push();
         matrices.scale(scale, -scale, -scale);
         SpriteIdentifier spriteIdentifier = this.getTextureId(type);
@@ -99,7 +99,7 @@ implements BlockEntityRenderer<SignBlockEntity> {
         signModel.root.render(matrices, vertices, light, overlay);
     }
 
-    SpriteIdentifier getTextureId(SignType signType) {
+    SpriteIdentifier getTextureId(WoodType signType) {
         return TexturedRenderLayers.getSignTextureId(signType);
     }
 
@@ -133,7 +133,7 @@ implements BlockEntityRenderer<SignBlockEntity> {
                 this.textRenderer.drawWithOutline(orderedText, g, m * blockEntity.getTextLineHeight() - j, k, i, matrices.peek().getPositionMatrix(), verticesProvider, l);
                 continue;
             }
-            this.textRenderer.draw(orderedText, g, (float)(m * blockEntity.getTextLineHeight() - j), k, false, matrices.peek().getPositionMatrix(), verticesProvider, false, 0, l);
+            this.textRenderer.draw(orderedText, g, (float)(m * blockEntity.getTextLineHeight() - j), k, false, matrices.peek().getPositionMatrix(), verticesProvider, TextRenderer.TextLayerType.NORMAL, 0, l);
         }
         matrices.pop();
     }
@@ -157,17 +157,17 @@ implements BlockEntityRenderer<SignBlockEntity> {
 
     static int getColor(SignBlockEntity sign) {
         int i = sign.getTextColor().getSignColor();
-        double d = 0.4;
-        int j = (int)((double)NativeImage.getRed(i) * 0.4);
-        int k = (int)((double)NativeImage.getGreen(i) * 0.4);
-        int l = (int)((double)NativeImage.getBlue(i) * 0.4);
         if (i == DyeColor.BLACK.getSignColor() && sign.isGlowingText()) {
             return -988212;
         }
-        return NativeImage.packColor(0, l, k, j);
+        double d = 0.4;
+        int j = (int)((double)ColorHelper.Argb.getRed(i) * 0.4);
+        int k = (int)((double)ColorHelper.Argb.getGreen(i) * 0.4);
+        int l = (int)((double)ColorHelper.Argb.getBlue(i) * 0.4);
+        return ColorHelper.Argb.getArgb(0, j, k, l);
     }
 
-    public static SignModel createSignModel(EntityModelLoader entityModelLoader, SignType type) {
+    public static SignModel createSignModel(EntityModelLoader entityModelLoader, WoodType type) {
         return new SignModel(entityModelLoader.getModelPart(EntityModelLayers.createSign(type)));
     }
 

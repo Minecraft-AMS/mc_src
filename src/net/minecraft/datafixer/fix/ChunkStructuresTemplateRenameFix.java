@@ -5,7 +5,6 @@
  *  com.google.common.collect.ImmutableMap
  *  com.mojang.datafixers.DSL
  *  com.mojang.datafixers.DataFix
- *  com.mojang.datafixers.OpticFinder
  *  com.mojang.datafixers.TypeRewriteRule
  *  com.mojang.datafixers.schemas.Schema
  *  com.mojang.datafixers.types.Type
@@ -17,7 +16,6 @@ package net.minecraft.datafixer.fix;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
-import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
@@ -35,8 +33,11 @@ extends DataFix {
 
     public TypeRewriteRule makeRule() {
         Type type = this.getInputSchema().getType(TypeReferences.STRUCTURE_FEATURE);
-        OpticFinder opticFinder = type.findField("Children");
-        return this.fixTypeEverywhereTyped("ChunkStructuresTemplateRenameFix", type, typed -> typed.updateTyped(opticFinder, typed2 -> typed2.update(DSL.remainderFinder(), dynamic -> this.fix((Dynamic<?>)((Dynamic)typed.get(DSL.remainderFinder())), (Dynamic<?>)dynamic))));
+        return this.fixTypeEverywhereTyped("ChunkStructuresTemplateRenameFix", type, typed -> typed.update(DSL.remainderFinder(), this::method_49459));
+    }
+
+    private Dynamic<?> method_49459(Dynamic<?> dynamic) {
+        return dynamic.update("Children", dynamic22 -> dynamic.createList(dynamic22.asStream().map(dynamic2 -> this.fix(dynamic, (Dynamic<?>)dynamic2))));
     }
 
     private Dynamic<?> fix(Dynamic<?> dynamic, Dynamic<?> dynamic2) {

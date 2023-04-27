@@ -81,9 +81,10 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.map.MapState;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockBreakingProgressS2CPacket;
 import net.minecraft.network.packet.s2c.play.BlockEventS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntityDamageS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
 import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
@@ -94,7 +95,6 @@ import net.minecraft.network.packet.s2c.play.PlayerSpawnPositionS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.recipe.RecipeManager;
-import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -135,6 +135,8 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.intprovider.IntProvider;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
@@ -187,14 +189,10 @@ public class ServerWorld
 extends World
 implements StructureWorldAccess {
     public static final BlockPos END_SPAWN_POS = new BlockPos(100, 50, 0);
-    private static final int field_35660 = 12000;
-    private static final int field_35653 = 180000;
-    private static final int field_35654 = 12000;
-    private static final int field_35655 = 24000;
-    private static final int field_35656 = 12000;
-    private static final int field_35657 = 180000;
-    private static final int field_35658 = 3600;
-    private static final int field_35659 = 15600;
+    public static final IntProvider CLEAR_WEATHER_DURATION_PROVIDER = UniformIntProvider.create(12000, 180000);
+    public static final IntProvider RAIN_WEATHER_DURATION_PROVIDER = UniformIntProvider.create(12000, 24000);
+    private static final IntProvider CLEAR_THUNDER_WEATHER_DURATION_PROVIDER = UniformIntProvider.create(12000, 180000);
+    public static final IntProvider THUNDER_WEATHER_DURATION_PROVIDER = UniformIntProvider.create(3600, 15600);
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int SERVER_IDLE_COOLDOWN = 300;
     private static final int MAX_TICKS = 65536;
@@ -226,7 +224,7 @@ implements StructureWorldAccess {
     private final boolean shouldTickTime;
 
     public ServerWorld(MinecraftServer server, Executor workerExecutor, LevelStorage.Session session, ServerWorldProperties properties, RegistryKey<World> worldKey, DimensionOptions dimensionOptions, WorldGenerationProgressListener worldGenerationProgressListener, boolean debugWorld, long seed, List<Spawner> spawners, boolean shouldTickTime) {
-        super(properties, worldKey, dimensionOptions.dimensionTypeEntry(), server::getProfiler, false, debugWorld, seed, server.getMaxChainedNeighborUpdates());
+        super(properties, worldKey, server.getRegistryManager(), dimensionOptions.dimensionTypeEntry(), server::getProfiler, false, debugWorld, seed, server.getMaxChainedNeighborUpdates());
         this.shouldTickTime = shouldTickTime;
         this.server = server;
         this.spawners = spawners;
@@ -395,6 +393,7 @@ implements StructureWorldAccess {
     }
 
     public void tickChunk(WorldChunk chunk, int randomTickSpeed) {
+        int l;
         BlockPos blockPos;
         ChunkPos chunkPos = chunk.getPos();
         boolean bl = this.isRaining();
@@ -429,12 +428,12 @@ implements StructureWorldAccess {
                 this.setBlockState(blockPos2, Blocks.ICE.getDefaultState());
             }
             if (bl) {
-                BlockState blockState;
+                Biome.Precipitation precipitation;
                 int k = this.getGameRules().getInt(GameRules.SNOW_ACCUMULATION_HEIGHT);
                 if (k > 0 && biome.canSetSnow(this, blockPos)) {
-                    blockState = this.getBlockState(blockPos);
+                    BlockState blockState = this.getBlockState(blockPos);
                     if (blockState.isOf(Blocks.SNOW)) {
-                        int l = blockState.get(SnowBlock.LAYERS);
+                        l = blockState.get(SnowBlock.LAYERS);
                         if (l < Math.min(k, 8)) {
                             BlockState blockState2 = (BlockState)blockState.with(SnowBlock.LAYERS, l + 1);
                             Block.pushEntitiesUpBeforeBlockChange(blockState, blockState2, this, blockPos);
@@ -444,12 +443,10 @@ implements StructureWorldAccess {
                         this.setBlockState(blockPos, Blocks.SNOW.getDefaultState());
                     }
                 }
-                blockState = this.getBlockState(blockPos2);
-                Biome.Precipitation precipitation = biome.getPrecipitation();
-                if (precipitation == Biome.Precipitation.RAIN && biome.isCold(blockPos2)) {
-                    precipitation = Biome.Precipitation.SNOW;
+                if ((precipitation = biome.getPrecipitation(blockPos2)) != Biome.Precipitation.NONE) {
+                    BlockState blockState3 = this.getBlockState(blockPos2);
+                    blockState3.getBlock().precipitationTick(blockState3, this, blockPos2, precipitation);
                 }
-                blockState.getBlock().precipitationTick(blockState, this, blockPos2, precipitation);
             }
         }
         profiler.swap("tickBlocks");
@@ -457,15 +454,15 @@ implements StructureWorldAccess {
             for (ChunkSection chunkSection : chunk.getSectionArray()) {
                 if (!chunkSection.hasRandomTicks()) continue;
                 int m = chunkSection.getYOffset();
-                for (int l = 0; l < randomTickSpeed; ++l) {
+                for (l = 0; l < randomTickSpeed; ++l) {
                     FluidState fluidState;
                     BlockPos blockPos3 = this.getRandomPosInChunk(i, m, j, 15);
                     profiler.push("randomTick");
-                    BlockState blockState3 = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - m, blockPos3.getZ() - j);
-                    if (blockState3.hasRandomTicks()) {
-                        blockState3.randomTick(this, blockPos3, this.random);
+                    BlockState blockState4 = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - m, blockPos3.getZ() - j);
+                    if (blockState4.hasRandomTicks()) {
+                        blockState4.randomTick(this, blockPos3, this.random);
                     }
-                    if ((fluidState = blockState3.getFluidState()).hasRandomTicks()) {
+                    if ((fluidState = blockState4.getFluidState()).hasRandomTicks()) {
                         fluidState.onRandomTick(this, blockPos3, this.random);
                     }
                     profiler.pop();
@@ -551,14 +548,14 @@ implements StructureWorldAccess {
                             bl2 = !bl2;
                         }
                     } else {
-                        j = bl2 ? MathHelper.nextBetween(this.random, 3600, 15600) : MathHelper.nextBetween(this.random, 12000, 180000);
+                        j = bl2 ? THUNDER_WEATHER_DURATION_PROVIDER.get(this.random) : CLEAR_THUNDER_WEATHER_DURATION_PROVIDER.get(this.random);
                     }
                     if (k > 0) {
                         if (--k == 0) {
                             bl3 = !bl3;
                         }
                     } else {
-                        k = bl3 ? MathHelper.nextBetween(this.random, 12000, 24000) : MathHelper.nextBetween(this.random, 12000, 180000);
+                        k = bl3 ? RAIN_WEATHER_DURATION_PROVIDER.get(this.random) : CLEAR_WEATHER_DURATION_PROVIDER.get(this.random);
                     }
                 }
                 this.worldProperties.setThunderTime(j);
@@ -897,6 +894,11 @@ implements StructureWorldAccess {
     }
 
     @Override
+    public void sendEntityDamage(Entity entity, DamageSource damageSource) {
+        this.getChunkManager().sendToNearbyPlayers(entity, new EntityDamageS2CPacket(entity, damageSource));
+    }
+
+    @Override
     public ServerChunkManager getChunkManager() {
         return this.chunkManager;
     }
@@ -979,7 +981,7 @@ implements StructureWorldAccess {
         return this.sendToPlayerIfNearby(viewer, force, x, y, z, packet);
     }
 
-    private boolean sendToPlayerIfNearby(ServerPlayerEntity player, boolean force, double x, double y, double z, Packet<?> packet) {
+    public final boolean sendToPlayerIfNearby(ServerPlayerEntity player, boolean force, double x, double y, double z, Packet<?> packet) {
         if (player.getWorld() != this) {
             return false;
         }
@@ -1038,11 +1040,6 @@ implements StructureWorldAccess {
     @Override
     public boolean isSavingDisabled() {
         return this.savingDisabled;
-    }
-
-    @Override
-    public DynamicRegistryManager getRegistryManager() {
-        return this.server.getRegistryManager();
     }
 
     public PersistentStateManager getPersistentStateManager() {

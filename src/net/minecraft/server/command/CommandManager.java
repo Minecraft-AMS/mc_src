@@ -64,6 +64,7 @@ import net.minecraft.server.command.AttributeCommand;
 import net.minecraft.server.command.BossBarCommand;
 import net.minecraft.server.command.ClearCommand;
 import net.minecraft.server.command.CloneCommand;
+import net.minecraft.server.command.DamageCommand;
 import net.minecraft.server.command.DataCommand;
 import net.minecraft.server.command.DatapackCommand;
 import net.minecraft.server.command.DebugCommand;
@@ -96,6 +97,7 @@ import net.minecraft.server.command.PlaySoundCommand;
 import net.minecraft.server.command.PublishCommand;
 import net.minecraft.server.command.RecipeCommand;
 import net.minecraft.server.command.ReloadCommand;
+import net.minecraft.server.command.RideCommand;
 import net.minecraft.server.command.SayCommand;
 import net.minecraft.server.command.ScheduleCommand;
 import net.minecraft.server.command.ScoreboardCommand;
@@ -103,6 +105,7 @@ import net.minecraft.server.command.SeedCommand;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.command.SetBlockCommand;
 import net.minecraft.server.command.SetWorldSpawnCommand;
+import net.minecraft.server.command.SpawnArmorTrimsCommand;
 import net.minecraft.server.command.SpawnPointCommand;
 import net.minecraft.server.command.SpectateCommand;
 import net.minecraft.server.command.SpreadPlayersCommand;
@@ -161,6 +164,7 @@ public class CommandManager {
         BossBarCommand.register(this.dispatcher);
         ClearCommand.register(this.dispatcher, commandRegistryAccess);
         CloneCommand.register(this.dispatcher, commandRegistryAccess);
+        DamageCommand.register(this.dispatcher, commandRegistryAccess);
         DataCommand.register(this.dispatcher);
         DatapackCommand.register(this.dispatcher);
         DebugCommand.register(this.dispatcher);
@@ -190,6 +194,7 @@ public class CommandManager {
         PlaySoundCommand.register(this.dispatcher);
         ReloadCommand.register(this.dispatcher);
         RecipeCommand.register(this.dispatcher);
+        RideCommand.register(this.dispatcher);
         SayCommand.register(this.dispatcher);
         ScheduleCommand.register(this.dispatcher);
         ScoreboardCommand.register(this.dispatcher);
@@ -216,6 +221,7 @@ public class CommandManager {
         }
         if (SharedConstants.isDevelopment) {
             TestCommand.register(this.dispatcher);
+            SpawnArmorTrimsCommand.register(this.dispatcher);
         }
         if (environment.dedicated) {
             BanIpCommand.register(this.dispatcher);
@@ -417,8 +423,8 @@ public class CommandManager {
         public static final /* enum */ RegistrationEnvironment ALL = new RegistrationEnvironment(true, true);
         public static final /* enum */ RegistrationEnvironment DEDICATED = new RegistrationEnvironment(false, true);
         public static final /* enum */ RegistrationEnvironment INTEGRATED = new RegistrationEnvironment(true, false);
-        final boolean integrated;
-        final boolean dedicated;
+        public final boolean integrated;
+        public final boolean dedicated;
         private static final /* synthetic */ RegistrationEnvironment[] field_25424;
 
         public static RegistrationEnvironment[] values() {

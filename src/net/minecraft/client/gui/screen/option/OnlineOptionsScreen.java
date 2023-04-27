@@ -24,7 +24,7 @@ import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.SimpleOption;
 import net.minecraft.text.Text;
-import net.minecraft.util.Util;
+import net.minecraft.util.Nullables;
 import net.minecraft.world.Difficulty;
 import org.apache.commons.compress.utils.Lists;
 import org.jetbrains.annotations.Nullable;
@@ -39,7 +39,7 @@ extends SimpleOptionsScreen {
         ArrayList list = Lists.newArrayList();
         list.add(gameOptions.getRealmsNotifications());
         list.add(gameOptions.getAllowServerListing());
-        SimpleOption simpleOption = Util.map(client.world, world -> {
+        SimpleOption simpleOption = Nullables.map(client.world, world -> {
             Difficulty difficulty = world.getDifficulty();
             return new SimpleOption<Unit>("options.difficulty.online", SimpleOption.emptyTooltip(), (optionText, unit) -> difficulty.getTranslatableName(), new SimpleOption.PotentialValuesBasedCallbacks<Unit>(List.of(Unit.INSTANCE), Codec.EMPTY.codec()), Unit.INSTANCE, unit -> {});
         });
@@ -58,10 +58,10 @@ extends SimpleOptionsScreen {
     protected void init() {
         ClickableWidget clickableWidget;
         super.init();
-        if (this.difficulty != null && (clickableWidget = this.buttonList.getButtonFor(this.difficulty)) != null) {
+        if (this.difficulty != null && (clickableWidget = this.buttonList.getWidgetFor(this.difficulty)) != null) {
             clickableWidget.active = false;
         }
-        if ((clickableWidget = this.buttonList.getButtonFor(this.gameOptions.getTelemetryOptInExtra())) != null) {
+        if ((clickableWidget = this.buttonList.getWidgetFor(this.gameOptions.getTelemetryOptInExtra())) != null) {
             clickableWidget.active = this.client.isOptionalTelemetryEnabledByApi();
         }
     }

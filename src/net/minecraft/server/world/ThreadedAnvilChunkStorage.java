@@ -60,6 +60,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -83,7 +84,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.boss.dragon.EnderDragonPart;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.s2c.play.ChunkBiomeDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkRenderDistanceCenterS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityAttachS2CPacket;
@@ -1100,17 +1102,17 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         }
     }
 
-    public void sendChunkPacketToWatchingPlayers(Chunk chunk) {
-        WorldChunk worldChunk;
-        ChunkPos chunkPos = chunk.getPos();
-        WorldChunk worldChunk2 = chunk instanceof WorldChunk ? (worldChunk = (WorldChunk)chunk) : this.world.getChunk(chunkPos.x, chunkPos.z);
-        MutableObject mutableObject = new MutableObject();
-        for (ServerPlayerEntity serverPlayerEntity : this.getPlayersWatchingChunk(chunkPos, false)) {
-            if (mutableObject.getValue() == null) {
-                mutableObject.setValue((Object)new ChunkDataS2CPacket(worldChunk2, this.lightingProvider, null, null, true));
+    public void sendChunkBiomePackets(List<Chunk> chunks2) {
+        HashMap<ServerPlayerEntity, List> map = new HashMap<ServerPlayerEntity, List>();
+        for (Chunk chunk : chunks2) {
+            WorldChunk worldChunk;
+            ChunkPos chunkPos = chunk.getPos();
+            WorldChunk worldChunk2 = chunk instanceof WorldChunk ? (worldChunk = (WorldChunk)chunk) : this.world.getChunk(chunkPos.x, chunkPos.z);
+            for (ServerPlayerEntity serverPlayerEntity : this.getPlayersWatchingChunk(chunkPos, false)) {
+                map.computeIfAbsent(serverPlayerEntity, player -> new ArrayList()).add(worldChunk2);
             }
-            serverPlayerEntity.sendChunkPacket(chunkPos, (Packet)mutableObject.getValue());
         }
+        map.forEach((player, chunks) -> player.networkHandler.sendPacket(ChunkBiomeDataS2CPacket.create(chunks)));
     }
 
     private void sendChunkDataPackets(ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk) {

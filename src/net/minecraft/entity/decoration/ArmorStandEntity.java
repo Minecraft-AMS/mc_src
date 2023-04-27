@@ -32,6 +32,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -92,7 +93,7 @@ extends LivingEntity {
 
     public ArmorStandEntity(EntityType<? extends ArmorStandEntity> entityType, World world) {
         super((EntityType<? extends LivingEntity>)entityType, world);
-        this.stepHeight = 0.0f;
+        this.setStepHeight(0.0f);
     }
 
     public ArmorStandEntity(World world, double x, double y, double z) {
@@ -398,19 +399,19 @@ extends LivingEntity {
         if (this.world.isClient || this.isRemoved()) {
             return false;
         }
-        if (DamageSource.OUT_OF_WORLD.equals(source)) {
+        if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             this.kill();
             return false;
         }
         if (this.isInvulnerableTo(source) || this.invisible || this.isMarker()) {
             return false;
         }
-        if (source.isExplosive()) {
+        if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
             this.onBreak(source);
             this.kill();
             return false;
         }
-        if (DamageSource.IN_FIRE.equals(source)) {
+        if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
             if (this.isOnFire()) {
                 this.updateHealth(source, 0.15f);
             } else {
@@ -418,7 +419,7 @@ extends LivingEntity {
             }
             return false;
         }
-        if (DamageSource.ON_FIRE.equals(source) && this.getHealth() > 0.5f) {
+        if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5f) {
             this.updateHealth(source, 4.0f);
             return false;
         }
@@ -428,8 +429,12 @@ extends LivingEntity {
         if (!bl3 && !bl) {
             return false;
         }
-        if (source.getAttacker() instanceof PlayerEntity && !((PlayerEntity)source.getAttacker()).getAbilities().allowModifyWorld) {
-            return false;
+        Entity entity = source.getAttacker();
+        if (entity instanceof PlayerEntity) {
+            PlayerEntity playerEntity = (PlayerEntity)entity;
+            if (!playerEntity.getAbilities().allowModifyWorld) {
+                return false;
+            }
         }
         if (source.isSourceCreativePlayer()) {
             this.playBreakSound();
@@ -489,7 +494,11 @@ extends LivingEntity {
     }
 
     private void breakAndDropItem(DamageSource damageSource) {
-        Block.dropStack(this.world, this.getBlockPos(), new ItemStack(Items.ARMOR_STAND));
+        ItemStack itemStack = new ItemStack(Items.ARMOR_STAND);
+        if (this.hasCustomName()) {
+            itemStack.setCustomName(this.getCustomName());
+        }
+        Block.dropStack(this.world, this.getBlockPos(), itemStack);
         this.onBreak(damageSource);
     }
 
@@ -625,7 +634,7 @@ extends LivingEntity {
         return (this.dataTracker.get(ARMOR_STAND_FLAGS) & 1) != 0;
     }
 
-    private void setShowArms(boolean showArms) {
+    public void setShowArms(boolean showArms) {
         this.dataTracker.set(ARMOR_STAND_FLAGS, this.setBitField(this.dataTracker.get(ARMOR_STAND_FLAGS), 4, showArms));
     }
 
@@ -633,7 +642,7 @@ extends LivingEntity {
         return (this.dataTracker.get(ARMOR_STAND_FLAGS) & 4) != 0;
     }
 
-    private void setHideBasePlate(boolean hideBasePlate) {
+    public void setHideBasePlate(boolean hideBasePlate) {
         this.dataTracker.set(ARMOR_STAND_FLAGS, this.setBitField(this.dataTracker.get(ARMOR_STAND_FLAGS), 8, hideBasePlate));
     }
 
@@ -781,7 +790,7 @@ extends LivingEntity {
             Box box = this.getDimensions(false).getBoxAt(this.getPos());
             BlockPos blockPos = this.getBlockPos();
             int i = Integer.MIN_VALUE;
-            for (BlockPos blockPos2 : BlockPos.iterate(new BlockPos(box.minX, box.minY, box.minZ), new BlockPos(box.maxX, box.maxY, box.maxZ))) {
+            for (BlockPos blockPos2 : BlockPos.iterate(BlockPos.ofFloored(box.minX, box.minY, box.minZ), BlockPos.ofFloored(box.maxX, box.maxY, box.maxZ))) {
                 int j = Math.max(this.world.getLightLevel(LightType.BLOCK, blockPos2), this.world.getLightLevel(LightType.SKY, blockPos2));
                 if (j == 15) {
                     return Vec3d.ofCenter(blockPos2);

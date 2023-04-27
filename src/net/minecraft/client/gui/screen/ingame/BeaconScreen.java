@@ -22,7 +22,6 @@ import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.PressableWidget;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.effect.StatusEffect;
@@ -123,25 +122,24 @@ extends HandledScreen<BeaconScreenHandler> {
 
     @Override
     protected void drawForeground(MatrixStack matrices, int mouseX, int mouseY) {
-        BeaconScreen.drawCenteredText(matrices, this.textRenderer, PRIMARY_POWER_TEXT, 62, 10, 0xE0E0E0);
-        BeaconScreen.drawCenteredText(matrices, this.textRenderer, SECONDARY_POWER_TEXT, 169, 10, 0xE0E0E0);
+        BeaconScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, PRIMARY_POWER_TEXT, 62, 10, 0xE0E0E0);
+        BeaconScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, SECONDARY_POWER_TEXT, 169, 10, 0xE0E0E0);
     }
 
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, TEXTURE);
         int i = (this.width - this.backgroundWidth) / 2;
         int j = (this.height - this.backgroundHeight) / 2;
-        this.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
-        this.itemRenderer.zOffset = 100.0f;
-        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.NETHERITE_INGOT), i + 20, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.EMERALD), i + 41, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.DIAMOND), i + 41 + 22, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.GOLD_INGOT), i + 42 + 44, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(new ItemStack(Items.IRON_INGOT), i + 42 + 66, j + 109);
-        this.itemRenderer.zOffset = 0.0f;
+        BeaconScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        matrices.push();
+        matrices.translate(0.0f, 0.0f, 100.0f);
+        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.NETHERITE_INGOT), i + 20, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.EMERALD), i + 41, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.DIAMOND), i + 41 + 22, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.GOLD_INGOT), i + 42 + 44, j + 109);
+        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.IRON_INGOT), i + 42 + 66, j + 109);
+        matrices.pop();
     }
 
     @Override
@@ -233,7 +231,7 @@ extends HandledScreen<BeaconScreenHandler> {
         @Override
         protected void renderExtra(MatrixStack matrices) {
             RenderSystem.setShaderTexture(0, this.sprite.getAtlasId());
-            EffectButtonWidget.drawSprite(matrices, this.getX() + 2, this.getY() + 2, this.getZOffset(), 18, 18, this.sprite);
+            EffectButtonWidget.drawSprite(matrices, this.getX() + 2, this.getY() + 2, 0, 18, 18, this.sprite);
         }
 
         @Override
@@ -286,7 +284,7 @@ extends HandledScreen<BeaconScreenHandler> {
 
         @Override
         protected void renderExtra(MatrixStack matrices) {
-            this.drawTexture(matrices, this.getX() + 2, this.getY() + 2, this.u, this.v, 18, 18);
+            IconButtonWidget.drawTexture(matrices, this.getX() + 2, this.getY() + 2, this.u, this.v, 18, 18);
         }
     }
 
@@ -306,19 +304,17 @@ extends HandledScreen<BeaconScreenHandler> {
 
         @Override
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, TEXTURE);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             int i = 219;
             int j = 0;
             if (!this.active) {
                 j += this.width * 2;
             } else if (this.disabled) {
                 j += this.width * 1;
-            } else if (this.isHovered()) {
+            } else if (this.isSelected()) {
                 j += this.width * 3;
             }
-            this.drawTexture(matrices, this.getX(), this.getY(), j, 219, this.width, this.height);
+            BaseButtonWidget.drawTexture(matrices, this.getX(), this.getY(), j, 219, this.width, this.height);
             this.renderExtra(matrices);
         }
 

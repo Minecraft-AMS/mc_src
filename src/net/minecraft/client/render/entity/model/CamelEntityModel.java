@@ -28,9 +28,10 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class CamelEntityModel<T extends CamelEntity>
 extends SinglePartEntityModel<T> {
-    private static final float field_40458 = 400.0f;
-    private static final float field_41377 = 0.3f;
     private static final float field_40459 = 2.0f;
+    private static final float field_42227 = 2.5f;
+    private static final float field_43083 = 0.45f;
+    private static final float field_43084 = 29.35f;
     private static final String SADDLE = "saddle";
     private static final String BRIDLE = "bridle";
     private static final String REINS = "reins";
@@ -72,9 +73,7 @@ extends SinglePartEntityModel<T> {
         this.getPart().traverse().forEach(ModelPart::resetTransform);
         this.setHeadAngles(camelEntity, i, j, h);
         this.updateVisibleParts(camelEntity);
-        float k = (float)((Entity)camelEntity).getVelocity().horizontalLengthSquared();
-        float l = MathHelper.clamp(k * 400.0f, 0.3f, 2.0f);
-        this.updateAnimation(((CamelEntity)camelEntity).walkingAnimationState, CamelAnimations.WALKING, h, l);
+        this.animateMovement(CamelAnimations.WALKING, f, g, 2.0f, 2.5f);
         this.updateAnimation(((CamelEntity)camelEntity).sittingTransitionAnimationState, CamelAnimations.SITTING_TRANSITION, h, 1.0f);
         this.updateAnimation(((CamelEntity)camelEntity).sittingAnimationState, CamelAnimations.SITTING, h, 1.0f);
         this.updateAnimation(((CamelEntity)camelEntity).standingTransitionAnimationState, CamelAnimations.STANDING_TRANSITION, h, 1.0f);
@@ -108,11 +107,9 @@ extends SinglePartEntityModel<T> {
     @Override
     public void render(MatrixStack matrices, VertexConsumer vertices, int light, int overlay, float red, float green, float blue, float alpha) {
         if (this.child) {
-            float f = 2.0f;
-            float g = 1.1f;
             matrices.push();
-            matrices.scale(0.45454544f, 0.41322312f, 0.45454544f);
-            matrices.translate(0.0f, 2.0625f, 0.0f);
+            matrices.scale(0.45f, 0.45f, 0.45f);
+            matrices.translate(0.0f, 1.834375f, 0.0f);
             this.getPart().render(matrices, vertices, light, overlay, red, green, blue, alpha);
             matrices.pop();
         } else {

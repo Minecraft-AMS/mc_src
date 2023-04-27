@@ -20,7 +20,6 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.passive.GoatEntity;
 import net.minecraft.registry.tag.BlockTags;
@@ -80,12 +79,12 @@ extends MultiTickTask<GoatEntity> {
         Brain<GoatEntity> brain = goatEntity.getBrain();
         if (!list.isEmpty()) {
             LivingEntity livingEntity = list.get(0);
-            livingEntity.damage(DamageSource.mob(goatEntity).setNeutral(), (float)goatEntity.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
+            livingEntity.damage(serverWorld.getDamageSources().mobAttackNoAggro(goatEntity), (float)goatEntity.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
             int i = goatEntity.hasStatusEffect(StatusEffects.SPEED) ? goatEntity.getStatusEffect(StatusEffects.SPEED).getAmplifier() + 1 : 0;
             int j = goatEntity.hasStatusEffect(StatusEffects.SLOWNESS) ? goatEntity.getStatusEffect(StatusEffects.SLOWNESS).getAmplifier() + 1 : 0;
             float f = 0.25f * (float)(i - j);
             float g = MathHelper.clamp(goatEntity.getMovementSpeed() * 1.65f, 0.2f, 3.0f) + f;
-            float h = livingEntity.blockedByShield(DamageSource.mob(goatEntity)) ? 0.5f : 1.0f;
+            float h = livingEntity.blockedByShield(serverWorld.getDamageSources().mobAttack(goatEntity)) ? 0.5f : 1.0f;
             livingEntity.takeKnockback((double)(h * g) * this.strengthMultiplierFactory.applyAsDouble(goatEntity), this.direction.getX(), this.direction.getZ());
             this.finishRam(serverWorld, goatEntity);
             serverWorld.playSoundFromEntity(null, goatEntity, this.impactSoundFactory.apply(goatEntity), SoundCategory.NEUTRAL, 1.0f, 1.0f);
@@ -109,7 +108,7 @@ extends MultiTickTask<GoatEntity> {
 
     private boolean shouldSnapHorn(ServerWorld world, GoatEntity goat) {
         Vec3d vec3d = goat.getVelocity().multiply(1.0, 0.0, 1.0).normalize();
-        BlockPos blockPos = new BlockPos(goat.getPos().add(vec3d));
+        BlockPos blockPos = BlockPos.ofFloored(goat.getPos().add(vec3d));
         return world.getBlockState(blockPos).isIn(BlockTags.SNAPS_GOAT_HORN) || world.getBlockState(blockPos.up()).isIn(BlockTags.SNAPS_GOAT_HORN);
     }
 

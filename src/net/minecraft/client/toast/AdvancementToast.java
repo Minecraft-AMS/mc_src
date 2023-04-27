@@ -14,7 +14,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementDisplay;
 import net.minecraft.advancement.AdvancementFrame;
-import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.client.toast.ToastManager;
@@ -26,6 +26,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class AdvancementToast
 implements Toast {
+    public static final int field_41812 = 5000;
     private final Advancement advancement;
     private boolean soundPlayed;
 
@@ -35,11 +36,9 @@ implements Toast {
 
     @Override
     public Toast.Visibility draw(MatrixStack matrices, ToastManager manager, long startTime) {
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, TEXTURE);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         AdvancementDisplay advancementDisplay = this.advancement.getDisplay();
-        manager.drawTexture(matrices, 0, 0, 0, 0, this.getWidth(), this.getHeight());
+        DrawableHelper.drawTexture(matrices, 0, 0, 0, 0, this.getWidth(), this.getHeight());
         if (advancementDisplay != null) {
             int i;
             List<OrderedText> list = manager.getClient().textRenderer.wrapLines(advancementDisplay.getTitle(), 125);
@@ -68,8 +67,8 @@ implements Toast {
                     manager.getClient().getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f));
                 }
             }
-            manager.getClient().getItemRenderer().renderInGui(advancementDisplay.getIcon(), 8, 8);
-            return startTime >= 5000L ? Toast.Visibility.HIDE : Toast.Visibility.SHOW;
+            manager.getClient().getItemRenderer().renderInGui(matrices, advancementDisplay.getIcon(), 8, 8);
+            return (double)startTime >= 5000.0 * manager.getNotificationDisplayTimeMultiplier() ? Toast.Visibility.HIDE : Toast.Visibility.SHOW;
         }
         return Toast.Visibility.HIDE;
     }

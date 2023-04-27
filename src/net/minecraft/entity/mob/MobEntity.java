@@ -22,6 +22,7 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.Targeter;
 import net.minecraft.entity.ai.control.BodyControl;
 import net.minecraft.entity.ai.control.JumpControl;
 import net.minecraft.entity.ai.control.LookControl;
@@ -89,7 +90,8 @@ import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class MobEntity
-extends LivingEntity {
+extends LivingEntity
+implements Targeter {
     private static final TrackedData<Byte> MOB_FLAGS = DataTracker.registerData(MobEntity.class, TrackedDataHandlerRegistry.BYTE);
     private static final int AI_DISABLED_FLAG = 1;
     private static final int LEFT_HANDED_FLAG = 2;
@@ -167,17 +169,15 @@ extends LivingEntity {
     }
 
     public float getPathfindingPenalty(PathNodeType nodeType) {
-        MobEntity mobEntity = this.getVehicle() instanceof MobEntity && ((MobEntity)this.getVehicle()).movesIndependently() ? (MobEntity)this.getVehicle() : this;
-        Float float_ = mobEntity.pathfindingPenalties.get((Object)nodeType);
+        MobEntity mobEntity;
+        Entity entity = this.getControllingVehicle();
+        MobEntity mobEntity2 = entity instanceof MobEntity && (mobEntity = (MobEntity)entity).movesIndependently() ? mobEntity : this;
+        Float float_ = mobEntity2.pathfindingPenalties.get((Object)nodeType);
         return float_ == null ? nodeType.getDefaultPenalty() : float_.floatValue();
     }
 
     public void setPathfindingPenalty(PathNodeType nodeType, float penalty) {
         this.pathfindingPenalties.put(nodeType, Float.valueOf(penalty));
-    }
-
-    public boolean canJumpToNextPathNode(PathNodeType type) {
-        return type != PathNodeType.DANGER_FIRE && type != PathNodeType.DANGER_CACTUS && type != PathNodeType.DANGER_OTHER && type != PathNodeType.WALKABLE_DOOR;
     }
 
     protected BodyControl createBodyControl() {
@@ -189,8 +189,9 @@ extends LivingEntity {
     }
 
     public MoveControl getMoveControl() {
-        if (this.hasVehicle() && this.getVehicle() instanceof MobEntity) {
-            MobEntity mobEntity = (MobEntity)this.getVehicle();
+        Entity entity = this.getControllingVehicle();
+        if (entity instanceof MobEntity) {
+            MobEntity mobEntity = (MobEntity)entity;
             return mobEntity.getMoveControl();
         }
         return this.moveControl;
@@ -201,17 +202,27 @@ extends LivingEntity {
     }
 
     public EntityNavigation getNavigation() {
-        if (this.hasVehicle() && this.getVehicle() instanceof MobEntity) {
-            MobEntity mobEntity = (MobEntity)this.getVehicle();
+        Entity entity = this.getControllingVehicle();
+        if (entity instanceof MobEntity) {
+            MobEntity mobEntity = (MobEntity)entity;
             return mobEntity.getNavigation();
         }
         return this.navigation;
+    }
+
+    @Override
+    @Nullable
+    public LivingEntity getControllingPassenger() {
+        MobEntity mobEntity;
+        Entity entity;
+        return !this.isAiDisabled() && (entity = this.getFirstPassenger()) instanceof MobEntity ? (mobEntity = (MobEntity)entity) : null;
     }
 
     public MobVisibilityCache getVisibilityCache() {
         return this.visibilityCache;
     }
 
+    @Override
     @Nullable
     public LivingEntity getTarget() {
         return this.target;
@@ -325,7 +336,7 @@ extends LivingEntity {
     }
 
     protected void updateGoalControls() {
-        boolean bl = !(this.getPrimaryPassenger() instanceof MobEntity);
+        boolean bl = !(this.getControllingPassenger() instanceof MobEntity);
         boolean bl2 = !(this.getVehicle() instanceof BoatEntity);
         this.goalSelector.setControlEnabled(Goal.Control.MOVE, bl);
         this.goalSelector.setControlEnabled(Goal.Control.JUMP, bl && bl2);
@@ -518,9 +529,14 @@ extends LivingEntity {
     }
 
     public ItemStack tryEquip(ItemStack stack) {
-        EquipmentSlot equipmentSlot = this.getSlotToEquip(stack);
+        EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(stack);
         ItemStack itemStack = this.getEquippedStack(equipmentSlot);
         boolean bl = this.prefersNewEquipment(stack, itemStack);
+        if (equipmentSlot.isArmorSlot() && !bl) {
+            equipmentSlot = EquipmentSlot.MAINHAND;
+            itemStack = this.getEquippedStack(equipmentSlot);
+            bl = this.prefersNewEquipment(stack, itemStack);
+        }
         if (bl && this.canPickupItem(stack)) {
             double d = this.getDropChance(equipmentSlot);
             if (!itemStack.isEmpty() && (double)Math.max(this.random.nextFloat() - 0.1f, 0.0f) < d) {
@@ -535,12 +551,6 @@ extends LivingEntity {
             return stack;
         }
         return ItemStack.EMPTY;
-    }
-
-    private EquipmentSlot getSlotToEquip(ItemStack stack) {
-        EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(stack);
-        boolean bl = this.getEquippedStack(equipmentSlot).isEmpty();
-        return equipmentSlot.isArmorSlot() && !bl ? EquipmentSlot.MAINHAND : equipmentSlot;
     }
 
     protected void equipLootStack(EquipmentSlot slot, ItemStack stack) {
@@ -1031,15 +1041,17 @@ extends LivingEntity {
         }
         if (this.getHoldingEntity() == player) {
             this.detachLeash(true, !player.getAbilities().creativeMode);
+            this.emitGameEvent(GameEvent.ENTITY_INTERACT, player);
             return ActionResult.success(this.world.isClient);
         }
         ActionResult actionResult = this.interactWithItem(player, hand);
         if (actionResult.isAccepted()) {
+            this.emitGameEvent(GameEvent.ENTITY_INTERACT, player);
             return actionResult;
         }
         actionResult = this.interactMob(player, hand);
         if (actionResult.isAccepted()) {
-            this.emitGameEvent(GameEvent.ENTITY_INTERACT);
+            this.emitGameEvent(GameEvent.ENTITY_INTERACT, player);
             return actionResult;
         }
         return super.interact(player, hand);
@@ -1235,11 +1247,6 @@ extends LivingEntity {
     }
 
     @Override
-    public boolean isLogicalSideForUpdatingMovement() {
-        return this.hasPrimaryPassenger() && super.isLogicalSideForUpdatingMovement();
-    }
-
-    @Override
     public boolean canMoveVoluntarily() {
         return super.canMoveVoluntarily() && !this.isAiDisabled();
     }
@@ -1305,7 +1312,7 @@ extends LivingEntity {
         if ((i = EnchantmentHelper.getFireAspect(this)) > 0) {
             target.setOnFireFor(i * 4);
         }
-        if (bl = target.damage(DamageSource.mob(this), f)) {
+        if (bl = target.damage(this.getDamageSources().mobAttack(this), f)) {
             if (g > 0.0f && target instanceof LivingEntity) {
                 ((LivingEntity)target).takeKnockback(g * 0.5f, MathHelper.sin(this.getYaw() * ((float)Math.PI / 180)), -MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)));
                 this.setVelocity(this.getVelocity().multiply(0.6, 1.0, 0.6));
@@ -1334,7 +1341,7 @@ extends LivingEntity {
         if (this.world.isDay() && !this.world.isClient) {
             boolean bl;
             float f = this.getBrightnessAtEyes();
-            BlockPos blockPos = new BlockPos(this.getX(), this.getEyeY(), this.getZ());
+            BlockPos blockPos = BlockPos.ofFloored(this.getX(), this.getEyeY(), this.getZ());
             boolean bl2 = bl = this.isWet() || this.inPowderSnow || this.wasInPowderSnow;
             if (f > 0.5f && this.random.nextFloat() * 30.0f < (f - 0.4f) * 2.0f && !bl && this.world.isSkyVisible(blockPos)) {
                 return true;

@@ -35,7 +35,7 @@ extends RedstoneTorchBlock {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final BooleanProperty LIT = RedstoneTorchBlock.LIT;
 
-    protected WallRedstoneTorchBlock(AbstractBlock.Settings settings) {
+    public WallRedstoneTorchBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(LIT, true));
     }

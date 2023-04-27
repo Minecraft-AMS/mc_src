@@ -40,7 +40,7 @@ extends PlantBlock {
     private final GourdBlock gourdBlock;
     private final Supplier<Item> pickBlockItem;
 
-    protected AttachedStemBlock(GourdBlock gourdBlock, Supplier<Item> pickBlockItem, AbstractBlock.Settings settings) {
+    public AttachedStemBlock(GourdBlock gourdBlock, Supplier<Item> pickBlockItem, AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH));
         this.gourdBlock = gourdBlock;

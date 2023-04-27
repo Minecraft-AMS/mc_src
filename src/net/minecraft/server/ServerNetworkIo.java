@@ -14,6 +14,7 @@
  *  io.netty.channel.ChannelInboundHandlerAdapter
  *  io.netty.channel.ChannelInitializer
  *  io.netty.channel.ChannelOption
+ *  io.netty.channel.ChannelPipeline
  *  io.netty.channel.EventLoopGroup
  *  io.netty.channel.epoll.Epoll
  *  io.netty.channel.epoll.EpollEventLoopGroup
@@ -43,6 +44,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -63,14 +65,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.DecoderHandler;
 import net.minecraft.network.LegacyQueryHandler;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.PacketCallbacks;
-import net.minecraft.network.PacketEncoder;
 import net.minecraft.network.RateLimitedConnection;
-import net.minecraft.network.SizePrepender;
-import net.minecraft.network.SplitterHandler;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.LocalServerHandshakeNetworkHandler;
@@ -123,11 +121,12 @@ public class ServerNetworkIo {
                     catch (ChannelException channelException) {
                         // empty catch block
                     }
-                    channel.pipeline().addLast("timeout", (ChannelHandler)new ReadTimeoutHandler(30)).addLast("legacy_query", (ChannelHandler)new LegacyQueryHandler(ServerNetworkIo.this)).addLast("splitter", (ChannelHandler)new SplitterHandler()).addLast("decoder", (ChannelHandler)new DecoderHandler(NetworkSide.SERVERBOUND)).addLast("prepender", (ChannelHandler)new SizePrepender()).addLast("encoder", (ChannelHandler)new PacketEncoder(NetworkSide.CLIENTBOUND));
+                    ChannelPipeline channelPipeline = channel.pipeline().addLast("timeout", (ChannelHandler)new ReadTimeoutHandler(30)).addLast("legacy_query", (ChannelHandler)new LegacyQueryHandler(ServerNetworkIo.this));
+                    ClientConnection.addHandlers(channelPipeline, NetworkSide.SERVERBOUND);
                     int i = ServerNetworkIo.this.server.getRateLimit();
                     ClientConnection clientConnection = i > 0 ? new RateLimitedConnection(i) : new ClientConnection(NetworkSide.SERVERBOUND);
                     ServerNetworkIo.this.connections.add(clientConnection);
-                    channel.pipeline().addLast("packet_handler", (ChannelHandler)clientConnection);
+                    channelPipeline.addLast("packet_handler", (ChannelHandler)clientConnection);
                     clientConnection.setPacketListener(new ServerHandshakeNetworkHandler(ServerNetworkIo.this.server, clientConnection));
                 }
             }).group((EventLoopGroup)lazy.get()).localAddress(address, port)).bind().syncUninterruptibly());
@@ -147,7 +146,8 @@ public class ServerNetworkIo {
                     ClientConnection clientConnection = new ClientConnection(NetworkSide.SERVERBOUND);
                     clientConnection.setPacketListener(new LocalServerHandshakeNetworkHandler(ServerNetworkIo.this.server, clientConnection));
                     ServerNetworkIo.this.connections.add(clientConnection);
-                    channel.pipeline().addLast("packet_handler", (ChannelHandler)clientConnection);
+                    ChannelPipeline channelPipeline = channel.pipeline();
+                    channelPipeline.addLast("packet_handler", (ChannelHandler)clientConnection);
                 }
             }).group((EventLoopGroup)DEFAULT_CHANNEL.get()).localAddress((SocketAddress)LocalAddress.ANY)).bind().syncUninterruptibly();
             this.channels.add(channelFuture);
@@ -176,7 +176,7 @@ public class ServerNetworkIo {
             Iterator<ClientConnection> iterator = this.connections.iterator();
             while (iterator.hasNext()) {
                 ClientConnection clientConnection = iterator.next();
-                if (clientConnection.hasChannel()) continue;
+                if (clientConnection.isChannelAbsent()) continue;
                 if (clientConnection.isOpen()) {
                     try {
                         clientConnection.tick();

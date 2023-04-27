@@ -48,11 +48,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SentMessage;
 import net.minecraft.network.message.SignedMessage;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.ChunkLoadDistanceS2CPacket;
 import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.network.packet.s2c.play.DifficultyS2CPacket;
@@ -99,6 +99,7 @@ import net.minecraft.server.BannedPlayerList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.OperatorEntry;
 import net.minecraft.server.OperatorList;
+import net.minecraft.server.ServerMetadata;
 import net.minecraft.server.Whitelist;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
@@ -212,14 +213,17 @@ public abstract class PlayerManager {
         MutableText mutableText = player.getGameProfile().getName().equalsIgnoreCase(string) ? Text.translatable("multiplayer.player.joined", player.getDisplayName()) : Text.translatable("multiplayer.player.joined.renamed", player.getDisplayName(), string);
         this.broadcast(mutableText.formatted(Formatting.YELLOW), false);
         serverPlayNetworkHandler.requestTeleport(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch());
-        player.sendServerMetadata(this.server.getServerMetadata());
+        ServerMetadata serverMetadata = this.server.getServerMetadata();
+        if (serverMetadata != null) {
+            player.sendServerMetadata(serverMetadata);
+        }
         player.networkHandler.sendPacket(PlayerListS2CPacket.entryFromPlayer(this.players));
         this.players.add(player);
         this.playerMap.put(player.getUuid(), player);
         this.sendToAll(PlayerListS2CPacket.entryFromPlayer(List.of(player)));
+        this.sendWorldInfo(player, serverWorld2);
         serverWorld2.onPlayerConnected(player);
         this.server.getBossBarManager().onPlayerConnect(player);
-        this.sendWorldInfo(player, serverWorld2);
         this.server.getResourcePackProperties().ifPresent(properties -> player.sendResourcePackUrl(properties.url(), properties.hash(), properties.isRequired(), properties.prompt()));
         for (StatusEffectInstance statusEffectInstance : player.getStatusEffects()) {
             serverPlayNetworkHandler.sendPacket(new EntityStatusEffectS2CPacket(player.getId(), statusEffectInstance));
@@ -415,8 +419,8 @@ public abstract class PlayerManager {
         serverPlayerEntity.copyFrom(player, alive);
         serverPlayerEntity.setId(player.getId());
         serverPlayerEntity.setMainArm(player.getMainArm());
-        for (String string : player.getScoreboardTags()) {
-            serverPlayerEntity.addScoreboardTag(string);
+        for (String string : player.getCommandTags()) {
+            serverPlayerEntity.addCommandTag(string);
         }
         boolean bl2 = false;
         if (optional.isPresent()) {
@@ -735,9 +739,8 @@ public abstract class PlayerManager {
         UUID uUID = player.getUuid();
         PlayerAdvancementTracker playerAdvancementTracker = this.advancementTrackers.get(uUID);
         if (playerAdvancementTracker == null) {
-            File file = this.server.getSavePath(WorldSavePath.ADVANCEMENTS).toFile();
-            File file2 = new File(file, uUID + ".json");
-            playerAdvancementTracker = new PlayerAdvancementTracker(this.server.getDataFixer(), this, this.server.getAdvancementLoader(), file2, player);
+            Path path = this.server.getSavePath(WorldSavePath.ADVANCEMENTS).resolve(uUID + ".json");
+            playerAdvancementTracker = new PlayerAdvancementTracker(this.server.getDataFixer(), this, this.server.getAdvancementLoader(), path, player);
             this.advancementTrackers.put(uUID, playerAdvancementTracker);
         }
         playerAdvancementTracker.setOwner(player);

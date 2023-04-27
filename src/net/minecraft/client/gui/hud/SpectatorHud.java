@@ -65,23 +65,23 @@ implements SpectatorMenuCloseCallback {
             return;
         }
         int i = this.client.getWindow().getScaledWidth() / 2;
-        int j = this.getZOffset();
-        this.setZOffset(-90);
-        int k = MathHelper.floor((float)this.client.getWindow().getScaledHeight() - 22.0f * f);
+        matrices.push();
+        matrices.translate(0.0f, 0.0f, -90.0f);
+        int j = MathHelper.floor((float)this.client.getWindow().getScaledHeight() - 22.0f * f);
         SpectatorMenuState spectatorMenuState = this.spectatorMenu.getCurrentState();
-        this.renderSpectatorMenu(matrices, f, i, k, spectatorMenuState);
-        this.setZOffset(j);
+        this.renderSpectatorMenu(matrices, f, i, j, spectatorMenuState);
+        matrices.pop();
     }
 
     protected void renderSpectatorMenu(MatrixStack matrices, float height, int x, int y, SpectatorMenuState state) {
         RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, height);
         RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
-        this.drawTexture(matrices, x - 91, y, 0, 0, 182, 22);
+        SpectatorHud.drawTexture(matrices, x - 91, y, 0, 0, 182, 22);
         if (state.getSelectedSlot() >= 0) {
-            this.drawTexture(matrices, x - 91 - 1 + state.getSelectedSlot() * 20, y - 1, 0, 22, 24, 22);
+            SpectatorHud.drawTexture(matrices, x - 91 - 1 + state.getSelectedSlot() * 20, y - 1, 0, 22, 24, 22);
         }
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         for (int i = 0; i < 9; ++i) {
             this.renderSpectatorCommand(matrices, i, this.client.getWindow().getScaledWidth() / 2 - 90 + i * 20 + 2, y + 3, height, state.getCommand(i));
         }
@@ -97,6 +97,7 @@ implements SpectatorMenuCloseCallback {
             float f = command.isEnabled() ? 1.0f : 0.25f;
             RenderSystem.setShaderColor(f, f, f, height);
             command.renderIcon(matrices, f, i);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             matrices.pop();
             if (i > 3 && command.isEnabled()) {
                 Text text = this.client.options.hotbarKeys[slot].getBoundKeyLocalizedText();
@@ -114,10 +115,7 @@ implements SpectatorMenuCloseCallback {
             if (text != null) {
                 int j = (this.client.getWindow().getScaledWidth() - this.client.textRenderer.getWidth(text)) / 2;
                 int k = this.client.getWindow().getScaledHeight() - 35;
-                RenderSystem.enableBlend();
-                RenderSystem.defaultBlendFunc();
                 this.client.textRenderer.drawWithShadow(matrices, text, (float)j, (float)k, 0xFFFFFF + (i << 24));
-                RenderSystem.disableBlend();
             }
         }
     }

@@ -18,12 +18,19 @@ public class ScreenTexts {
     public static final Text YES = Text.translatable("gui.yes");
     public static final Text NO = Text.translatable("gui.no");
     public static final Text PROCEED = Text.translatable("gui.proceed");
+    public static final Text CONTINUE = Text.translatable("gui.continue");
     public static final Text BACK = Text.translatable("gui.back");
+    public static final Text TO_TITLE = Text.translatable("gui.toTitle");
     public static final Text ACKNOWLEDGE = Text.translatable("gui.acknowledge");
     public static final Text CONNECT_FAILED = Text.translatable("connect.failed");
     public static final Text LINE_BREAK = Text.literal("\n");
     public static final Text SENTENCE_SEPARATOR = Text.literal(". ");
     public static final Text ELLIPSIS = Text.literal("...");
+    public static final Text SPACE = ScreenTexts.space();
+
+    public static MutableText space() {
+        return Text.literal(" ");
+    }
 
     public static MutableText days(long days) {
         return Text.translatable("gui.days", days);
@@ -49,8 +56,14 @@ public class ScreenTexts {
         return Text.translatable("options.generic_value", text, value);
     }
 
-    public static MutableText joinSentences(Text first, Text second) {
-        return Text.empty().append(first).append(SENTENCE_SEPARATOR).append(second);
+    public static MutableText joinSentences(Text ... sentences) {
+        MutableText mutableText = Text.empty();
+        for (int i = 0; i < sentences.length; ++i) {
+            mutableText.append(sentences[i]);
+            if (i == sentences.length - 1) continue;
+            mutableText.append(SENTENCE_SEPARATOR);
+        }
+        return mutableText;
     }
 
     public static Text joinLines(Text ... texts) {

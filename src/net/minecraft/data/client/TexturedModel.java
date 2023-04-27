@@ -27,6 +27,10 @@ public class TexturedModel {
     public static final Factory ORIENTABLE = TexturedModel.makeFactory(TextureMap::sideFrontTop, Models.ORIENTABLE);
     public static final Factory ORIENTABLE_WITH_BOTTOM = TexturedModel.makeFactory(TextureMap::sideFrontTopBottom, Models.ORIENTABLE_WITH_BOTTOM);
     public static final Factory CARPET = TexturedModel.makeFactory(TextureMap::wool, Models.CARPET);
+    public static final Factory FLOWERBED_1 = TexturedModel.makeFactory(TextureMap::flowerbed, Models.FLOWERBED_1);
+    public static final Factory FLOWERBED_2 = TexturedModel.makeFactory(TextureMap::flowerbed, Models.FLOWERBED_2);
+    public static final Factory FLOWERBED_3 = TexturedModel.makeFactory(TextureMap::flowerbed, Models.FLOWERBED_3);
+    public static final Factory FLOWERBED_4 = TexturedModel.makeFactory(TextureMap::flowerbed, Models.FLOWERBED_4);
     public static final Factory TEMPLATE_GLAZED_TERRACOTTA = TexturedModel.makeFactory(TextureMap::pattern, Models.TEMPLATE_GLAZED_TERRACOTTA);
     public static final Factory CORAL_FAN = TexturedModel.makeFactory(TextureMap::fan, Models.CORAL_FAN);
     public static final Factory PARTICLE = TexturedModel.makeFactory(TextureMap::particle, Models.PARTICLE);
@@ -68,7 +72,7 @@ public class TexturedModel {
         return this.model.upload(block, suffix, this.textures, writer);
     }
 
-    private static Factory makeFactory(Function<Block, TextureMap> texturesGetter, Model model) {
+    public static Factory makeFactory(Function<Block, TextureMap> texturesGetter, Model model) {
         return block -> new TexturedModel((TextureMap)texturesGetter.apply(block), model);
     }
 

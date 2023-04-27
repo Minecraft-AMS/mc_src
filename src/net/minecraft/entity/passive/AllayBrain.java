@@ -15,8 +15,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.BlockPosLookTarget;
@@ -25,17 +27,17 @@ import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.LookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
-import net.minecraft.entity.ai.brain.task.FollowMobWithIntervalTask;
+import net.minecraft.entity.ai.brain.task.FleeTask;
 import net.minecraft.entity.ai.brain.task.GiveInventoryToLookTargetTask;
 import net.minecraft.entity.ai.brain.task.GoTowardsLookTargetTask;
 import net.minecraft.entity.ai.brain.task.LookAroundTask;
+import net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask;
 import net.minecraft.entity.ai.brain.task.RandomTask;
 import net.minecraft.entity.ai.brain.task.StayAboveWaterTask;
 import net.minecraft.entity.ai.brain.task.StrollTask;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.ai.brain.task.TemptationCooldownTask;
 import net.minecraft.entity.ai.brain.task.WaitTask;
-import net.minecraft.entity.ai.brain.task.WalkTask;
 import net.minecraft.entity.ai.brain.task.WalkToNearestVisibleWantedItemTask;
 import net.minecraft.entity.ai.brain.task.WalkTowardsLookTargetTask;
 import net.minecraft.entity.ai.brain.task.WanderAroundTask;
@@ -71,11 +73,11 @@ public class AllayBrain {
     }
 
     private static void addCoreActivities(Brain<AllayEntity> brain) {
-        brain.setTaskList(Activity.CORE, 0, (ImmutableList<Task<AllayEntity>>)ImmutableList.of((Object)new StayAboveWaterTask(0.8f), (Object)new WalkTask(2.5f), (Object)new LookAroundTask(45, 90), (Object)new WanderAroundTask(), (Object)new TemptationCooldownTask(MemoryModuleType.LIKED_NOTEBLOCK_COOLDOWN_TICKS), (Object)new TemptationCooldownTask(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS)));
+        brain.setTaskList(Activity.CORE, 0, (ImmutableList<Task<AllayEntity>>)ImmutableList.of((Object)new StayAboveWaterTask(0.8f), (Object)new FleeTask(2.5f), (Object)new LookAroundTask(45, 90), (Object)new WanderAroundTask(), (Object)new TemptationCooldownTask(MemoryModuleType.LIKED_NOTEBLOCK_COOLDOWN_TICKS), (Object)new TemptationCooldownTask(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS)));
     }
 
     private static void addIdleActivities(Brain<AllayEntity> brain) {
-        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<AllayEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, WalkToNearestVisibleWantedItemTask.create(allay -> true, 1.75f, true, 32)), (Object)Pair.of((Object)1, new GiveInventoryToLookTargetTask(AllayBrain::getLookTarget, 2.25f, 20)), (Object)Pair.of((Object)2, WalkTowardsLookTargetTask.create(AllayBrain::getLookTarget, 4, 16, 2.25f)), (Object)Pair.of((Object)3, FollowMobWithIntervalTask.follow(6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)4, new RandomTask(ImmutableList.of((Object)Pair.of(StrollTask.createSolidTargeting(1.0f), (Object)2), (Object)Pair.of(GoTowardsLookTargetTask.create(1.0f, 3), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of());
+        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<AllayEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, WalkToNearestVisibleWantedItemTask.create(allay -> true, 1.75f, true, 32)), (Object)Pair.of((Object)1, new GiveInventoryToLookTargetTask(AllayBrain::getLookTarget, 2.25f, 20)), (Object)Pair.of((Object)2, WalkTowardsLookTargetTask.create(AllayBrain::getLookTarget, Predicate.not(AllayBrain::hasNearestVisibleWantedItem), 4, 16, 2.25f)), (Object)Pair.of((Object)3, LookAtMobWithIntervalTask.follow(6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)4, new RandomTask(ImmutableList.of((Object)Pair.of(StrollTask.createSolidTargeting(1.0f), (Object)2), (Object)Pair.of(GoTowardsLookTargetTask.create(1.0f, 3), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of());
     }
 
     public static void updateActivities(AllayEntity allay) {
@@ -105,6 +107,11 @@ public class AllayBrain {
             brain.forget(MemoryModuleType.LIKED_NOTEBLOCK);
         }
         return AllayBrain.getLikedLookTarget(allay);
+    }
+
+    private static boolean hasNearestVisibleWantedItem(LivingEntity entity) {
+        Brain<ItemEntity> brain = entity.getBrain();
+        return brain.hasMemoryModule(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM);
     }
 
     private static boolean shouldGoTowardsNoteBlock(LivingEntity allay, Brain<?> brain, GlobalPos pos) {

@@ -29,7 +29,7 @@ extends AbstractRedstoneGateBlock {
     public static final BooleanProperty LOCKED = Properties.LOCKED;
     public static final IntProperty DELAY = Properties.DELAY;
 
-    protected RepeaterBlock(AbstractBlock.Settings settings) {
+    public RepeaterBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(DELAY, 1)).with(LOCKED, false)).with(POWERED, false));
     }

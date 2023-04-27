@@ -17,7 +17,7 @@ extends CoralParentBlock {
     protected static final float field_31006 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 15.0, 14.0);
 
-    protected DeadCoralBlock(AbstractBlock.Settings settings) {
+    public DeadCoralBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

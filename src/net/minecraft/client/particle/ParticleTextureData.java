@@ -8,7 +8,6 @@
  *  com.google.gson.JsonObject
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.particle;
 
@@ -21,25 +20,25 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class ParticleTextureData {
-    @Nullable
     private final List<Identifier> textureList;
 
-    private ParticleTextureData(@Nullable List<Identifier> textureList) {
+    private ParticleTextureData(List<Identifier> textureList) {
         this.textureList = textureList;
     }
 
-    @Nullable
     public List<Identifier> getTextureList() {
         return this.textureList;
     }
 
     public static ParticleTextureData load(JsonObject json) {
         JsonArray jsonArray = JsonHelper.getArray(json, "textures", null);
-        List list = jsonArray != null ? (List)Streams.stream((Iterable)jsonArray).map(texture -> JsonHelper.asString(texture, "texture")).map(Identifier::new).collect(ImmutableList.toImmutableList()) : null;
+        if (jsonArray == null) {
+            return new ParticleTextureData(List.of());
+        }
+        List list = (List)Streams.stream((Iterable)jsonArray).map(texture -> JsonHelper.asString(texture, "texture")).map(Identifier::new).collect(ImmutableList.toImmutableList());
         return new ParticleTextureData(list);
     }
 }

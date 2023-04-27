@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.vehicle;
 
-import java.util.function.BiConsumer;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -33,7 +32,6 @@ import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public interface VehicleInventory
@@ -95,11 +93,9 @@ NamedScreenHandlerFactory {
         }
     }
 
-    default public ActionResult open(BiConsumer<GameEvent, Entity> gameEventEmitter, PlayerEntity player) {
+    default public ActionResult open(PlayerEntity player) {
         player.openHandledScreen(this);
         if (!player.world.isClient) {
-            gameEventEmitter.accept(GameEvent.CONTAINER_OPEN, player);
-            PiglinBrain.onGuardedBlockInteracted(player, true);
             return ActionResult.CONSUME;
         }
         return ActionResult.SUCCESS;

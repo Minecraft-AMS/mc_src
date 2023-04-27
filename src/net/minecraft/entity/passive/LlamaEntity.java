@@ -190,7 +190,7 @@ RangedAttackMob {
 
     @Override
     @Nullable
-    public LivingEntity getPrimaryPassenger() {
+    public LivingEntity getControllingPassenger() {
         return null;
     }
 
@@ -491,12 +491,6 @@ RangedAttackMob {
     @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
-    }
-
-    @Override
-    @Nullable
-    public /* synthetic */ Entity getPrimaryPassenger() {
-        return this.getPrimaryPassenger();
     }
 
     @Override

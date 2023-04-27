@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class CyclingButtonWidget<T>
 extends PressableWidget {
-    static final BooleanSupplier HAS_ALT_DOWN = Screen::hasAltDown;
+    public static final BooleanSupplier HAS_ALT_DOWN = Screen::hasAltDown;
     private static final List<Boolean> BOOLEAN_VALUES = ImmutableList.of((Object)Boolean.TRUE, (Object)Boolean.FALSE);
     private final Text optionText;
     private int index;

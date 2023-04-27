@@ -75,7 +75,7 @@ implements Angerable {
 
     public IronGolemEntity(EntityType<? extends IronGolemEntity> entityType, World world) {
         super((EntityType<? extends GolemEntity>)entityType, world);
-        this.stepHeight = 1.0f;
+        this.setStepHeight(1.0f);
     }
 
     @Override
@@ -199,7 +199,7 @@ implements Angerable {
         this.world.sendEntityStatus(this, (byte)4);
         float f = this.getAttackDamage();
         float g = (int)f > 0 ? f / 2.0f + (float)this.random.nextInt((int)f) : f;
-        boolean bl = target.damage(DamageSource.mob(this), g);
+        boolean bl = target.damage(this.getDamageSources().mobAttack(this), g);
         if (bl) {
             double d;
             if (target instanceof LivingEntity) {

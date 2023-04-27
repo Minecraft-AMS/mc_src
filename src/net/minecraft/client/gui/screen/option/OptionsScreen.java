@@ -2,13 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.gui.screen.option;
 
-import com.google.common.collect.ImmutableList;
 import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -18,6 +16,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.option.AccessibilityOptionsScreen;
 import net.minecraft.client.gui.screen.option.ChatOptionsScreen;
 import net.minecraft.client.gui.screen.option.ControlsOptionsScreen;
+import net.minecraft.client.gui.screen.option.CreditsAndAttributionScreen;
 import net.minecraft.client.gui.screen.option.LanguageOptionsScreen;
 import net.minecraft.client.gui.screen.option.OnlineOptionsScreen;
 import net.minecraft.client.gui.screen.option.SkinOptionsScreen;
@@ -27,18 +26,17 @@ import net.minecraft.client.gui.screen.option.VideoOptionsScreen;
 import net.minecraft.client.gui.screen.pack.PackScreen;
 import net.minecraft.client.gui.widget.AxisGridWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.EmptyWidget;
 import net.minecraft.client.gui.widget.GridWidget;
 import net.minecraft.client.gui.widget.LockButtonWidget;
 import net.minecraft.client.gui.widget.SimplePositioningWidget;
+import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.packet.c2s.play.UpdateDifficultyC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateDifficultyLockC2SPacket;
 import net.minecraft.resource.ResourcePackManager;
-import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.world.Difficulty;
@@ -55,6 +53,7 @@ extends Screen {
     private static final Text RESOURCE_PACK_TEXT = Text.translatable("options.resourcepack");
     private static final Text ACCESSIBILITY_TEXT = Text.translatable("options.accessibility.title");
     private static final Text TELEMETRY_TEXT = Text.translatable("options.telemetry");
+    private static final Text CREDITS_AND_ATTRIBUTION_TEXT = Text.translatable("options.credits_and_attribution");
     private static final int COLUMNS = 2;
     private final Screen parent;
     private final GameOptions settings;
@@ -72,7 +71,7 @@ extends Screen {
         GridWidget gridWidget = new GridWidget();
         gridWidget.getMainPositioner().marginX(5).marginBottom(4).alignHorizontalCenter();
         GridWidget.Adder adder = gridWidget.createAdder(2);
-        adder.add(this.settings.getFov().createButton(this.client.options, 0, 0, 150));
+        adder.add(this.settings.getFov().createWidget(this.client.options, 0, 0, 150));
         adder.add(this.createTopRightButton());
         adder.add(EmptyWidget.ofHeight(26), 2);
         adder.add(this.createButton(SKIN_CUSTOMIZATION_TEXT, () -> new SkinOptionsScreen(this, this.settings)));
@@ -81,16 +80,22 @@ extends Screen {
         adder.add(this.createButton(CONTROL_TEXT, () -> new ControlsOptionsScreen(this, this.settings)));
         adder.add(this.createButton(LANGUAGE_TEXT, () -> new LanguageOptionsScreen((Screen)this, this.settings, this.client.getLanguageManager())));
         adder.add(this.createButton(CHAT_TEXT, () -> new ChatOptionsScreen(this, this.settings)));
-        adder.add(this.createButton(RESOURCE_PACK_TEXT, () -> new PackScreen(this, this.client.getResourcePackManager(), this::refreshResourcePacks, this.client.getResourcePackDir(), Text.translatable("resourcePack.title"))));
+        adder.add(this.createButton(RESOURCE_PACK_TEXT, () -> new PackScreen(this.client.getResourcePackManager(), this::refreshResourcePacks, this.client.getResourcePackDir(), Text.translatable("resourcePack.title"))));
         adder.add(this.createButton(ACCESSIBILITY_TEXT, () -> new AccessibilityOptionsScreen(this, this.settings)));
         adder.add(this.createButton(TELEMETRY_TEXT, () -> new TelemetryInfoScreen(this, this.settings)));
+        adder.add(this.createButton(CREDITS_AND_ATTRIBUTION_TEXT, () -> new CreditsAndAttributionScreen(this)));
         adder.add(ButtonWidget.builder(ScreenTexts.DONE, button -> this.client.setScreen(this.parent)).width(200).build(), 2, adder.copyPositioner().marginTop(6));
-        gridWidget.recalculateDimensions();
+        gridWidget.refreshPositions();
         SimplePositioningWidget.setPos(gridWidget, 0, this.height / 6 - 12, this.width, this.height, 0.5f, 0.0f);
-        this.addDrawableChild(gridWidget);
+        gridWidget.forEachChild(this::addDrawableChild);
     }
 
-    private ClickableWidget createTopRightButton() {
+    private void refreshResourcePacks(ResourcePackManager resourcePackManager) {
+        this.settings.refreshResourcePacks(resourcePackManager);
+        this.client.setScreen(this);
+    }
+
+    private Widget createTopRightButton() {
         if (this.client.world != null && this.client.isIntegratedServerRunning()) {
             this.difficultyButton = OptionsScreen.createDifficultyButtonWidget(0, 0, "options.difficulty", this.client);
             if (!this.client.world.getLevelProperties().isHardcore()) {
@@ -102,7 +107,6 @@ extends Screen {
                 AxisGridWidget axisGridWidget = new AxisGridWidget(150, 0, AxisGridWidget.DisplayAxis.HORIZONTAL);
                 axisGridWidget.add(this.difficultyButton);
                 axisGridWidget.add(this.lockDifficultyButton);
-                axisGridWidget.recalculateDimensions();
                 return axisGridWidget;
             }
             this.difficultyButton.active = false;
@@ -113,23 +117,6 @@ extends Screen {
 
     public static CyclingButtonWidget<Difficulty> createDifficultyButtonWidget(int x, int y, String translationKey, MinecraftClient client) {
         return CyclingButtonWidget.builder(Difficulty::getTranslatableName).values((Difficulty[])Difficulty.values()).initially(client.world.getDifficulty()).build(x, y, 150, 20, Text.translatable(translationKey), (button, difficulty) -> client.getNetworkHandler().sendPacket(new UpdateDifficultyC2SPacket((Difficulty)difficulty)));
-    }
-
-    private void refreshResourcePacks(ResourcePackManager resourcePackManager) {
-        ImmutableList list = ImmutableList.copyOf(this.settings.resourcePacks);
-        this.settings.resourcePacks.clear();
-        this.settings.incompatibleResourcePacks.clear();
-        for (ResourcePackProfile resourcePackProfile : resourcePackManager.getEnabledProfiles()) {
-            if (resourcePackProfile.isPinned()) continue;
-            this.settings.resourcePacks.add(resourcePackProfile.getName());
-            if (resourcePackProfile.getCompatibility().isCompatible()) continue;
-            this.settings.incompatibleResourcePacks.add(resourcePackProfile.getName());
-        }
-        this.settings.write();
-        ImmutableList list2 = ImmutableList.copyOf(this.settings.resourcePacks);
-        if (!list2.equals(list)) {
-            this.client.reloadResources();
-        }
     }
 
     private void lockDifficulty(boolean difficultyLocked) {
@@ -150,7 +137,7 @@ extends Screen {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        OptionsScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 15, 0xFFFFFF);
+        OptionsScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 15, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
     }
 

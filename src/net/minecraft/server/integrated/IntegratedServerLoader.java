@@ -29,6 +29,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.BackupPromptScreen;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.DatapackFailureScreen;
+import net.minecraft.client.gui.screen.NoticeScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.EditWorldScreen;
@@ -224,7 +225,11 @@ public class IntegratedServerLoader {
         }
         catch (Exception exception) {
             LOGGER.warn("Failed to load level data or datapacks, can't proceed with server load", (Throwable)exception);
-            this.client.setScreen(new DatapackFailureScreen(() -> this.start(parent, levelName, true, canShowBackupPrompt)));
+            if (!safeMode) {
+                this.client.setScreen(new DatapackFailureScreen(() -> this.start(parent, levelName, true, canShowBackupPrompt)));
+            } else {
+                this.client.setScreen(new NoticeScreen(() -> this.client.setScreen(null), Text.translatable("datapackFailure.safeMode.failed.title"), Text.translatable("datapackFailure.safeMode.failed.description"), ScreenTexts.TO_TITLE, true));
+            }
             IntegratedServerLoader.close(session, levelName);
             return;
         }
@@ -287,7 +292,7 @@ public class IntegratedServerLoader {
         }, text, text2, false));
     }
 
-    public static void tryLoad(MinecraftClient client, CreateWorldScreen parent, Lifecycle lifecycle, Runnable loader) {
+    public static void tryLoad(MinecraftClient client, CreateWorldScreen parent, Lifecycle lifecycle, Runnable loader, boolean bypassWarnings) {
         BooleanConsumer booleanConsumer = confirmed -> {
             if (confirmed) {
                 loader.run();
@@ -295,7 +300,7 @@ public class IntegratedServerLoader {
                 client.setScreen(parent);
             }
         };
-        if (lifecycle == Lifecycle.stable()) {
+        if (bypassWarnings || lifecycle == Lifecycle.stable()) {
             loader.run();
         } else if (lifecycle == Lifecycle.experimental()) {
             client.setScreen(new ConfirmScreen(booleanConsumer, Text.translatable("selectWorld.warning.experimental.title"), Text.translatable("selectWorld.warning.experimental.question")));

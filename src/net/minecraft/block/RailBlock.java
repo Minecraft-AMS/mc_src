@@ -22,7 +22,7 @@ public class RailBlock
 extends AbstractRailBlock {
     public static final EnumProperty<RailShape> SHAPE = Properties.RAIL_SHAPE;
 
-    protected RailBlock(AbstractBlock.Settings settings) {
+    public RailBlock(AbstractBlock.Settings settings) {
         super(false, settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(SHAPE, RailShape.NORTH_SOUTH)).with(WATERLOGGED, false));
     }

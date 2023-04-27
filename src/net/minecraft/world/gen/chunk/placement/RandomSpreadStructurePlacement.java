@@ -29,7 +29,7 @@ public class RandomSpreadStructurePlacement
 extends StructurePlacement {
     public static final Codec<RandomSpreadStructurePlacement> CODEC = RecordCodecBuilder.mapCodec(instance -> RandomSpreadStructurePlacement.buildCodec(instance).and(instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(RandomSpreadStructurePlacement::getSpacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(RandomSpreadStructurePlacement::getSeparation), (App)SpreadType.CODEC.optionalFieldOf("spread_type", (Object)SpreadType.LINEAR).forGetter(RandomSpreadStructurePlacement::getSpreadType))).apply((Applicative)instance, RandomSpreadStructurePlacement::new)).flatXmap(placement -> {
         if (placement.spacing <= placement.separation) {
-            return DataResult.error((String)"Spacing has to be larger than separation");
+            return DataResult.error(() -> "Spacing has to be larger than separation");
         }
         return DataResult.success((Object)placement);
     }, DataResult::success).codec();

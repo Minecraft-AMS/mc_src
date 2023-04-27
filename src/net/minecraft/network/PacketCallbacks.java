@@ -7,7 +7,7 @@
 package net.minecraft.network;
 
 import java.util.function.Supplier;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import org.jetbrains.annotations.Nullable;
 
 public interface PacketCallbacks {

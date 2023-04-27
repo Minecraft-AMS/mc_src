@@ -19,7 +19,7 @@ public class SnowyBlock
 extends Block {
     public static final BooleanProperty SNOWY = Properties.SNOWY;
 
-    protected SnowyBlock(AbstractBlock.Settings settings) {
+    public SnowyBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(SNOWY, false));
     }

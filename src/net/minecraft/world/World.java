@@ -26,15 +26,17 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.boss.dragon.EnderDragonPart;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageSources;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.recipe.RecipeManager;
+import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -122,14 +124,16 @@ AutoCloseable {
     private final WorldBorder border;
     private final BiomeAccess biomeAccess;
     private final RegistryKey<World> registryKey;
+    private final DynamicRegistryManager registryManager;
+    private final DamageSources damageSources;
     private long tickOrder;
 
-    protected World(MutableWorldProperties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> dimension, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed, int maxChainedNeighborUpdates) {
+    protected World(MutableWorldProperties properties, RegistryKey<World> registryRef, DynamicRegistryManager registryManager, RegistryEntry<DimensionType> dimensionEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long biomeAccess, int maxChainedNeighborUpdates) {
         this.profiler = profiler;
         this.properties = properties;
-        this.dimensionEntry = dimension;
-        this.dimension = dimension.getKey().orElseThrow(() -> new IllegalArgumentException("Dimension must be registered, got " + dimension));
-        final DimensionType dimensionType = dimension.value();
+        this.dimensionEntry = dimensionEntry;
+        this.dimension = dimensionEntry.getKey().orElseThrow(() -> new IllegalArgumentException("Dimension must be registered, got " + dimensionEntry));
+        final DimensionType dimensionType = dimensionEntry.value();
         this.registryKey = registryRef;
         this.isClient = isClient;
         this.border = dimensionType.coordinateScale() != 1.0 ? new WorldBorder(){
@@ -145,9 +149,11 @@ AutoCloseable {
             }
         } : new WorldBorder();
         this.thread = Thread.currentThread();
-        this.biomeAccess = new BiomeAccess(this, seed);
+        this.biomeAccess = new BiomeAccess(this, biomeAccess);
         this.debugWorld = debugWorld;
         this.neighborUpdater = new ChainRestrictedNeighborUpdater(this, maxChainedNeighborUpdates);
+        this.registryManager = registryManager;
+        this.damageSources = new DamageSources(registryManager);
     }
 
     @Override
@@ -546,7 +552,7 @@ AutoCloseable {
     public BlockPos getSpawnPos() {
         BlockPos blockPos = new BlockPos(this.properties.getSpawnX(), this.properties.getSpawnY(), this.properties.getSpawnZ());
         if (!this.getWorldBorder().contains(blockPos)) {
-            blockPos = this.getTopPosition(Heightmap.Type.MOTION_BLOCKING, new BlockPos(this.getWorldBorder().getCenterX(), 0.0, this.getWorldBorder().getCenterZ()));
+            blockPos = this.getTopPosition(Heightmap.Type.MOTION_BLOCKING, BlockPos.ofFloored(this.getWorldBorder().getCenterX(), 0.0, this.getWorldBorder().getCenterZ()));
         }
         return blockPos;
     }
@@ -727,6 +733,9 @@ AutoCloseable {
     public void sendEntityStatus(Entity entity, byte status) {
     }
 
+    public void sendEntityDamage(Entity entity, DamageSource damageSource) {
+    }
+
     public void addSyncedBlockEvent(BlockPos pos, Block block, int type, int data) {
         this.getBlockState(pos).onSyncedBlockEvent(this, pos, type, data);
     }
@@ -782,12 +791,7 @@ AutoCloseable {
             return false;
         }
         Biome biome = this.getBiome(pos).value();
-        return biome.getPrecipitation() == Biome.Precipitation.RAIN && biome.doesNotSnow(pos);
-    }
-
-    public boolean hasHighHumidity(BlockPos pos) {
-        Biome biome = this.getBiome(pos).value();
-        return biome.hasHighHumidity();
+        return biome.getPrecipitation(pos) == Biome.Precipitation.RAIN;
     }
 
     @Nullable
@@ -929,6 +933,15 @@ AutoCloseable {
     @Override
     public long getTickOrder() {
         return this.tickOrder++;
+    }
+
+    @Override
+    public DynamicRegistryManager getRegistryManager() {
+        return this.registryManager;
+    }
+
+    public DamageSources getDamageSources() {
+        return this.damageSources;
     }
 
     @Override

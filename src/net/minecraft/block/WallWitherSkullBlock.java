@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class WallWitherSkullBlock
 extends WallSkullBlock {
-    protected WallWitherSkullBlock(AbstractBlock.Settings settings) {
+    public WallWitherSkullBlock(AbstractBlock.Settings settings) {
         super(SkullBlock.Type.WITHER_SKELETON, settings);
     }
 

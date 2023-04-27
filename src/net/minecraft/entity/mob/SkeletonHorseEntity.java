@@ -43,7 +43,7 @@ extends AbstractHorseEntity {
 
     @Override
     protected void initAttributes(Random random) {
-        this.getAttributeInstance(EntityAttributes.HORSE_JUMP_STRENGTH).setBaseValue(this.getChildJumpStrengthBonus(random));
+        this.getAttributeInstance(EntityAttributes.HORSE_JUMP_STRENGTH).setBaseValue(SkeletonHorseEntity.getChildJumpStrengthBonus(random::nextDouble));
     }
 
     @Override
@@ -134,11 +134,6 @@ extends AbstractHorseEntity {
         super.readCustomDataFromNbt(nbt);
         this.setTrapped(nbt.getBoolean("SkeletonTrap"));
         this.trapTime = nbt.getInt("SkeletonTrapTime");
-    }
-
-    @Override
-    public boolean canBeRiddenInWater() {
-        return true;
     }
 
     @Override

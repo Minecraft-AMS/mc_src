@@ -40,11 +40,11 @@ implements Codec<RegistryEntry<E>> {
         Optional optional;
         if (dynamicOps instanceof RegistryOps && (optional = (registryOps = (RegistryOps)dynamicOps).getOwner(this.registry)).isPresent()) {
             if (!registryEntry.ownerEquals(optional.get())) {
-                return DataResult.error((String)("Element " + registryEntry + " is not valid in current registry set"));
+                return DataResult.error(() -> "Element " + registryEntry + " is not valid in current registry set");
             }
-            return (DataResult)registryEntry.getKeyOrValue().map(registryKey -> Identifier.CODEC.encode((Object)registryKey.getValue(), dynamicOps, object), value -> DataResult.error((String)("Elements from registry " + this.registry + " can't be serialized to a value")));
+            return (DataResult)registryEntry.getKeyOrValue().map(registryKey -> Identifier.CODEC.encode((Object)registryKey.getValue(), dynamicOps, object), value -> DataResult.error(() -> "Elements from registry " + this.registry + " can't be serialized to a value"));
         }
-        return DataResult.error((String)("Can't access registry " + this.registry));
+        return DataResult.error(() -> "Can't access registry " + this.registry);
     }
 
     public <T> DataResult<Pair<RegistryEntry<E>, T>> decode(DynamicOps<T> ops, T input) {
@@ -53,10 +53,10 @@ implements Codec<RegistryEntry<E>> {
         if (ops instanceof RegistryOps && (optional = (registryOps = (RegistryOps)ops).getEntryLookup(this.registry)).isPresent()) {
             return Identifier.CODEC.decode(ops, input).flatMap(pair -> {
                 Identifier identifier = (Identifier)pair.getFirst();
-                return ((RegistryEntryLookup)optional.get()).getOptional(RegistryKey.of(this.registry, identifier)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Failed to get element " + identifier))).map(reference -> Pair.of((Object)reference, (Object)pair.getSecond())).setLifecycle(Lifecycle.stable());
+                return ((RegistryEntryLookup)optional.get()).getOptional(RegistryKey.of(this.registry, identifier)).map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Failed to get element " + identifier)).map(reference -> Pair.of((Object)reference, (Object)pair.getSecond())).setLifecycle(Lifecycle.stable());
             });
         }
-        return DataResult.error((String)("Can't access registry " + this.registry));
+        return DataResult.error(() -> "Can't access registry " + this.registry);
     }
 
     public String toString() {

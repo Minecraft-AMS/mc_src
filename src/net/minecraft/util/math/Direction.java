@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
@@ -387,7 +388,7 @@ implements StringIdentifiable {
     }
 
     private static DataResult<Direction> validateVertical(Direction direction) {
-        return direction.getAxis().isVertical() ? DataResult.success((Object)direction) : DataResult.error((String)"Expected a vertical direction");
+        return direction.getAxis().isVertical() ? DataResult.success((Object)direction) : DataResult.error(() -> "Expected a vertical direction");
     }
 
     public static Direction get(AxisDirection direction, Axis axis) {
@@ -416,7 +417,7 @@ implements StringIdentifiable {
     static {
         field_11037 = Direction.method_36931();
         CODEC = StringIdentifiable.createCodec(Direction::values);
-        VERTICAL_CODEC = CODEC.flatXmap(Direction::validateVertical, Direction::validateVertical);
+        VERTICAL_CODEC = Codecs.validate(CODEC, Direction::validateVertical);
         ALL = Direction.values();
         VALUES = (Direction[])Arrays.stream(ALL).sorted(Comparator.comparingInt(direction -> direction.id)).toArray(Direction[]::new);
         HORIZONTAL = (Direction[])Arrays.stream(ALL).filter(direction -> direction.getAxis().isHorizontal()).sorted(Comparator.comparingInt(direction -> direction.idHorizontal)).toArray(Direction[]::new);

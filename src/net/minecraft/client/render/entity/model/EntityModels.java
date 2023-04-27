@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.WoodType;
 import net.minecraft.client.model.Dilation;
 import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.block.entity.BannerBlockEntityRenderer;
@@ -22,6 +23,7 @@ import net.minecraft.client.render.block.entity.BedBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BellBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ChestBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ConduitBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.DecoratedPotBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.HangingSignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
 import net.minecraft.client.render.entity.EndCrystalEntityRenderer;
@@ -29,6 +31,7 @@ import net.minecraft.client.render.entity.EnderDragonEntityRenderer;
 import net.minecraft.client.render.entity.WitherSkullEntityRenderer;
 import net.minecraft.client.render.entity.feature.TridentRiptideFeatureRenderer;
 import net.minecraft.client.render.entity.model.AllayEntityModel;
+import net.minecraft.client.render.entity.model.ArmorEntityModel;
 import net.minecraft.client.render.entity.model.ArmorStandArmorEntityModel;
 import net.minecraft.client.render.entity.model.ArmorStandEntityModel;
 import net.minecraft.client.render.entity.model.AxolotlEntityModel;
@@ -96,6 +99,7 @@ import net.minecraft.client.render.entity.model.SkullEntityModel;
 import net.minecraft.client.render.entity.model.SlimeEntityModel;
 import net.minecraft.client.render.entity.model.SmallPufferfishEntityModel;
 import net.minecraft.client.render.entity.model.SmallTropicalFishEntityModel;
+import net.minecraft.client.render.entity.model.SnifferModel;
 import net.minecraft.client.render.entity.model.SnowGolemEntityModel;
 import net.minecraft.client.render.entity.model.SpiderEntityModel;
 import net.minecraft.client.render.entity.model.SquidEntityModel;
@@ -111,7 +115,6 @@ import net.minecraft.client.render.entity.model.WitherEntityModel;
 import net.minecraft.client.render.entity.model.WolfEntityModel;
 import net.minecraft.client.render.entity.model.ZombieVillagerEntityModel;
 import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.util.SignType;
 
 @Environment(value=EnvType.CLIENT)
 public class EntityModels {
@@ -122,9 +125,9 @@ public class EntityModels {
     public static Map<EntityModelLayer, TexturedModelData> getModels() {
         ImmutableMap.Builder builder = ImmutableMap.builder();
         TexturedModelData texturedModelData = TexturedModelData.of(BipedEntityModel.getModelData(Dilation.NONE, 0.0f), 64, 64);
-        TexturedModelData texturedModelData2 = TexturedModelData.of(BipedEntityModel.getModelData(ARMOR_DILATION, 0.0f), 64, 32);
-        TexturedModelData texturedModelData3 = TexturedModelData.of(BipedEntityModel.getModelData(new Dilation(1.02f), 0.0f), 64, 32);
-        TexturedModelData texturedModelData4 = TexturedModelData.of(BipedEntityModel.getModelData(HAT_DILATION, 0.0f), 64, 32);
+        TexturedModelData texturedModelData2 = TexturedModelData.of(ArmorEntityModel.getModelData(ARMOR_DILATION), 64, 32);
+        TexturedModelData texturedModelData3 = TexturedModelData.of(ArmorEntityModel.getModelData(new Dilation(1.02f)), 64, 32);
+        TexturedModelData texturedModelData4 = TexturedModelData.of(ArmorEntityModel.getModelData(HAT_DILATION), 64, 32);
         TexturedModelData texturedModelData5 = MinecartEntityModel.getTexturedModelData();
         TexturedModelData texturedModelData6 = SkullEntityModel.getSkullTexturedModelData();
         TexturedModelData texturedModelData7 = TexturedModelData.of(HorseEntityModel.getModelData(Dilation.NONE), 64, 64);
@@ -158,8 +161,6 @@ public class EntityModels {
         builder.put((Object)EntityModelLayers.CAMEL, (Object)CamelEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.CAVE_SPIDER, (Object)texturedModelData19);
         builder.put((Object)EntityModelLayers.CHEST, (Object)ChestBlockEntityRenderer.getSingleTexturedModelData());
-        builder.put((Object)EntityModelLayers.DOUBLE_CHEST_LEFT, (Object)ChestBlockEntityRenderer.getLeftDoubleTexturedModelData());
-        builder.put((Object)EntityModelLayers.DOUBLE_CHEST_RIGHT, (Object)ChestBlockEntityRenderer.getRightDoubleTexturedModelData());
         builder.put((Object)EntityModelLayers.CHEST_MINECART, (Object)texturedModelData5);
         builder.put((Object)EntityModelLayers.CHICKEN, (Object)ChickenEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.COD, (Object)CodEntityModel.getTexturedModelData());
@@ -172,8 +173,12 @@ public class EntityModels {
         builder.put((Object)EntityModelLayers.CREEPER, (Object)CreeperEntityModel.getTexturedModelData(Dilation.NONE));
         builder.put((Object)EntityModelLayers.CREEPER_ARMOR, (Object)CreeperEntityModel.getTexturedModelData(new Dilation(2.0f)));
         builder.put((Object)EntityModelLayers.CREEPER_HEAD, (Object)texturedModelData6);
+        builder.put((Object)EntityModelLayers.DECORATED_POT_BASE, (Object)DecoratedPotBlockEntityRenderer.getTopBottomNeckTexturedModelData());
+        builder.put((Object)EntityModelLayers.DECORATED_POT_SIDES, (Object)DecoratedPotBlockEntityRenderer.getSidesTexturedModelData());
         builder.put((Object)EntityModelLayers.DOLPHIN, (Object)DolphinEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.DONKEY, (Object)DonkeyEntityModel.getTexturedModelData());
+        builder.put((Object)EntityModelLayers.DOUBLE_CHEST_LEFT, (Object)ChestBlockEntityRenderer.getLeftDoubleTexturedModelData());
+        builder.put((Object)EntityModelLayers.DOUBLE_CHEST_RIGHT, (Object)ChestBlockEntityRenderer.getRightDoubleTexturedModelData());
         builder.put((Object)EntityModelLayers.DRAGON_SKULL, (Object)DragonHeadEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.DROWNED, (Object)DrownedEntityModel.getTexturedModelData(Dilation.NONE));
         builder.put((Object)EntityModelLayers.DROWNED_INNER_ARMOR, (Object)texturedModelData4);
@@ -256,6 +261,7 @@ public class EntityModels {
         builder.put((Object)EntityModelLayers.SKELETON_SKULL, (Object)texturedModelData6);
         builder.put((Object)EntityModelLayers.SLIME, (Object)SlimeEntityModel.getInnerTexturedModelData());
         builder.put((Object)EntityModelLayers.SLIME_OUTER, (Object)SlimeEntityModel.getOuterTexturedModelData());
+        builder.put((Object)EntityModelLayers.SNIFFER, (Object)SnifferModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.SNOW_GOLEM, (Object)SnowGolemEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.SPAWNER_MINECART, (Object)texturedModelData5);
         builder.put((Object)EntityModelLayers.SPIDER, (Object)texturedModelData19);
@@ -315,9 +321,9 @@ public class EntityModels {
             builder.put((Object)EntityModelLayers.createChestBoat(type), (Object)texturedModelData21);
         }
         TexturedModelData texturedModelData24 = SignBlockEntityRenderer.getTexturedModelData();
-        SignType.stream().forEach(signType -> builder.put((Object)EntityModelLayers.createSign(signType), (Object)texturedModelData24));
+        WoodType.stream().forEach(signType -> builder.put((Object)EntityModelLayers.createSign(signType), (Object)texturedModelData24));
         TexturedModelData texturedModelData25 = HangingSignBlockEntityRenderer.getTexturedModelData();
-        SignType.stream().forEach(signType -> builder.put((Object)EntityModelLayers.createHangingSign(signType), (Object)texturedModelData25));
+        WoodType.stream().forEach(signType -> builder.put((Object)EntityModelLayers.createHangingSign(signType), (Object)texturedModelData25));
         ImmutableMap immutableMap = builder.build();
         List list = EntityModelLayers.getLayers().filter(layer -> !immutableMap.containsKey(layer)).collect(Collectors.toList());
         if (!list.isEmpty()) {

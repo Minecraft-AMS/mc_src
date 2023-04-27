@@ -217,7 +217,7 @@ extends RealmsScreen {
         this.tooltip = null;
         this.renderBackground(matrices);
         this.backupObjectSelectionList.render(matrices, mouseX, mouseY, delta);
-        RealmsBackupScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
+        RealmsBackupScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
         this.textRenderer.draw(matrices, BACKUPS_TEXT, (float)((this.width - 150) / 2 - 90), 20.0f, 0xA0A0A0);
         if (this.noBackups.booleanValue()) {
             this.textRenderer.draw(matrices, NO_BACKUPS_TEXT, 20.0f, (float)(this.height / 2 - 10), 0xFFFFFF);
@@ -236,7 +236,7 @@ extends RealmsScreen {
         int i = mouseX + 12;
         int j = mouseY - 12;
         int k = this.textRenderer.getWidth(text);
-        this.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        RealmsBackupScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
         this.textRenderer.drawWithShadow(matrices, text, (float)i, (float)j, 0xFFFFFF);
     }
 
@@ -254,11 +254,6 @@ extends RealmsScreen {
         @Override
         public int getRowWidth() {
             return (int)((double)this.width * 0.93);
-        }
-
-        @Override
-        public boolean isFocused() {
-            return RealmsBackupScreen.this.getFocused() == this;
         }
 
         @Override
@@ -283,7 +278,7 @@ extends RealmsScreen {
                 int l = k / this.itemHeight;
                 if (mouseX >= (double)i && mouseX <= (double)j && l >= 0 && k >= 0 && l < this.getEntryCount()) {
                     this.setSelected(l);
-                    this.itemClicked(k, l, mouseX, mouseY, this.width);
+                    this.itemClicked(k, l, mouseX, mouseY, this.width, button);
                 }
                 return true;
             }
@@ -296,18 +291,18 @@ extends RealmsScreen {
         }
 
         @Override
-        public void itemClicked(int cursorY, int selectionIndex, double mouseX, double mouseY, int listWidth) {
-            int i = this.width - 35;
-            int j = selectionIndex * this.itemHeight + 36 - (int)this.getScrollAmount();
-            int k = i + 10;
-            int l = j - 3;
-            if (mouseX >= (double)i && mouseX <= (double)(i + 9) && mouseY >= (double)j && mouseY <= (double)(j + 9)) {
+        public void itemClicked(int cursorY, int selectionIndex, double mouseX, double mouseY, int listWidth, int i) {
+            int j = this.width - 35;
+            int k = selectionIndex * this.itemHeight + 36 - (int)this.getScrollAmount();
+            int l = j + 10;
+            int m = k - 3;
+            if (mouseX >= (double)j && mouseX <= (double)(j + 9) && mouseY >= (double)k && mouseY <= (double)(k + 9)) {
                 if (!RealmsBackupScreen.this.backups.get((int)selectionIndex).changeList.isEmpty()) {
                     RealmsBackupScreen.this.selectedBackup = -1;
                     lastScrollPosition = (int)this.getScrollAmount();
                     this.client.setScreen(new RealmsBackupInfoScreen(RealmsBackupScreen.this, RealmsBackupScreen.this.backups.get(selectionIndex)));
                 }
-            } else if (mouseX >= (double)k && mouseX < (double)(k + 13) && mouseY >= (double)l && mouseY < (double)(l + 15)) {
+            } else if (mouseX >= (double)l && mouseX < (double)(l + 13) && mouseY >= (double)m && mouseY < (double)(m + 15)) {
                 lastScrollPosition = (int)this.getScrollAmount();
                 RealmsBackupScreen.this.restoreClicked(selectionIndex);
             }
@@ -369,7 +364,6 @@ extends RealmsScreen {
         private void drawRestore(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
             boolean bl = mouseX >= x && mouseX <= x + 12 && mouseY >= y && mouseY <= y + 14 && mouseY < RealmsBackupScreen.this.height - 15 && mouseY > 32;
             RenderSystem.setShaderTexture(0, RESTORE_ICON);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             matrices.push();
             matrices.scale(0.5f, 0.5f, 0.5f);
             float f = bl ? 28.0f : 0.0f;
@@ -383,7 +377,6 @@ extends RealmsScreen {
         private void drawInfo(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
             boolean bl = mouseX >= x && mouseX <= x + 8 && mouseY >= y && mouseY <= y + 8 && mouseY < RealmsBackupScreen.this.height - 15 && mouseY > 32;
             RenderSystem.setShaderTexture(0, PLUS_ICON);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             matrices.push();
             matrices.scale(0.5f, 0.5f, 0.5f);
             float f = bl ? 15.0f : 0.0f;

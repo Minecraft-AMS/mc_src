@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.serialization.Codec
@@ -10,13 +9,12 @@
  */
 package net.minecraft.world.biome.source;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
@@ -34,8 +32,12 @@ implements BiomeAccess.Storage {
     private final RegistryEntry<Biome> biome;
 
     public FixedBiomeSource(RegistryEntry<Biome> biome) {
-        super((List<RegistryEntry<Biome>>)ImmutableList.of(biome));
         this.biome = biome;
+    }
+
+    @Override
+    protected Stream<RegistryEntry<Biome>> biomeStream() {
+        return Stream.of(this.biome);
     }
 
     @Override

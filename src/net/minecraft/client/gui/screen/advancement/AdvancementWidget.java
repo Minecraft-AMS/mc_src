@@ -22,7 +22,6 @@ import net.minecraft.client.font.TextHandler;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.advancement.AdvancementObtainedStatus;
 import net.minecraft.client.gui.screen.advancement.AdvancementTab;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
@@ -126,18 +125,18 @@ extends DrawableHelper {
             int m = y + this.y + 13;
             int n2 = n = border ? -16777216 : -1;
             if (border) {
-                this.drawHorizontalLine(matrices, j, i, k - 1, n);
-                this.drawHorizontalLine(matrices, j + 1, i, k, n);
-                this.drawHorizontalLine(matrices, j, i, k + 1, n);
-                this.drawHorizontalLine(matrices, l, j - 1, m - 1, n);
-                this.drawHorizontalLine(matrices, l, j - 1, m, n);
-                this.drawHorizontalLine(matrices, l, j - 1, m + 1, n);
-                this.drawVerticalLine(matrices, j - 1, m, k, n);
-                this.drawVerticalLine(matrices, j + 1, m, k, n);
+                AdvancementWidget.drawHorizontalLine(matrices, j, i, k - 1, n);
+                AdvancementWidget.drawHorizontalLine(matrices, j + 1, i, k, n);
+                AdvancementWidget.drawHorizontalLine(matrices, j, i, k + 1, n);
+                AdvancementWidget.drawHorizontalLine(matrices, l, j - 1, m - 1, n);
+                AdvancementWidget.drawHorizontalLine(matrices, l, j - 1, m, n);
+                AdvancementWidget.drawHorizontalLine(matrices, l, j - 1, m + 1, n);
+                AdvancementWidget.drawVerticalLine(matrices, j - 1, m, k, n);
+                AdvancementWidget.drawVerticalLine(matrices, j + 1, m, k, n);
             } else {
-                this.drawHorizontalLine(matrices, j, i, k, n);
-                this.drawHorizontalLine(matrices, l, j, m, n);
-                this.drawVerticalLine(matrices, j, m, k, n);
+                AdvancementWidget.drawHorizontalLine(matrices, j, i, k, n);
+                AdvancementWidget.drawHorizontalLine(matrices, l, j, m, n);
+                AdvancementWidget.drawVerticalLine(matrices, j, m, k, n);
             }
         }
         for (AdvancementWidget advancementWidget : this.children) {
@@ -149,10 +148,9 @@ extends DrawableHelper {
         if (!this.display.isHidden() || this.progress != null && this.progress.isDone()) {
             float f = this.progress == null ? 0.0f : this.progress.getProgressBarPercentage();
             AdvancementObtainedStatus advancementObtainedStatus = f >= 1.0f ? AdvancementObtainedStatus.OBTAINED : AdvancementObtainedStatus.UNOBTAINED;
-            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
-            this.drawTexture(matrices, x + this.x + 3, y + this.y, this.display.getFrame().getTextureV(), 128 + advancementObtainedStatus.getSpriteIndex() * 26, 26, 26);
-            this.client.getItemRenderer().renderInGui(this.display.getIcon(), x + this.x + 8, y + this.y + 5);
+            AdvancementWidget.drawTexture(matrices, x + this.x + 3, y + this.y, this.display.getFrame().getTextureV(), 128 + advancementObtainedStatus.getSpriteIndex() * 26, 26, 26);
+            this.client.getItemRenderer().renderInGui(matrices, this.display.getIcon(), x + this.x + 8, y + this.y + 5);
         }
         for (AdvancementWidget advancementWidget : this.children) {
             advancementWidget.renderWidgets(matrices, x, y);
@@ -202,23 +200,21 @@ extends DrawableHelper {
             advancementObtainedStatus3 = AdvancementObtainedStatus.UNOBTAINED;
         }
         int k = this.width - j;
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
         int l = originY + this.y;
         int m = bl ? originX + this.x - this.width + 26 + 6 : originX + this.x;
         int n = 32 + this.description.size() * this.client.textRenderer.fontHeight;
         if (!this.description.isEmpty()) {
             if (bl2) {
-                this.renderDescriptionBackground(matrices, m, l + 26 - n, this.width, n, 10, 200, 26, 0, 52);
+                AdvancementWidget.drawNineSlicedTexture(matrices, m, l + 26 - n, this.width, n, 10, 200, 26, 0, 52);
             } else {
-                this.renderDescriptionBackground(matrices, m, l, this.width, n, 10, 200, 26, 0, 52);
+                AdvancementWidget.drawNineSlicedTexture(matrices, m, l, this.width, n, 10, 200, 26, 0, 52);
             }
         }
-        this.drawTexture(matrices, m, l, 0, advancementObtainedStatus.getSpriteIndex() * 26, j, 26);
-        this.drawTexture(matrices, m + j, l, 200 - k, advancementObtainedStatus2.getSpriteIndex() * 26, k, 26);
-        this.drawTexture(matrices, originX + this.x + 3, originY + this.y, this.display.getFrame().getTextureV(), 128 + advancementObtainedStatus3.getSpriteIndex() * 26, 26, 26);
+        AdvancementWidget.drawTexture(matrices, m, l, 0, advancementObtainedStatus.getSpriteIndex() * 26, j, 26);
+        AdvancementWidget.drawTexture(matrices, m + j, l, 200 - k, advancementObtainedStatus2.getSpriteIndex() * 26, k, 26);
+        AdvancementWidget.drawTexture(matrices, originX + this.x + 3, originY + this.y, this.display.getFrame().getTextureV(), 128 + advancementObtainedStatus3.getSpriteIndex() * 26, 26, 26);
         if (bl) {
             this.client.textRenderer.drawWithShadow(matrices, this.title, (float)(m + 5), (float)(originY + this.y + 9), -1);
             if (string != null) {
@@ -239,31 +235,7 @@ extends DrawableHelper {
                 this.client.textRenderer.draw(matrices, this.description.get(o), (float)(m + 5), (float)(originY + this.y + 9 + 17 + o * this.client.textRenderer.fontHeight), -5592406);
             }
         }
-        this.client.getItemRenderer().renderInGui(this.display.getIcon(), originX + this.x + 8, originY + this.y + 5);
-    }
-
-    protected void renderDescriptionBackground(MatrixStack matrices, int x, int y, int width, int height, int cornerSize, int textureWidth, int textureHeight, int u, int v) {
-        this.drawTexture(matrices, x, y, u, v, cornerSize, cornerSize);
-        this.drawTextureRepeatedly(matrices, x + cornerSize, y, width - cornerSize - cornerSize, cornerSize, u + cornerSize, v, textureWidth - cornerSize - cornerSize, textureHeight);
-        this.drawTexture(matrices, x + width - cornerSize, y, u + textureWidth - cornerSize, v, cornerSize, cornerSize);
-        this.drawTexture(matrices, x, y + height - cornerSize, u, v + textureHeight - cornerSize, cornerSize, cornerSize);
-        this.drawTextureRepeatedly(matrices, x + cornerSize, y + height - cornerSize, width - cornerSize - cornerSize, cornerSize, u + cornerSize, v + textureHeight - cornerSize, textureWidth - cornerSize - cornerSize, textureHeight);
-        this.drawTexture(matrices, x + width - cornerSize, y + height - cornerSize, u + textureWidth - cornerSize, v + textureHeight - cornerSize, cornerSize, cornerSize);
-        this.drawTextureRepeatedly(matrices, x, y + cornerSize, cornerSize, height - cornerSize - cornerSize, u, v + cornerSize, textureWidth, textureHeight - cornerSize - cornerSize);
-        this.drawTextureRepeatedly(matrices, x + cornerSize, y + cornerSize, width - cornerSize - cornerSize, height - cornerSize - cornerSize, u + cornerSize, v + cornerSize, textureWidth - cornerSize - cornerSize, textureHeight - cornerSize - cornerSize);
-        this.drawTextureRepeatedly(matrices, x + width - cornerSize, y + cornerSize, cornerSize, height - cornerSize - cornerSize, u + textureWidth - cornerSize, v + cornerSize, textureWidth, textureHeight - cornerSize - cornerSize);
-    }
-
-    protected void drawTextureRepeatedly(MatrixStack matrices, int x, int y, int width, int height, int u, int v, int textureWidth, int textureHeight) {
-        for (int i = 0; i < width; i += textureWidth) {
-            int j = x + i;
-            int k = Math.min(textureWidth, width - i);
-            for (int l = 0; l < height; l += textureHeight) {
-                int m = y + l;
-                int n = Math.min(textureHeight, height - l);
-                this.drawTexture(matrices, j, m, u, v, k, n);
-            }
-        }
+        this.client.getItemRenderer().renderInGui(matrices, this.display.getIcon(), originX + this.x + 8, originY + this.y + 5);
     }
 
     public boolean shouldRender(int originX, int originY, int mouseX, int mouseY) {

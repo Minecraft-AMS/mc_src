@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
- *  com.mojang.bridge.game.PackType
  *  com.mojang.logging.LogUtils
  *  org.slf4j.Logger
  */
@@ -12,7 +11,6 @@ package net.minecraft;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.mojang.bridge.game.PackType;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +21,7 @@ import java.util.UUID;
 import net.minecraft.GameVersion;
 import net.minecraft.SaveVersion;
 import net.minecraft.SharedConstants;
+import net.minecraft.resource.ResourceType;
 import net.minecraft.util.JsonHelper;
 import org.slf4j.Logger;
 
@@ -41,12 +40,12 @@ implements GameVersion {
 
     private MinecraftVersion() {
         this.id = UUID.randomUUID().toString().replaceAll("-", "");
-        this.name = "1.19.3";
+        this.name = "1.19.4";
         this.stable = true;
-        this.saveVersion = new SaveVersion(3218, "main");
+        this.saveVersion = new SaveVersion(3337, "main");
         this.protocolVersion = SharedConstants.getProtocolVersion();
-        this.resourcePackVersion = 12;
-        this.dataPackVersion = 10;
+        this.resourcePackVersion = 13;
+        this.dataPackVersion = 12;
         this.buildTime = new Date();
     }
 
@@ -83,10 +82,12 @@ implements GameVersion {
         }
     }
 
+    @Override
     public String getId() {
         return this.id;
     }
 
+    @Override
     public String getName() {
         return this.name;
     }
@@ -96,18 +97,22 @@ implements GameVersion {
         return this.saveVersion;
     }
 
+    @Override
     public int getProtocolVersion() {
         return this.protocolVersion;
     }
 
-    public int getPackVersion(PackType packType) {
-        return packType == PackType.DATA ? this.dataPackVersion : this.resourcePackVersion;
+    @Override
+    public int getResourceVersion(ResourceType type) {
+        return type == ResourceType.SERVER_DATA ? this.dataPackVersion : this.resourcePackVersion;
     }
 
+    @Override
     public Date getBuildTime() {
         return this.buildTime;
     }
 
+    @Override
     public boolean isStable() {
         return this.stable;
     }

@@ -25,7 +25,7 @@ public class ClampedIntProvider
 extends IntProvider {
     public static final Codec<ClampedIntProvider> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)IntProvider.VALUE_CODEC.fieldOf("source").forGetter(provider -> provider.source), (App)Codec.INT.fieldOf("min_inclusive").forGetter(provider -> provider.min), (App)Codec.INT.fieldOf("max_inclusive").forGetter(provider -> provider.max)).apply((Applicative)instance, ClampedIntProvider::new)).comapFlatMap(provider -> {
         if (provider.max < provider.min) {
-            return DataResult.error((String)("Max must be at least min, min_inclusive: " + provider.min + ", max_inclusive: " + provider.max));
+            return DataResult.error(() -> "Max must be at least min, min_inclusive: " + clampedIntProvider.min + ", max_inclusive: " + clampedIntProvider.max);
         }
         return DataResult.success((Object)provider);
     }, Function.identity());

@@ -24,6 +24,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffectUtil;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 
@@ -53,7 +54,6 @@ extends HandledScreen<T> {
         if (collection.isEmpty() || j < 32) {
             return;
         }
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         boolean bl = j >= 120;
         int k = 33;
         if (collection.size() > 5) {
@@ -74,7 +74,7 @@ extends HandledScreen<T> {
                 l += k;
             }
             if (statusEffectInstance != null) {
-                List<Text> list = List.of(this.getStatusEffectDescription(statusEffectInstance), Text.literal(StatusEffectUtil.durationToString(statusEffectInstance, 1.0f)));
+                List<Text> list = List.of(this.getStatusEffectDescription(statusEffectInstance), StatusEffectUtil.durationToString(statusEffectInstance, 1.0f));
                 this.renderTooltip(matrices, list, Optional.empty(), mouseX, mouseY);
             }
         }
@@ -84,11 +84,10 @@ extends HandledScreen<T> {
         RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
         int i = this.y;
         for (StatusEffectInstance statusEffectInstance : statusEffects) {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             if (wide) {
-                this.drawTexture(matrices, x, i, 0, 166, 120, 32);
+                AbstractInventoryScreen.drawTexture(matrices, x, i, 0, 166, 120, 32);
             } else {
-                this.drawTexture(matrices, x, i, 0, 198, 32, 32);
+                AbstractInventoryScreen.drawTexture(matrices, x, i, 0, 198, 32, 32);
             }
             i += height;
         }
@@ -101,7 +100,7 @@ extends HandledScreen<T> {
             StatusEffect statusEffect = statusEffectInstance.getEffectType();
             Sprite sprite = statusEffectSpriteManager.getSprite(statusEffect);
             RenderSystem.setShaderTexture(0, sprite.getAtlasId());
-            AbstractInventoryScreen.drawSprite(matrices, x + (wide ? 6 : 7), i + 7, this.getZOffset(), 18, 18, sprite);
+            AbstractInventoryScreen.drawSprite(matrices, x + (wide ? 6 : 7), i + 7, 0, 18, 18, sprite);
             i += height;
         }
     }
@@ -111,8 +110,8 @@ extends HandledScreen<T> {
         for (StatusEffectInstance statusEffectInstance : statusEffects) {
             Text text = this.getStatusEffectDescription(statusEffectInstance);
             this.textRenderer.drawWithShadow(matrices, text, (float)(x + 10 + 18), (float)(i + 6), 0xFFFFFF);
-            String string = StatusEffectUtil.durationToString(statusEffectInstance, 1.0f);
-            this.textRenderer.drawWithShadow(matrices, string, (float)(x + 10 + 18), (float)(i + 6 + 10), 0x7F7F7F);
+            Text text2 = StatusEffectUtil.durationToString(statusEffectInstance, 1.0f);
+            this.textRenderer.drawWithShadow(matrices, text2, (float)(x + 10 + 18), (float)(i + 6 + 10), 0x7F7F7F);
             i += height;
         }
     }
@@ -120,7 +119,7 @@ extends HandledScreen<T> {
     private Text getStatusEffectDescription(StatusEffectInstance statusEffect) {
         MutableText mutableText = statusEffect.getEffectType().getName().copy();
         if (statusEffect.getAmplifier() >= 1 && statusEffect.getAmplifier() <= 9) {
-            mutableText.append(" ").append(Text.translatable("enchantment.level." + (statusEffect.getAmplifier() + 1)));
+            mutableText.append(ScreenTexts.SPACE).append(Text.translatable("enchantment.level." + (statusEffect.getAmplifier() + 1)));
         }
         return mutableText;
     }

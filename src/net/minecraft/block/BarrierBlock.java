@@ -12,12 +12,12 @@ import net.minecraft.world.BlockView;
 
 public class BarrierBlock
 extends Block {
-    protected BarrierBlock(AbstractBlock.Settings settings) {
+    public BarrierBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
     @Override
-    public boolean isTranslucent(BlockState state, BlockView world, BlockPos pos) {
+    public boolean isTransparent(BlockState state, BlockView world, BlockPos pos) {
         return true;
     }
 

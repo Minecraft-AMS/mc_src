@@ -66,6 +66,12 @@ public class MatrixStack {
         entry.normalMatrix.rotate((Quaternionfc)quaternion);
     }
 
+    public void multiply(Quaternionf quaternion, float originX, float originY, float originZ) {
+        Entry entry = this.stack.getLast();
+        entry.positionMatrix.rotateAround((Quaternionfc)quaternion, originX, originY, originZ);
+        entry.normalMatrix.rotate((Quaternionfc)quaternion);
+    }
+
     public void push() {
         Entry entry = this.stack.getLast();
         this.stack.addLast(new Entry(new Matrix4f((Matrix4fc)entry.positionMatrix), new Matrix3f((Matrix3fc)entry.normalMatrix)));

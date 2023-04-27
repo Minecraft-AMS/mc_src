@@ -15,7 +15,6 @@ import net.minecraft.client.gui.screen.recipebook.AbstractFurnaceRecipeBookScree
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.AbstractFurnaceScreenHandler;
@@ -49,7 +48,7 @@ implements RecipeBookProvider {
         this.addDrawableChild(new TexturedButtonWidget(this.x + 20, this.height / 2 - 49, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, button -> {
             this.recipeBook.toggleOpen();
             this.x = this.recipeBook.findLeftEdge(this.width, this.backgroundWidth);
-            ((TexturedButtonWidget)button).setPos(this.x + 20, this.height / 2 - 49);
+            ((TexturedButtonWidget)button).setPosition(this.x + 20, this.height / 2 - 49);
         }));
         this.titleX = (this.backgroundWidth - this.textRenderer.getWidth(this.title)) / 2;
     }
@@ -78,18 +77,16 @@ implements RecipeBookProvider {
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
         int k;
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, this.background);
         int i = this.x;
         int j = this.y;
-        this.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        AbstractFurnaceScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
         if (((AbstractFurnaceScreenHandler)this.handler).isBurning()) {
             k = ((AbstractFurnaceScreenHandler)this.handler).getFuelProgress();
-            this.drawTexture(matrices, i + 56, j + 36 + 12 - k, 176, 12 - k, 14, k + 1);
+            AbstractFurnaceScreen.drawTexture(matrices, i + 56, j + 36 + 12 - k, 176, 12 - k, 14, k + 1);
         }
         k = ((AbstractFurnaceScreenHandler)this.handler).getCookProgress();
-        this.drawTexture(matrices, i + 79, j + 34, 176, 14, k + 1, 16);
+        AbstractFurnaceScreen.drawTexture(matrices, i + 79, j + 34, 176, 14, k + 1, 16);
     }
 
     @Override

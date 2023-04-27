@@ -10,10 +10,7 @@
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.properties.Property
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  com.mojang.datafixers.DataFixer
  *  com.mojang.logging.LogUtils
- *  com.mojang.serialization.Dynamic
- *  com.mojang.serialization.DynamicOps
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
@@ -28,10 +25,7 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.datafixers.DataFixer;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +41,6 @@ import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.nbt.NbtByteArray;
 import net.minecraft.nbt.NbtCompound;
@@ -55,7 +48,6 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtIntArray;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtLongArray;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.nbt.NbtTypes;
 import net.minecraft.nbt.StringNbtReader;
@@ -477,14 +469,6 @@ public final class NbtHelper {
         return stringBuilder;
     }
 
-    public static NbtCompound update(DataFixer fixer, DataFixTypes fixTypes, NbtCompound compound, int oldVersion) {
-        return NbtHelper.update(fixer, fixTypes, compound, oldVersion, SharedConstants.getGameVersion().getWorldVersion());
-    }
-
-    public static NbtCompound update(DataFixer fixer, DataFixTypes fixTypes, NbtCompound compound, int oldVersion, int targetVersion) {
-        return (NbtCompound)fixer.update(fixTypes.getTypeReference(), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)compound), oldVersion, targetVersion).getValue();
-    }
-
     public static Text toPrettyPrintedText(NbtElement element) {
         return new NbtTextFormatter("", 0).apply(element);
     }
@@ -596,6 +580,20 @@ public final class NbtHelper {
         }
         nbtCompound.putString("Name", string2);
         return nbtCompound;
+    }
+
+    public static NbtCompound putDataVersion(NbtCompound nbt) {
+        int i = SharedConstants.getGameVersion().getSaveVersion().getId();
+        return NbtHelper.putDataVersion(nbt, i);
+    }
+
+    public static NbtCompound putDataVersion(NbtCompound nbt, int dataVersion) {
+        nbt.putInt("DataVersion", dataVersion);
+        return nbt;
+    }
+
+    public static int getDataVersion(NbtCompound nbt, int fallback) {
+        return nbt.contains("DataVersion", 99) ? nbt.getInt("DataVersion") : fallback;
     }
 }
 

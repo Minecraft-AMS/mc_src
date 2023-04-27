@@ -147,7 +147,7 @@ extends RealmsScreen {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        RealmsResetWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 7, 0xFFFFFF);
+        RealmsResetWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 7, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
     }
 
@@ -155,19 +155,13 @@ extends RealmsScreen {
         RenderSystem.setShaderTexture(0, texture);
         if (hovered) {
             RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
-        } else {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
         DrawableHelper.drawTexture(matrices, x + 2, y + 14, 0.0f, 0.0f, 56, 56, 56, 56);
         RenderSystem.setShaderTexture(0, SLOT_FRAME_TEXTURE);
-        if (hovered) {
-            RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
-        } else {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        }
         DrawableHelper.drawTexture(matrices, x, y + 12, 0.0f, 0.0f, 60, 60, 60, 60);
         int i = hovered ? 0xA0A0A0 : 0xFFFFFF;
-        RealmsResetWorldScreen.drawCenteredText(matrices, this.textRenderer, text, x + 30, y, i);
+        RealmsResetWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, text, x + 30, y, i);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     private void executeLongRunningTask(LongRunningTask task) {
@@ -212,7 +206,7 @@ extends RealmsScreen {
 
         @Override
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RealmsResetWorldScreen.this.drawFrame(matrices, this.getX(), this.getY(), this.getMessage(), this.image, this.isHovered(), this.isMouseOver(mouseX, mouseY));
+            RealmsResetWorldScreen.this.drawFrame(matrices, this.getX(), this.getY(), this.getMessage(), this.image, this.isSelected(), this.isMouseOver(mouseX, mouseY));
         }
     }
 }

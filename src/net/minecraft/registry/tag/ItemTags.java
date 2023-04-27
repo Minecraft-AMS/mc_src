@@ -30,6 +30,7 @@ public final class ItemTags {
     public static final TagKey<Item> OAK_LOGS = ItemTags.of("oak_logs");
     public static final TagKey<Item> BIRCH_LOGS = ItemTags.of("birch_logs");
     public static final TagKey<Item> ACACIA_LOGS = ItemTags.of("acacia_logs");
+    public static final TagKey<Item> CHERRY_LOGS = ItemTags.of("cherry_logs");
     public static final TagKey<Item> JUNGLE_LOGS = ItemTags.of("jungle_logs");
     public static final TagKey<Item> SPRUCE_LOGS = ItemTags.of("spruce_logs");
     public static final TagKey<Item> MANGROVE_LOGS = ItemTags.of("mangrove_logs");
@@ -39,6 +40,7 @@ public final class ItemTags {
     public static final TagKey<Item> WART_BLOCKS = ItemTags.of("wart_blocks");
     public static final TagKey<Item> BANNERS = ItemTags.of("banners");
     public static final TagKey<Item> SAND = ItemTags.of("sand");
+    public static final TagKey<Item> SMELTS_TO_GLASS = ItemTags.of("smelts_to_glass");
     public static final TagKey<Item> STAIRS = ItemTags.of("stairs");
     public static final TagKey<Item> SLABS = ItemTags.of("slabs");
     public static final TagKey<Item> WALLS = ItemTags.of("walls");
@@ -90,6 +92,19 @@ public final class ItemTags {
     public static final TagKey<Item> COMPASSES = ItemTags.of("compasses");
     public static final TagKey<Item> HANGING_SIGNS = ItemTags.of("hanging_signs");
     public static final TagKey<Item> CREEPER_IGNITERS = ItemTags.of("creeper_igniters");
+    public static final TagKey<Item> NOTEBLOCK_TOP_INSTRUMENTS = ItemTags.of("noteblock_top_instruments");
+    public static final TagKey<Item> TRIMMABLE_ARMOR = ItemTags.of("trimmable_armor");
+    public static final TagKey<Item> TRIM_MATERIALS = ItemTags.of("trim_materials");
+    public static final TagKey<Item> TRIM_TEMPLATES = ItemTags.of("trim_templates");
+    public static final TagKey<Item> SNIFFER_FOOD = ItemTags.of("sniffer_food");
+    public static final TagKey<Item> DECORATED_POT_SHARDS = ItemTags.of("decorated_pot_shards");
+    public static final TagKey<Item> SWORDS = ItemTags.of("swords");
+    public static final TagKey<Item> AXES = ItemTags.of("axes");
+    public static final TagKey<Item> HOES = ItemTags.of("hoes");
+    public static final TagKey<Item> PICKAXES = ItemTags.of("pickaxes");
+    public static final TagKey<Item> SHOVELS = ItemTags.of("shovels");
+    public static final TagKey<Item> TOOLS = ItemTags.of("tools");
+    public static final TagKey<Item> BREAKS_DECORATED_POTS = ItemTags.of("breaks_decorated_pots");
 
     private ItemTags() {
     }

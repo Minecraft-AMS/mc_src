@@ -28,6 +28,7 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Ownable;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -47,7 +48,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class AreaEffectCloudEntity
-extends Entity {
+extends Entity
+implements Ownable {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_29972 = 5;
     private static final TrackedData<Float> RADIUS = DataTracker.registerData(AreaEffectCloudEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -176,7 +178,7 @@ extends Entity {
                 boolean bl;
                 block19: {
                     float g;
-                    int i;
+                    int i2;
                     super.tick();
                     bl = this.isWaiting();
                     f = this.getRadius();
@@ -186,13 +188,13 @@ extends Entity {
                     }
                     ParticleEffect particleEffect = this.getParticleType();
                     if (bl) {
-                        i = 2;
+                        i2 = 2;
                         g = 0.2f;
                     } else {
-                        i = MathHelper.ceil((float)Math.PI * f * f);
+                        i2 = MathHelper.ceil((float)Math.PI * f * f);
                         g = f;
                     }
-                    for (int j = 0; j < i; ++j) {
+                    for (int j = 0; j < i2; ++j) {
                         double p;
                         double o;
                         double n;
@@ -241,7 +243,7 @@ extends Entity {
                 this.affectedEntities.entrySet().removeIf(entry -> this.age >= (Integer)entry.getValue());
                 list = Lists.newArrayList();
                 for (StatusEffectInstance statusEffectInstance : this.potion.getEffects()) {
-                    list.add(new StatusEffectInstance(statusEffectInstance.getEffectType(), statusEffectInstance.getDuration() / 4, statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()));
+                    list.add(new StatusEffectInstance(statusEffectInstance.getEffectType(), statusEffectInstance.mapDuration(i -> i / 4), statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()));
                 }
                 list.addAll(this.effects);
                 if (!list.isEmpty()) break block21;
@@ -316,6 +318,7 @@ extends Entity {
         this.ownerUuid = owner == null ? null : owner.getUuid();
     }
 
+    @Override
     @Nullable
     public LivingEntity getOwner() {
         Entity entity;
@@ -412,6 +415,12 @@ extends Entity {
     @Override
     public EntityDimensions getDimensions(EntityPose pose) {
         return EntityDimensions.changing(this.getRadius() * 2.0f, 0.5f);
+    }
+
+    @Override
+    @Nullable
+    public /* synthetic */ Entity getOwner() {
+        return this.getOwner();
     }
 }
 

@@ -36,6 +36,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
+import net.minecraft.client.gui.widget.GridWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.math.MatrixStack;
@@ -68,8 +69,14 @@ extends Screen {
     protected void init() {
         this.ruleListWidget = new RuleListWidget(this.gameRules);
         this.addSelectableChild(this.ruleListWidget);
-        this.doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.ruleSaver.accept(Optional.of(this.gameRules))).dimensions(this.width / 2 - 155, this.height - 29, 150, 20).build());
-        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.ruleSaver.accept(Optional.empty())).dimensions(this.width / 2 - 155 + 160, this.height - 29, 150, 20).build());
+        GridWidget.Adder adder = new GridWidget().setColumnSpacing(10).createAdder(2);
+        this.doneButton = adder.add(ButtonWidget.builder(ScreenTexts.DONE, button -> this.ruleSaver.accept(Optional.of(this.gameRules))).build());
+        adder.add(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.ruleSaver.accept(Optional.empty())).build());
+        adder.getGridWidget().forEachChild(child -> {
+            ClickableWidget cfr_ignored_0 = (ClickableWidget)this.addDrawableChild(child);
+        });
+        adder.getGridWidget().setPosition(this.width / 2 - 155, this.height - 28);
+        adder.getGridWidget().refreshPositions();
     }
 
     @Override
@@ -81,7 +88,7 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.field_24297 = null;
         this.ruleListWidget.render(matrices, mouseX, mouseY, delta);
-        EditGameRulesScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
+        EditGameRulesScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
     }
 
@@ -255,7 +262,7 @@ extends Screen {
 
         @Override
         public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            DrawableHelper.drawCenteredText(matrices, ((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name, x + entryWidth / 2, y + 5, 0xFFFFFF);
+            DrawableHelper.drawCenteredTextWithShadow(matrices, ((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name, x + entryWidth / 2, y + 5, 0xFFFFFF);
         }
 
         @Override

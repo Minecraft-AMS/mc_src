@@ -165,13 +165,13 @@ implements ReadableProfiler {
     }
 
     @Override
-    public void visit(String marker, int i) {
-        this.getCurrentInfo().counts.addTo((Object)marker, (long)i);
+    public void visit(String marker, int num) {
+        this.getCurrentInfo().counts.addTo((Object)marker, (long)num);
     }
 
     @Override
-    public void visit(Supplier<String> markerGetter, int i) {
-        this.getCurrentInfo().counts.addTo((Object)markerGetter.get(), (long)i);
+    public void visit(Supplier<String> markerGetter, int num) {
+        this.getCurrentInfo().counts.addTo((Object)markerGetter.get(), (long)num);
     }
 
     @Override

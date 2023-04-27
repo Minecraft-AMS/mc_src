@@ -38,7 +38,7 @@ public class HoeItem
 extends MiningToolItem {
     protected static final Map<Block, Pair<Predicate<ItemUsageContext>, Consumer<ItemUsageContext>>> TILLING_ACTIONS = Maps.newHashMap((Map)ImmutableMap.of((Object)Blocks.GRASS_BLOCK, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.FARMLAND.getDefaultState())), (Object)Blocks.DIRT_PATH, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.FARMLAND.getDefaultState())), (Object)Blocks.DIRT, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.FARMLAND.getDefaultState())), (Object)Blocks.COARSE_DIRT, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.DIRT.getDefaultState())), (Object)Blocks.ROOTED_DIRT, (Object)Pair.of(itemUsageContext -> true, HoeItem.createTillAndDropAction(Blocks.DIRT.getDefaultState(), Items.HANGING_ROOTS))));
 
-    protected HoeItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
+    public HoeItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
         super(attackDamage, attackSpeed, material, BlockTags.HOE_MINEABLE, settings);
     }
 

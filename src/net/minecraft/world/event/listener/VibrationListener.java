@@ -52,6 +52,7 @@ implements GameEventListener {
     @VisibleForTesting
     public static final Object2IntMap<GameEvent> FREQUENCIES = Object2IntMaps.unmodifiable((Object2IntMap)((Object2IntMap)Util.make(new Object2IntOpenHashMap(), frequencies -> {
         frequencies.put((Object)GameEvent.STEP, 1);
+        frequencies.put((Object)GameEvent.ITEM_INTERACT_FINISH, 2);
         frequencies.put((Object)GameEvent.FLAP, 2);
         frequencies.put((Object)GameEvent.SWIM, 3);
         frequencies.put((Object)GameEvent.ELYTRA_GLIDE, 4);
@@ -61,9 +62,11 @@ implements GameEventListener {
         frequencies.put((Object)GameEvent.ENTITY_SHAKE, 6);
         frequencies.put((Object)GameEvent.BLOCK_CHANGE, 6);
         frequencies.put((Object)GameEvent.NOTE_BLOCK_PLAY, 6);
+        frequencies.put((Object)GameEvent.ENTITY_DISMOUNT, 6);
         frequencies.put((Object)GameEvent.PROJECTILE_SHOOT, 7);
         frequencies.put((Object)GameEvent.DRINK, 7);
         frequencies.put((Object)GameEvent.PRIME_FUSE, 7);
+        frequencies.put((Object)GameEvent.ENTITY_MOUNT, 7);
         frequencies.put((Object)GameEvent.PROJECTILE_LAND, 8);
         frequencies.put((Object)GameEvent.EAT, 8);
         frequencies.put((Object)GameEvent.ENTITY_INTERACT, 8);
@@ -84,7 +87,6 @@ implements GameEventListener {
         frequencies.put((Object)GameEvent.ENTITY_DIE, 13);
         frequencies.put((Object)GameEvent.BLOCK_DESTROY, 13);
         frequencies.put((Object)GameEvent.FLUID_PICKUP, 13);
-        frequencies.put((Object)GameEvent.ITEM_INTERACT_FINISH, 14);
         frequencies.put((Object)GameEvent.CONTAINER_CLOSE, 14);
         frequencies.put((Object)GameEvent.PISTON_CONTRACT, 14);
         frequencies.put((Object)GameEvent.PISTON_EXTEND, 15);
@@ -139,7 +141,7 @@ implements GameEventListener {
                 --this.delay;
                 if (this.delay <= 0) {
                     this.delay = 0;
-                    this.callback.accept(serverWorld, this, new BlockPos(this.vibration.pos()), this.vibration.gameEvent(), this.vibration.getEntity(serverWorld).orElse(null), this.vibration.getOwner(serverWorld).orElse(null), this.vibration.distance());
+                    this.callback.accept(serverWorld, this, BlockPos.ofFloored(this.vibration.pos()), this.vibration.gameEvent(), this.vibration.getEntity(serverWorld).orElse(null), this.vibration.getOwner(serverWorld).orElse(null), this.vibration.distance());
                     this.vibration = null;
                 }
             }
@@ -169,7 +171,7 @@ implements GameEventListener {
             return false;
         }
         Vec3d vec3d = optional.get();
-        if (!this.callback.accepts(world, this, new BlockPos(emitterPos), event, emitter)) {
+        if (!this.callback.accepts(world, this, BlockPos.ofFloored(emitterPos), event, emitter)) {
             return false;
         }
         if (VibrationListener.isOccluded(world, emitterPos, vec3d)) {
@@ -191,7 +193,7 @@ implements GameEventListener {
         Vec3d vec3d = new Vec3d((double)MathHelper.floor(start.x) + 0.5, (double)MathHelper.floor(start.y) + 0.5, (double)MathHelper.floor(start.z) + 0.5);
         Vec3d vec3d2 = new Vec3d((double)MathHelper.floor(end.x) + 0.5, (double)MathHelper.floor(end.y) + 0.5, (double)MathHelper.floor(end.z) + 0.5);
         for (Direction direction : Direction.values()) {
-            Vec3d vec3d3 = vec3d.withBias(direction, 1.0E-5f);
+            Vec3d vec3d3 = vec3d.offset(direction, 1.0E-5f);
             if (world.raycast(new BlockStateRaycastContext(vec3d3, vec3d2, state -> state.isIn(BlockTags.OCCLUDES_VIBRATION_SIGNALS))).getType() == HitResult.Type.BLOCK) continue;
             return false;
         }

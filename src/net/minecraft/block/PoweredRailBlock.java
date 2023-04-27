@@ -23,7 +23,7 @@ extends AbstractRailBlock {
     public static final EnumProperty<RailShape> SHAPE = Properties.STRAIGHT_RAIL_SHAPE;
     public static final BooleanProperty POWERED = Properties.POWERED;
 
-    protected PoweredRailBlock(AbstractBlock.Settings settings) {
+    public PoweredRailBlock(AbstractBlock.Settings settings) {
         super(true, settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(SHAPE, RailShape.NORTH_SOUTH)).with(POWERED, false)).with(WATERLOGGED, false));
     }

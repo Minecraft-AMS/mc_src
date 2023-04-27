@@ -58,8 +58,8 @@ public abstract class TreeDecorator {
             this.replacer.accept(pos, state);
         }
 
-        public boolean isAir(BlockPos poa) {
-            return this.world.testBlockState(poa, AbstractBlock.AbstractBlockState::isAir);
+        public boolean isAir(BlockPos pos) {
+            return this.world.testBlockState(pos, AbstractBlock.AbstractBlockState::isAir);
         }
 
         public TestableWorld getWorld() {

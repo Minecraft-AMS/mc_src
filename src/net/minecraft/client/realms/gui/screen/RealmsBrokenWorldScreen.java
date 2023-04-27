@@ -85,7 +85,7 @@ extends RealmsScreen {
 
     @Override
     public Text getNarratedTitle() {
-        return Texts.join(Stream.concat(Stream.of(this.title), Stream.of(this.message)).collect(Collectors.toList()), Text.literal(" "));
+        return Texts.join(Stream.concat(Stream.of(this.title), Stream.of(this.message)).collect(Collectors.toList()), ScreenTexts.SPACE);
     }
 
     private void addButtons() {
@@ -142,9 +142,9 @@ extends RealmsScreen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         super.render(matrices, mouseX, mouseY, delta);
-        RealmsBrokenWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+        RealmsBrokenWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
         for (int i = 0; i < this.message.length; ++i) {
-            RealmsBrokenWorldScreen.drawCenteredText(matrices, this.textRenderer, this.message[i], this.width / 2, RealmsBrokenWorldScreen.row(-1) + 3 + i * 12, 0xA0A0A0);
+            RealmsBrokenWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.message[i], this.width / 2, RealmsBrokenWorldScreen.row(-1) + 3 + i * 12, 0xA0A0A0);
         }
         if (this.serverData == null) {
             return;
@@ -236,7 +236,7 @@ extends RealmsScreen {
         if (empty) {
             RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.EMPTY_FRAME);
         } else if (templateImage != null && templateId != -1L) {
-            RealmsTextureManager.bindWorldTemplate(String.valueOf(templateId), templateImage);
+            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(String.valueOf(templateId), templateImage));
         } else if (slotId == 1) {
             RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.PANORAMA_0);
         } else if (slotId == 2) {
@@ -244,7 +244,7 @@ extends RealmsScreen {
         } else if (slotId == 3) {
             RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.PANORAMA_3);
         } else {
-            RealmsTextureManager.bindWorldTemplate(String.valueOf(this.serverData.minigameId), this.serverData.minigameImage);
+            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(String.valueOf(this.serverData.minigameId), this.serverData.minigameImage));
         }
         if (!activeSlot) {
             RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
@@ -260,7 +260,8 @@ extends RealmsScreen {
             RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
         }
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 80, 80, 80, 80);
-        RealmsBrokenWorldScreen.drawCenteredText(matrices, this.textRenderer, slotName, x + 40, y + 66, 0xFFFFFF);
+        RealmsBrokenWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, slotName, x + 40, y + 66, 0xFFFFFF);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 }
 

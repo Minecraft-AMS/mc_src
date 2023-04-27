@@ -137,8 +137,8 @@ extends AnimalModel<T> {
     @Override
     public void animateModel(T abstractHorseEntity, float f, float g, float h) {
         super.animateModel(abstractHorseEntity, f, g, h);
-        float i = MathHelper.lerpAngle(((AbstractHorseEntity)abstractHorseEntity).prevBodyYaw, ((AbstractHorseEntity)abstractHorseEntity).bodyYaw, h);
-        float j = MathHelper.lerpAngle(((AbstractHorseEntity)abstractHorseEntity).prevHeadYaw, ((AbstractHorseEntity)abstractHorseEntity).headYaw, h);
+        float i = MathHelper.lerpAngleDegrees(h, ((AbstractHorseEntity)abstractHorseEntity).prevBodyYaw, ((AbstractHorseEntity)abstractHorseEntity).bodyYaw);
+        float j = MathHelper.lerpAngleDegrees(h, ((AbstractHorseEntity)abstractHorseEntity).prevHeadYaw, ((AbstractHorseEntity)abstractHorseEntity).headYaw);
         float k = MathHelper.lerp(h, ((AbstractHorseEntity)abstractHorseEntity).prevPitch, ((Entity)abstractHorseEntity).getPitch());
         float l = j - i;
         float m = k * ((float)Math.PI / 180);
@@ -149,7 +149,7 @@ extends AnimalModel<T> {
             l = -20.0f;
         }
         if (g > 0.2f) {
-            m += MathHelper.cos(f * 0.4f) * 0.15f * g;
+            m += MathHelper.cos(f * 0.8f) * 0.15f * g;
         }
         float n = ((AbstractHorseEntity)abstractHorseEntity).getEatingGrassAnimationProgress(h);
         float o = ((AbstractHorseEntity)abstractHorseEntity).getAngryAnimationProgress(h);

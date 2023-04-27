@@ -9,37 +9,38 @@ package net.minecraft.client.gui.widget;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.Positioner;
+import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.client.gui.widget.WrapperWidget;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.Divider;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class GridWidget
 extends WrapperWidget {
-    private final List<ClickableWidget> children = new ArrayList<ClickableWidget>();
+    private final List<Widget> children = new ArrayList<Widget>();
     private final List<Element> grids = new ArrayList<Element>();
     private final Positioner mainPositioner = Positioner.create();
+    private int rowSpacing = 0;
+    private int columnSpacing = 0;
 
     public GridWidget() {
         this(0, 0);
     }
 
     public GridWidget(int x, int y) {
-        this(x, y, Text.empty());
+        super(x, y, 0, 0);
     }
 
-    public GridWidget(int x, int y, Text message) {
-        super(x, y, 0, 0, message);
-    }
-
-    public void recalculateDimensions() {
+    @Override
+    public void refreshPositions() {
         int m;
         int l;
+        int k;
+        super.refreshPositions();
         int i = 0;
         int j = 0;
         for (Element element : this.grids) {
@@ -49,24 +50,26 @@ extends WrapperWidget {
         int[] is = new int[j + 1];
         int[] js = new int[i + 1];
         for (Element element2 : this.grids) {
-            Divider divider = new Divider(element2.getHeight(), element2.occupiedRows);
-            for (int k = element2.row; k <= element2.getRowEnd(); ++k) {
-                js[k] = Math.max(js[k], divider.nextInt());
+            k = element2.getHeight() - (element2.occupiedRows - 1) * this.rowSpacing;
+            Divider divider = new Divider(k, element2.occupiedRows);
+            for (l = element2.row; l <= element2.getRowEnd(); ++l) {
+                js[l] = Math.max(js[l], divider.nextInt());
             }
-            Divider divider2 = new Divider(element2.getWidth(), element2.occupiedColumns);
-            for (l = element2.column; l <= element2.getColumnEnd(); ++l) {
-                is[l] = Math.max(is[l], divider2.nextInt());
+            l = element2.getWidth() - (element2.occupiedColumns - 1) * this.columnSpacing;
+            Divider divider2 = new Divider(l, element2.occupiedColumns);
+            for (m = element2.column; m <= element2.getColumnEnd(); ++m) {
+                is[m] = Math.max(is[m], divider2.nextInt());
             }
         }
         int[] ks = new int[j + 1];
         int[] ls = new int[i + 1];
         ks[0] = 0;
-        for (m = 1; m <= j; ++m) {
-            ks[m] = ks[m - 1] + is[m - 1];
+        for (k = 1; k <= j; ++k) {
+            ks[k] = ks[k - 1] + is[k - 1] + this.columnSpacing;
         }
         ls[0] = 0;
-        for (m = 1; m <= i; ++m) {
-            ls[m] = ls[m - 1] + js[m - 1];
+        for (k = 1; k <= i; ++k) {
+            ls[k] = ls[k - 1] + js[k - 1] + this.rowSpacing;
         }
         for (Element element3 : this.grids) {
             int n;
@@ -74,30 +77,30 @@ extends WrapperWidget {
             for (n = element3.column; n <= element3.getColumnEnd(); ++n) {
                 l += is[n];
             }
-            element3.setX(this.getX() + ks[element3.column], l);
+            element3.setX(this.getX() + ks[element3.column], l += this.columnSpacing * (element3.occupiedColumns - 1));
             n = 0;
-            for (int o = element3.row; o <= element3.getRowEnd(); ++o) {
-                n += js[o];
+            for (m = element3.row; m <= element3.getRowEnd(); ++m) {
+                n += js[m];
             }
-            element3.setY(this.getY() + ls[element3.row], n);
+            element3.setY(this.getY() + ls[element3.row], n += this.rowSpacing * (element3.occupiedRows - 1));
         }
         this.width = ks[j] + is[j];
         this.height = ls[i] + js[i];
     }
 
-    public <T extends ClickableWidget> T add(T widget, int row, int column) {
+    public <T extends Widget> T add(T widget, int row, int column) {
         return this.add(widget, row, column, this.copyPositioner());
     }
 
-    public <T extends ClickableWidget> T add(T widget, int row, int column, Positioner positioner) {
+    public <T extends Widget> T add(T widget, int row, int column, Positioner positioner) {
         return this.add(widget, row, column, 1, 1, positioner);
     }
 
-    public <T extends ClickableWidget> T add(T widget, int row, int column, int occupiedRows, int occupiedColumns) {
+    public <T extends Widget> T add(T widget, int row, int column, int occupiedRows, int occupiedColumns) {
         return this.add(widget, row, column, occupiedRows, occupiedColumns, this.copyPositioner());
     }
 
-    public <T extends ClickableWidget> T add(T widget, int row, int column, int occupiedRows, int occupiedColumns, Positioner positioner) {
+    public <T extends Widget> T add(T widget, int row, int column, int occupiedRows, int occupiedColumns, Positioner positioner) {
         if (occupiedRows < 1) {
             throw new IllegalArgumentException("Occupied rows must be at least 1");
         }
@@ -109,9 +112,23 @@ extends WrapperWidget {
         return widget;
     }
 
+    public GridWidget setColumnSpacing(int columnSpacing) {
+        this.columnSpacing = columnSpacing;
+        return this;
+    }
+
+    public GridWidget setRowSpacing(int rowSpacing) {
+        this.rowSpacing = rowSpacing;
+        return this;
+    }
+
+    public GridWidget setSpacing(int spacing) {
+        return this.setColumnSpacing(spacing).setRowSpacing(spacing);
+    }
+
     @Override
-    protected List<? extends ClickableWidget> wrappedWidgets() {
-        return this.children;
+    public void forEachElement(Consumer<Widget> consumer) {
+        this.children.forEach(consumer);
     }
 
     public Positioner copyPositioner() {
@@ -134,7 +151,7 @@ extends WrapperWidget {
         final int occupiedRows;
         final int occupiedColumns;
 
-        Element(ClickableWidget widget, int row, int column, int occupiedRows, int occupiedColumns, Positioner positioner) {
+        Element(Widget widget, int row, int column, int occupiedRows, int occupiedColumns, Positioner positioner) {
             super(widget, positioner.toImpl());
             this.row = row;
             this.column = column;
@@ -160,19 +177,19 @@ extends WrapperWidget {
             this.columns = columns;
         }
 
-        public <T extends ClickableWidget> T add(T widget) {
+        public <T extends Widget> T add(T widget) {
             return this.add(widget, 1);
         }
 
-        public <T extends ClickableWidget> T add(T widget, int occupiedColumns) {
+        public <T extends Widget> T add(T widget, int occupiedColumns) {
             return this.add(widget, occupiedColumns, this.getMainPositioner());
         }
 
-        public <T extends ClickableWidget> T add(T widget, Positioner positioner) {
+        public <T extends Widget> T add(T widget, Positioner positioner) {
             return this.add(widget, 1, positioner);
         }
 
-        public <T extends ClickableWidget> T add(T widget, int occupiedColumns, Positioner positioner) {
+        public <T extends Widget> T add(T widget, int occupiedColumns, Positioner positioner) {
             int i = this.totalOccupiedColumns / this.columns;
             int j = this.totalOccupiedColumns % this.columns;
             if (j + occupiedColumns > this.columns) {
@@ -182,6 +199,10 @@ extends WrapperWidget {
             }
             this.totalOccupiedColumns += occupiedColumns;
             return GridWidget.this.add(widget, i, j, 1, occupiedColumns, positioner);
+        }
+
+        public GridWidget getGridWidget() {
+            return GridWidget.this;
         }
 
         public Positioner copyPositioner() {

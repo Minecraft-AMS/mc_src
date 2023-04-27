@@ -16,6 +16,7 @@ import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.ParticleEffect;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
@@ -60,7 +61,7 @@ extends SpriteBillboardParticle {
             this.velocityX *= (double)0.7f;
             this.velocityZ *= (double)0.7f;
         }
-        if ((d = Math.max(this.world.getBlockState(blockPos = new BlockPos(this.x, this.y, this.z)).getCollisionShape(this.world, blockPos).getEndingCoord(Direction.Axis.Y, this.x - (double)blockPos.getX(), this.z - (double)blockPos.getZ()), (double)this.world.getFluidState(blockPos).getHeight(this.world, blockPos))) > 0.0 && this.y < (double)blockPos.getY() + d) {
+        if ((d = Math.max(this.world.getBlockState(blockPos = BlockPos.ofFloored(this.x, this.y, this.z)).getCollisionShape(this.world, blockPos).getEndingCoord(Direction.Axis.Y, this.x - (double)blockPos.getX(), this.z - (double)blockPos.getZ()), (double)this.world.getFluidState(blockPos).getHeight(this.world, blockPos))) > 0.0 && this.y < (double)blockPos.getY() + d) {
             this.markDead();
         }
     }
@@ -79,6 +80,11 @@ extends SpriteBillboardParticle {
             RainSplashParticle rainSplashParticle = new RainSplashParticle(clientWorld, d, e, f);
             rainSplashParticle.setSprite(this.spriteProvider);
             return rainSplashParticle;
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
         }
     }
 }

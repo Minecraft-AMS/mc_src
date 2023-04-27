@@ -10,6 +10,7 @@ package net.minecraft.block.dispenser;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.BeehiveBlock;
 import net.minecraft.block.Block;
@@ -225,12 +226,12 @@ public interface DispenserBehavior {
             public ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
                 Direction direction = pointer.getBlockState().get(DispenserBlock.FACING);
                 BlockPos blockPos = pointer.getPos().offset(direction);
-                ServerWorld world = pointer.getWorld();
-                ArmorStandEntity armorStandEntity = new ArmorStandEntity(world, (double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5);
-                EntityType.loadFromEntityNbt(world, null, armorStandEntity, stack.getNbt());
-                armorStandEntity.setYaw(direction.asRotation());
-                world.spawnEntity(armorStandEntity);
-                stack.decrement(1);
+                ServerWorld serverWorld = pointer.getWorld();
+                Consumer<ArmorStandEntity> consumer = EntityType.copier(armorStandEntity -> armorStandEntity.setYaw(direction.asRotation()), serverWorld, stack, null);
+                ArmorStandEntity armorStandEntity2 = EntityType.ARMOR_STAND.spawn(serverWorld, stack.getNbt(), consumer, blockPos, SpawnReason.DISPENSER, false, false);
+                if (armorStandEntity2 != null) {
+                    stack.decrement(1);
+                }
                 return stack;
             }
         });
@@ -354,6 +355,7 @@ public interface DispenserBehavior {
         DispenserBlock.registerBehavior(Items.JUNGLE_BOAT, new BoatDispenserBehavior(BoatEntity.Type.JUNGLE));
         DispenserBlock.registerBehavior(Items.DARK_OAK_BOAT, new BoatDispenserBehavior(BoatEntity.Type.DARK_OAK));
         DispenserBlock.registerBehavior(Items.ACACIA_BOAT, new BoatDispenserBehavior(BoatEntity.Type.ACACIA));
+        DispenserBlock.registerBehavior(Items.CHERRY_BOAT, new BoatDispenserBehavior(BoatEntity.Type.CHERRY));
         DispenserBlock.registerBehavior(Items.MANGROVE_BOAT, new BoatDispenserBehavior(BoatEntity.Type.MANGROVE));
         DispenserBlock.registerBehavior(Items.BAMBOO_RAFT, new BoatDispenserBehavior(BoatEntity.Type.BAMBOO));
         DispenserBlock.registerBehavior(Items.OAK_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.OAK, true));
@@ -362,6 +364,7 @@ public interface DispenserBehavior {
         DispenserBlock.registerBehavior(Items.JUNGLE_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.JUNGLE, true));
         DispenserBlock.registerBehavior(Items.DARK_OAK_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.DARK_OAK, true));
         DispenserBlock.registerBehavior(Items.ACACIA_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.ACACIA, true));
+        DispenserBlock.registerBehavior(Items.CHERRY_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.CHERRY, true));
         DispenserBlock.registerBehavior(Items.MANGROVE_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.MANGROVE, true));
         DispenserBlock.registerBehavior(Items.BAMBOO_CHEST_RAFT, new BoatDispenserBehavior(BoatEntity.Type.BAMBOO, true));
         ItemDispenserBehavior dispenserBehavior = new ItemDispenserBehavior(){
@@ -580,7 +583,7 @@ public interface DispenserBehavior {
                 this.setSuccess(true);
                 if (blockState.isOf(Blocks.RESPAWN_ANCHOR)) {
                     if (blockState.get(RespawnAnchorBlock.CHARGES) != 4) {
-                        RespawnAnchorBlock.charge(world, blockPos, blockState);
+                        RespawnAnchorBlock.charge(null, world, blockPos, blockState);
                         stack.decrement(1);
                     } else {
                         this.setSuccess(false);

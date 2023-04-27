@@ -19,13 +19,9 @@ extends Schema {
         super(versionKey, parent);
     }
 
-    protected static void targetEntityItems(Schema schema, Map<String, Supplier<TypeTemplate>> map, String entityId) {
-        schema.register(map, entityId, () -> Schema100.targetItems(schema));
-    }
-
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
-        Schema700.targetEntityItems(schema, map, "ElderGuardian");
+        schema.register(map, "ElderGuardian", () -> Schema100.targetItems(schema));
         return map;
     }
 }

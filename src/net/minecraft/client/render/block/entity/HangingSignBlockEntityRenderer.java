@@ -16,6 +16,7 @@ import net.minecraft.block.AbstractSignBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.HangingSignBlock;
 import net.minecraft.block.WallSignBlock;
+import net.minecraft.block.WoodType;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.ModelData;
@@ -34,7 +35,6 @@ import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.state.property.Properties;
-import net.minecraft.util.SignType;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.RotationPropertyHelper;
 import net.minecraft.util.math.Vec3d;
@@ -50,7 +50,7 @@ extends SignBlockEntityRenderer {
     public static final String CHAIN_R1 = "chainR1";
     public static final String CHAIN_R2 = "chainR2";
     public static final String BOARD = "board";
-    private final Map<SignType, HangingSignModel> MODELS = (Map)SignType.stream().collect(ImmutableMap.toImmutableMap(signType -> signType, type -> new HangingSignModel(context.getLayerModelPart(EntityModelLayers.createHangingSign(type)))));
+    private final Map<WoodType, HangingSignModel> MODELS = (Map)WoodType.stream().collect(ImmutableMap.toImmutableMap(woodType -> woodType, type -> new HangingSignModel(context.getLayerModelPart(EntityModelLayers.createHangingSign(type)))));
 
     public HangingSignBlockEntityRenderer(BlockEntityRendererFactory.Context context) {
         super(context);
@@ -61,8 +61,8 @@ extends SignBlockEntityRenderer {
         float g;
         BlockState blockState = signBlockEntity.getCachedState();
         matrixStack.push();
-        SignType signType = AbstractSignBlock.getSignType(blockState.getBlock());
-        HangingSignModel hangingSignModel = this.MODELS.get(signType);
+        WoodType woodType = AbstractSignBlock.getWoodType(blockState.getBlock());
+        HangingSignModel hangingSignModel = this.MODELS.get(woodType);
         boolean bl = !(blockState.getBlock() instanceof HangingSignBlock);
         boolean bl2 = blockState.contains(Properties.ATTACHED) && blockState.get(Properties.ATTACHED) != false;
         matrixStack.translate(0.5, 0.9375, 0.5);
@@ -75,7 +75,7 @@ extends SignBlockEntityRenderer {
         matrixStack.translate(0.0f, -0.3125f, 0.0f);
         hangingSignModel.updateVisibleParts(blockState);
         g = 1.0f;
-        this.renderSign(matrixStack, vertexConsumerProvider, i, j, 1.0f, signType, hangingSignModel);
+        this.renderSign(matrixStack, vertexConsumerProvider, i, j, 1.0f, woodType, hangingSignModel);
         this.renderText(signBlockEntity, matrixStack, vertexConsumerProvider, i, 1.0f);
     }
 
@@ -84,7 +84,7 @@ extends SignBlockEntityRenderer {
     }
 
     @Override
-    SpriteIdentifier getTextureId(SignType signType) {
+    SpriteIdentifier getTextureId(WoodType signType) {
         return TexturedRenderLayers.getHangingSignTextureId(signType);
     }
 

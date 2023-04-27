@@ -31,6 +31,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
@@ -83,7 +84,7 @@ extends Block {
     }
 
     @Override
-    public boolean isTranslucent(BlockState state, BlockView world, BlockPos pos) {
+    public boolean isTransparent(BlockState state, BlockView world, BlockPos pos) {
         return true;
     }
 
@@ -164,6 +165,9 @@ extends Block {
         BlockState blockState3;
         BlockPos blockPos2;
         BlockState blockState;
+        if (!world.getGameRules().getBoolean(GameRules.DO_VINES_SPREAD)) {
+            return;
+        }
         if (random.nextInt(4) != 0) {
             return;
         }

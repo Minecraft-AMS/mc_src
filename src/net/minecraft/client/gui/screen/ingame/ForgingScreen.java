@@ -11,7 +11,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
@@ -22,7 +21,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
-public class ForgingScreen<T extends ForgingScreenHandler>
+public abstract class ForgingScreen<T extends ForgingScreenHandler>
 extends HandledScreen<T>
 implements ScreenHandlerListener {
     private final Identifier texture;
@@ -52,7 +51,6 @@ implements ScreenHandlerListener {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         super.render(matrices, mouseX, mouseY, delta);
-        RenderSystem.disableBlend();
         this.renderForeground(matrices, mouseX, mouseY, delta);
         this.drawMouseoverTooltip(matrices, mouseX, mouseY);
     }
@@ -62,17 +60,12 @@ implements ScreenHandlerListener {
 
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, this.texture);
-        int i = (this.width - this.backgroundWidth) / 2;
-        int j = (this.height - this.backgroundHeight) / 2;
-        this.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
-        this.drawTexture(matrices, i + 59, j + 20, 0, this.backgroundHeight + (((ForgingScreenHandler)this.handler).getSlot(0).hasStack() ? 0 : 16), 110, 16);
-        if ((((ForgingScreenHandler)this.handler).getSlot(0).hasStack() || ((ForgingScreenHandler)this.handler).getSlot(1).hasStack()) && !((ForgingScreenHandler)this.handler).getSlot(2).hasStack()) {
-            this.drawTexture(matrices, i + 99, j + 45, this.backgroundWidth, 0, 28, 21);
-        }
+        ForgingScreen.drawTexture(matrices, this.x, this.y, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        this.drawInvalidRecipeArrow(matrices, this.x, this.y);
     }
+
+    protected abstract void drawInvalidRecipeArrow(MatrixStack var1, int var2, int var3);
 
     @Override
     public void onPropertyUpdate(ScreenHandler handler, int property, int value) {

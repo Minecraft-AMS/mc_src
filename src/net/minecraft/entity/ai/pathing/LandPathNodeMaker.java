@@ -134,7 +134,7 @@ extends PathNodeMaker {
         PathNodeType pathNodeType = this.getNodeType(this.entity, node.x, node.y + 1, node.z);
         PathNodeType pathNodeType2 = this.getNodeType(this.entity, node.x, node.y, node.z);
         if (this.entity.getPathfindingPenalty(pathNodeType) >= 0.0f && pathNodeType2 != PathNodeType.STICKY_HONEY) {
-            j = MathHelper.floor(Math.max(1.0f, this.entity.stepHeight));
+            j = MathHelper.floor(Math.max(1.0f, this.entity.getStepHeight()));
         }
         if (this.isValidAdjacentSuccessor(pathNode = this.getPathNode(node.x, node.y, node.z + 1, j, d = this.getFeetY(new BlockPos(node.x, node.y, node.z)), Direction.SOUTH, pathNodeType2), node)) {
             successors[i++] = pathNode;
@@ -285,7 +285,7 @@ extends PathNodeMaker {
     }
 
     private double getStepHeight() {
-        return Math.max(1.125, (double)this.entity.stepHeight);
+        return Math.max(1.125, (double)this.entity.getStepHeight());
     }
 
     private PathNode getNodeWith(int x, int y, int z, PathNodeType type, float penalty) {
@@ -307,11 +307,10 @@ extends PathNodeMaker {
     }
 
     @Override
-    public PathNodeType getNodeType(BlockView world, int x, int y, int z, MobEntity mob, int sizeX, int sizeY, int sizeZ, boolean canOpenDoors, boolean canEnterOpenDoors) {
+    public PathNodeType getNodeType(BlockView world, int x, int y, int z, MobEntity mob) {
         EnumSet<PathNodeType> enumSet = EnumSet.noneOf(PathNodeType.class);
         PathNodeType pathNodeType = PathNodeType.BLOCKED;
-        BlockPos blockPos = mob.getBlockPos();
-        pathNodeType = this.findNearbyNodeTypes(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
+        pathNodeType = this.findNearbyNodeTypes(world, x, y, z, enumSet, pathNodeType, mob.getBlockPos());
         if (enumSet.contains((Object)PathNodeType.FENCE)) {
             return PathNodeType.FENCE;
         }
@@ -326,21 +325,21 @@ extends PathNodeMaker {
             if (!(mob.getPathfindingPenalty(pathNodeType3) >= mob.getPathfindingPenalty(pathNodeType2))) continue;
             pathNodeType2 = pathNodeType3;
         }
-        if (pathNodeType == PathNodeType.OPEN && mob.getPathfindingPenalty(pathNodeType2) == 0.0f && sizeX <= 1) {
+        if (pathNodeType == PathNodeType.OPEN && mob.getPathfindingPenalty(pathNodeType2) == 0.0f && this.entityBlockXSize <= 1) {
             return PathNodeType.OPEN;
         }
         return pathNodeType2;
     }
 
-    public PathNodeType findNearbyNodeTypes(BlockView world, int x, int y, int z, int sizeX, int sizeY, int sizeZ, boolean canOpenDoors, boolean canEnterOpenDoors, EnumSet<PathNodeType> nearbyTypes, PathNodeType type, BlockPos pos) {
-        for (int i = 0; i < sizeX; ++i) {
-            for (int j = 0; j < sizeY; ++j) {
-                for (int k = 0; k < sizeZ; ++k) {
+    public PathNodeType findNearbyNodeTypes(BlockView world, int x, int y, int z, EnumSet<PathNodeType> nearbyTypes, PathNodeType type, BlockPos pos) {
+        for (int i = 0; i < this.entityBlockXSize; ++i) {
+            for (int j = 0; j < this.entityBlockYSize; ++j) {
+                for (int k = 0; k < this.entityBlockZSize; ++k) {
                     int l = i + x;
                     int m = j + y;
                     int n = k + z;
                     PathNodeType pathNodeType = this.getDefaultNodeType(world, l, m, n);
-                    pathNodeType = this.adjustNodeType(world, canOpenDoors, canEnterOpenDoors, pos, pathNodeType);
+                    pathNodeType = this.adjustNodeType(world, pos, pathNodeType);
                     if (i == 0 && j == 0 && k == 0) {
                         type = pathNodeType;
                     }
@@ -351,18 +350,16 @@ extends PathNodeMaker {
         return type;
     }
 
-    protected PathNodeType adjustNodeType(BlockView world, boolean canOpenDoors, boolean canEnterOpenDoors, BlockPos pos, PathNodeType type) {
-        if (type == PathNodeType.DOOR_WOOD_CLOSED && canOpenDoors && canEnterOpenDoors) {
+    protected PathNodeType adjustNodeType(BlockView world, BlockPos pos, PathNodeType type) {
+        boolean bl = this.canEnterOpenDoors();
+        if (type == PathNodeType.DOOR_WOOD_CLOSED && this.canOpenDoors() && bl) {
             type = PathNodeType.WALKABLE_DOOR;
         }
-        if (type == PathNodeType.DOOR_OPEN && !canEnterOpenDoors) {
+        if (type == PathNodeType.DOOR_OPEN && !bl) {
             type = PathNodeType.BLOCKED;
         }
         if (type == PathNodeType.RAIL && !(world.getBlockState(pos).getBlock() instanceof AbstractRailBlock) && !(world.getBlockState(pos.down()).getBlock() instanceof AbstractRailBlock)) {
             type = PathNodeType.UNPASSABLE_RAIL;
-        }
-        if (type == PathNodeType.LEAVES) {
-            type = PathNodeType.BLOCKED;
         }
         return type;
     }
@@ -372,7 +369,7 @@ extends PathNodeMaker {
     }
 
     protected PathNodeType getNodeType(MobEntity entity, int x, int y, int z) {
-        return (PathNodeType)((Object)this.nodeTypes.computeIfAbsent(BlockPos.asLong(x, y, z), l -> this.getNodeType(this.cachedWorld, x, y, z, entity, this.entityBlockXSize, this.entityBlockYSize, this.entityBlockZSize, this.canOpenDoors(), this.canEnterOpenDoors())));
+        return (PathNodeType)((Object)this.nodeTypes.computeIfAbsent(BlockPos.asLong(x, y, z), l -> this.getNodeType(this.cachedWorld, x, y, z, entity)));
     }
 
     @Override
@@ -390,9 +387,6 @@ extends PathNodeMaker {
             PathNodeType pathNodeType3 = pathNodeType = pathNodeType2 == PathNodeType.WALKABLE || pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WATER || pathNodeType2 == PathNodeType.LAVA ? PathNodeType.OPEN : PathNodeType.WALKABLE;
             if (pathNodeType2 == PathNodeType.DAMAGE_FIRE) {
                 pathNodeType = PathNodeType.DAMAGE_FIRE;
-            }
-            if (pathNodeType2 == PathNodeType.DAMAGE_CACTUS) {
-                pathNodeType = PathNodeType.DAMAGE_CACTUS;
             }
             if (pathNodeType2 == PathNodeType.DAMAGE_OTHER) {
                 pathNodeType = PathNodeType.DAMAGE_OTHER;
@@ -420,10 +414,7 @@ extends PathNodeMaker {
                     if (l == 0 && n == 0) continue;
                     pos.set(i + l, j + m, k + n);
                     BlockState blockState = world.getBlockState(pos);
-                    if (blockState.isOf(Blocks.CACTUS)) {
-                        return PathNodeType.DANGER_CACTUS;
-                    }
-                    if (blockState.isOf(Blocks.SWEET_BERRY_BUSH)) {
+                    if (blockState.isOf(Blocks.CACTUS) || blockState.isOf(Blocks.SWEET_BERRY_BUSH)) {
                         return PathNodeType.DANGER_OTHER;
                     }
                     if (LandPathNodeMaker.inflictsFireDamage(blockState)) {
@@ -450,10 +441,7 @@ extends PathNodeMaker {
         if (blockState.isOf(Blocks.POWDER_SNOW)) {
             return PathNodeType.POWDER_SNOW;
         }
-        if (blockState.isOf(Blocks.CACTUS)) {
-            return PathNodeType.DAMAGE_CACTUS;
-        }
-        if (blockState.isOf(Blocks.SWEET_BERRY_BUSH)) {
+        if (blockState.isOf(Blocks.CACTUS) || blockState.isOf(Blocks.SWEET_BERRY_BUSH)) {
             return PathNodeType.DAMAGE_OTHER;
         }
         if (blockState.isOf(Blocks.HONEY_BLOCK)) {

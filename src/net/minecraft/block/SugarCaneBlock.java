@@ -29,7 +29,7 @@ extends Block {
     protected static final float field_31258 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
 
-    protected SugarCaneBlock(AbstractBlock.Settings settings) {
+    public SugarCaneBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(AGE, 0));
     }

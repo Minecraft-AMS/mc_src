@@ -54,13 +54,13 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.selectServerButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.select"), button -> this.saveAndClose()).dimensions(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20).build());
-        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.callback.accept(false)).dimensions(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20).build());
         this.addressField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 116, 200, 20, Text.translatable("addServer.enterIp"));
         this.addressField.setMaxLength(128);
         this.addressField.setText(this.client.options.lastServer);
         this.addressField.setChangedListener(text -> this.onAddressFieldChanged());
         this.addSelectableChild(this.addressField);
+        this.selectServerButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.select"), button -> this.saveAndClose()).dimensions(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.callback.accept(false)).dimensions(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20).build());
         this.setInitialFocus(this.addressField);
         this.onAddressFieldChanged();
     }
@@ -95,7 +95,7 @@ extends Screen {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        DirectConnectScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
+        DirectConnectScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
         DirectConnectScreen.drawTextWithShadow(matrices, this.textRenderer, ENTER_IP_TEXT, this.width / 2 - 100, 100, 0xA0A0A0);
         this.addressField.render(matrices, mouseX, mouseY, delta);
         super.render(matrices, mouseX, mouseY, delta);

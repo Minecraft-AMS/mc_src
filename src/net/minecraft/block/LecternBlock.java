@@ -64,7 +64,7 @@ extends BlockWithEntity {
     public static final VoxelShape SOUTH_SHAPE = VoxelShapes.union(Block.createCuboidShape(0.0, 10.0, 10.666667, 16.0, 14.0, 15.0), Block.createCuboidShape(0.0, 12.0, 6.333333, 16.0, 16.0, 10.666667), Block.createCuboidShape(0.0, 14.0, 2.0, 16.0, 18.0, 6.333333), BASE_SHAPE);
     private static final int SCHEDULED_TICK_DELAY = 2;
 
-    protected LecternBlock(AbstractBlock.Settings settings) {
+    public LecternBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(POWERED, false)).with(HAS_BOOK, false));
     }
@@ -94,7 +94,7 @@ extends BlockWithEntity {
         if (!world.isClient && playerEntity != null && playerEntity.isCreativeLevelTwoOp() && (nbtCompound = BlockItem.getBlockEntityNbt(itemStack)) != null && nbtCompound.contains("Book")) {
             bl = true;
         }
-        return (BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getPlayerFacing().getOpposite())).with(HAS_BOOK, bl);
+        return (BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing().getOpposite())).with(HAS_BOOK, bl);
     }
 
     @Override
@@ -141,29 +141,30 @@ extends BlockWithEntity {
         return new LecternBlockEntity(pos, state);
     }
 
-    public static boolean putBookIfAbsent(@Nullable PlayerEntity player, World world, BlockPos pos, BlockState state, ItemStack stack) {
+    public static boolean putBookIfAbsent(@Nullable Entity user, World world, BlockPos pos, BlockState state, ItemStack stack) {
         if (!state.get(HAS_BOOK).booleanValue()) {
             if (!world.isClient) {
-                LecternBlock.putBook(player, world, pos, state, stack);
+                LecternBlock.putBook(user, world, pos, state, stack);
             }
             return true;
         }
         return false;
     }
 
-    private static void putBook(@Nullable PlayerEntity player, World world, BlockPos pos, BlockState state, ItemStack stack) {
+    private static void putBook(@Nullable Entity user, World world, BlockPos pos, BlockState state, ItemStack stack) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof LecternBlockEntity) {
             LecternBlockEntity lecternBlockEntity = (LecternBlockEntity)blockEntity;
             lecternBlockEntity.setBook(stack.split(1));
-            LecternBlock.setHasBook(world, pos, state, true);
+            LecternBlock.setHasBook(user, world, pos, state, true);
             world.playSound(null, pos, SoundEvents.ITEM_BOOK_PUT, SoundCategory.BLOCKS, 1.0f, 1.0f);
-            world.emitGameEvent((Entity)player, GameEvent.BLOCK_CHANGE, pos);
         }
     }
 
-    public static void setHasBook(World world, BlockPos pos, BlockState state, boolean hasBook) {
-        world.setBlockState(pos, (BlockState)((BlockState)state.with(POWERED, false)).with(HAS_BOOK, hasBook), 3);
+    public static void setHasBook(@Nullable Entity user, World world, BlockPos pos, BlockState state, boolean hasBook) {
+        BlockState blockState = (BlockState)((BlockState)state.with(POWERED, false)).with(HAS_BOOK, hasBook);
+        world.setBlockState(pos, blockState, 3);
+        world.emitGameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Emitter.of(user, blockState));
         LecternBlock.updateNeighborAlways(world, pos, state);
     }
 

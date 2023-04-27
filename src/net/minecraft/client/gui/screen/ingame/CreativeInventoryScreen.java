@@ -33,11 +33,11 @@ import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.HotbarStorage;
 import net.minecraft.client.option.HotbarStorageEntry;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.search.SearchManager;
 import net.minecraft.client.search.SearchProvider;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -48,6 +48,7 @@ import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.screen.PlayerScreenHandler;
@@ -99,15 +100,15 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         this.backgroundHeight = 136;
         this.backgroundWidth = 195;
         this.operatorTabEnabled = operatorTabEnabled;
-        ItemGroups.updateDisplayParameters(enabledFeatures, this.shouldShowOperatorTab(player));
+        ItemGroups.updateDisplayContext(enabledFeatures, this.shouldShowOperatorTab(player), player.world.getRegistryManager());
     }
 
     private boolean shouldShowOperatorTab(PlayerEntity player) {
         return player.isCreativeLevelTwoOp() && this.operatorTabEnabled;
     }
 
-    private void updateDisplayParameters(FeatureSet enabledFeatures, boolean showOperatorTab) {
-        if (ItemGroups.updateDisplayParameters(enabledFeatures, showOperatorTab)) {
+    private void updateDisplayParameters(FeatureSet enabledFeatures, boolean showOperatorTab, RegistryWrapper.WrapperLookup wrapperLookup) {
+        if (ItemGroups.updateDisplayContext(enabledFeatures, showOperatorTab, wrapperLookup)) {
             for (ItemGroup itemGroup : ItemGroups.getGroups()) {
                 Collection<ItemStack> collection = itemGroup.getDisplayStacks();
                 if (itemGroup != selectedTab) continue;
@@ -139,7 +140,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
             return;
         }
         if (this.client.player != null) {
-            this.updateDisplayParameters(this.client.player.networkHandler.getEnabledFeatures(), this.shouldShowOperatorTab(this.client.player));
+            this.updateDisplayParameters(this.client.player.networkHandler.getEnabledFeatures(), this.shouldShowOperatorTab(this.client.player), this.client.player.world.getRegistryManager());
         }
         if (!this.client.interactionManager.hasCreativeInventory()) {
             this.client.setScreen(new InventoryScreen(this.client.player));
@@ -409,7 +410,6 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
     @Override
     protected void drawForeground(MatrixStack matrices, int mouseX, int mouseY) {
         if (selectedTab.shouldRenderName()) {
-            RenderSystem.disableBlend();
             this.textRenderer.draw(matrices, selectedTab.getDisplayName(), 8.0f, 6.0f, 0x404040);
         }
     }
@@ -522,7 +522,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         if (selectedTab.getType() == ItemGroup.Type.SEARCH) {
             this.searchBox.setVisible(true);
             this.searchBox.setFocusUnlocked(false);
-            this.searchBox.setTextFieldFocused(true);
+            this.searchBox.setFocused(true);
             if (itemGroup != group) {
                 this.searchBox.setText("");
             }
@@ -530,7 +530,7 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         } else {
             this.searchBox.setVisible(false);
             this.searchBox.setFocusUnlocked(true);
-            this.searchBox.setTextFieldFocused(false);
+            this.searchBox.setFocused(false);
             this.searchBox.setText("");
         }
         this.scrollPosition = 0.0f;
@@ -587,7 +587,6 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         if (this.deleteItemSlot != null && selectedTab.getType() == ItemGroup.Type.INVENTORY && this.isPointWithinBounds(this.deleteItemSlot.x, this.deleteItemSlot.y, 16, 16, mouseX, mouseY)) {
             this.renderTooltip(matrices, DELETE_ITEM_SLOT_TEXT, mouseX, mouseY);
         }
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         this.drawMouseoverTooltip(matrices, mouseX, mouseY);
     }
 
@@ -622,29 +621,24 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
 
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         for (ItemGroup itemGroup : ItemGroups.getGroupsToDisplay()) {
-            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, TEXTURE);
             if (itemGroup == selectedTab) continue;
             this.renderTabIcon(matrices, itemGroup);
         }
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, new Identifier(TAB_TEXTURE_PREFIX + selectedTab.getTexture()));
-        this.drawTexture(matrices, this.x, this.y, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        CreativeInventoryScreen.drawTexture(matrices, this.x, this.y, 0, 0, this.backgroundWidth, this.backgroundHeight);
         this.searchBox.render(matrices, mouseX, mouseY, delta);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         int i = this.x + 175;
         int j = this.y + 18;
         int k = j + 112;
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, TEXTURE);
         if (selectedTab.hasScrollbar()) {
-            this.drawTexture(matrices, i, j + (int)((float)(k - j - 17) * this.scrollPosition), 232 + (this.hasScrollbar() ? 0 : 12), 0, 12, 15);
+            CreativeInventoryScreen.drawTexture(matrices, i, j + (int)((float)(k - j - 17) * this.scrollPosition), 232 + (this.hasScrollbar() ? 0 : 12), 0, 12, 15);
         }
         this.renderTabIcon(matrices, selectedTab);
         if (selectedTab.getType() == ItemGroup.Type.INVENTORY) {
-            InventoryScreen.drawEntity(this.x + 88, this.y + 45, 20, this.x + 88 - mouseX, this.y + 45 - 30 - mouseY, this.client.player);
+            InventoryScreen.drawEntity(matrices, this.x + 88, this.y + 45, 20, this.x + 88 - mouseX, this.y + 45 - 30 - mouseY, (LivingEntity)this.client.player);
         }
     }
 
@@ -698,13 +692,14 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
             k += 64;
             m += this.backgroundHeight - 4;
         }
-        this.drawTexture(matrices, l, m, j, k, 26, 32);
-        this.itemRenderer.zOffset = 100.0f;
+        CreativeInventoryScreen.drawTexture(matrices, l, m, j, k, 26, 32);
+        matrices.push();
+        matrices.translate(0.0f, 0.0f, 100.0f);
         int n2 = bl2 ? 1 : -1;
         ItemStack itemStack = group.getIcon();
-        this.itemRenderer.renderInGuiWithOverrides(itemStack, l += 5, m += 8 + n2);
-        this.itemRenderer.renderGuiItemOverlay(this.textRenderer, itemStack, l, m);
-        this.itemRenderer.zOffset = 0.0f;
+        this.itemRenderer.renderInGuiWithOverrides(matrices, itemStack, l += 5, m += 8 + n2);
+        this.itemRenderer.renderGuiItemOverlay(matrices, this.textRenderer, itemStack, l, m);
+        matrices.pop();
     }
 
     public boolean isInventoryTabSelected() {
@@ -860,6 +855,11 @@ extends AbstractInventoryScreen<CreativeScreenHandler> {
         @Override
         public void setStack(ItemStack stack) {
             this.slot.setStack(stack);
+        }
+
+        @Override
+        public void setStackNoCallbacks(ItemStack stack) {
+            this.slot.setStackNoCallbacks(stack);
         }
 
         @Override

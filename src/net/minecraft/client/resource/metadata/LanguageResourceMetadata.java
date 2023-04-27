@@ -2,29 +2,41 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.serialization.Codec
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.resource.metadata;
 
-import java.util.Collection;
+import com.mojang.serialization.Codec;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
+import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.resource.language.LanguageDefinition;
-import net.minecraft.client.resource.metadata.LanguageResourceMetadataReader;
+import net.minecraft.resource.metadata.ResourceMetadataSerializer;
+import net.minecraft.util.dynamic.Codecs;
 
 @Environment(value=EnvType.CLIENT)
-public class LanguageResourceMetadata {
-    public static final LanguageResourceMetadataReader READER = new LanguageResourceMetadataReader();
-    public static final boolean field_32978 = false;
-    private final Collection<LanguageDefinition> definitions;
+public record LanguageResourceMetadata(Map<String, LanguageDefinition> definitions) {
+    public static final Codec<String> LANGUAGE_CODE_CODEC = Codecs.string(1, 16);
+    public static final Codec<LanguageResourceMetadata> CODEC = Codec.unboundedMap(LANGUAGE_CODE_CODEC, LanguageDefinition.CODEC).xmap(LanguageResourceMetadata::new, LanguageResourceMetadata::definitions);
+    public static final ResourceMetadataSerializer<LanguageResourceMetadata> SERIALIZER = ResourceMetadataSerializer.fromCodec("language", CODEC);
 
-    public LanguageResourceMetadata(Collection<LanguageDefinition> definitions) {
-        this.definitions = definitions;
+    @Override
+    public final String toString() {
+        return ObjectMethods.bootstrap("toString", new MethodHandle[]{LanguageResourceMetadata.class, "languages", "definitions"}, this);
     }
 
-    public Collection<LanguageDefinition> getLanguageDefinitions() {
-        return this.definitions;
+    @Override
+    public final int hashCode() {
+        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{LanguageResourceMetadata.class, "languages", "definitions"}, this);
+    }
+
+    @Override
+    public final boolean equals(Object object) {
+        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{LanguageResourceMetadata.class, "languages", "definitions"}, this, object);
     }
 }
 

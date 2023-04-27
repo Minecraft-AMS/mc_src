@@ -30,7 +30,6 @@ import net.minecraft.util.Util;
 public class TelemetryInfoScreen
 extends Screen {
     private static final int MARGIN = 8;
-    private static final String FEEDBACK_URL = "https://aka.ms/javafeedback?ref=game";
     private static final Text TITLE_TEXT = Text.translatable("telemetry_info.screen.title");
     private static final Text DESCRIPTION_TEXT = Text.translatable("telemetry_info.screen.description").formatted(Formatting.GRAY);
     private static final Text GIVE_FEEDBACK_TEXT = Text.translatable("telemetry_info.button.give_feedback");
@@ -53,20 +52,19 @@ extends Screen {
 
     @Override
     protected void init() {
-        SimplePositioningWidget simplePositioningWidget = new SimplePositioningWidget(0, 0, this.width, this.height);
+        SimplePositioningWidget simplePositioningWidget = new SimplePositioningWidget();
         simplePositioningWidget.getMainPositioner().margin(8);
         simplePositioningWidget.setMinHeight(this.height);
         GridWidget gridWidget = simplePositioningWidget.add(new GridWidget(), simplePositioningWidget.copyPositioner().relative(0.5f, 0.0f));
         gridWidget.getMainPositioner().alignHorizontalCenter().marginBottom(8);
         GridWidget.Adder adder = gridWidget.createAdder(1);
         adder.add(new TextWidget(this.getTitle(), this.textRenderer));
-        adder.add(MultilineTextWidget.createCentered(this.width - 16, this.textRenderer, DESCRIPTION_TEXT));
+        adder.add(new MultilineTextWidget(DESCRIPTION_TEXT, this.textRenderer).setMaxWidth(this.width - 16).setCentered(true));
         GridWidget gridWidget2 = this.createButtonRow(ButtonWidget.builder(GIVE_FEEDBACK_TEXT, this::openFeedbackPage).build(), ButtonWidget.builder(SHOW_DATA_TEXT, this::openLogDirectory).build());
         adder.add(gridWidget2);
         GridWidget gridWidget3 = this.createButtonRow(this.createOptInButton(), ButtonWidget.builder(ScreenTexts.DONE, this::goBack).build());
         simplePositioningWidget.add(gridWidget3, simplePositioningWidget.copyPositioner().relative(0.5f, 1.0f));
-        gridWidget.recalculateDimensions();
-        simplePositioningWidget.recalculateDimensions();
+        simplePositioningWidget.refreshPositions();
         this.telemetryEventWidget = new TelemetryEventWidget(0, 0, this.width - 40, gridWidget3.getY() - (gridWidget2.getY() + gridWidget2.getHeight()) - 16, this.client.textRenderer);
         this.telemetryEventWidget.setScrollY(this.scroll);
         this.telemetryEventWidget.setScrollConsumer(scroll -> {
@@ -74,14 +72,15 @@ extends Screen {
         });
         this.setInitialFocus(this.telemetryEventWidget);
         adder.add(this.telemetryEventWidget);
-        gridWidget.recalculateDimensions();
-        simplePositioningWidget.recalculateDimensions();
+        simplePositioningWidget.refreshPositions();
         SimplePositioningWidget.setPos(simplePositioningWidget, 0, 0, this.width, this.height, 0.5f, 0.0f);
-        this.addDrawableChild(simplePositioningWidget);
+        simplePositioningWidget.forEachChild(child -> {
+            ClickableWidget cfr_ignored_0 = (ClickableWidget)this.addDrawableChild(child);
+        });
     }
 
     private ClickableWidget createOptInButton() {
-        ClickableWidget clickableWidget = this.options.getTelemetryOptInExtra().createButton(this.options, 0, 0, 150, value -> this.telemetryEventWidget.refresh((boolean)value));
+        ClickableWidget clickableWidget = this.options.getTelemetryOptInExtra().createWidget(this.options, 0, 0, 150, value -> this.telemetryEventWidget.refresh((boolean)value));
         clickableWidget.active = this.client.isOptionalTelemetryEnabledByApi();
         return clickableWidget;
     }
@@ -93,10 +92,10 @@ extends Screen {
     private void openFeedbackPage(ButtonWidget button) {
         this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
-                Util.getOperatingSystem().open(FEEDBACK_URL);
+                Util.getOperatingSystem().open("https://aka.ms/javafeedback?ref=game");
             }
             this.client.setScreen(this);
-        }, FEEDBACK_URL, true));
+        }, "https://aka.ms/javafeedback?ref=game", true));
     }
 
     private void openLogDirectory(ButtonWidget button) {
@@ -111,7 +110,7 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackgroundTexture(0);
+        this.renderBackgroundTexture(matrices);
         super.render(matrices, mouseX, mouseY, delta);
     }
 
@@ -120,7 +119,6 @@ extends Screen {
         gridWidget.getMainPositioner().alignHorizontalCenter().marginX(4);
         gridWidget.add(left, 0, 0);
         gridWidget.add(right, 0, 1);
-        gridWidget.recalculateDimensions();
         return gridWidget;
     }
 }

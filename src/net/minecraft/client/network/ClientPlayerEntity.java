@@ -130,7 +130,6 @@ extends AbstractClientPlayerEntity {
     public Input input;
     protected final MinecraftClient client;
     protected int ticksLeftToDoubleTapSprint;
-    public int ticksSinceSprintingChanged;
     public float renderYaw;
     public float renderPitch;
     public float lastRenderYaw;
@@ -417,7 +416,7 @@ extends AbstractClientPlayerEntity {
 
     private void pushOutOfBlocks(double x, double z) {
         Direction[] directions;
-        BlockPos blockPos = new BlockPos(x, this.getY(), z);
+        BlockPos blockPos = BlockPos.ofFloored(x, this.getY(), z);
         if (!this.wouldCollideAt(blockPos)) {
             return;
         }
@@ -447,12 +446,6 @@ extends AbstractClientPlayerEntity {
         Box box = this.getBoundingBox();
         Box box2 = new Box(pos.getX(), box.minY, pos.getZ(), (double)pos.getX() + 1.0, box.maxY, (double)pos.getZ() + 1.0).contract(1.0E-7);
         return this.world.canCollide(this, box2);
-    }
-
-    @Override
-    public void setSprinting(boolean sprinting) {
-        super.setSprinting(sprinting);
-        this.ticksSinceSprintingChanged = 0;
     }
 
     public void setExperience(float progress, int total, int level) {
@@ -546,8 +539,8 @@ extends AbstractClientPlayerEntity {
     @Nullable
     public JumpingMount getJumpingMount() {
         JumpingMount jumpingMount;
-        Entity entity = this.getVehicle();
-        return entity instanceof JumpingMount && (jumpingMount = (JumpingMount)((Object)entity)).canJump(this) ? jumpingMount : null;
+        Entity entity = this.getControllingVehicle();
+        return entity instanceof JumpingMount && (jumpingMount = (JumpingMount)((Object)entity)).canJump() ? jumpingMount : null;
     }
 
     public float getMountJumpStrength() {
@@ -657,8 +650,8 @@ extends AbstractClientPlayerEntity {
         JumpingMount jumpingMount;
         int i;
         ItemStack itemStack;
-        boolean bl6;
-        ++this.ticksSinceSprintingChanged;
+        boolean bl8;
+        boolean bl7;
         if (this.ticksLeftToDoubleTapSprint > 0) {
             --this.ticksLeftToDoubleTapSprint;
         }
@@ -690,35 +683,37 @@ extends AbstractClientPlayerEntity {
         if (bl2) {
             this.ticksLeftToDoubleTapSprint = 0;
         }
-        boolean bl5 = this.canSprint();
-        if ((this.onGround || this.isSubmergedInWater() || this.hasVehicle() && this.getVehicle().isOnGround()) && !bl2 && !bl3 && this.isWalking() && !this.isSprinting() && bl5 && !this.isUsingItem() && !this.hasStatusEffect(StatusEffects.BLINDNESS)) {
+        boolean bl5 = this.canStartSprinting();
+        boolean bl6 = this.hasVehicle() ? this.getVehicle().isOnGround() : this.onGround;
+        boolean bl9 = bl7 = !bl2 && !bl3;
+        if ((bl6 || this.isSubmergedInWater()) && bl7 && bl5) {
             if (this.ticksLeftToDoubleTapSprint > 0 || this.client.options.sprintKey.isPressed()) {
                 this.setSprinting(true);
             } else {
                 this.ticksLeftToDoubleTapSprint = 7;
             }
         }
-        if (!this.isSprinting() && (!this.isTouchingWater() || this.isSubmergedInWater()) && this.isWalking() && bl5 && !this.isUsingItem() && !this.hasStatusEffect(StatusEffects.BLINDNESS) && this.client.options.sprintKey.isPressed()) {
+        if ((!this.isTouchingWater() || this.isSubmergedInWater()) && bl5 && this.client.options.sprintKey.isPressed()) {
             this.setSprinting(true);
         }
         if (this.isSprinting()) {
-            boolean bl7;
-            bl6 = !this.input.hasForwardMovement() || !bl5;
-            boolean bl8 = bl7 = bl6 || this.horizontalCollision && !this.collidedSoftly || this.isTouchingWater() && !this.isSubmergedInWater();
+            boolean bl92;
+            bl8 = !this.input.hasForwardMovement() || !this.canSprint();
+            boolean bl10 = bl92 = bl8 || this.horizontalCollision && !this.collidedSoftly || this.isTouchingWater() && !this.isSubmergedInWater();
             if (this.isSwimming()) {
-                if (!this.onGround && !this.input.sneaking && bl6 || !this.isTouchingWater()) {
+                if (!this.onGround && !this.input.sneaking && bl8 || !this.isTouchingWater()) {
                     this.setSprinting(false);
                 }
-            } else if (bl7) {
+            } else if (bl92) {
                 this.setSprinting(false);
             }
         }
-        bl6 = false;
+        bl8 = false;
         if (this.getAbilities().allowFlying) {
             if (this.client.interactionManager.isFlyingLocked()) {
                 if (!this.getAbilities().flying) {
                     this.getAbilities().flying = true;
-                    bl6 = true;
+                    bl8 = true;
                     this.sendAbilitiesUpdate();
                 }
             } else if (!bl && this.input.jumping && !bl4) {
@@ -726,13 +721,13 @@ extends AbstractClientPlayerEntity {
                     this.abilityResyncCountdown = 7;
                 } else if (!this.isSwimming()) {
                     this.getAbilities().flying = !this.getAbilities().flying;
-                    bl6 = true;
+                    bl8 = true;
                     this.sendAbilitiesUpdate();
                     this.abilityResyncCountdown = 0;
                 }
             }
         }
-        if (this.input.jumping && !bl6 && !bl && !this.getAbilities().flying && !this.hasVehicle() && !this.isClimbing() && (itemStack = this.getEquippedStack(EquipmentSlot.CHEST)).isOf(Items.ELYTRA) && ElytraItem.isUsable(itemStack) && this.checkFallFlying()) {
+        if (this.input.jumping && !bl8 && !bl && !this.getAbilities().flying && !this.hasVehicle() && !this.isClimbing() && (itemStack = this.getEquippedStack(EquipmentSlot.CHEST)).isOf(Items.ELYTRA) && ElytraItem.isUsable(itemStack) && this.checkFallFlying()) {
             this.networkHandler.sendPacket(new ClientCommandC2SPacket(this, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
         }
         this.falling = this.isFallFlying();
@@ -811,7 +806,7 @@ extends AbstractClientPlayerEntity {
                 this.nextNauseaStrength = 1.0f;
             }
             this.inNetherPortal = false;
-        } else if (this.hasStatusEffect(StatusEffects.NAUSEA) && this.getStatusEffect(StatusEffects.NAUSEA).getDuration() > 60) {
+        } else if (this.hasStatusEffect(StatusEffects.NAUSEA) && !this.getStatusEffect(StatusEffects.NAUSEA).isDurationBelow(60)) {
             this.nextNauseaStrength += 0.006666667f;
             if (this.nextNauseaStrength > 1.0f) {
                 this.nextNauseaStrength = 1.0f;
@@ -831,8 +826,9 @@ extends AbstractClientPlayerEntity {
     public void tickRiding() {
         super.tickRiding();
         this.riding = false;
-        if (this.getVehicle() instanceof BoatEntity) {
-            BoatEntity boatEntity = (BoatEntity)this.getVehicle();
+        Entity entity = this.getControllingVehicle();
+        if (entity instanceof BoatEntity) {
+            BoatEntity boatEntity = (BoatEntity)entity;
             boatEntity.setInputs(this.input.pressingLeft, this.input.pressingRight, this.input.pressingForward, this.input.pressingBack);
             this.riding |= this.input.pressingLeft || this.input.pressingRight || this.input.pressingForward || this.input.pressingBack;
         }
@@ -886,7 +882,7 @@ extends AbstractClientPlayerEntity {
                 return;
             }
         }
-        float l = MathHelper.fastInverseSqrt(g);
+        float l = MathHelper.inverseSqrt(g);
         Vec3d vec3d4 = vec3d3.multiply(l);
         Vec3d vec3d5 = this.getRotationVecClient();
         j = (float)(vec3d5.x * vec3d4.x + vec3d5.z * vec3d4.z);
@@ -894,7 +890,7 @@ extends AbstractClientPlayerEntity {
             return;
         }
         ShapeContext shapeContext = ShapeContext.of(this);
-        BlockPos blockPos = new BlockPos(this.getX(), this.getBoundingBox().maxY, this.getZ());
+        BlockPos blockPos = BlockPos.ofFloored(this.getX(), this.getBoundingBox().maxY, this.getZ());
         BlockState blockState = this.world.getBlockState(blockPos);
         if (!blockState.getCollisionShape(this.world, blockPos, shapeContext).isEmpty()) {
             return;
@@ -930,7 +926,7 @@ extends AbstractClientPlayerEntity {
             if (!box2.intersects(vec3d10, vec3d11) && !box2.intersects(vec3d12, vec3d13)) continue;
             r = (float)box2.maxY;
             Vec3d vec3d14 = box2.getCenter();
-            BlockPos blockPos2 = new BlockPos(vec3d14);
+            BlockPos blockPos2 = BlockPos.ofFloored(vec3d14);
             int s = 1;
             while ((float)s < n) {
                 BlockState blockState4;
@@ -981,6 +977,14 @@ extends AbstractClientPlayerEntity {
     private boolean hasMovementInput() {
         Vec2f vec2f = this.input.getMovementInput();
         return vec2f.x != 0.0f || vec2f.y != 0.0f;
+    }
+
+    private boolean canStartSprinting() {
+        return !this.isSprinting() && this.isWalking() && this.canSprint() && !this.isUsingItem() && !this.hasStatusEffect(StatusEffects.BLINDNESS) && (!this.hasVehicle() || this.canVehicleSprint(this.getVehicle())) && !this.isFallFlying();
+    }
+
+    private boolean canVehicleSprint(Entity vehicle) {
+        return vehicle.canSprintAsVehicle() && vehicle.isLogicalSideForUpdatingMovement();
     }
 
     private boolean isWalking() {

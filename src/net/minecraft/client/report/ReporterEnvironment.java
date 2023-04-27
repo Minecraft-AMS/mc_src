@@ -14,6 +14,7 @@ package net.minecraft.client.report;
 import com.mojang.authlib.yggdrasil.request.AbuseReportRequest;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
+import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -39,7 +40,7 @@ public record ReporterEnvironment(String clientVersion, @Nullable Server server)
     }
 
     public AbuseReportRequest.ClientInfo toClientInfo() {
-        return new AbuseReportRequest.ClientInfo(this.clientVersion);
+        return new AbuseReportRequest.ClientInfo(this.clientVersion, Locale.getDefault().toLanguageTag());
     }
 
     @Nullable
@@ -64,7 +65,7 @@ public record ReporterEnvironment(String clientVersion, @Nullable Server server)
 
     private static String getVersion() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("1.19.3");
+        stringBuilder.append("1.19.4");
         if (MinecraftClient.getModStatus().isModded()) {
             stringBuilder.append(" (modded)");
         }

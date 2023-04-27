@@ -108,7 +108,7 @@ public class Criteria {
     public static final ItemCriterion ALLAY_DROP_ITEM_ON_BLOCK = Criteria.register(new ItemCriterion(new Identifier("allay_drop_item_on_block")));
     public static final TickCriterion AVOID_VIBRATION = Criteria.register(new TickCriterion(new Identifier("avoid_vibration")));
 
-    private static <T extends Criterion<?>> T register(T object) {
+    public static <T extends Criterion<?>> T register(T object) {
         if (VALUES.containsKey(object.getId())) {
             throw new IllegalArgumentException("Duplicate criterion id " + object.getId());
         }

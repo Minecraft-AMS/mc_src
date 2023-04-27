@@ -38,13 +38,13 @@ public class ScoreboardCriterion {
     private final boolean readOnly;
     private final RenderType defaultRenderType;
 
-    private static ScoreboardCriterion create(String name, boolean readOnly, RenderType defaultRenderType) {
+    public static ScoreboardCriterion create(String name, boolean readOnly, RenderType defaultRenderType) {
         ScoreboardCriterion scoreboardCriterion = new ScoreboardCriterion(name, readOnly, defaultRenderType);
         SIMPLE_CRITERIA.put(name, scoreboardCriterion);
         return scoreboardCriterion;
     }
 
-    private static ScoreboardCriterion create(String name) {
+    public static ScoreboardCriterion create(String name) {
         return ScoreboardCriterion.create(name, false, RenderType.INTEGER);
     }
 

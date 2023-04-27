@@ -43,20 +43,23 @@ public final class TextureKey {
     public static final TextureKey UNSTICKY = TextureKey.of("unsticky");
     public static final TextureKey TORCH = TextureKey.of("torch");
     public static final TextureKey LAYER0 = TextureKey.of("layer0");
+    public static final TextureKey LAYER1 = TextureKey.of("layer1");
+    public static final TextureKey LAYER2 = TextureKey.of("layer2");
     public static final TextureKey LIT_LOG = TextureKey.of("lit_log");
     public static final TextureKey CANDLE = TextureKey.of("candle");
     public static final TextureKey INSIDE = TextureKey.of("inside");
     public static final TextureKey CONTENT = TextureKey.of("content");
     public static final TextureKey INNER_TOP = TextureKey.of("inner_top");
+    public static final TextureKey FLOWERBED = TextureKey.of("flowerbed");
     private final String name;
     @Nullable
     private final TextureKey parent;
 
-    private static TextureKey of(String name) {
+    public static TextureKey of(String name) {
         return new TextureKey(name, null);
     }
 
-    private static TextureKey of(String name, TextureKey parent) {
+    public static TextureKey of(String name, TextureKey parent) {
         return new TextureKey(name, parent);
     }
 

@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Preconditions
  *  com.google.common.collect.ImmutableList
  *  com.google.common.hash.Hashing
  *  com.mojang.datafixers.util.Pair
@@ -9,12 +10,12 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
- *  org.apache.commons.lang3.Validate
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.world;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -52,8 +53,6 @@ import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.EditWorldScreen;
 import net.minecraft.client.gui.screen.world.SelectWorldScreen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
-import net.minecraft.client.gui.widget.EntryListWidget;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.texture.NativeImage;
@@ -76,7 +75,6 @@ import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.level.storage.LevelStorageException;
 import net.minecraft.world.level.storage.LevelSummary;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -207,19 +205,9 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     }
 
     @Override
-    protected boolean isFocused() {
-        return this.parent.getFocused() == this;
-    }
-
-    @Override
     public void setSelected(@Nullable Entry entry) {
         super.setSelected(entry);
-        this.parent.worldSelected(entry != null && entry.isAvailable());
-    }
-
-    @Override
-    protected void moveSelection(EntryListWidget.MoveDirection direction) {
-        this.moveSelectionIf(direction, Entry::isAvailable);
+        this.parent.worldSelected(entry != null && entry.isAvailable(), entry != null);
     }
 
     public Optional<WorldEntry> getSelectedAsOptional() {
@@ -329,8 +317,6 @@ extends AlwaysSelectedEntryListWidget<Entry> {
             this.client.textRenderer.draw(matrices, (String)string, (float)(x + 32 + 3), (float)(y + 1), 0xFFFFFF);
             this.client.textRenderer.draw(matrices, string2, (float)(x + 32 + 3), (float)(y + this.client.textRenderer.fontHeight + 3), 0x808080);
             this.client.textRenderer.draw(matrices, text, (float)(x + 32 + 3), (float)(y + this.client.textRenderer.fontHeight + this.client.textRenderer.fontHeight + 3), 0x808080);
-            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.setShaderTexture(0, this.icon != null ? this.iconLocation : UNKNOWN_SERVER_LOCATION);
             RenderSystem.enableBlend();
             DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
@@ -339,8 +325,6 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 int j;
                 RenderSystem.setShaderTexture(0, WORLD_SELECTION_LOCATION);
                 DrawableHelper.fill(matrices, x, y, x + 32, y + 32, -1601138544);
-                RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 int i = mouseX - x;
                 boolean bl = i < 32;
                 int n = j = bl ? 32 : 0;
@@ -379,7 +363,6 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 return true;
             }
             WorldListWidget.this.setSelected(this);
-            this.screen.worldSelected(WorldListWidget.this.getSelectedAsOptional().isPresent());
             if (mouseX - (double)WorldListWidget.this.getRowLeft() <= 32.0) {
                 this.play();
                 return true;
@@ -389,7 +372,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 return true;
             }
             this.time = Util.getMeasuringTimeMs();
-            return false;
+            return true;
         }
 
         public void play() {
@@ -493,9 +476,9 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 GeneratorOptionsHolder generatorOptionsHolder = (GeneratorOptionsHolder)pair.getSecond();
                 Path path = CreateWorldScreen.copyDataPack(session.getDirectory(WorldSavePath.DATAPACKS), this.client);
                 if (generatorOptionsHolder.generatorOptions().isLegacyCustomizedType()) {
-                    this.client.setScreen(new ConfirmScreen(confirmed -> this.client.setScreen(confirmed ? CreateWorldScreen.create(this.screen, levelInfo, generatorOptionsHolder, path) : this.screen), Text.translatable("selectWorld.recreate.customized.title"), Text.translatable("selectWorld.recreate.customized.text"), ScreenTexts.PROCEED, ScreenTexts.CANCEL));
+                    this.client.setScreen(new ConfirmScreen(confirmed -> this.client.setScreen(confirmed ? CreateWorldScreen.create(this.client, this.screen, levelInfo, generatorOptionsHolder, path) : this.screen), Text.translatable("selectWorld.recreate.customized.title"), Text.translatable("selectWorld.recreate.customized.text"), ScreenTexts.PROCEED, ScreenTexts.CANCEL));
                 } else {
-                    this.client.setScreen(CreateWorldScreen.create(this.screen, levelInfo, generatorOptionsHolder, path));
+                    this.client.setScreen(CreateWorldScreen.create(this.client, this.screen, levelInfo, generatorOptionsHolder, path));
                 }
             }
             catch (Exception exception) {
@@ -526,8 +509,8 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                     InputStream inputStream = Files.newInputStream(this.iconPath, new OpenOption[0]);
                     try {
                         NativeImage nativeImage = NativeImage.read(inputStream);
-                        Validate.validState((nativeImage.getWidth() == 64 ? 1 : 0) != 0, (String)"Must be 64 pixels wide", (Object[])new Object[0]);
-                        Validate.validState((nativeImage.getHeight() == 64 ? 1 : 0) != 0, (String)"Must be 64 pixels high", (Object[])new Object[0]);
+                        Preconditions.checkState((nativeImage.getWidth() == 64 ? 1 : 0) != 0, (Object)"Must be 64 pixels wide");
+                        Preconditions.checkState((nativeImage.getHeight() == 64 ? 1 : 0) != 0, (Object)"Must be 64 pixels high");
                         NativeImageBackedTexture nativeImageBackedTexture2 = new NativeImageBackedTexture(nativeImage);
                         this.client.getTextureManager().registerTexture(this.iconLocation, nativeImageBackedTexture2);
                         nativeImageBackedTexture = nativeImageBackedTexture2;

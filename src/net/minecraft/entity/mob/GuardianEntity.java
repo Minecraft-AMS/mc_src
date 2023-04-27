@@ -30,6 +30,7 @@ import net.minecraft.entity.ai.pathing.SwimNavigation;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -39,6 +40,7 @@ import net.minecraft.entity.passive.AxolotlEntity;
 import net.minecraft.entity.passive.SquidEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -283,6 +285,10 @@ extends HostileEntity {
         return ((float)this.beamTicks + tickDelta) / (float)this.getWarmupTime();
     }
 
+    public float getBeamTicks() {
+        return this.beamTicks;
+    }
+
     @Override
     public boolean canSpawn(WorldView world) {
         return world.doesNotIntersectEntities(this);
@@ -294,11 +300,13 @@ extends HostileEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (!this.areSpikesRetracted() && !source.isMagic() && source.getSource() instanceof LivingEntity) {
-            LivingEntity livingEntity = (LivingEntity)source.getSource();
-            if (!source.isExplosive()) {
-                livingEntity.damage(DamageSource.thorns(this), 2.0f);
-            }
+        Entity entity;
+        if (this.world.isClient) {
+            return false;
+        }
+        if (!this.areSpikesRetracted() && !source.isIn(DamageTypeTags.AVOIDS_GUARDIAN_THORNS) && !source.isOf(DamageTypes.THORNS) && (entity = source.getSource()) instanceof LivingEntity) {
+            LivingEntity livingEntity = (LivingEntity)entity;
+            livingEntity.damage(this.getDamageSources().thorns(this), 2.0f);
         }
         if (this.wanderGoal != null) {
             this.wanderGoal.ignoreChanceOnce();
@@ -313,7 +321,7 @@ extends HostileEntity {
 
     @Override
     public void travel(Vec3d movementInput) {
-        if (this.canMoveVoluntarily() && this.isTouchingWater()) {
+        if (this.isLogicalSideForUpdatingMovement() && this.isTouchingWater()) {
             this.updateVelocity(0.1f, movementInput);
             this.move(MovementType.SELF, this.getVelocity());
             this.setVelocity(this.getVelocity().multiply(0.9));
@@ -364,7 +372,7 @@ extends HostileEntity {
             double r = lookControl.getLookX();
             double s = lookControl.getLookY();
             double t = lookControl.getLookZ();
-            if (!lookControl.method_38970()) {
+            if (!lookControl.isLookingAtSpecificPosition()) {
                 r = o;
                 s = p;
                 t = q;
@@ -446,8 +454,8 @@ extends HostileEntity {
                 if (this.elder) {
                     f += 2.0f;
                 }
-                livingEntity.damage(DamageSource.magic(this.guardian, this.guardian), f);
-                livingEntity.damage(DamageSource.mob(this.guardian), (float)this.guardian.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
+                livingEntity.damage(this.guardian.getDamageSources().indirectMagic(this.guardian, this.guardian), f);
+                livingEntity.damage(this.guardian.getDamageSources().mobAttack(this.guardian), (float)this.guardian.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
                 this.guardian.setTarget(null);
             }
             super.tick();

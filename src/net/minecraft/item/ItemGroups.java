@@ -8,16 +8,21 @@
 package net.minecraft.item;
 
 import com.mojang.datafixers.util.Pair;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LightBlock;
 import net.minecraft.block.SuspiciousStewIngredient;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.enchantment.EnchantmentTarget;
+import net.minecraft.entity.decoration.painting.PaintingEntity;
+import net.minecraft.entity.decoration.painting.PaintingVariant;
 import net.minecraft.item.EnchantedBookItem;
 import net.minecraft.item.FireworkRocketItem;
 import net.minecraft.item.GoatHornItem;
@@ -28,12 +33,15 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemStackSet;
 import net.minecraft.item.Items;
 import net.minecraft.item.SuspiciousStewItem;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
-import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.InstrumentTags;
+import net.minecraft.registry.tag.PaintingVariantTags;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.resource.featuretoggle.FeatureSet;
@@ -42,7 +50,7 @@ import net.minecraft.village.raid.Raid;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemGroups {
-    private static final ItemGroup BUILDING_BLOCKS = ItemGroup.create(ItemGroup.Row.TOP, 0).displayName(Text.translatable("itemGroup.buildingBlocks")).icon(() -> new ItemStack(Blocks.BRICKS)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup BUILDING_BLOCKS = ItemGroup.create(ItemGroup.Row.TOP, 0).displayName(Text.translatable("itemGroup.buildingBlocks")).icon(() -> new ItemStack(Blocks.BRICKS)).entries((displayContext, entries) -> {
         entries.add(Items.OAK_LOG);
         entries.add(Items.OAK_WOOD);
         entries.add(Items.STRIPPED_OAK_LOG);
@@ -134,6 +142,19 @@ public class ItemGroups {
         entries.add(Items.MANGROVE_TRAPDOOR);
         entries.add(Items.MANGROVE_PRESSURE_PLATE);
         entries.add(Items.MANGROVE_BUTTON);
+        entries.add(Items.CHERRY_LOG);
+        entries.add(Items.CHERRY_WOOD);
+        entries.add(Items.STRIPPED_CHERRY_LOG);
+        entries.add(Items.STRIPPED_CHERRY_WOOD);
+        entries.add(Items.CHERRY_PLANKS);
+        entries.add(Items.CHERRY_STAIRS);
+        entries.add(Items.CHERRY_SLAB);
+        entries.add(Items.CHERRY_FENCE);
+        entries.add(Items.CHERRY_FENCE_GATE);
+        entries.add(Items.CHERRY_DOOR);
+        entries.add(Items.CHERRY_TRAPDOOR);
+        entries.add(Items.CHERRY_PRESSURE_PLATE);
+        entries.add(Items.CHERRY_BUTTON);
         entries.add(Items.BAMBOO_BLOCK);
         entries.add(Items.STRIPPED_BAMBOO_BLOCK);
         entries.add(Items.BAMBOO_PLANKS);
@@ -379,7 +400,7 @@ public class ItemGroups {
         entries.add(Items.WAXED_OXIDIZED_CUT_COPPER_STAIRS);
         entries.add(Items.WAXED_OXIDIZED_CUT_COPPER_SLAB);
     }).build();
-    private static final ItemGroup COLORED_BLOCKS = ItemGroup.create(ItemGroup.Row.TOP, 1).displayName(Text.translatable("itemGroup.coloredBlocks")).icon(() -> new ItemStack(Blocks.CYAN_WOOL)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup COLORED_BLOCKS = ItemGroup.create(ItemGroup.Row.TOP, 1).displayName(Text.translatable("itemGroup.coloredBlocks")).icon(() -> new ItemStack(Blocks.CYAN_WOOL)).entries((displayContext, entries) -> {
         entries.add(Items.WHITE_WOOL);
         entries.add(Items.LIGHT_GRAY_WOOL);
         entries.add(Items.GRAY_WOOL);
@@ -579,7 +600,7 @@ public class ItemGroups {
         entries.add(Items.MAGENTA_BANNER);
         entries.add(Items.PINK_BANNER);
     }).build();
-    private static final ItemGroup NATURAL = ItemGroup.create(ItemGroup.Row.TOP, 2).displayName(Text.translatable("itemGroup.natural")).icon(() -> new ItemStack(Blocks.GRASS_BLOCK)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup NATURAL = ItemGroup.create(ItemGroup.Row.TOP, 2).displayName(Text.translatable("itemGroup.natural")).icon(() -> new ItemStack(Blocks.GRASS_BLOCK)).entries((displayContext, entries) -> {
         entries.add(Items.GRASS_BLOCK);
         entries.add(Items.PODZOL);
         entries.add(Items.MYCELIUM);
@@ -602,6 +623,7 @@ public class ItemGroups {
         entries.add(Items.SNOW);
         entries.add(Items.MOSS_BLOCK);
         entries.add(Items.MOSS_CARPET);
+        entries.add(Items.PINK_PETALS);
         entries.add(Items.STONE);
         entries.add(Items.DEEPSLATE);
         entries.add(Items.GRANITE);
@@ -661,6 +683,7 @@ public class ItemGroups {
         entries.add(Items.ACACIA_LOG);
         entries.add(Items.DARK_OAK_LOG);
         entries.add(Items.MANGROVE_LOG);
+        entries.add(Items.CHERRY_LOG);
         entries.add(Items.MUSHROOM_STEM);
         entries.add(Items.CRIMSON_STEM);
         entries.add(Items.WARPED_STEM);
@@ -673,6 +696,7 @@ public class ItemGroups {
         entries.add(Items.MANGROVE_LEAVES);
         entries.add(Items.MANGROVE_ROOTS);
         entries.add(Items.MUDDY_MANGROVE_ROOTS);
+        entries.add(Items.CHERRY_LEAVES);
         entries.add(Items.AZALEA_LEAVES);
         entries.add(Items.FLOWERING_AZALEA_LEAVES);
         entries.add(Items.BROWN_MUSHROOM_BLOCK);
@@ -687,6 +711,7 @@ public class ItemGroups {
         entries.add(Items.ACACIA_SAPLING);
         entries.add(Items.DARK_OAK_SAPLING);
         entries.add(Items.MANGROVE_PROPAGULE);
+        entries.add(Items.CHERRY_SAPLING);
         entries.add(Items.AZALEA);
         entries.add(Items.FLOWERING_AZALEA);
         entries.add(Items.BROWN_MUSHROOM);
@@ -716,6 +741,7 @@ public class ItemGroups {
         entries.add(Items.CRIMSON_ROOTS);
         entries.add(Items.WARPED_ROOTS);
         entries.add(Items.NETHER_SPROUTS);
+        entries.add(Items.TORCHFLOWER);
         entries.add(Items.WEEPING_VINES);
         entries.add(Items.TWISTING_VINES);
         entries.add(Items.VINE);
@@ -738,6 +764,7 @@ public class ItemGroups {
         entries.add(Items.PUMPKIN_SEEDS);
         entries.add(Items.MELON_SEEDS);
         entries.add(Items.BEETROOT_SEEDS);
+        entries.add(Items.TORCHFLOWER_SEEDS);
         entries.add(Items.GLOW_BERRIES);
         entries.add(Items.SWEET_BERRIES);
         entries.add(Items.NETHER_WART);
@@ -798,7 +825,7 @@ public class ItemGroups {
         entries.add(Items.COBWEB);
         entries.add(Items.BEDROCK);
     }).build();
-    private static final ItemGroup FUNCTIONAL = ItemGroup.create(ItemGroup.Row.TOP, 3).displayName(Text.translatable("itemGroup.functional")).icon(() -> new ItemStack(Items.OAK_SIGN)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup FUNCTIONAL = ItemGroup.create(ItemGroup.Row.TOP, 3).displayName(Text.translatable("itemGroup.functional")).icon(() -> new ItemStack(Items.OAK_SIGN)).entries((displayContext, entries) -> {
         entries.add(Items.TORCH);
         entries.add(Items.SOUL_TORCH);
         entries.add(Items.REDSTONE_TORCH);
@@ -846,12 +873,15 @@ public class ItemGroups {
         entries.add(Items.SCAFFOLDING);
         entries.add(Items.BEE_NEST);
         entries.add(Items.BEEHIVE);
+        entries.add(Items.SUSPICIOUS_SAND);
         entries.add(Items.LIGHTNING_ROD);
         entries.add(Items.FLOWER_POT);
+        entries.add(Items.DECORATED_POT);
         entries.add(Items.ARMOR_STAND);
         entries.add(Items.ITEM_FRAME);
         entries.add(Items.GLOW_ITEM_FRAME);
         entries.add(Items.PAINTING);
+        displayContext.lookup().getOptionalWrapper(RegistryKeys.PAINTING_VARIANT).ifPresent(registryWrapper -> ItemGroups.addPaintings(entries, registryWrapper, entry -> entry.isIn(PaintingVariantTags.PLACEABLE), ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS));
         entries.add(Items.BOOKSHELF);
         entries.add(Items.CHISELED_BOOKSHELF);
         entries.add(Items.LECTERN);
@@ -870,6 +900,8 @@ public class ItemGroups {
         entries.add(Items.DARK_OAK_HANGING_SIGN);
         entries.add(Items.MANGROVE_SIGN);
         entries.add(Items.MANGROVE_HANGING_SIGN);
+        entries.add(Items.CHERRY_SIGN);
+        entries.add(Items.CHERRY_HANGING_SIGN);
         entries.add(Items.BAMBOO_SIGN);
         entries.add(Items.BAMBOO_HANGING_SIGN);
         entries.add(Items.CRIMSON_SIGN);
@@ -965,7 +997,7 @@ public class ItemGroups {
         entries.add(Items.INFESTED_CHISELED_STONE_BRICKS);
         entries.add(Items.INFESTED_DEEPSLATE);
     }).build();
-    private static final ItemGroup REDSTONE = ItemGroup.create(ItemGroup.Row.TOP, 4).displayName(Text.translatable("itemGroup.redstone")).icon(() -> new ItemStack(Items.REDSTONE)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup REDSTONE = ItemGroup.create(ItemGroup.Row.TOP, 4).displayName(Text.translatable("itemGroup.redstone")).icon(() -> new ItemStack(Items.REDSTONE)).entries((displayContext, entries) -> {
         entries.add(Items.REDSTONE);
         entries.add(Items.REDSTONE_TORCH);
         entries.add(Items.REDSTONE_BLOCK);
@@ -1025,8 +1057,8 @@ public class ItemGroups {
         entries.add(Items.ARMOR_STAND);
         entries.add(Items.REDSTONE_ORE);
     }).build();
-    private static final ItemGroup HOTBAR = ItemGroup.create(ItemGroup.Row.TOP, 5).displayName(Text.translatable("itemGroup.hotbar")).icon(() -> new ItemStack(Blocks.BOOKSHELF)).special().type(ItemGroup.Type.HOTBAR).build();
-    private static final ItemGroup SEARCH = ItemGroup.create(ItemGroup.Row.TOP, 6).displayName(Text.translatable("itemGroup.search")).icon(() -> new ItemStack(Items.COMPASS)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup HOTBAR = ItemGroup.create(ItemGroup.Row.TOP, 5).displayName(Text.translatable("itemGroup.hotbar")).icon(() -> new ItemStack(Blocks.BOOKSHELF)).special().type(ItemGroup.Type.HOTBAR).build();
+    public static final ItemGroup SEARCH = ItemGroup.create(ItemGroup.Row.TOP, 6).displayName(Text.translatable("itemGroup.search")).icon(() -> new ItemStack(Items.COMPASS)).entries((displayContext, entries) -> {
         Set<ItemStack> set = ItemStackSet.create();
         for (ItemGroup itemGroup : GROUPS) {
             if (itemGroup.getType() == ItemGroup.Type.SEARCH) continue;
@@ -1034,7 +1066,7 @@ public class ItemGroups {
         }
         entries.addAll(set);
     }).texture("item_search.png").special().type(ItemGroup.Type.SEARCH).build();
-    private static final ItemGroup TOOLS = ItemGroup.create(ItemGroup.Row.BOTTOM, 0).displayName(Text.translatable("itemGroup.tools")).icon(() -> new ItemStack(Items.DIAMOND_PICKAXE)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup TOOLS = ItemGroup.create(ItemGroup.Row.BOTTOM, 0).displayName(Text.translatable("itemGroup.tools")).icon(() -> new ItemStack(Items.DIAMOND_PICKAXE)).entries((displayContext, entries) -> {
         entries.add(Items.WOODEN_SHOVEL);
         entries.add(Items.WOODEN_PICKAXE);
         entries.add(Items.WOODEN_AXE);
@@ -1075,9 +1107,10 @@ public class ItemGroups {
         entries.add(Items.FIRE_CHARGE);
         entries.add(Items.BONE_MEAL);
         entries.add(Items.SHEARS);
+        entries.add(Items.BRUSH);
         entries.add(Items.NAME_TAG);
         entries.add(Items.LEAD);
-        if (enabledFeatures.contains(FeatureFlags.BUNDLE)) {
+        if (displayContext.enabledFeatures().contains(FeatureFlags.BUNDLE)) {
             entries.add(Items.BUNDLE);
         }
         entries.add(Items.COMPASS);
@@ -1107,6 +1140,8 @@ public class ItemGroups {
         entries.add(Items.DARK_OAK_CHEST_BOAT);
         entries.add(Items.MANGROVE_BOAT);
         entries.add(Items.MANGROVE_CHEST_BOAT);
+        entries.add(Items.CHERRY_BOAT);
+        entries.add(Items.CHERRY_CHEST_BOAT);
         entries.add(Items.BAMBOO_RAFT);
         entries.add(Items.BAMBOO_CHEST_RAFT);
         entries.add(Items.RAIL);
@@ -1118,7 +1153,7 @@ public class ItemGroups {
         entries.add(Items.CHEST_MINECART);
         entries.add(Items.FURNACE_MINECART);
         entries.add(Items.TNT_MINECART);
-        ItemGroups.addInstruments(entries, Items.GOAT_HORN, InstrumentTags.GOAT_HORNS, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
+        displayContext.lookup().getOptionalWrapper(RegistryKeys.INSTRUMENT).ifPresent(registryWrapper -> ItemGroups.addInstruments(entries, registryWrapper, Items.GOAT_HORN, InstrumentTags.GOAT_HORNS, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS));
         entries.add(Items.MUSIC_DISC_13);
         entries.add(Items.MUSIC_DISC_CAT);
         entries.add(Items.MUSIC_DISC_BLOCKS);
@@ -1135,7 +1170,7 @@ public class ItemGroups {
         entries.add(Items.MUSIC_DISC_5);
         entries.add(Items.MUSIC_DISC_PIGSTEP);
     }).build();
-    private static final ItemGroup COMBAT = ItemGroup.create(ItemGroup.Row.BOTTOM, 1).displayName(Text.translatable("itemGroup.combat")).icon(() -> new ItemStack(Items.NETHERITE_SWORD)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup COMBAT = ItemGroup.create(ItemGroup.Row.BOTTOM, 1).displayName(Text.translatable("itemGroup.combat")).icon(() -> new ItemStack(Items.NETHERITE_SWORD)).entries((displayContext, entries) -> {
         entries.add(Items.WOODEN_SWORD);
         entries.add(Items.STONE_SWORD);
         entries.add(Items.IRON_SWORD);
@@ -1189,9 +1224,9 @@ public class ItemGroups {
         ItemGroups.addFireworkRockets(entries, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
         entries.add(Items.ARROW);
         entries.add(Items.SPECTRAL_ARROW);
-        ItemGroups.addPotions(entries, Items.TIPPED_ARROW, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
+        displayContext.lookup().getOptionalWrapper(RegistryKeys.POTION).ifPresent(registryWrapper -> ItemGroups.addPotions(entries, registryWrapper, Items.TIPPED_ARROW, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS));
     }).build();
-    private static final ItemGroup FOOD_AND_DRINK = ItemGroup.create(ItemGroup.Row.BOTTOM, 2).displayName(Text.translatable("itemGroup.foodAndDrink")).icon(() -> new ItemStack(Items.GOLDEN_APPLE)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup FOOD_AND_DRINK = ItemGroup.create(ItemGroup.Row.BOTTOM, 2).displayName(Text.translatable("itemGroup.foodAndDrink")).icon(() -> new ItemStack(Items.GOLDEN_APPLE)).entries((displayContext, entries) -> {
         entries.add(Items.APPLE);
         entries.add(Items.GOLDEN_APPLE);
         entries.add(Items.ENCHANTED_GOLDEN_APPLE);
@@ -1234,11 +1269,13 @@ public class ItemGroups {
         ItemGroups.addSuspiciousStews(entries, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
         entries.add(Items.MILK_BUCKET);
         entries.add(Items.HONEY_BOTTLE);
-        ItemGroups.addPotions(entries, Items.POTION, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
-        ItemGroups.addPotions(entries, Items.SPLASH_POTION, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
-        ItemGroups.addPotions(entries, Items.LINGERING_POTION, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
+        displayContext.lookup().getOptionalWrapper(RegistryKeys.POTION).ifPresent(registryWrapper -> {
+            ItemGroups.addPotions(entries, registryWrapper, Items.POTION, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
+            ItemGroups.addPotions(entries, registryWrapper, Items.SPLASH_POTION, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
+            ItemGroups.addPotions(entries, registryWrapper, Items.LINGERING_POTION, ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS);
+        });
     }).build();
-    private static final ItemGroup INGREDIENTS = ItemGroup.create(ItemGroup.Row.BOTTOM, 3).displayName(Text.translatable("itemGroup.ingredients")).icon(() -> new ItemStack(Items.IRON_INGOT)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup INGREDIENTS = ItemGroup.create(ItemGroup.Row.BOTTOM, 3).displayName(Text.translatable("itemGroup.ingredients")).icon(() -> new ItemStack(Items.IRON_INGOT)).entries((displayContext, entries) -> {
         entries.add(Items.COAL);
         entries.add(Items.CHARCOAL);
         entries.add(Items.RAW_IRON);
@@ -1278,6 +1315,7 @@ public class ItemGroups {
         entries.add(Items.PRISMARINE_CRYSTALS);
         entries.add(Items.NAUTILUS_SHELL);
         entries.add(Items.HEART_OF_THE_SEA);
+        entries.add(Items.FIRE_CHARGE);
         entries.add(Items.BLAZE_ROD);
         entries.add(Items.NETHER_STAR);
         entries.add(Items.ENDER_PEARL);
@@ -1332,12 +1370,30 @@ public class ItemGroups {
         entries.add(Items.MOJANG_BANNER_PATTERN);
         entries.add(Items.GLOBE_BANNER_PATTERN);
         entries.add(Items.PIGLIN_BANNER_PATTERN);
+        entries.add(Items.POTTERY_SHARD_ARCHER);
+        entries.add(Items.POTTERY_SHARD_PRIZE);
+        entries.add(Items.POTTERY_SHARD_ARMS_UP);
+        entries.add(Items.POTTERY_SHARD_SKULL);
+        entries.add(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
+        entries.add(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.VEX_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE);
+        entries.add(Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE);
         entries.add(Items.EXPERIENCE_BOTTLE);
         EnumSet<EnchantmentTarget> set = EnumSet.allOf(EnchantmentTarget.class);
-        ItemGroups.addMaxLevelEnchantedBooks(entries, set, ItemGroup.StackVisibility.PARENT_TAB_ONLY);
-        ItemGroups.addAllLevelEnchantedBooks(entries, set, ItemGroup.StackVisibility.SEARCH_TAB_ONLY);
+        displayContext.lookup().getOptionalWrapper(RegistryKeys.ENCHANTMENT).ifPresent(registryWrapper -> {
+            ItemGroups.addMaxLevelEnchantedBooks(entries, registryWrapper, set, ItemGroup.StackVisibility.PARENT_TAB_ONLY);
+            ItemGroups.addAllLevelEnchantedBooks(entries, registryWrapper, set, ItemGroup.StackVisibility.SEARCH_TAB_ONLY);
+        });
     }).build();
-    private static final ItemGroup SPAWN_EGGS = ItemGroup.create(ItemGroup.Row.BOTTOM, 4).displayName(Text.translatable("itemGroup.spawnEggs")).icon(() -> new ItemStack(Items.PIG_SPAWN_EGG)).entries((enabledFeatures, entries, operatorEnabled) -> {
+    public static final ItemGroup SPAWN_EGGS = ItemGroup.create(ItemGroup.Row.BOTTOM, 4).displayName(Text.translatable("itemGroup.spawnEggs")).icon(() -> new ItemStack(Items.PIG_SPAWN_EGG)).entries((displayContext, entries) -> {
         entries.add(Items.SPAWNER);
         entries.add(Items.ALLAY_SPAWN_EGG);
         entries.add(Items.AXOLOTL_SPAWN_EGG);
@@ -1391,6 +1447,7 @@ public class ItemGroups {
         entries.add(Items.SKELETON_SPAWN_EGG);
         entries.add(Items.SKELETON_HORSE_SPAWN_EGG);
         entries.add(Items.SLIME_SPAWN_EGG);
+        entries.add(Items.SNIFFER_SPAWN_EGG);
         entries.add(Items.SNOW_GOLEM_SPAWN_EGG);
         entries.add(Items.SPIDER_SPAWN_EGG);
         entries.add(Items.SQUID_SPAWN_EGG);
@@ -1414,8 +1471,8 @@ public class ItemGroups {
         entries.add(Items.ZOMBIE_VILLAGER_SPAWN_EGG);
         entries.add(Items.ZOMBIFIED_PIGLIN_SPAWN_EGG);
     }).build();
-    private static final ItemGroup OPERATOR = ItemGroup.create(ItemGroup.Row.BOTTOM, 5).displayName(Text.translatable("itemGroup.op")).icon(() -> new ItemStack(Items.COMMAND_BLOCK)).special().entries((enabledFeatures, entries, operatorEnabled) -> {
-        if (operatorEnabled) {
+    public static final ItemGroup OPERATOR = ItemGroup.create(ItemGroup.Row.BOTTOM, 5).displayName(Text.translatable("itemGroup.op")).icon(() -> new ItemStack(Items.COMMAND_BLOCK)).special().entries((displayContext, entries) -> {
+        if (displayContext.hasPermissions()) {
             entries.add(Items.COMMAND_BLOCK);
             entries.add(Items.CHAIN_COMMAND_BLOCK);
             entries.add(Items.REPEATING_COMMAND_BLOCK);
@@ -1428,13 +1485,14 @@ public class ItemGroups {
             for (int i = 15; i >= 0; --i) {
                 entries.add(LightBlock.addNbtForLevel(new ItemStack(Items.LIGHT), i));
             }
+            displayContext.lookup().getOptionalWrapper(RegistryKeys.PAINTING_VARIANT).ifPresent(registryWrapper -> ItemGroups.addPaintings(entries, registryWrapper, entry -> !entry.isIn(PaintingVariantTags.PLACEABLE), ItemGroup.StackVisibility.PARENT_AND_SEARCH_TABS));
         }
     }).build();
-    private static final ItemGroup INVENTORY = ItemGroup.create(ItemGroup.Row.BOTTOM, 6).displayName(Text.translatable("itemGroup.inventory")).icon(() -> new ItemStack(Blocks.CHEST)).texture("inventory.png").noRenderedName().special().type(ItemGroup.Type.INVENTORY).noScrollbar().build();
+    public static final ItemGroup INVENTORY = ItemGroup.create(ItemGroup.Row.BOTTOM, 6).displayName(Text.translatable("itemGroup.inventory")).icon(() -> new ItemStack(Blocks.CHEST)).texture("inventory.png").noRenderedName().special().type(ItemGroup.Type.INVENTORY).noScrollbar().build();
     private static final List<ItemGroup> GROUPS = ItemGroups.collect(BUILDING_BLOCKS, COLORED_BLOCKS, NATURAL, FUNCTIONAL, REDSTONE, HOTBAR, SEARCH, TOOLS, COMBAT, FOOD_AND_DRINK, INGREDIENTS, SPAWN_EGGS, OPERATOR, INVENTORY);
+    private static final Comparator<RegistryEntry<PaintingVariant>> PAINTING_VARIANT_COMPARATOR = Comparator.comparing(RegistryEntry::value, Comparator.comparingInt(paintingVariant -> paintingVariant.getHeight() * paintingVariant.getWidth()).thenComparing(PaintingVariant::getWidth));
     @Nullable
-    public static FeatureSet enabledFeatures;
-    public static boolean operatorEnabled;
+    private static ItemGroup.DisplayContext displayContext;
 
     private static List<ItemGroup> collect(ItemGroup ... groups) {
         HashMap<Pair, String> map = new HashMap<Pair, String>();
@@ -1451,33 +1509,20 @@ public class ItemGroups {
         return BUILDING_BLOCKS;
     }
 
-    private static void addPotions(ItemGroup.Entries entries, Item item, ItemGroup.StackVisibility visibility) {
-        for (Potion potion : Registries.POTION) {
-            if (potion == Potions.EMPTY) continue;
-            entries.add(PotionUtil.setPotion(new ItemStack(item), potion), visibility);
-        }
+    private static void addPotions(ItemGroup.Entries entries, RegistryWrapper<Potion> registryWrapper, Item item, ItemGroup.StackVisibility visibility) {
+        registryWrapper.streamEntries().filter(entry -> !entry.matchesKey(Potions.EMPTY_KEY)).map(entry -> PotionUtil.setPotion(new ItemStack(item), (Potion)entry.value())).forEach(stack -> entries.add((ItemStack)stack, visibility));
     }
 
-    private static void addMaxLevelEnchantedBooks(ItemGroup.Entries entries, Set<EnchantmentTarget> targets, ItemGroup.StackVisibility visibility) {
-        for (Enchantment enchantment : Registries.ENCHANTMENT) {
-            if (!targets.contains((Object)enchantment.type)) continue;
-            entries.add(EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry(enchantment, enchantment.getMaxLevel())), visibility);
-        }
+    private static void addMaxLevelEnchantedBooks(ItemGroup.Entries entries, RegistryWrapper<Enchantment> registryWrapper, Set<EnchantmentTarget> enchantmentTargets, ItemGroup.StackVisibility visibility) {
+        registryWrapper.streamEntries().map(RegistryEntry::value).filter(enchantment -> enchantmentTargets.contains((Object)enchantment.target)).map(enchantment -> EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry((Enchantment)enchantment, enchantment.getMaxLevel()))).forEach(stack -> entries.add((ItemStack)stack, visibility));
     }
 
-    private static void addAllLevelEnchantedBooks(ItemGroup.Entries entries, Set<EnchantmentTarget> targets, ItemGroup.StackVisibility visibility) {
-        for (Enchantment enchantment : Registries.ENCHANTMENT) {
-            if (!targets.contains((Object)enchantment.type)) continue;
-            for (int i = enchantment.getMinLevel(); i <= enchantment.getMaxLevel(); ++i) {
-                entries.add(EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry(enchantment, i)), visibility);
-            }
-        }
+    private static void addAllLevelEnchantedBooks(ItemGroup.Entries entries, RegistryWrapper<Enchantment> registryWrapper, Set<EnchantmentTarget> enchantmentTargets, ItemGroup.StackVisibility visibility) {
+        registryWrapper.streamEntries().map(RegistryEntry::value).filter(enchantment -> enchantmentTargets.contains((Object)enchantment.target)).flatMap(enchantment -> IntStream.rangeClosed(enchantment.getMinLevel(), enchantment.getMaxLevel()).mapToObj(level -> EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry((Enchantment)enchantment, level)))).forEach(stack -> entries.add((ItemStack)stack, visibility));
     }
 
-    private static void addInstruments(ItemGroup.Entries entries, Item item, TagKey<Instrument> instrumentTag, ItemGroup.StackVisibility visibility) {
-        for (RegistryEntry<Instrument> registryEntry : Registries.INSTRUMENT.iterateEntries(instrumentTag)) {
-            entries.add(GoatHornItem.getStackForInstrument(item, registryEntry), visibility);
-        }
+    private static void addInstruments(ItemGroup.Entries entries, RegistryWrapper<Instrument> registryWrapper, Item item, TagKey<Instrument> instrumentTag, ItemGroup.StackVisibility visibility) {
+        registryWrapper.getOptional(instrumentTag).ifPresent(entryList -> entryList.stream().map(instrument -> GoatHornItem.getStackForInstrument(item, instrument)).forEach(stack -> entries.add((ItemStack)stack, visibility)));
     }
 
     private static void addSuspiciousStews(ItemGroup.Entries entries, ItemGroup.StackVisibility visibility) {
@@ -1499,6 +1544,15 @@ public class ItemGroups {
         }
     }
 
+    private static void addPaintings(ItemGroup.Entries entries, RegistryWrapper.Impl<PaintingVariant> registryWrapper, Predicate<RegistryEntry<PaintingVariant>> predicate, ItemGroup.StackVisibility visibility) {
+        registryWrapper.streamEntries().filter(predicate).sorted(PAINTING_VARIANT_COMPARATOR).forEach(variant -> {
+            ItemStack itemStack = new ItemStack(Items.PAINTING);
+            NbtCompound nbtCompound = itemStack.getOrCreateSubNbt("EntityTag");
+            PaintingEntity.writeVariantToNbt(nbtCompound, variant);
+            entries.add(itemStack, visibility);
+        });
+    }
+
     public static List<ItemGroup> getGroupsToDisplay() {
         return GROUPS.stream().filter(ItemGroup::shouldDisplay).toList();
     }
@@ -1511,27 +1565,18 @@ public class ItemGroups {
         return SEARCH;
     }
 
-    private static void updateEntries(FeatureSet enabledFeatures, boolean operatorEnabled) {
-        GROUPS.stream().filter(group -> group.getType() == ItemGroup.Type.CATEGORY).forEach(group -> group.updateEntries(enabledFeatures, operatorEnabled));
-        GROUPS.stream().filter(group -> group.getType() != ItemGroup.Type.CATEGORY).forEach(group -> group.updateEntries(enabledFeatures, operatorEnabled));
+    private static void updateEntries(ItemGroup.DisplayContext displayContext) {
+        GROUPS.stream().filter(group -> group.getType() == ItemGroup.Type.CATEGORY).forEach(group -> group.updateEntries(displayContext));
+        GROUPS.stream().filter(group -> group.getType() != ItemGroup.Type.CATEGORY).forEach(group -> group.updateEntries(displayContext));
     }
 
-    private static boolean displayParametersMatch(FeatureSet enabledFeatures, boolean operatorEnabled) {
-        return ItemGroups.operatorEnabled == operatorEnabled && enabledFeatures.equals(ItemGroups.enabledFeatures);
-    }
-
-    public static boolean updateDisplayParameters(FeatureSet enabledFeatures, boolean operatorEnabled) {
-        if (ItemGroups.displayParametersMatch(enabledFeatures, operatorEnabled)) {
+    public static boolean updateDisplayContext(FeatureSet enabledFeatures, boolean operatorEnabled, RegistryWrapper.WrapperLookup lookup) {
+        if (displayContext != null && !displayContext.doesNotMatch(enabledFeatures, operatorEnabled, lookup)) {
             return false;
         }
-        ItemGroups.enabledFeatures = enabledFeatures;
-        ItemGroups.operatorEnabled = operatorEnabled;
-        ItemGroups.updateEntries(ItemGroups.enabledFeatures, ItemGroups.operatorEnabled);
+        displayContext = new ItemGroup.DisplayContext(enabledFeatures, operatorEnabled, lookup);
+        ItemGroups.updateEntries(displayContext);
         return true;
-    }
-
-    static {
-        ItemGroups.operatorEnabled = false;
     }
 }
 

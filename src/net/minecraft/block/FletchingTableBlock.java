@@ -15,7 +15,7 @@ import net.minecraft.world.World;
 
 public class FletchingTableBlock
 extends CraftingTableBlock {
-    protected FletchingTableBlock(AbstractBlock.Settings settings) {
+    public FletchingTableBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

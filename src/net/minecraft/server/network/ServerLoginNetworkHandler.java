@@ -59,7 +59,7 @@ TickablePacketListener {
     private static final Random RANDOM = Random.create();
     private final byte[] nonce;
     final MinecraftServer server;
-    public final ClientConnection connection;
+    final ClientConnection connection;
     State state = State.HELLO;
     private int loginTicks;
     @Nullable
@@ -90,8 +90,8 @@ TickablePacketListener {
     }
 
     @Override
-    public ClientConnection getConnection() {
-        return this.connection;
+    public boolean isConnectionOpen() {
+        return this.connection.isOpen();
     }
 
     public void disconnect(Text reason) {

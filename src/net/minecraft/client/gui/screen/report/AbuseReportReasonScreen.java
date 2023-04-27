@@ -21,13 +21,13 @@ import net.minecraft.client.report.AbuseReportReason;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
+import net.minecraft.util.Nullables;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class AbuseReportReasonScreen
 extends Screen {
-    private static final String ABOUT_JAVA_REPORTING_URL = "https://aka.ms/aboutjavareporting";
     private static final Text TITLE_TEXT = Text.translatable("gui.abuseReport.reason.title");
     private static final Text DESCRIPTION_TEXT = Text.translatable("gui.abuseReport.reason.description");
     private static final Text READ_INFO_TEXT = Text.translatable("gui.chatReport.read_info");
@@ -56,15 +56,15 @@ extends Screen {
         this.reasonList = new ReasonListWidget(this.client);
         this.reasonList.setRenderBackground(false);
         this.addSelectableChild(this.reasonList);
-        ReasonListWidget.ReasonEntry reasonEntry = Util.map(this.reason, this.reasonList::getEntry);
+        ReasonListWidget.ReasonEntry reasonEntry = Nullables.map(this.reason, this.reasonList::getEntry);
         this.reasonList.setSelected(reasonEntry);
         int i = this.width / 2 - 150 - 5;
         this.addDrawableChild(ButtonWidget.builder(READ_INFO_TEXT, button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
-                Util.getOperatingSystem().open(ABOUT_JAVA_REPORTING_URL);
+                Util.getOperatingSystem().open("https://aka.ms/aboutjavareporting");
             }
             this.client.setScreen(this);
-        }, ABOUT_JAVA_REPORTING_URL, true))).dimensions(i, this.getDoneButtonY(), 150, 20).build());
+        }, "https://aka.ms/aboutjavareporting", true))).dimensions(i, this.getDoneButtonY(), 150, 20).build());
         int j = this.width / 2 + 5;
         this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> {
             ReasonListWidget.ReasonEntry reasonEntry = (ReasonListWidget.ReasonEntry)this.reasonList.getSelectedOrNull();
@@ -80,7 +80,7 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         this.reasonList.render(matrices, mouseX, mouseY, delta);
-        AbuseReportReasonScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 16, 0xFFFFFF);
+        AbuseReportReasonScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 16, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
         AbuseReportReasonScreen.fill(matrices, this.getLeft(), this.getTop(), this.getRight(), this.getBottom(), 0x7F000000);
         AbuseReportReasonScreen.drawTextWithShadow(matrices, this.textRenderer, DESCRIPTION_TEXT, this.getLeft() + 4, this.getTop() + 4, -8421505);
@@ -93,7 +93,7 @@ extends Screen {
             int m = j - i;
             int n = l - k;
             int o = this.textRenderer.getWrappedLinesHeight(reasonEntry.reason.getDescription(), m);
-            this.textRenderer.drawTrimmed(reasonEntry.reason.getDescription(), i, k + (n - o) / 2, m, -1);
+            this.textRenderer.drawTrimmed(matrices, reasonEntry.reason.getDescription(), i, k + (n - o) / 2, m, -1);
         }
     }
 
@@ -128,7 +128,6 @@ extends Screen {
         public ReasonListWidget(MinecraftClient client) {
             super(client, AbuseReportReasonScreen.this.width, AbuseReportReasonScreen.this.height, 40, AbuseReportReasonScreen.this.height - 95, 18);
             for (AbuseReportReason abuseReportReason : AbuseReportReason.values()) {
-                if (!abuseReportReason.isReportable()) continue;
                 this.addEntry(new ReasonEntry(abuseReportReason));
             }
         }
@@ -146,11 +145,6 @@ extends Screen {
         @Override
         protected int getScrollbarPositionX() {
             return this.getRowRight() - 2;
-        }
-
-        @Override
-        protected boolean isFocused() {
-            return AbuseReportReasonScreen.this.getFocused() == this;
         }
 
         @Override

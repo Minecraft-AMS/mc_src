@@ -60,12 +60,11 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.datafixer.Schemas;
-import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.scanner.ExclusiveNbtCollector;
@@ -131,7 +130,7 @@ public class LevelStorage {
             if (!optional.isPresent()) continue;
             dynamic = dynamic.set(string, (Dynamic)optional.get());
         }
-        Dynamic dynamic2 = dataFixer.update(TypeReferences.WORLD_GEN_SETTINGS, dynamic, version, SharedConstants.getGameVersion().getWorldVersion());
+        Dynamic dynamic2 = DataFixTypes.WORLD_GEN_SETTINGS.update(dataFixer, dynamic, version);
         return WorldGenSettings.CODEC.parse(dynamic2);
     }
 
@@ -219,8 +218,8 @@ public class LevelStorage {
             if (nbtElement instanceof NbtCompound) {
                 NbtCompound nbtCompound = (NbtCompound)nbtElement;
                 NbtCompound nbtCompound2 = nbtCompound.getCompound(DATA_KEY);
-                int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
-                Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+                int i = NbtHelper.getDataVersion(nbtCompound2, -1);
+                Dynamic dynamic = DataFixTypes.LEVEL.update(dataFixer, new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i);
                 return LevelStorage.parseDataPackSettings(dynamic);
             }
         }
@@ -242,14 +241,14 @@ public class LevelStorage {
             NbtCompound nbtCompound2 = nbtCompound.getCompound(DATA_KEY);
             NbtCompound nbtCompound3 = nbtCompound2.contains("Player", 10) ? nbtCompound2.getCompound("Player") : null;
             nbtCompound2.remove("Player");
-            int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
-            Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic(ops, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+            int i = NbtHelper.getDataVersion(nbtCompound2, -1);
+            Dynamic dynamic = DataFixTypes.LEVEL.update((DataFixer)dataFixer, new Dynamic(ops, (Object)nbtCompound2), i);
             WorldGenSettings worldGenSettings = (WorldGenSettings)LevelStorage.readGeneratorProperties(dynamic, dataFixer, i).getOrThrow(false, Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0)));
             SaveVersionInfo saveVersionInfo = SaveVersionInfo.fromDynamic(dynamic);
             LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataConfiguration);
             DimensionOptionsRegistryHolder.DimensionsConfig dimensionsConfig = worldGenSettings.dimensionOptionsRegistryHolder().toConfig(dimensionOptionsRegistry);
             Lifecycle lifecycle2 = dimensionsConfig.getLifecycle().add(lifecycle);
-            LevelProperties levelProperties = LevelProperties.readProperties((Dynamic<NbtElement>)dynamic, dataFixer, i, nbtCompound3, levelInfo, saveVersionInfo, dimensionsConfig.specialWorldProperty(), worldGenSettings.generatorOptions(), lifecycle2);
+            LevelProperties levelProperties = LevelProperties.readProperties(dynamic, dataFixer, i, nbtCompound3, levelInfo, saveVersionInfo, dimensionsConfig.specialWorldProperty(), worldGenSettings.generatorOptions(), lifecycle2);
             return Pair.of((Object)levelProperties, (Object)dimensionsConfig);
         };
     }
@@ -259,10 +258,10 @@ public class LevelStorage {
             try {
                 NbtElement nbtElement = LevelStorage.loadCompactLevelData(path);
                 if (nbtElement instanceof NbtCompound) {
+                    int i;
                     NbtCompound nbtCompound = (NbtCompound)nbtElement;
                     NbtCompound nbtCompound2 = nbtCompound.getCompound(DATA_KEY);
-                    int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
-                    Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+                    Dynamic dynamic = DataFixTypes.LEVEL.update((DataFixer)dataFixer, new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i = NbtHelper.getDataVersion(nbtCompound2, -1));
                     SaveVersionInfo saveVersionInfo = SaveVersionInfo.fromDynamic(dynamic);
                     int j = saveVersionInfo.getLevelFormatVersion();
                     if (j == 19132 || j == 19133) {
@@ -270,7 +269,7 @@ public class LevelStorage {
                         Path path2 = levelSave.getIconPath();
                         DataConfiguration dataConfiguration = LevelStorage.parseDataPackSettings(dynamic);
                         LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataConfiguration);
-                        FeatureSet featureSet = LevelStorage.parseEnabledFeatures((Dynamic<NbtElement>)dynamic);
+                        FeatureSet featureSet = LevelStorage.parseEnabledFeatures(dynamic);
                         boolean bl3 = FeatureFlags.isNotVanilla(featureSet);
                         return new LevelSummary(levelInfo, saveVersionInfo, levelSave.getRootPath(), bl2, locked, bl3, path2);
                     }
@@ -286,7 +285,7 @@ public class LevelStorage {
         };
     }
 
-    private static FeatureSet parseEnabledFeatures(Dynamic<NbtElement> levelData) {
+    private static FeatureSet parseEnabledFeatures(Dynamic<?> levelData) {
         Set<Identifier> set = levelData.get("enabled_features").asStream().flatMap(featureFlag -> featureFlag.asString().result().map(Identifier::tryParse).stream()).collect(Collectors.toSet());
         return FeatureFlags.FEATURE_MANAGER.featureSetOf(set, id -> {});
     }

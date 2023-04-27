@@ -70,6 +70,7 @@ import net.minecraft.client.render.model.json.ModelElementTexture;
 import net.minecraft.client.render.model.json.ModelOverride;
 import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelTransformation;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.render.model.json.Transformation;
 import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.Sprite;
@@ -90,10 +91,12 @@ implements UnbakedModel {
     static final Gson GSON = new GsonBuilder().registerTypeAdapter(JsonUnbakedModel.class, (Object)new Deserializer()).registerTypeAdapter(ModelElement.class, (Object)new ModelElement.Deserializer()).registerTypeAdapter(ModelElementFace.class, (Object)new ModelElementFace.Deserializer()).registerTypeAdapter(ModelElementTexture.class, (Object)new ModelElementTexture.Deserializer()).registerTypeAdapter(Transformation.class, (Object)new Transformation.Deserializer()).registerTypeAdapter(ModelTransformation.class, (Object)new ModelTransformation.Deserializer()).registerTypeAdapter(ModelOverride.class, (Object)new ModelOverride.Deserializer()).create();
     private static final char TEXTURE_REFERENCE_INITIAL = '#';
     public static final String PARTICLE_KEY = "particle";
+    private static final boolean field_42912 = true;
     private final List<ModelElement> elements;
     @Nullable
     private final GuiLight guiLight;
-    private final boolean ambientOcclusion;
+    @Nullable
+    private final Boolean ambientOcclusion;
     private final ModelTransformation transformations;
     private final List<ModelOverride> overrides;
     public String id = "";
@@ -112,7 +115,7 @@ implements UnbakedModel {
         return JsonUnbakedModel.deserialize(new StringReader(json));
     }
 
-    public JsonUnbakedModel(@Nullable Identifier parentId, List<ModelElement> elements, Map<String, Either<SpriteIdentifier, String>> textureMap, boolean ambientOcclusion, @Nullable GuiLight guiLight, ModelTransformation transformations, List<ModelOverride> overrides) {
+    public JsonUnbakedModel(@Nullable Identifier parentId, List<ModelElement> elements, Map<String, Either<SpriteIdentifier, String>> textureMap, @Nullable Boolean ambientOcclusion, @Nullable GuiLight guiLight, ModelTransformation transformations, List<ModelOverride> overrides) {
         this.elements = elements;
         this.ambientOcclusion = ambientOcclusion;
         this.guiLight = guiLight;
@@ -130,10 +133,13 @@ implements UnbakedModel {
     }
 
     public boolean useAmbientOcclusion() {
+        if (this.ambientOcclusion != null) {
+            return this.ambientOcclusion;
+        }
         if (this.parent != null) {
             return this.parent.useAmbientOcclusion();
         }
-        return this.ambientOcclusion;
+        return true;
     }
 
     public GuiLight getGuiLight() {
@@ -278,18 +284,18 @@ implements UnbakedModel {
     }
 
     public ModelTransformation getTransformations() {
-        Transformation transformation = this.getTransformation(ModelTransformation.Mode.THIRD_PERSON_LEFT_HAND);
-        Transformation transformation2 = this.getTransformation(ModelTransformation.Mode.THIRD_PERSON_RIGHT_HAND);
-        Transformation transformation3 = this.getTransformation(ModelTransformation.Mode.FIRST_PERSON_LEFT_HAND);
-        Transformation transformation4 = this.getTransformation(ModelTransformation.Mode.FIRST_PERSON_RIGHT_HAND);
-        Transformation transformation5 = this.getTransformation(ModelTransformation.Mode.HEAD);
-        Transformation transformation6 = this.getTransformation(ModelTransformation.Mode.GUI);
-        Transformation transformation7 = this.getTransformation(ModelTransformation.Mode.GROUND);
-        Transformation transformation8 = this.getTransformation(ModelTransformation.Mode.FIXED);
+        Transformation transformation = this.getTransformation(ModelTransformationMode.THIRD_PERSON_LEFT_HAND);
+        Transformation transformation2 = this.getTransformation(ModelTransformationMode.THIRD_PERSON_RIGHT_HAND);
+        Transformation transformation3 = this.getTransformation(ModelTransformationMode.FIRST_PERSON_LEFT_HAND);
+        Transformation transformation4 = this.getTransformation(ModelTransformationMode.FIRST_PERSON_RIGHT_HAND);
+        Transformation transformation5 = this.getTransformation(ModelTransformationMode.HEAD);
+        Transformation transformation6 = this.getTransformation(ModelTransformationMode.GUI);
+        Transformation transformation7 = this.getTransformation(ModelTransformationMode.GROUND);
+        Transformation transformation8 = this.getTransformation(ModelTransformationMode.FIXED);
         return new ModelTransformation(transformation, transformation2, transformation3, transformation4, transformation5, transformation6, transformation7, transformation8);
     }
 
-    private Transformation getTransformation(ModelTransformation.Mode renderMode) {
+    private Transformation getTransformation(ModelTransformationMode renderMode) {
         if (this.parent != null && !this.transformations.isTransformationDefined(renderMode)) {
             return this.parent.getTransformation(renderMode);
         }
@@ -344,14 +350,12 @@ implements UnbakedModel {
     @Environment(value=EnvType.CLIENT)
     public static class Deserializer
     implements JsonDeserializer<JsonUnbakedModel> {
-        private static final boolean DEFAULT_AMBIENT_OCCLUSION = true;
-
         public JsonUnbakedModel deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             List<ModelElement> list = this.elementsFromJson(jsonDeserializationContext, jsonObject);
             String string = this.parentFromJson(jsonObject);
             Map<String, Either<SpriteIdentifier, String>> map = this.texturesFromJson(jsonObject);
-            boolean bl = this.ambientOcclusionFromJson(jsonObject);
+            Boolean boolean_ = this.ambientOcclusionFromJson(jsonObject);
             ModelTransformation modelTransformation = ModelTransformation.NONE;
             if (jsonObject.has("display")) {
                 JsonObject jsonObject2 = JsonHelper.getObject(jsonObject, "display");
@@ -363,7 +367,7 @@ implements UnbakedModel {
                 guiLight = GuiLight.byName(JsonHelper.getString(jsonObject, "gui_light"));
             }
             Identifier identifier = string.isEmpty() ? null : new Identifier(string);
-            return new JsonUnbakedModel(identifier, list, map, bl, guiLight, modelTransformation, list2);
+            return new JsonUnbakedModel(identifier, list, map, boolean_, guiLight, modelTransformation, list2);
         }
 
         protected List<ModelOverride> overridesFromJson(JsonDeserializationContext context, JsonObject object) {
@@ -404,8 +408,12 @@ implements UnbakedModel {
             return JsonHelper.getString(json, "parent", "");
         }
 
-        protected boolean ambientOcclusionFromJson(JsonObject json) {
-            return JsonHelper.getBoolean(json, "ambientocclusion", true);
+        @Nullable
+        protected Boolean ambientOcclusionFromJson(JsonObject json) {
+            if (json.has("ambientocclusion")) {
+                return JsonHelper.getBoolean(json, "ambientocclusion");
+            }
+            return null;
         }
 
         protected List<ModelElement> elementsFromJson(JsonDeserializationContext context, JsonObject json) {

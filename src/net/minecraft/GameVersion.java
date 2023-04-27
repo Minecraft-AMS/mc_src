@@ -1,25 +1,25 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.mojang.bridge.game.GameVersion
  */
 package net.minecraft;
 
+import java.util.Date;
 import net.minecraft.SaveVersion;
+import net.minecraft.resource.ResourceType;
 
-public interface GameVersion
-extends com.mojang.bridge.game.GameVersion {
-    @Deprecated
-    default public int getWorldVersion() {
-        return this.getSaveVersion().getId();
-    }
-
-    @Deprecated
-    default public String getSeriesId() {
-        return this.getSaveVersion().getSeries();
-    }
-
+public interface GameVersion {
     public SaveVersion getSaveVersion();
+
+    public String getId();
+
+    public String getName();
+
+    public int getProtocolVersion();
+
+    public int getResourceVersion(ResourceType var1);
+
+    public Date getBuildTime();
+
+    public boolean isStable();
 }
 

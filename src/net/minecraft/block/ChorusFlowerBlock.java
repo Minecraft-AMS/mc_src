@@ -32,7 +32,7 @@ extends Block {
     public static final IntProperty AGE = Properties.AGE_5;
     private final ChorusPlantBlock plantBlock;
 
-    protected ChorusFlowerBlock(ChorusPlantBlock plantBlock, AbstractBlock.Settings settings) {
+    public ChorusFlowerBlock(ChorusPlantBlock plantBlock, AbstractBlock.Settings settings) {
         super(settings);
         this.plantBlock = plantBlock;
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(AGE, 0));

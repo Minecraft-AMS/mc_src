@@ -94,7 +94,7 @@ public class Explosion {
         this.z = z;
         this.createFire = createFire;
         this.destructionType = destructionType;
-        this.damageSource = damageSource == null ? DamageSource.explosion(this) : damageSource;
+        this.damageSource = damageSource == null ? world.getDamageSources().explosion(this) : damageSource;
         this.behavior = behavior == null ? this.chooseBehavior(entity) : behavior;
     }
 
@@ -153,7 +153,7 @@ public class Explosion {
                     double o = this.z;
                     float p = 0.3f;
                     for (float h = this.power * (0.7f + this.world.random.nextFloat() * 0.6f); h > 0.0f; h -= 0.22500001f) {
-                        BlockPos blockPos = new BlockPos(m, n, o);
+                        BlockPos blockPos = BlockPos.ofFloored(m, n, o);
                         BlockState blockState = this.world.getBlockState(blockPos);
                         FluidState fluidState = this.world.getFluidState(blockPos);
                         if (!this.world.isInBuildLimit(blockPos)) continue block2;
@@ -183,6 +183,7 @@ public class Explosion {
         Vec3d vec3d = new Vec3d(this.x, this.y, this.z);
         for (int v = 0; v < list.size(); ++v) {
             PlayerEntity playerEntity;
+            double ad;
             double z;
             double y;
             double x;
@@ -196,13 +197,16 @@ public class Explosion {
             double ab = Explosion.getExposure(vec3d, entity);
             double ac = (1.0 - w) * ab;
             entity.damage(this.getDamageSource(), (int)((ac * ac + ac) / 2.0 * 7.0 * (double)q + 1.0));
-            double ad = ac;
             if (entity instanceof LivingEntity) {
-                ad = ProtectionEnchantment.transformExplosionKnockback((LivingEntity)entity, ac);
+                LivingEntity livingEntity = (LivingEntity)entity;
+                ad = ProtectionEnchantment.transformExplosionKnockback(livingEntity, ac);
+            } else {
+                ad = ac;
             }
-            entity.setVelocity(entity.getVelocity().add(x * ad, y * ad, z * ad));
+            Vec3d vec3d2 = new Vec3d(x *= ad, y *= ad, z *= ad);
+            entity.setVelocity(entity.getVelocity().add(vec3d2));
             if (!(entity instanceof PlayerEntity) || (playerEntity = (PlayerEntity)entity).isSpectator() || playerEntity.isCreative() && playerEntity.getAbilities().flying) continue;
-            this.affectedPlayers.put(playerEntity, new Vec3d(x * ac, y * ac, z * ac));
+            this.affectedPlayers.put(playerEntity, vec3d2);
         }
     }
 
@@ -291,7 +295,7 @@ public class Explosion {
         Entity entity2 = this.entity;
         if (entity2 instanceof TntEntity) {
             TntEntity tntEntity = (TntEntity)entity2;
-            return tntEntity.getCausingEntity();
+            return tntEntity.getOwner();
         }
         entity2 = this.entity;
         if (entity2 instanceof LivingEntity) {

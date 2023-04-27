@@ -44,13 +44,13 @@ implements DensityFunction.EachApplier,
 DensityFunction.NoisePos {
     private final GenerationShapeConfig generationShapeConfig;
     final int horizontalCellCount;
-    final int cellHeight;
+    final int verticalCellCount;
     final int minimumCellY;
     private final int startCellX;
     private final int startCellZ;
-    final int biomeX;
-    final int biomeZ;
-    final List<NoiseInterpolator> interpolators;
+    final int startBiomeX;
+    final int startBiomeZ;
+    final List<DensityInterpolator> interpolators;
     final List<CellCache> caches;
     private final Map<DensityFunction, DensityFunction> actualDensityFunctionCache = new HashMap<DensityFunction, DensityFunction>();
     private final Long2IntMap surfaceHeightEstimateCache = new Long2IntOpenHashMap();
@@ -58,16 +58,16 @@ DensityFunction.NoisePos {
     private final DensityFunction initialDensityWithoutJaggedness;
     private final BlockStateSampler blockStateSampler;
     private final Blender blender;
-    private final FlatCacheDensityFunction cachedBlendAlphaDensityFunction;
-    private final FlatCacheDensityFunction cachedBlendOffsetDensityFunction;
+    private final FlatCache cachedBlendAlphaDensityFunction;
+    private final FlatCache cachedBlendOffsetDensityFunction;
     private final DensityFunctionTypes.Beardifying beardifying;
     private long lastBlendingColumnPos = ChunkPos.MARKER;
     private Blender.BlendResult lastBlendingResult = new Blender.BlendResult(1.0, 0.0);
-    final int biomeHorizontalEnd;
-    final int horizontalBlockSize;
-    final int verticalBlockSize;
+    final int horizontalBiomeEnd;
+    final int horizontalCellBlockCount;
+    final int verticalCellBlockCount;
     boolean isInInterpolationLoop;
-    boolean isSamplingNoise;
+    boolean isSamplingForCaches;
     private int startBlockX;
     int startBlockY;
     private int startBlockZ;
@@ -77,11 +77,11 @@ DensityFunction.NoisePos {
     long sampleUniqueIndex;
     long cacheOnceUniqueIndex;
     int index;
-    private final DensityFunction.EachApplier eachApplier = new DensityFunction.EachApplier(){
+    private final DensityFunction.EachApplier interpolationEachApplier = new DensityFunction.EachApplier(){
 
         @Override
-        public DensityFunction.NoisePos getPosAt(int index) {
-            ChunkNoiseSampler.this.startBlockY = (index + ChunkNoiseSampler.this.minimumCellY) * ChunkNoiseSampler.this.verticalBlockSize;
+        public DensityFunction.NoisePos at(int index) {
+            ChunkNoiseSampler.this.startBlockY = (index + ChunkNoiseSampler.this.minimumCellY) * ChunkNoiseSampler.this.verticalCellBlockCount;
             ++ChunkNoiseSampler.this.sampleUniqueIndex;
             ChunkNoiseSampler.this.cellBlockY = 0;
             ChunkNoiseSampler.this.index = index;
@@ -89,9 +89,9 @@ DensityFunction.NoisePos {
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction densityFunction) {
-            for (int i = 0; i < ChunkNoiseSampler.this.cellHeight + 1; ++i) {
-                ChunkNoiseSampler.this.startBlockY = (i + ChunkNoiseSampler.this.minimumCellY) * ChunkNoiseSampler.this.verticalBlockSize;
+        public void fill(double[] densities, DensityFunction densityFunction) {
+            for (int i = 0; i < ChunkNoiseSampler.this.verticalCellCount + 1; ++i) {
+                ChunkNoiseSampler.this.startBlockY = (i + ChunkNoiseSampler.this.minimumCellY) * ChunkNoiseSampler.this.verticalCellBlockCount;
                 ++ChunkNoiseSampler.this.sampleUniqueIndex;
                 ChunkNoiseSampler.this.cellBlockY = 0;
                 ChunkNoiseSampler.this.index = i;
@@ -103,35 +103,35 @@ DensityFunction.NoisePos {
     public static ChunkNoiseSampler create(Chunk chunk, NoiseConfig noiseConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender) {
         GenerationShapeConfig generationShapeConfig = chunkGeneratorSettings.generationShapeConfig().trimHeight(chunk);
         ChunkPos chunkPos = chunk.getPos();
-        int i = 16 / generationShapeConfig.horizontalBlockSize();
+        int i = 16 / generationShapeConfig.horizontalCellBlockCount();
         return new ChunkNoiseSampler(i, noiseConfig, chunkPos.getStartX(), chunkPos.getStartZ(), generationShapeConfig, beardifying, chunkGeneratorSettings, fluidLevelSampler, blender);
     }
 
-    public ChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startX, int startZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender) {
+    public ChunkNoiseSampler(int horizontalCellCount, NoiseConfig noiseConfig, int startBlockX, int startBlockZ, GenerationShapeConfig generationShapeConfig, DensityFunctionTypes.Beardifying beardifying, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender) {
         int l;
         int k;
         this.generationShapeConfig = generationShapeConfig;
-        this.horizontalBlockSize = generationShapeConfig.horizontalBlockSize();
-        this.verticalBlockSize = generationShapeConfig.verticalBlockSize();
+        this.horizontalCellBlockCount = generationShapeConfig.horizontalCellBlockCount();
+        this.verticalCellBlockCount = generationShapeConfig.verticalCellBlockCount();
         this.horizontalCellCount = horizontalCellCount;
-        this.cellHeight = MathHelper.floorDiv(generationShapeConfig.height(), this.verticalBlockSize);
-        this.minimumCellY = MathHelper.floorDiv(generationShapeConfig.minimumY(), this.verticalBlockSize);
-        this.startCellX = Math.floorDiv(startX, this.horizontalBlockSize);
-        this.startCellZ = Math.floorDiv(startZ, this.horizontalBlockSize);
+        this.verticalCellCount = MathHelper.floorDiv(generationShapeConfig.height(), this.verticalCellBlockCount);
+        this.minimumCellY = MathHelper.floorDiv(generationShapeConfig.minimumY(), this.verticalCellBlockCount);
+        this.startCellX = Math.floorDiv(startBlockX, this.horizontalCellBlockCount);
+        this.startCellZ = Math.floorDiv(startBlockZ, this.horizontalCellBlockCount);
         this.interpolators = Lists.newArrayList();
         this.caches = Lists.newArrayList();
-        this.biomeX = BiomeCoords.fromBlock(startX);
-        this.biomeZ = BiomeCoords.fromBlock(startZ);
-        this.biomeHorizontalEnd = BiomeCoords.fromBlock(horizontalCellCount * this.horizontalBlockSize);
+        this.startBiomeX = BiomeCoords.fromBlock(startBlockX);
+        this.startBiomeZ = BiomeCoords.fromBlock(startBlockZ);
+        this.horizontalBiomeEnd = BiomeCoords.fromBlock(horizontalCellCount * this.horizontalCellBlockCount);
         this.blender = blender;
         this.beardifying = beardifying;
-        this.cachedBlendAlphaDensityFunction = new FlatCacheDensityFunction(new BlendAlphaDensityFunction(), false);
-        this.cachedBlendOffsetDensityFunction = new FlatCacheDensityFunction(new BlendOffsetDensityFunction(), false);
-        for (int i = 0; i <= this.biomeHorizontalEnd; ++i) {
-            int j = this.biomeX + i;
+        this.cachedBlendAlphaDensityFunction = new FlatCache(new BlendAlphaDensityFunction(), false);
+        this.cachedBlendOffsetDensityFunction = new FlatCache(new BlendOffsetDensityFunction(), false);
+        for (int i = 0; i <= this.horizontalBiomeEnd; ++i) {
+            int j = this.startBiomeX + i;
             k = BiomeCoords.toBlock(j);
-            for (l = 0; l <= this.biomeHorizontalEnd; ++l) {
-                int m = this.biomeZ + l;
+            for (l = 0; l <= this.horizontalBiomeEnd; ++l) {
+                int m = this.startBiomeZ + l;
                 int n = BiomeCoords.toBlock(m);
                 Blender.BlendResult blendResult = blender.calculate(k, n);
                 this.cachedBlendAlphaDensityFunction.cache[i][l] = blendResult.alpha();
@@ -143,8 +143,8 @@ DensityFunction.NoisePos {
         if (!chunkGeneratorSettings.hasAquifers()) {
             this.aquiferSampler = AquiferSampler.seaLevel(fluidLevelSampler);
         } else {
-            k = ChunkSectionPos.getSectionCoord(startX);
-            l = ChunkSectionPos.getSectionCoord(startZ);
+            k = ChunkSectionPos.getSectionCoord(startBlockX);
+            l = ChunkSectionPos.getSectionCoord(startBlockZ);
             this.aquiferSampler = AquiferSampler.aquifer(this, new ChunkPos(k, l), noiseRouter2, noiseConfig.getAquiferRandomDeriver(), generationShapeConfig.minimumY(), generationShapeConfig.height(), fluidLevelSampler);
         }
         ImmutableList.Builder builder = ImmutableList.builder();
@@ -191,7 +191,7 @@ DensityFunction.NoisePos {
         int i = ColumnPos.getX(columnPos);
         int j = ColumnPos.getZ(columnPos);
         int k = this.generationShapeConfig.minimumY();
-        for (int l = k + this.generationShapeConfig.height(); l >= k; l -= this.verticalBlockSize) {
+        for (int l = k + this.generationShapeConfig.height(); l >= k; l -= this.verticalCellBlockCount) {
             DensityFunction.UnblendedNoisePos unblendedNoisePos = new DensityFunction.UnblendedNoisePos(i, l, j);
             if (!(this.initialDensityWithoutJaggedness.sample(unblendedNoisePos) > 0.390625)) continue;
             return l;
@@ -204,42 +204,42 @@ DensityFunction.NoisePos {
         return this.blender;
     }
 
-    private void sampleNoise(boolean start, int nextCellX) {
-        this.startBlockX = nextCellX * this.horizontalBlockSize;
+    private void sampleDensity(boolean start, int cellX) {
+        this.startBlockX = cellX * this.horizontalCellBlockCount;
         this.cellBlockX = 0;
         for (int i = 0; i < this.horizontalCellCount + 1; ++i) {
             int j = this.startCellZ + i;
-            this.startBlockZ = j * this.horizontalBlockSize;
+            this.startBlockZ = j * this.horizontalCellBlockCount;
             this.cellBlockZ = 0;
             ++this.cacheOnceUniqueIndex;
-            for (NoiseInterpolator noiseInterpolator : this.interpolators) {
-                double[] ds = (start ? noiseInterpolator.startNoiseBuffer : noiseInterpolator.endNoiseBuffer)[i];
-                noiseInterpolator.applyEach(ds, this.eachApplier);
+            for (DensityInterpolator densityInterpolator : this.interpolators) {
+                double[] ds = (start ? densityInterpolator.startDensityBuffer : densityInterpolator.endDensityBuffer)[i];
+                densityInterpolator.fill(ds, this.interpolationEachApplier);
             }
         }
         ++this.cacheOnceUniqueIndex;
     }
 
-    public void sampleStartNoise() {
+    public void sampleStartDensity() {
         if (this.isInInterpolationLoop) {
             throw new IllegalStateException("Staring interpolation twice");
         }
         this.isInInterpolationLoop = true;
         this.sampleUniqueIndex = 0L;
-        this.sampleNoise(true, this.startCellX);
+        this.sampleDensity(true, this.startCellX);
     }
 
-    public void sampleEndNoise(int cellX) {
-        this.sampleNoise(false, this.startCellX + cellX + 1);
-        this.startBlockX = (this.startCellX + cellX) * this.horizontalBlockSize;
+    public void sampleEndDensity(int cellX) {
+        this.sampleDensity(false, this.startCellX + cellX + 1);
+        this.startBlockX = (this.startCellX + cellX) * this.horizontalCellBlockCount;
     }
 
     @Override
-    public ChunkNoiseSampler getPosAt(int i) {
-        int j = Math.floorMod(i, this.horizontalBlockSize);
-        int k = Math.floorDiv(i, this.horizontalBlockSize);
-        int l = Math.floorMod(k, this.horizontalBlockSize);
-        int m = this.verticalBlockSize - 1 - Math.floorDiv(k, this.horizontalBlockSize);
+    public ChunkNoiseSampler at(int i) {
+        int j = Math.floorMod(i, this.horizontalCellBlockCount);
+        int k = Math.floorDiv(i, this.horizontalCellBlockCount);
+        int l = Math.floorMod(k, this.horizontalCellBlockCount);
+        int m = this.verticalCellBlockCount - 1 - Math.floorDiv(k, this.horizontalCellBlockCount);
         this.cellBlockX = l;
         this.cellBlockY = m;
         this.cellBlockZ = j;
@@ -248,14 +248,14 @@ DensityFunction.NoisePos {
     }
 
     @Override
-    public void applyEach(double[] densities, DensityFunction densityFunction) {
+    public void fill(double[] densities, DensityFunction densityFunction) {
         this.index = 0;
-        for (int i = this.verticalBlockSize - 1; i >= 0; --i) {
+        for (int i = this.verticalCellBlockCount - 1; i >= 0; --i) {
             this.cellBlockY = i;
-            for (int j = 0; j < this.horizontalBlockSize; ++j) {
+            for (int j = 0; j < this.horizontalCellBlockCount; ++j) {
                 this.cellBlockX = j;
                 int k = 0;
-                while (k < this.horizontalBlockSize) {
+                while (k < this.horizontalCellBlockCount) {
                     this.cellBlockZ = k++;
                     densities[this.index++] = densityFunction.sample(this);
                 }
@@ -263,33 +263,33 @@ DensityFunction.NoisePos {
         }
     }
 
-    public void sampleNoiseCorners(int cellY, int cellZ) {
-        this.interpolators.forEach(interpolator -> interpolator.sampleNoiseCorners(cellY, cellZ));
-        this.isSamplingNoise = true;
-        this.startBlockY = (cellY + this.minimumCellY) * this.verticalBlockSize;
-        this.startBlockZ = (this.startCellZ + cellZ) * this.horizontalBlockSize;
+    public void onSampledCellCorners(int cellY, int cellZ) {
+        this.interpolators.forEach(interpolator -> interpolator.onSampledCellCorners(cellY, cellZ));
+        this.isSamplingForCaches = true;
+        this.startBlockY = (cellY + this.minimumCellY) * this.verticalCellBlockCount;
+        this.startBlockZ = (this.startCellZ + cellZ) * this.horizontalCellBlockCount;
         ++this.cacheOnceUniqueIndex;
         for (CellCache cellCache : this.caches) {
-            cellCache.delegate.applyEach(cellCache.cache, this);
+            cellCache.delegate.fill(cellCache.cache, this);
         }
         ++this.cacheOnceUniqueIndex;
-        this.isSamplingNoise = false;
+        this.isSamplingForCaches = false;
     }
 
-    public void sampleNoiseY(int blockY, double cellDeltaY) {
+    public void interpolateY(int blockY, double deltaY) {
         this.cellBlockY = blockY - this.startBlockY;
-        this.interpolators.forEach(interpolator -> interpolator.sampleNoiseY(cellDeltaY));
+        this.interpolators.forEach(interpolator -> interpolator.interpolateY(deltaY));
     }
 
-    public void sampleNoiseX(int blockX, double cellDeltaX) {
+    public void interpolateX(int blockX, double deltaX) {
         this.cellBlockX = blockX - this.startBlockX;
-        this.interpolators.forEach(interpolator -> interpolator.sampleNoiseX(cellDeltaX));
+        this.interpolators.forEach(interpolator -> interpolator.interpolateX(deltaX));
     }
 
-    public void sampleNoiseZ(int blockZ, double cellDeltaZ) {
+    public void interpolateZ(int blockZ, double deltaZ) {
         this.cellBlockZ = blockZ - this.startBlockZ;
         ++this.sampleUniqueIndex;
-        this.interpolators.forEach(interpolator -> interpolator.sampleNoiseZ(cellDeltaZ));
+        this.interpolators.forEach(interpolator -> interpolator.interpolateZ(deltaZ));
     }
 
     public void stopInterpolation() {
@@ -300,19 +300,19 @@ DensityFunction.NoisePos {
     }
 
     public void swapBuffers() {
-        this.interpolators.forEach(NoiseInterpolator::swapBuffers);
+        this.interpolators.forEach(DensityInterpolator::swapBuffers);
     }
 
     public AquiferSampler getAquiferSampler() {
         return this.aquiferSampler;
     }
 
-    protected int getHorizontalBlockSize() {
-        return this.horizontalBlockSize;
+    protected int getHorizontalCellBlockCount() {
+        return this.horizontalCellBlockCount;
     }
 
-    protected int getVerticalBlockSize() {
-        return this.verticalBlockSize;
+    protected int getVerticalCellBlockCount() {
+        return this.verticalCellBlockCount;
     }
 
     Blender.BlendResult calculateBlendResult(int blockX, int blockZ) {
@@ -326,60 +326,60 @@ DensityFunction.NoisePos {
         return blendResult;
     }
 
-    protected DensityFunction getActualDensityFunction(DensityFunction densityFunction) {
-        return this.actualDensityFunctionCache.computeIfAbsent(densityFunction, this::getActualDensityFunctionImpl);
+    protected DensityFunction getActualDensityFunction(DensityFunction function) {
+        return this.actualDensityFunctionCache.computeIfAbsent(function, this::getActualDensityFunctionImpl);
     }
 
-    private DensityFunction getActualDensityFunctionImpl(DensityFunction densityFunction) {
-        if (densityFunction instanceof DensityFunctionTypes.Wrapping) {
-            DensityFunctionTypes.Wrapping wrapping = (DensityFunctionTypes.Wrapping)densityFunction;
+    private DensityFunction getActualDensityFunctionImpl(DensityFunction function) {
+        if (function instanceof DensityFunctionTypes.Wrapping) {
+            DensityFunctionTypes.Wrapping wrapping = (DensityFunctionTypes.Wrapping)function;
             return switch (wrapping.type()) {
                 default -> throw new IncompatibleClassChangeError();
-                case DensityFunctionTypes.Wrapping.Type.INTERPOLATED -> new NoiseInterpolator(wrapping.wrapped());
-                case DensityFunctionTypes.Wrapping.Type.FLAT_CACHE -> new FlatCacheDensityFunction(wrapping.wrapped(), true);
+                case DensityFunctionTypes.Wrapping.Type.INTERPOLATED -> new DensityInterpolator(wrapping.wrapped());
+                case DensityFunctionTypes.Wrapping.Type.FLAT_CACHE -> new FlatCache(wrapping.wrapped(), true);
                 case DensityFunctionTypes.Wrapping.Type.CACHE2D -> new Cache2D(wrapping.wrapped());
                 case DensityFunctionTypes.Wrapping.Type.CACHE_ONCE -> new CacheOnce(wrapping.wrapped());
                 case DensityFunctionTypes.Wrapping.Type.CACHE_ALL_IN_CELL -> new CellCache(wrapping.wrapped());
             };
         }
         if (this.blender != Blender.getNoBlending()) {
-            if (densityFunction == DensityFunctionTypes.BlendAlpha.INSTANCE) {
+            if (function == DensityFunctionTypes.BlendAlpha.INSTANCE) {
                 return this.cachedBlendAlphaDensityFunction;
             }
-            if (densityFunction == DensityFunctionTypes.BlendOffset.INSTANCE) {
+            if (function == DensityFunctionTypes.BlendOffset.INSTANCE) {
                 return this.cachedBlendOffsetDensityFunction;
             }
         }
-        if (densityFunction == DensityFunctionTypes.Beardifier.INSTANCE) {
+        if (function == DensityFunctionTypes.Beardifier.INSTANCE) {
             return this.beardifying;
         }
-        if (densityFunction instanceof DensityFunctionTypes.RegistryEntryHolder) {
-            DensityFunctionTypes.RegistryEntryHolder registryEntryHolder = (DensityFunctionTypes.RegistryEntryHolder)densityFunction;
+        if (function instanceof DensityFunctionTypes.RegistryEntryHolder) {
+            DensityFunctionTypes.RegistryEntryHolder registryEntryHolder = (DensityFunctionTypes.RegistryEntryHolder)function;
             return registryEntryHolder.function().value();
         }
-        return densityFunction;
+        return function;
     }
 
     @Override
-    public /* synthetic */ DensityFunction.NoisePos getPosAt(int index) {
-        return this.getPosAt(index);
+    public /* synthetic */ DensityFunction.NoisePos at(int index) {
+        return this.at(index);
     }
 
-    class FlatCacheDensityFunction
+    class FlatCache
     implements DensityFunctionTypes.Wrapper,
     ParentedNoiseType {
         private final DensityFunction delegate;
         final double[][] cache;
 
-        FlatCacheDensityFunction(DensityFunction delegate, boolean sample) {
+        FlatCache(DensityFunction delegate, boolean sample) {
             this.delegate = delegate;
-            this.cache = new double[ChunkNoiseSampler.this.biomeHorizontalEnd + 1][ChunkNoiseSampler.this.biomeHorizontalEnd + 1];
+            this.cache = new double[ChunkNoiseSampler.this.horizontalBiomeEnd + 1][ChunkNoiseSampler.this.horizontalBiomeEnd + 1];
             if (sample) {
-                for (int i = 0; i <= ChunkNoiseSampler.this.biomeHorizontalEnd; ++i) {
-                    int j = ChunkNoiseSampler.this.biomeX + i;
+                for (int i = 0; i <= ChunkNoiseSampler.this.horizontalBiomeEnd; ++i) {
+                    int j = ChunkNoiseSampler.this.startBiomeX + i;
                     int k = BiomeCoords.toBlock(j);
-                    for (int l = 0; l <= ChunkNoiseSampler.this.biomeHorizontalEnd; ++l) {
-                        int m = ChunkNoiseSampler.this.biomeZ + l;
+                    for (int l = 0; l <= ChunkNoiseSampler.this.horizontalBiomeEnd; ++l) {
+                        int m = ChunkNoiseSampler.this.startBiomeZ + l;
                         int n = BiomeCoords.toBlock(m);
                         this.cache[i][l] = delegate.sample(new DensityFunction.UnblendedNoisePos(k, 0, n));
                     }
@@ -391,8 +391,8 @@ DensityFunction.NoisePos {
         public double sample(DensityFunction.NoisePos pos) {
             int i = BiomeCoords.fromBlock(pos.blockX());
             int j = BiomeCoords.fromBlock(pos.blockZ());
-            int k = i - ChunkNoiseSampler.this.biomeX;
-            int l = j - ChunkNoiseSampler.this.biomeZ;
+            int k = i - ChunkNoiseSampler.this.startBiomeX;
+            int l = j - ChunkNoiseSampler.this.startBiomeZ;
             int m = this.cache.length;
             if (k >= 0 && l >= 0 && k < m && l < m) {
                 return this.cache[k][l];
@@ -401,8 +401,8 @@ DensityFunction.NoisePos {
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
-            applier.applyEach(densities, this);
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
+            applier.fill(densities, this);
         }
 
         @Override
@@ -437,8 +437,8 @@ DensityFunction.NoisePos {
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
-            applier.applyEach(densities, this);
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
+            applier.fill(densities, this);
         }
 
         @Override
@@ -478,8 +478,8 @@ DensityFunction.NoisePos {
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
-            applier.applyEach(densities, this);
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
+            applier.fill(densities, this);
         }
 
         @Override
@@ -504,12 +504,12 @@ DensityFunction.NoisePos {
         public BlockState sample(DensityFunction.NoisePos var1);
     }
 
-    public class NoiseInterpolator
+    public class DensityInterpolator
     implements DensityFunctionTypes.Wrapper,
     ParentedNoiseType {
-        double[][] startNoiseBuffer;
-        double[][] endNoiseBuffer;
-        private final DensityFunction columnSampler;
+        double[][] startDensityBuffer;
+        double[][] endDensityBuffer;
+        private final DensityFunction delegate;
         private double x0y0z0;
         private double x0y0z1;
         private double x1y0z0;
@@ -526,10 +526,10 @@ DensityFunction.NoisePos {
         private double z1;
         private double result;
 
-        NoiseInterpolator(DensityFunction columnSampler) {
-            this.columnSampler = columnSampler;
-            this.startNoiseBuffer = this.createBuffer(ChunkNoiseSampler.this.cellHeight, ChunkNoiseSampler.this.horizontalCellCount);
-            this.endNoiseBuffer = this.createBuffer(ChunkNoiseSampler.this.cellHeight, ChunkNoiseSampler.this.horizontalCellCount);
+        DensityInterpolator(DensityFunction delegate) {
+            this.delegate = delegate;
+            this.startDensityBuffer = this.createBuffer(ChunkNoiseSampler.this.verticalCellCount, ChunkNoiseSampler.this.horizontalCellCount);
+            this.endDensityBuffer = this.createBuffer(ChunkNoiseSampler.this.verticalCellCount, ChunkNoiseSampler.this.horizontalCellCount);
             ChunkNoiseSampler.this.interpolators.add(this);
         }
 
@@ -543,65 +543,65 @@ DensityFunction.NoisePos {
             return ds;
         }
 
-        void sampleNoiseCorners(int noiseY, int noiseZ) {
-            this.x0y0z0 = this.startNoiseBuffer[noiseZ][noiseY];
-            this.x0y0z1 = this.startNoiseBuffer[noiseZ + 1][noiseY];
-            this.x1y0z0 = this.endNoiseBuffer[noiseZ][noiseY];
-            this.x1y0z1 = this.endNoiseBuffer[noiseZ + 1][noiseY];
-            this.x0y1z0 = this.startNoiseBuffer[noiseZ][noiseY + 1];
-            this.x0y1z1 = this.startNoiseBuffer[noiseZ + 1][noiseY + 1];
-            this.x1y1z0 = this.endNoiseBuffer[noiseZ][noiseY + 1];
-            this.x1y1z1 = this.endNoiseBuffer[noiseZ + 1][noiseY + 1];
+        void onSampledCellCorners(int cellY, int cellZ) {
+            this.x0y0z0 = this.startDensityBuffer[cellZ][cellY];
+            this.x0y0z1 = this.startDensityBuffer[cellZ + 1][cellY];
+            this.x1y0z0 = this.endDensityBuffer[cellZ][cellY];
+            this.x1y0z1 = this.endDensityBuffer[cellZ + 1][cellY];
+            this.x0y1z0 = this.startDensityBuffer[cellZ][cellY + 1];
+            this.x0y1z1 = this.startDensityBuffer[cellZ + 1][cellY + 1];
+            this.x1y1z0 = this.endDensityBuffer[cellZ][cellY + 1];
+            this.x1y1z1 = this.endDensityBuffer[cellZ + 1][cellY + 1];
         }
 
-        void sampleNoiseY(double deltaY) {
+        void interpolateY(double deltaY) {
             this.x0z0 = MathHelper.lerp(deltaY, this.x0y0z0, this.x0y1z0);
             this.x1z0 = MathHelper.lerp(deltaY, this.x1y0z0, this.x1y1z0);
             this.x0z1 = MathHelper.lerp(deltaY, this.x0y0z1, this.x0y1z1);
             this.x1z1 = MathHelper.lerp(deltaY, this.x1y0z1, this.x1y1z1);
         }
 
-        void sampleNoiseX(double deltaX) {
+        void interpolateX(double deltaX) {
             this.z0 = MathHelper.lerp(deltaX, this.x0z0, this.x1z0);
             this.z1 = MathHelper.lerp(deltaX, this.x0z1, this.x1z1);
         }
 
-        void sampleNoiseZ(double deltaZ) {
+        void interpolateZ(double deltaZ) {
             this.result = MathHelper.lerp(deltaZ, this.z0, this.z1);
         }
 
         @Override
         public double sample(DensityFunction.NoisePos pos) {
             if (pos != ChunkNoiseSampler.this) {
-                return this.columnSampler.sample(pos);
+                return this.delegate.sample(pos);
             }
             if (!ChunkNoiseSampler.this.isInInterpolationLoop) {
                 throw new IllegalStateException("Trying to sample interpolator outside the interpolation loop");
             }
-            if (ChunkNoiseSampler.this.isSamplingNoise) {
-                return MathHelper.lerp3((double)ChunkNoiseSampler.this.cellBlockX / (double)ChunkNoiseSampler.this.horizontalBlockSize, (double)ChunkNoiseSampler.this.cellBlockY / (double)ChunkNoiseSampler.this.verticalBlockSize, (double)ChunkNoiseSampler.this.cellBlockZ / (double)ChunkNoiseSampler.this.horizontalBlockSize, this.x0y0z0, this.x1y0z0, this.x0y1z0, this.x1y1z0, this.x0y0z1, this.x1y0z1, this.x0y1z1, this.x1y1z1);
+            if (ChunkNoiseSampler.this.isSamplingForCaches) {
+                return MathHelper.lerp3((double)ChunkNoiseSampler.this.cellBlockX / (double)ChunkNoiseSampler.this.horizontalCellBlockCount, (double)ChunkNoiseSampler.this.cellBlockY / (double)ChunkNoiseSampler.this.verticalCellBlockCount, (double)ChunkNoiseSampler.this.cellBlockZ / (double)ChunkNoiseSampler.this.horizontalCellBlockCount, this.x0y0z0, this.x1y0z0, this.x0y1z0, this.x1y1z0, this.x0y0z1, this.x1y0z1, this.x0y1z1, this.x1y1z1);
             }
             return this.result;
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
-            if (ChunkNoiseSampler.this.isSamplingNoise) {
-                applier.applyEach(densities, this);
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
+            if (ChunkNoiseSampler.this.isSamplingForCaches) {
+                applier.fill(densities, this);
                 return;
             }
-            this.wrapped().applyEach(densities, applier);
+            this.wrapped().fill(densities, applier);
         }
 
         @Override
         public DensityFunction wrapped() {
-            return this.columnSampler;
+            return this.delegate;
         }
 
         private void swapBuffers() {
-            double[][] ds = this.startNoiseBuffer;
-            this.startNoiseBuffer = this.endNoiseBuffer;
-            this.endNoiseBuffer = ds;
+            double[][] ds = this.startDensityBuffer;
+            this.startDensityBuffer = this.endDensityBuffer;
+            this.endDensityBuffer = ds;
         }
 
         @Override
@@ -618,7 +618,7 @@ DensityFunction.NoisePos {
 
         CellCache(DensityFunction delegate) {
             this.delegate = delegate;
-            this.cache = new double[ChunkNoiseSampler.this.horizontalBlockSize * ChunkNoiseSampler.this.horizontalBlockSize * ChunkNoiseSampler.this.verticalBlockSize];
+            this.cache = new double[ChunkNoiseSampler.this.horizontalCellBlockCount * ChunkNoiseSampler.this.horizontalCellBlockCount * ChunkNoiseSampler.this.verticalCellBlockCount];
             ChunkNoiseSampler.this.caches.add(this);
         }
 
@@ -633,15 +633,15 @@ DensityFunction.NoisePos {
             int i = ChunkNoiseSampler.this.cellBlockX;
             int j = ChunkNoiseSampler.this.cellBlockY;
             int k = ChunkNoiseSampler.this.cellBlockZ;
-            if (i >= 0 && j >= 0 && k >= 0 && i < ChunkNoiseSampler.this.horizontalBlockSize && j < ChunkNoiseSampler.this.verticalBlockSize && k < ChunkNoiseSampler.this.horizontalBlockSize) {
-                return this.cache[((ChunkNoiseSampler.this.verticalBlockSize - 1 - j) * ChunkNoiseSampler.this.horizontalBlockSize + i) * ChunkNoiseSampler.this.horizontalBlockSize + k];
+            if (i >= 0 && j >= 0 && k >= 0 && i < ChunkNoiseSampler.this.horizontalCellBlockCount && j < ChunkNoiseSampler.this.verticalCellBlockCount && k < ChunkNoiseSampler.this.horizontalCellBlockCount) {
+                return this.cache[((ChunkNoiseSampler.this.verticalCellBlockCount - 1 - j) * ChunkNoiseSampler.this.horizontalCellBlockCount + i) * ChunkNoiseSampler.this.horizontalCellBlockCount + k];
             }
             return this.delegate.sample(pos);
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
-            applier.applyEach(densities, this);
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
+            applier.fill(densities, this);
         }
 
         @Override
@@ -681,8 +681,8 @@ DensityFunction.NoisePos {
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
-            this.delegate.applyEach(densities, applier);
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
+            this.delegate.fill(densities, applier);
         }
 
         @Override
@@ -728,12 +728,12 @@ DensityFunction.NoisePos {
         }
 
         @Override
-        public void applyEach(double[] densities, DensityFunction.EachApplier applier) {
+        public void fill(double[] densities, DensityFunction.EachApplier applier) {
             if (this.cache != null && this.cacheOnceUniqueIndex == ChunkNoiseSampler.this.cacheOnceUniqueIndex) {
                 System.arraycopy(this.cache, 0, densities, 0, densities.length);
                 return;
             }
-            this.wrapped().applyEach(densities, applier);
+            this.wrapped().fill(densities, applier);
             if (this.cache != null && this.cache.length == densities.length) {
                 System.arraycopy(densities, 0, this.cache, 0, densities.length);
             } else {

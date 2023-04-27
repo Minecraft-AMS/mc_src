@@ -40,7 +40,7 @@ implements Fertilizable {
     private final GourdBlock gourdBlock;
     private final Supplier<Item> pickBlockItem;
 
-    protected StemBlock(GourdBlock gourdBlock, Supplier<Item> pickBlockItem, AbstractBlock.Settings settings) {
+    public StemBlock(GourdBlock gourdBlock, Supplier<Item> pickBlockItem, AbstractBlock.Settings settings) {
         super(settings);
         this.gourdBlock = gourdBlock;
         this.pickBlockItem = pickBlockItem;

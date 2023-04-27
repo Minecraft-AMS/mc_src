@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -111,8 +110,7 @@ implements ChunkDataAccess<Entity> {
                 nbtList.add(nbtCompound);
             }
         });
-        NbtCompound nbtCompound = new NbtCompound();
-        nbtCompound.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
+        NbtCompound nbtCompound = NbtHelper.putDataVersion(new NbtCompound());
         nbtCompound.put(ENTITIES_KEY, nbtList);
         EntityChunkDataAccess.putChunkPos(nbtCompound, chunkPos);
         this.dataLoadWorker.setResult(chunkPos, nbtCompound).exceptionally(ex -> {
@@ -129,12 +127,8 @@ implements ChunkDataAccess<Entity> {
     }
 
     private NbtCompound fixChunkData(NbtCompound chunkNbt) {
-        int i = EntityChunkDataAccess.getChunkDataVersion(chunkNbt);
-        return NbtHelper.update(this.dataFixer, DataFixTypes.ENTITY_CHUNK, chunkNbt, i);
-    }
-
-    public static int getChunkDataVersion(NbtCompound chunkNbt) {
-        return chunkNbt.contains("DataVersion", 99) ? chunkNbt.getInt("DataVersion") : -1;
+        int i = NbtHelper.getDataVersion(chunkNbt, -1);
+        return DataFixTypes.ENTITY_CHUNK.update(this.dataFixer, chunkNbt, i);
     }
 
     @Override

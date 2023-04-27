@@ -60,7 +60,7 @@ implements ClampedModelPredicateProvider {
         if (this.aimlessInterpolator.shouldUpdate(time)) {
             this.aimlessInterpolator.update(time, Math.random());
         }
-        double d = this.aimlessInterpolator.value + (double)((float)this.scatter(seed) / 2.1474836E9f);
+        double d = this.aimlessInterpolator.value + (double)((float)this.scatter(seed) / 2.14748365E9f);
         return MathHelper.floorMod((float)d, 1.0f);
     }
 

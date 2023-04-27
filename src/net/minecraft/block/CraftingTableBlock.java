@@ -23,7 +23,7 @@ public class CraftingTableBlock
 extends Block {
     private static final Text TITLE = Text.translatable("container.crafting");
 
-    protected CraftingTableBlock(AbstractBlock.Settings settings) {
+    public CraftingTableBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 

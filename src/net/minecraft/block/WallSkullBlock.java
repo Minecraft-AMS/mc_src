@@ -33,7 +33,7 @@ extends AbstractSkullBlock {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     private static final Map<Direction, VoxelShape> FACING_TO_SHAPE = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)Block.createCuboidShape(4.0, 4.0, 8.0, 12.0, 12.0, 16.0), (Object)Direction.SOUTH, (Object)Block.createCuboidShape(4.0, 4.0, 0.0, 12.0, 12.0, 8.0), (Object)Direction.EAST, (Object)Block.createCuboidShape(0.0, 4.0, 4.0, 8.0, 12.0, 12.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(8.0, 4.0, 4.0, 16.0, 12.0, 12.0)));
 
-    protected WallSkullBlock(SkullBlock.SkullType skullType, AbstractBlock.Settings settings) {
+    public WallSkullBlock(SkullBlock.SkullType skullType, AbstractBlock.Settings settings) {
         super(skullType, settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH));
     }

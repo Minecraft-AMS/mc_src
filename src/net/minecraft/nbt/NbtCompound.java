@@ -58,7 +58,7 @@ implements NbtElement {
         if (nbtElement instanceof NbtCompound) {
             return DataResult.success((Object)((NbtCompound)nbtElement));
         }
-        return DataResult.error((String)("Not a compound tag: " + nbtElement));
+        return DataResult.error(() -> "Not a compound tag: " + nbtElement);
     }, nbt -> new Dynamic((DynamicOps)NbtOps.INSTANCE, nbt));
     private static final int SIZE = 48;
     private static final int field_41719 = 32;

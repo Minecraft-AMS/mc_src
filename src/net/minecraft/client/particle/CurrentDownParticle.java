@@ -16,6 +16,7 @@ import net.minecraft.client.particle.SpriteBillboardParticle;
 import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.ParticleEffect;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -57,7 +58,7 @@ extends SpriteBillboardParticle {
         this.velocityX *= 0.07;
         this.velocityZ *= 0.07;
         this.move(this.velocityX, this.velocityY, this.velocityZ);
-        if (!this.world.getFluidState(new BlockPos(this.x, this.y, this.z)).isIn(FluidTags.WATER) || this.onGround) {
+        if (!this.world.getFluidState(BlockPos.ofFloored(this.x, this.y, this.z)).isIn(FluidTags.WATER) || this.onGround) {
             this.markDead();
         }
         this.accelerationAngle += 0.08f;
@@ -77,6 +78,11 @@ extends SpriteBillboardParticle {
             CurrentDownParticle currentDownParticle = new CurrentDownParticle(clientWorld, d, e, f);
             currentDownParticle.setSprite(this.spriteProvider);
             return currentDownParticle;
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
         }
     }
 }

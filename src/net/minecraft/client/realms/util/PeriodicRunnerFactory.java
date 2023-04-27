@@ -106,7 +106,7 @@ public class PeriodicRunnerFactory {
             }
         }
 
-        void reset() {
+        public void reset() {
             this.resultFuture = null;
             this.lastResult = null;
             this.nextTime = -1L;

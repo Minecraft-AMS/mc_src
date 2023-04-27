@@ -20,7 +20,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.registry.RegistryKeys;
@@ -206,7 +206,7 @@ extends EndPortalBlockEntity {
         WorldChunk worldChunk = EndGatewayBlockEntity.getChunk(world, vec3d);
         BlockPos blockPos = EndGatewayBlockEntity.findPortalPosition(worldChunk);
         if (blockPos == null) {
-            BlockPos blockPos2 = new BlockPos(vec3d.x + 0.5, 75.0, vec3d.z + 0.5);
+            BlockPos blockPos2 = BlockPos.ofFloored(vec3d.x + 0.5, 75.0, vec3d.z + 0.5);
             LOGGER.debug("Failed to find a suitable block to teleport to, spawning an island on {}", (Object)blockPos2);
             world.getRegistryManager().getOptional(RegistryKeys.CONFIGURED_FEATURE).flatMap(registry -> registry.getEntry(EndConfiguredFeatures.END_ISLAND)).ifPresent(reference -> ((ConfiguredFeature)reference.value()).generate(world, world.getChunkManager().getChunkGenerator(), Random.create(blockPos2.asLong()), blockPos2));
             blockPos = blockPos2;

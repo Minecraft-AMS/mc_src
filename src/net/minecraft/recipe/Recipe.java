@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.RecipeType;
+import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.world.World;
@@ -17,11 +18,11 @@ import net.minecraft.world.World;
 public interface Recipe<C extends Inventory> {
     public boolean matches(C var1, World var2);
 
-    public ItemStack craft(C var1);
+    public ItemStack craft(C var1, DynamicRegistryManager var2);
 
     public boolean fits(int var1, int var2);
 
-    public ItemStack getOutput();
+    public ItemStack getOutput(DynamicRegistryManager var1);
 
     default public DefaultedList<ItemStack> getRemainder(C inventory) {
         DefaultedList<ItemStack> defaultedList = DefaultedList.ofSize(inventory.size(), ItemStack.EMPTY);
@@ -39,6 +40,10 @@ public interface Recipe<C extends Inventory> {
 
     default public boolean isIgnoredInRecipeBook() {
         return false;
+    }
+
+    default public boolean showNotification() {
+        return true;
     }
 
     default public String getGroup() {
