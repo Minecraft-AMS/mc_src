@@ -45,13 +45,13 @@ extends CompositeEntityModel<BoatEntity> {
     }
 
     public static void addParts(ModelPartData modelPartData) {
-        modelPartData.addChild(BOTTOM, ModelPartBuilder.create().uv(0, 0).cuboid(-14.0f, -11.0f, -4.0f, 28.0f, 20.0f, 4.0f).uv(0, 0).cuboid(-14.0f, -9.0f, -8.0f, 28.0f, 16.0f, 4.0f), ModelTransform.of(0.0f, -3.0f, 1.0f, 1.5708f, 0.0f, 0.0f));
+        modelPartData.addChild(BOTTOM, ModelPartBuilder.create().uv(0, 0).cuboid(-14.0f, -11.0f, -4.0f, 28.0f, 20.0f, 4.0f).uv(0, 0).cuboid(-14.0f, -9.0f, -8.0f, 28.0f, 16.0f, 4.0f), ModelTransform.of(0.0f, -2.0f, 1.0f, 1.5708f, 0.0f, 0.0f));
         int i = 20;
         int j = 7;
         int k = 6;
         float f = -5.0f;
-        modelPartData.addChild(LEFT_PADDLE, ModelPartBuilder.create().uv(0, 24).cuboid(-1.0f, 0.0f, -5.0f, 2.0f, 2.0f, 18.0f).cuboid(-1.001f, -3.0f, 8.0f, 1.0f, 6.0f, 7.0f), ModelTransform.of(3.0f, -5.0f, 9.0f, 0.0f, 0.0f, 0.19634955f));
-        modelPartData.addChild(RIGHT_PADDLE, ModelPartBuilder.create().uv(40, 24).cuboid(-1.0f, 0.0f, -5.0f, 2.0f, 2.0f, 18.0f).cuboid(0.001f, -3.0f, 8.0f, 1.0f, 6.0f, 7.0f), ModelTransform.of(3.0f, -5.0f, -9.0f, 0.0f, (float)Math.PI, 0.19634955f));
+        modelPartData.addChild(LEFT_PADDLE, ModelPartBuilder.create().uv(0, 24).cuboid(-1.0f, 0.0f, -5.0f, 2.0f, 2.0f, 18.0f).cuboid(-1.001f, -3.0f, 8.0f, 1.0f, 6.0f, 7.0f), ModelTransform.of(3.0f, -4.0f, 9.0f, 0.0f, 0.0f, 0.19634955f));
+        modelPartData.addChild(RIGHT_PADDLE, ModelPartBuilder.create().uv(40, 24).cuboid(-1.0f, 0.0f, -5.0f, 2.0f, 2.0f, 18.0f).cuboid(0.001f, -3.0f, 8.0f, 1.0f, 6.0f, 7.0f), ModelTransform.of(3.0f, -4.0f, -9.0f, 0.0f, (float)Math.PI, 0.19634955f));
     }
 
     public static TexturedModelData getTexturedModelData() {

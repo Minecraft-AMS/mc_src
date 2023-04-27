@@ -13,6 +13,8 @@ import java.util.Optional;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.brain.EntityLookTarget;
+import net.minecraft.entity.ai.brain.LookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -70,8 +72,9 @@ extends MultiTickTask<MobEntity> {
             return false;
         }
         Optional<WalkTarget> optional = mobEntity.getBrain().getOptionalRegisteredMemory(MemoryModuleType.WALK_TARGET);
+        boolean bl = optional.map(WanderAroundTask::isTargetSpectator).orElse(false);
         EntityNavigation entityNavigation = mobEntity.getNavigation();
-        return !entityNavigation.isIdle() && optional.isPresent() && !this.hasReached(mobEntity, optional.get());
+        return !entityNavigation.isIdle() && optional.isPresent() && !this.hasReached(mobEntity, optional.get()) && !bl;
     }
 
     @Override
@@ -138,6 +141,15 @@ extends MultiTickTask<MobEntity> {
 
     private boolean hasReached(MobEntity entity, WalkTarget walkTarget) {
         return walkTarget.getLookTarget().getBlockPos().getManhattanDistance(entity.getBlockPos()) <= walkTarget.getCompletionRange();
+    }
+
+    private static boolean isTargetSpectator(WalkTarget target) {
+        LookTarget lookTarget = target.getLookTarget();
+        if (lookTarget instanceof EntityLookTarget) {
+            EntityLookTarget entityLookTarget = (EntityLookTarget)lookTarget;
+            return entityLookTarget.getEntity().isSpectator();
+        }
+        return false;
     }
 
     @Override

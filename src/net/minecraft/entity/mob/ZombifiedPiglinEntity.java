@@ -113,7 +113,7 @@ implements Angerable {
         } else if (entityAttributeInstance.hasModifier(ATTACKING_SPEED_BOOST)) {
             entityAttributeInstance.removeModifier(ATTACKING_SPEED_BOOST);
         }
-        this.tickAngerLogic((ServerWorld)this.world, true);
+        this.tickAngerLogic((ServerWorld)this.getWorld(), true);
         if (this.getTarget() != null) {
             this.tickAngerPassing();
         }
@@ -146,7 +146,7 @@ implements Angerable {
     private void angerNearbyZombifiedPiglins() {
         double d = this.getAttributeValue(EntityAttributes.GENERIC_FOLLOW_RANGE);
         Box box = Box.from(this.getPos()).expand(d, 10.0, d);
-        this.world.getEntitiesByClass(ZombifiedPiglinEntity.class, box, EntityPredicates.EXCEPT_SPECTATOR).stream().filter(zombifiedPiglin -> zombifiedPiglin != this).filter(zombifiedPiglin -> zombifiedPiglin.getTarget() == null).filter(zombifiedPiglin -> !zombifiedPiglin.isTeammate(this.getTarget())).forEach(zombifiedPiglin -> zombifiedPiglin.setTarget(this.getTarget()));
+        this.getWorld().getEntitiesByClass(ZombifiedPiglinEntity.class, box, EntityPredicates.EXCEPT_SPECTATOR).stream().filter(zombifiedPiglin -> zombifiedPiglin != this).filter(zombifiedPiglin -> zombifiedPiglin.getTarget() == null).filter(zombifiedPiglin -> !zombifiedPiglin.isTeammate(this.getTarget())).forEach(zombifiedPiglin -> zombifiedPiglin.setTarget(this.getTarget()));
     }
 
     private void playAngrySound() {
@@ -188,7 +188,7 @@ implements Angerable {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.readAngerFromNbt(this.world, nbt);
+        this.readAngerFromNbt(this.getWorld(), nbt);
     }
 
     @Override

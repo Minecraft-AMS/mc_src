@@ -40,12 +40,13 @@ import org.slf4j.Logger;
 public class ServerLightingProvider
 extends LightingProvider
 implements AutoCloseable {
+    public static final int field_44692 = 1000;
     private static final Logger LOGGER = LogUtils.getLogger();
     private final TaskExecutor<Runnable> processor;
     private final ObjectList<Pair<Stage, Runnable>> pendingTasks = new ObjectArrayList();
     private final ThreadedAnvilChunkStorage chunkStorage;
     private final MessageListener<ChunkTaskPrioritySystem.Task<Runnable>> executor;
-    private volatile int taskBatchSize = 5;
+    private final int taskBatchSize = 1000;
     private final AtomicBoolean ticking = new AtomicBoolean();
 
     public ServerLightingProvider(ChunkProvider chunkProvider, ThreadedAnvilChunkStorage chunkStorage, boolean hasBlockLight, TaskExecutor<Runnable> processor, MessageListener<ChunkTaskPrioritySystem.Task<Runnable>> executor) {
@@ -60,12 +61,7 @@ implements AutoCloseable {
     }
 
     @Override
-    public int doLightUpdates(int i, boolean doSkylight, boolean skipEdgeLightPropagation) {
-        throw Util.throwOrPause(new UnsupportedOperationException("Ran automatically on a different thread!"));
-    }
-
-    @Override
-    public void addLightSource(BlockPos pos, int level) {
+    public int doLightUpdates() {
         throw Util.throwOrPause(new UnsupportedOperationException("Ran automatically on a different thread!"));
     }
 
@@ -81,8 +77,8 @@ implements AutoCloseable {
             super.setRetainData(pos, false);
             super.setColumnEnabled(pos, false);
             for (i = this.getBottomY(); i < this.getTopY(); ++i) {
-                super.enqueueSectionData(LightType.BLOCK, ChunkSectionPos.from(pos, i), null, true);
-                super.enqueueSectionData(LightType.SKY, ChunkSectionPos.from(pos, i), null, true);
+                super.enqueueSectionData(LightType.BLOCK, ChunkSectionPos.from(pos, i), null);
+                super.enqueueSectionData(LightType.SKY, ChunkSectionPos.from(pos, i), null);
             }
             for (i = this.world.getBottomSectionCoord(); i < this.world.getTopSectionCoord(); ++i) {
                 super.setSectionStatus(ChunkSectionPos.from(pos, i), true);
@@ -96,13 +92,18 @@ implements AutoCloseable {
     }
 
     @Override
+    public void propagateLight(ChunkPos chunkPos) {
+        this.enqueue(chunkPos.x, chunkPos.z, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.propagateLight(chunkPos), () -> "propagateLight " + chunkPos));
+    }
+
+    @Override
     public void setColumnEnabled(ChunkPos pos, boolean retainData) {
         this.enqueue(pos.x, pos.z, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.setColumnEnabled(pos, retainData), () -> "enableLight " + pos + " " + retainData));
     }
 
     @Override
-    public void enqueueSectionData(LightType lightType, ChunkSectionPos pos, @Nullable ChunkNibbleArray nibbles, boolean nonEdge) {
-        this.enqueue(pos.getSectionX(), pos.getSectionZ(), () -> 0, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.enqueueSectionData(lightType, pos, nibbles, nonEdge), () -> "queueData " + pos));
+    public void enqueueSectionData(LightType lightType, ChunkSectionPos pos, @Nullable ChunkNibbleArray nibbles) {
+        this.enqueue(pos.getSectionX(), pos.getSectionZ(), () -> 0, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.enqueueSectionData(lightType, pos, nibbles), () -> "queueData " + pos));
     }
 
     private void enqueue(int x, int z, Stage stage, Runnable task) {
@@ -112,7 +113,7 @@ implements AutoCloseable {
     private void enqueue(int x, int z, IntSupplier completedLevelSupplier, Stage stage, Runnable task) {
         this.executor.send(ChunkTaskPrioritySystem.createMessage(() -> {
             this.pendingTasks.add((Object)Pair.of((Object)((Object)stage), (Object)task));
-            if (this.pendingTasks.size() >= this.taskBatchSize) {
+            if (this.pendingTasks.size() >= 1000) {
                 this.runTasks();
             }
         }, ChunkPos.toLong(x, z), completedLevelSupplier));
@@ -123,17 +124,8 @@ implements AutoCloseable {
         this.enqueue(pos.x, pos.z, () -> 0, Stage.PRE_UPDATE, Util.debugRunnable(() -> super.setRetainData(pos, retainData), () -> "retainData " + pos));
     }
 
-    public CompletableFuture<Chunk> retainData(Chunk chunk) {
+    public CompletableFuture<Chunk> initializeLight(Chunk chunk, boolean bl) {
         ChunkPos chunkPos = chunk.getPos();
-        return CompletableFuture.supplyAsync(Util.debugSupplier(() -> {
-            super.setRetainData(chunkPos, true);
-            return chunk;
-        }, () -> "retainData: " + chunkPos), task -> this.enqueue(chunkPos.x, chunkPos.z, Stage.PRE_UPDATE, task));
-    }
-
-    public CompletableFuture<Chunk> light(Chunk chunk, boolean excludeBlocks) {
-        ChunkPos chunkPos = chunk.getPos();
-        chunk.setLightOn(false);
         this.enqueue(chunkPos.x, chunkPos.z, Stage.PRE_UPDATE, Util.debugRunnable(() -> {
             ChunkSection[] chunkSections = chunk.getSectionArray();
             for (int i = 0; i < chunk.countVerticalSections(); ++i) {
@@ -142,17 +134,27 @@ implements AutoCloseable {
                 int j = this.world.sectionIndexToCoord(i);
                 super.setSectionStatus(ChunkSectionPos.from(chunkPos, j), false);
             }
-            super.setColumnEnabled(chunkPos, true);
+        }, () -> "initializeLight: " + chunkPos));
+        return CompletableFuture.supplyAsync(() -> {
+            super.setColumnEnabled(chunkPos, bl);
+            super.setRetainData(chunkPos, false);
+            return chunk;
+        }, task -> this.enqueue(chunkPos.x, chunkPos.z, Stage.POST_UPDATE, task));
+    }
+
+    public CompletableFuture<Chunk> light(Chunk chunk, boolean excludeBlocks) {
+        ChunkPos chunkPos = chunk.getPos();
+        chunk.setLightOn(false);
+        this.enqueue(chunkPos.x, chunkPos.z, Stage.PRE_UPDATE, Util.debugRunnable(() -> {
             if (!excludeBlocks) {
-                chunk.getLightSourcesStream().forEach(pos -> super.addLightSource((BlockPos)pos, chunk.getLuminance((BlockPos)pos)));
+                super.propagateLight(chunkPos);
             }
         }, () -> "lightChunk " + chunkPos + " " + excludeBlocks));
         return CompletableFuture.supplyAsync(() -> {
             chunk.setLightOn(true);
-            super.setRetainData(chunkPos, false);
             this.chunkStorage.releaseLightTicket(chunkPos);
             return chunk;
-        }, runnable -> this.enqueue(chunkPos.x, chunkPos.z, Stage.POST_UPDATE, runnable));
+        }, task -> this.enqueue(chunkPos.x, chunkPos.z, Stage.POST_UPDATE, task));
     }
 
     public void tick() {
@@ -167,7 +169,7 @@ implements AutoCloseable {
     private void runTasks() {
         Pair pair;
         int j;
-        int i = Math.min(this.pendingTasks.size(), this.taskBatchSize);
+        int i = Math.min(this.pendingTasks.size(), 1000);
         ObjectListIterator objectListIterator = this.pendingTasks.iterator();
         for (j = 0; objectListIterator.hasNext() && j < i; ++j) {
             pair = (Pair)objectListIterator.next();
@@ -175,7 +177,7 @@ implements AutoCloseable {
             ((Runnable)pair.getSecond()).run();
         }
         objectListIterator.back(j);
-        super.doLightUpdates(Integer.MAX_VALUE, true, true);
+        super.doLightUpdates();
         for (j = 0; objectListIterator.hasNext() && j < i; ++j) {
             pair = (Pair)objectListIterator.next();
             if (pair.getFirst() == Stage.POST_UPDATE) {
@@ -183,10 +185,6 @@ implements AutoCloseable {
             }
             objectListIterator.remove();
         }
-    }
-
-    public void setTaskBatchSize(int taskBatchSize) {
-        this.taskBatchSize = taskBatchSize;
     }
 
     static final class Stage

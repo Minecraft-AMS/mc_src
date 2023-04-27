@@ -68,8 +68,8 @@ extends MultiTickTask<VillagerEntity> {
             DyeColor dyeColor = Util.getRandom(DyeColor.values(), random);
             int i = random.nextInt(3);
             ItemStack itemStack = this.createFirework(dyeColor, i);
-            FireworkRocketEntity fireworkRocketEntity = new FireworkRocketEntity(villagerEntity.world, villagerEntity, villagerEntity.getX(), villagerEntity.getEyeY(), villagerEntity.getZ(), itemStack);
-            villagerEntity.world.spawnEntity(fireworkRocketEntity);
+            FireworkRocketEntity fireworkRocketEntity = new FireworkRocketEntity(villagerEntity.getWorld(), villagerEntity, villagerEntity.getX(), villagerEntity.getEyeY(), villagerEntity.getZ(), itemStack);
+            villagerEntity.getWorld().spawnEntity(fireworkRocketEntity);
         }
     }
 

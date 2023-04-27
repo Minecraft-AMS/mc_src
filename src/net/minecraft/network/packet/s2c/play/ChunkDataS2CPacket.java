@@ -24,12 +24,12 @@ implements Packet<ClientPlayPacketListener> {
     private final ChunkData chunkData;
     private final LightData lightData;
 
-    public ChunkDataS2CPacket(WorldChunk chunk, LightingProvider lightProvider, @Nullable BitSet skyBits, @Nullable BitSet blockBits, boolean nonEdge) {
+    public ChunkDataS2CPacket(WorldChunk chunk, LightingProvider lightProvider, @Nullable BitSet skyBits, @Nullable BitSet blockBits) {
         ChunkPos chunkPos = chunk.getPos();
         this.chunkX = chunkPos.x;
         this.chunkZ = chunkPos.z;
         this.chunkData = new ChunkData(chunk);
-        this.lightData = new LightData(chunkPos, lightProvider, skyBits, blockBits, nonEdge);
+        this.lightData = new LightData(chunkPos, lightProvider, skyBits, blockBits);
     }
 
     public ChunkDataS2CPacket(PacketByteBuf buf) {

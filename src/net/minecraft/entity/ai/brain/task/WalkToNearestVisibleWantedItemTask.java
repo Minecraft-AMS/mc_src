@@ -26,7 +26,7 @@ public class WalkToNearestVisibleWantedItemTask {
             TaskTriggerer taskTriggerer = requiresWalkTarget ? context.queryMemoryOptional(MemoryModuleType.WALK_TARGET) : context.queryMemoryAbsent(MemoryModuleType.WALK_TARGET);
             return context.group(context.queryMemoryOptional(MemoryModuleType.LOOK_TARGET), taskTriggerer, context.queryMemoryValue(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM), context.queryMemoryOptional(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS)).apply((Applicative)context, (lookTarget, walkTarget, nearestVisibleWantedItem, itemPickupCooldownTicks) -> (world, entity, time) -> {
                 ItemEntity itemEntity = (ItemEntity)context.getValue(nearestVisibleWantedItem);
-                if (context.getOptionalValue(itemPickupCooldownTicks).isEmpty() && startCondition.test(entity) && itemEntity.isInRange(entity, radius) && entity.world.getWorldBorder().contains(itemEntity.getBlockPos())) {
+                if (context.getOptionalValue(itemPickupCooldownTicks).isEmpty() && startCondition.test(entity) && itemEntity.isInRange(entity, radius) && entity.getWorld().getWorldBorder().contains(itemEntity.getBlockPos())) {
                     WalkTarget walkTarget = new WalkTarget(new EntityLookTarget(itemEntity, false), speed, 0);
                     lookTarget.remember(new EntityLookTarget(itemEntity, true));
                     walkTarget.remember(walkTarget);

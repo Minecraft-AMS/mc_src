@@ -224,20 +224,20 @@ RangedAttackMob {
             bl = true;
         }
         if (this.isBaby() && i > 0) {
-            this.world.addParticle(ParticleTypes.HAPPY_VILLAGER, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), 0.0, 0.0, 0.0);
-            if (!this.world.isClient) {
+            this.getWorld().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), 0.0, 0.0, 0.0);
+            if (!this.getWorld().isClient) {
                 this.growUp(i);
             }
             bl = true;
         }
         if (j > 0 && (bl || !this.isTame()) && this.getTemper() < this.getMaxTemper()) {
             bl = true;
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 this.addTemper(j);
             }
         }
         if (bl && !this.isSilent() && (soundEvent = this.getEatSound()) != null) {
-            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), this.getEatSound(), this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+            this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), this.getEatSound(), this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
         }
         return bl;
     }
@@ -341,7 +341,7 @@ RangedAttackMob {
 
     @Override
     protected void updateSaddle() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         super.updateSaddle();
@@ -396,20 +396,20 @@ RangedAttackMob {
 
     @Nullable
     protected LlamaEntity createChild() {
-        return EntityType.LLAMA.create(this.world);
+        return EntityType.LLAMA.create(this.getWorld());
     }
 
     private void spitAt(LivingEntity target) {
-        LlamaSpitEntity llamaSpitEntity = new LlamaSpitEntity(this.world, this);
+        LlamaSpitEntity llamaSpitEntity = new LlamaSpitEntity(this.getWorld(), this);
         double d = target.getX() - this.getX();
         double e = target.getBodyY(0.3333333333333333) - llamaSpitEntity.getY();
         double f = target.getZ() - this.getZ();
         double g = Math.sqrt(d * d + f * f) * (double)0.2f;
         llamaSpitEntity.setVelocity(d, e + g, f, 1.5f, 10.0f);
         if (!this.isSilent()) {
-            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_LLAMA_SPIT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+            this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_LLAMA_SPIT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
         }
-        this.world.spawnEntity(llamaSpitEntity);
+        this.getWorld().spawnEntity(llamaSpitEntity);
         this.spit = true;
     }
 

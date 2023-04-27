@@ -38,7 +38,6 @@ public class ServerList {
 
     public ServerList(MinecraftClient client) {
         this.client = client;
-        this.loadFile();
     }
 
     public void loadFile() {

@@ -58,7 +58,8 @@ extends VanillaResourcePackProvider {
     }
 
     private static DefaultResourcePack createDefaultPack(Path assetsPath) {
-        return new DefaultResourcePackBuilder().withMetadataMap(METADATA_MAP).withNamespaces("minecraft", "realms").runCallback().withDefaultPaths().withPath(ResourceType.CLIENT_RESOURCES, assetsPath).build();
+        DefaultResourcePackBuilder defaultResourcePackBuilder = new DefaultResourcePackBuilder().withMetadataMap(METADATA_MAP).withNamespaces("minecraft", "realms");
+        return defaultResourcePackBuilder.runCallback().withDefaultPaths().withPath(ResourceType.CLIENT_RESOURCES, assetsPath).build();
     }
 
     @Override

@@ -84,8 +84,9 @@ import net.minecraft.entity.Tameable;
 import net.minecraft.entity.Targeter;
 import net.minecraft.entity.boss.CommandBossBar;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.loot.LootDataType;
+import net.minecraft.loot.LootManager;
 import net.minecraft.loot.condition.LootCondition;
-import net.minecraft.loot.condition.LootConditionManager;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
@@ -128,8 +129,8 @@ public class ExecuteCommand {
         consumer2.onCommandComplete(context, success, result);
     };
     private static final SuggestionProvider<ServerCommandSource> LOOT_CONDITIONS = (context, builder) -> {
-        LootConditionManager lootConditionManager = ((ServerCommandSource)context.getSource()).getServer().getPredicateManager();
-        return CommandSource.suggestIdentifiers(lootConditionManager.getIds(), builder);
+        LootManager lootManager = ((ServerCommandSource)context.getSource()).getServer().getLootManager();
+        return CommandSource.suggestIdentifiers(lootManager.getIds(LootDataType.PREDICATES), builder);
     };
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess) {
@@ -143,7 +144,7 @@ public class ExecuteCommand {
         })))).then(CommandManager.literal("at").then(CommandManager.argument("targets", EntityArgumentType.entities()).fork((CommandNode)literalCommandNode, context -> {
             ArrayList list = Lists.newArrayList();
             for (Entity entity : EntityArgumentType.getOptionalEntities((CommandContext<ServerCommandSource>)context, "targets")) {
-                list.add(((ServerCommandSource)context.getSource()).withWorld((ServerWorld)entity.world).withPosition(entity.getPos()).withRotation(entity.getRotationClient()));
+                list.add(((ServerCommandSource)context.getSource()).withWorld((ServerWorld)entity.getWorld()).withPosition(entity.getPos()).withRotation(entity.getRotationClient()));
             }
             return list;
         })))).then(((LiteralArgumentBuilder)CommandManager.literal("store").then(ExecuteCommand.addStoreArguments((LiteralCommandNode<ServerCommandSource>)literalCommandNode, CommandManager.literal("result"), true))).then(ExecuteCommand.addStoreArguments((LiteralCommandNode<ServerCommandSource>)literalCommandNode, CommandManager.literal("success"), false)))).then(((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("positioned").then(CommandManager.argument("pos", Vec3ArgumentType.vec3()).redirect((CommandNode)literalCommandNode, context -> ((ServerCommandSource)context.getSource()).withPosition(Vec3ArgumentType.getVec3((CommandContext<ServerCommandSource>)context, "pos")).withEntityAnchor(EntityAnchorArgumentType.EntityAnchor.FEET)))).then(CommandManager.literal("as").then(CommandManager.argument("targets", EntityArgumentType.entities()).fork((CommandNode)literalCommandNode, context -> {
@@ -293,8 +294,9 @@ public class ExecuteCommand {
 
     private static boolean testLootCondition(ServerCommandSource source, LootCondition condition) {
         ServerWorld serverWorld = source.getWorld();
-        LootContext.Builder builder = new LootContext.Builder(serverWorld).parameter(LootContextParameters.ORIGIN, source.getPosition()).optionalParameter(LootContextParameters.THIS_ENTITY, source.getEntity());
-        return condition.test(builder.build(LootContextTypes.COMMAND));
+        LootContext lootContext = new LootContext.Builder(serverWorld).parameter(LootContextParameters.ORIGIN, source.getPosition()).optionalParameter(LootContextParameters.THIS_ENTITY, source.getEntity()).build(LootContextTypes.COMMAND);
+        lootContext.markActive(LootContext.predicate(condition));
+        return condition.test(lootContext);
     }
 
     private static Collection<ServerCommandSource> getSourceOrEmptyForConditionFork(CommandContext<ServerCommandSource> context, boolean positive, boolean value) {

@@ -95,7 +95,6 @@ AutoCloseable {
     public static final int HORIZONTAL_LIMIT = 30000000;
     public static final int MAX_UPDATE_DEPTH = 512;
     public static final int field_30967 = 32;
-    private static final Direction[] DIRECTIONS = Direction.values();
     public static final int field_30968 = 15;
     public static final int field_30969 = 24000;
     public static final int MAX_Y = 20000000;
@@ -220,11 +219,6 @@ AutoCloseable {
         BlockState blockState = worldChunk.setBlockState(pos, state, (flags & 0x40) != 0);
         if (blockState != null) {
             BlockState blockState2 = this.getBlockState(pos);
-            if ((flags & 0x80) == 0 && blockState2 != blockState && (blockState2.getOpacity(this, pos) != blockState.getOpacity(this, pos) || blockState2.getLuminance() != blockState.getLuminance() || blockState2.hasSidedTransparency() || blockState.hasSidedTransparency())) {
-                this.getProfiler().push("queueCheckLight");
-                this.getChunkManager().getLightingProvider().checkBlock(pos);
-                this.getProfiler().pop();
-            }
             if (blockState2 == state) {
                 if (blockState != blockState2) {
                     this.scheduleBlockRerenderIfNeeded(pos, blockState, blockState2);
@@ -645,74 +639,6 @@ AutoCloseable {
     @Override
     public int getSeaLevel() {
         return 63;
-    }
-
-    public int getReceivedStrongRedstonePower(BlockPos pos) {
-        int i = 0;
-        if ((i = Math.max(i, this.getStrongRedstonePower(pos.down(), Direction.DOWN))) >= 15) {
-            return i;
-        }
-        if ((i = Math.max(i, this.getStrongRedstonePower(pos.up(), Direction.UP))) >= 15) {
-            return i;
-        }
-        if ((i = Math.max(i, this.getStrongRedstonePower(pos.north(), Direction.NORTH))) >= 15) {
-            return i;
-        }
-        if ((i = Math.max(i, this.getStrongRedstonePower(pos.south(), Direction.SOUTH))) >= 15) {
-            return i;
-        }
-        if ((i = Math.max(i, this.getStrongRedstonePower(pos.west(), Direction.WEST))) >= 15) {
-            return i;
-        }
-        if ((i = Math.max(i, this.getStrongRedstonePower(pos.east(), Direction.EAST))) >= 15) {
-            return i;
-        }
-        return i;
-    }
-
-    public boolean isEmittingRedstonePower(BlockPos pos, Direction direction) {
-        return this.getEmittedRedstonePower(pos, direction) > 0;
-    }
-
-    public int getEmittedRedstonePower(BlockPos pos, Direction direction) {
-        BlockState blockState = this.getBlockState(pos);
-        int i = blockState.getWeakRedstonePower(this, pos, direction);
-        if (blockState.isSolidBlock(this, pos)) {
-            return Math.max(i, this.getReceivedStrongRedstonePower(pos));
-        }
-        return i;
-    }
-
-    public boolean isReceivingRedstonePower(BlockPos pos) {
-        if (this.getEmittedRedstonePower(pos.down(), Direction.DOWN) > 0) {
-            return true;
-        }
-        if (this.getEmittedRedstonePower(pos.up(), Direction.UP) > 0) {
-            return true;
-        }
-        if (this.getEmittedRedstonePower(pos.north(), Direction.NORTH) > 0) {
-            return true;
-        }
-        if (this.getEmittedRedstonePower(pos.south(), Direction.SOUTH) > 0) {
-            return true;
-        }
-        if (this.getEmittedRedstonePower(pos.west(), Direction.WEST) > 0) {
-            return true;
-        }
-        return this.getEmittedRedstonePower(pos.east(), Direction.EAST) > 0;
-    }
-
-    public int getReceivedRedstonePower(BlockPos pos) {
-        int i = 0;
-        for (Direction direction : DIRECTIONS) {
-            int j = this.getEmittedRedstonePower(pos.offset(direction), direction);
-            if (j >= 15) {
-                return 15;
-            }
-            if (j <= i) continue;
-            i = j;
-        }
-        return i;
     }
 
     public void disconnect() {

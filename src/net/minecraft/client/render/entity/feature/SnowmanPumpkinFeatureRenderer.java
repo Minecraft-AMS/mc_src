@@ -64,7 +64,7 @@ extends FeatureRenderer<SnowGolemEntity, SnowGolemEntityModel<SnowGolemEntity>> 
             matrixStack.translate(-0.5f, -0.5f, -0.5f);
             this.blockRenderManager.getModelRenderer().render(matrixStack.peek(), vertexConsumerProvider.getBuffer(RenderLayer.getOutline(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE)), blockState, bakedModel, 0.0f, 0.0f, 0.0f, i, n);
         } else {
-            this.itemRenderer.renderItem(snowGolemEntity, itemStack, ModelTransformationMode.HEAD, false, matrixStack, vertexConsumerProvider, snowGolemEntity.world, i, LivingEntityRenderer.getOverlay(snowGolemEntity, 0.0f), snowGolemEntity.getId());
+            this.itemRenderer.renderItem(snowGolemEntity, itemStack, ModelTransformationMode.HEAD, false, matrixStack, vertexConsumerProvider, snowGolemEntity.getWorld(), i, LivingEntityRenderer.getOverlay(snowGolemEntity, 0.0f), snowGolemEntity.getId());
         }
         matrixStack.pop();
     }

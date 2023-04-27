@@ -128,7 +128,7 @@ AutoCloseable {
     }
 
     private boolean needsBlending(NbtCompound nbt) {
-        if (!nbt.contains("DataVersion", 99) || nbt.getInt("DataVersion") < 3088) {
+        if (!nbt.contains("DataVersion", 99) || nbt.getInt("DataVersion") < 3441) {
             return true;
         }
         return nbt.contains("blending_data", 10);

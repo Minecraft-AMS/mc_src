@@ -156,6 +156,10 @@ public class TextureMap {
         return new TextureMap().put(TextureKey.SIDE, TextureMap.getSubId(block, "_side")).put(TextureKey.TOP, TextureMap.getSubId(block, "_top"));
     }
 
+    public static TextureMap pottedAzaleaBush(Block block) {
+        return new TextureMap().put(TextureKey.PLANT, TextureMap.getSubId(block, "_plant")).put(TextureKey.SIDE, TextureMap.getSubId(block, "_side")).put(TextureKey.TOP, TextureMap.getSubId(block, "_top"));
+    }
+
     public static TextureMap sideAndEndForTop(Block block) {
         return new TextureMap().put(TextureKey.SIDE, TextureMap.getId(block)).put(TextureKey.END, TextureMap.getSubId(block, "_top")).put(TextureKey.PARTICLE, TextureMap.getId(block));
     }
@@ -252,6 +256,10 @@ public class TextureMap {
 
     public static TextureMap frontTopSide(Block frontTopSideBlock, Block downBlock) {
         return new TextureMap().put(TextureKey.PARTICLE, TextureMap.getSubId(frontTopSideBlock, "_front")).put(TextureKey.DOWN, TextureMap.getId(downBlock)).put(TextureKey.UP, TextureMap.getSubId(frontTopSideBlock, "_top")).put(TextureKey.NORTH, TextureMap.getSubId(frontTopSideBlock, "_front")).put(TextureKey.SOUTH, TextureMap.getSubId(frontTopSideBlock, "_front")).put(TextureKey.EAST, TextureMap.getSubId(frontTopSideBlock, "_side")).put(TextureKey.WEST, TextureMap.getSubId(frontTopSideBlock, "_side"));
+    }
+
+    public static TextureMap snifferEgg(String age) {
+        return new TextureMap().put(TextureKey.PARTICLE, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_north")).put(TextureKey.BOTTOM, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_bottom")).put(TextureKey.TOP, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_top")).put(TextureKey.NORTH, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_north")).put(TextureKey.SOUTH, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_south")).put(TextureKey.EAST, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_east")).put(TextureKey.WEST, TextureMap.getSubId(Blocks.SNIFFER_EGG, age + "_west"));
     }
 
     public static TextureMap campfire(Block block) {

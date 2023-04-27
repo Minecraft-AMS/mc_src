@@ -52,7 +52,7 @@ public class DamageTracker {
         this.clearFallDeathSuffix();
         Optional<BlockPos> optional = this.entity.getClimbingPos();
         if (optional.isPresent()) {
-            BlockState blockState = this.entity.world.getBlockState(optional.get());
+            BlockState blockState = this.entity.getWorld().getBlockState(optional.get());
             this.fallDeathSuffix = blockState.isOf(Blocks.LADDER) || blockState.isIn(BlockTags.TRAPDOORS) ? "ladder" : (blockState.isOf(Blocks.VINE) ? "vines" : (blockState.isOf(Blocks.WEEPING_VINES) || blockState.isOf(Blocks.WEEPING_VINES_PLANT) ? "weeping_vines" : (blockState.isOf(Blocks.TWISTING_VINES) || blockState.isOf(Blocks.TWISTING_VINES_PLANT) ? "twisting_vines" : (blockState.isOf(Blocks.SCAFFOLDING) ? "scaffolding" : "other_climbable"))));
         } else if (this.entity.isTouchingWater()) {
             this.fallDeathSuffix = "water";

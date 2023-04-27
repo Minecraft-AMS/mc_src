@@ -15,7 +15,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractSignBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.HangingSignBlock;
-import net.minecraft.block.WallSignBlock;
 import net.minecraft.block.WoodType;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.model.Model;
@@ -36,7 +35,6 @@ import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.RotationPropertyHelper;
 import net.minecraft.util.math.Vec3d;
 
 @Environment(value=EnvType.CLIENT)
@@ -44,12 +42,15 @@ public class HangingSignBlockEntityRenderer
 extends SignBlockEntityRenderer {
     private static final String PLANK = "plank";
     private static final String V_CHAINS = "vChains";
-    public static final String NORMAL_CHAINS = "normalChains";
-    public static final String CHAIN_L1 = "chainL1";
-    public static final String CHAIN_L2 = "chainL2";
-    public static final String CHAIN_R1 = "chainR1";
-    public static final String CHAIN_R2 = "chainR2";
-    public static final String BOARD = "board";
+    private static final String NORMAL_CHAINS = "normalChains";
+    private static final String CHAIN_L1 = "chainL1";
+    private static final String CHAIN_L2 = "chainL2";
+    private static final String CHAIN_R1 = "chainR1";
+    private static final String CHAIN_R2 = "chainR2";
+    private static final String BOARD = "board";
+    private static final float MODEL_SCALE = 1.0f;
+    private static final float TEXT_SCALE = 0.9f;
+    private static final Vec3d TEXT_OFFSET = new Vec3d(0.0, -0.32f, 0.073f);
     private final Map<WoodType, HangingSignModel> MODELS = (Map)WoodType.stream().collect(ImmutableMap.toImmutableMap(woodType -> woodType, type -> new HangingSignModel(context.getLayerModelPart(EntityModelLayers.createHangingSign(type)))));
 
     public HangingSignBlockEntityRenderer(BlockEntityRendererFactory.Context context) {
@@ -57,30 +58,36 @@ extends SignBlockEntityRenderer {
     }
 
     @Override
-    public void render(SignBlockEntity signBlockEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, int j) {
-        float g;
-        BlockState blockState = signBlockEntity.getCachedState();
-        matrixStack.push();
-        WoodType woodType = AbstractSignBlock.getWoodType(blockState.getBlock());
-        HangingSignModel hangingSignModel = this.MODELS.get(woodType);
-        boolean bl = !(blockState.getBlock() instanceof HangingSignBlock);
-        boolean bl2 = blockState.contains(Properties.ATTACHED) && blockState.get(Properties.ATTACHED) != false;
-        matrixStack.translate(0.5, 0.9375, 0.5);
-        if (bl2) {
-            g = -RotationPropertyHelper.toDegrees(blockState.get(HangingSignBlock.ROTATION));
-            matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(g));
-        } else {
-            matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(this.getRotationDegrees(blockState, bl)));
-        }
-        matrixStack.translate(0.0f, -0.3125f, 0.0f);
-        hangingSignModel.updateVisibleParts(blockState);
-        g = 1.0f;
-        this.renderSign(matrixStack, vertexConsumerProvider, i, j, 1.0f, woodType, hangingSignModel);
-        this.renderText(signBlockEntity, matrixStack, vertexConsumerProvider, i, 1.0f);
+    public float getSignScale() {
+        return 1.0f;
     }
 
-    private float getRotationDegrees(BlockState state, boolean wall) {
-        return wall ? -state.get(WallSignBlock.FACING).asRotation() : -((float)(state.get(HangingSignBlock.ROTATION) * 360) / 16.0f);
+    @Override
+    public float getTextScale() {
+        return 0.9f;
+    }
+
+    @Override
+    public void render(SignBlockEntity signBlockEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, int j) {
+        BlockState blockState = signBlockEntity.getCachedState();
+        AbstractSignBlock abstractSignBlock = (AbstractSignBlock)blockState.getBlock();
+        WoodType woodType = AbstractSignBlock.getWoodType(abstractSignBlock);
+        HangingSignModel hangingSignModel = this.MODELS.get(woodType);
+        hangingSignModel.updateVisibleParts(blockState);
+        this.render(signBlockEntity, matrixStack, vertexConsumerProvider, i, j, blockState, abstractSignBlock, woodType, hangingSignModel);
+    }
+
+    @Override
+    void setAngles(MatrixStack matrices, float rotationDegrees, BlockState state) {
+        matrices.translate(0.5, 0.9375, 0.5);
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(rotationDegrees));
+        matrices.translate(0.0f, -0.3125f, 0.0f);
+    }
+
+    @Override
+    void renderSignModel(MatrixStack matrices, int light, int overlay, Model model, VertexConsumer vertexConsumers) {
+        HangingSignModel hangingSignModel = (HangingSignModel)model;
+        hangingSignModel.root.render(matrices, vertexConsumers, light, overlay);
     }
 
     @Override
@@ -89,14 +96,8 @@ extends SignBlockEntityRenderer {
     }
 
     @Override
-    void renderSignModel(MatrixStack matrices, int light, int overlay, Model model, VertexConsumer vertices) {
-        HangingSignModel hangingSignModel = (HangingSignModel)model;
-        hangingSignModel.root.render(matrices, vertices, light, overlay);
-    }
-
-    @Override
-    Vec3d getTextOffset(float scale) {
-        return new Vec3d(0.0, -0.32f * scale, 0.063f * scale);
+    Vec3d getTextOffset() {
+        return TEXT_OFFSET;
     }
 
     public static TexturedModelData getTexturedModelData() {

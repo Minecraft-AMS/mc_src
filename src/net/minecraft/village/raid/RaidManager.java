@@ -75,7 +75,7 @@ extends PersistentState {
 
     public static boolean isValidRaiderFor(RaiderEntity raider, Raid raid) {
         if (raider != null && raid != null && raid.getWorld() != null) {
-            return raider.isAlive() && raider.canJoinRaid() && raider.getDespawnCounter() <= 2400 && raider.world.getDimension() == raid.getWorld().getDimension();
+            return raider.isAlive() && raider.canJoinRaid() && raider.getDespawnCounter() <= 2400 && raider.getWorld().getDimension() == raid.getWorld().getDimension();
         }
         return false;
     }
@@ -89,7 +89,7 @@ extends PersistentState {
         if (this.world.getGameRules().getBoolean(GameRules.DISABLE_RAIDS)) {
             return null;
         }
-        DimensionType dimensionType = player.world.getDimension();
+        DimensionType dimensionType = player.getWorld().getDimension();
         if (!dimensionType.hasRaids()) {
             return null;
         }
@@ -108,7 +108,7 @@ extends PersistentState {
         } else {
             blockPos3 = blockPos;
         }
-        Raid raid = this.getOrCreateRaid(player.getWorld(), blockPos3);
+        Raid raid = this.getOrCreateRaid(player.getServerWorld(), blockPos3);
         boolean bl = false;
         if (!raid.hasStarted()) {
             if (!this.raids.containsKey(raid.getRaidId())) {

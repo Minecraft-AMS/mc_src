@@ -187,7 +187,8 @@ implements Monster {
         private boolean willCollide(Vec3d direction, int steps) {
             Box box = this.ghast.getBoundingBox();
             for (int i = 1; i < steps; ++i) {
-                if (this.ghast.world.isSpaceEmpty(this.ghast, box = box.offset(direction))) continue;
+                box = box.offset(direction);
+                if (this.ghast.getWorld().isSpaceEmpty(this.ghast, box)) continue;
                 return false;
             }
             return true;
@@ -306,7 +307,7 @@ implements Monster {
             }
             double d = 64.0;
             if (livingEntity.squaredDistanceTo(this.ghast) < 4096.0 && this.ghast.canSee(livingEntity)) {
-                World world = this.ghast.world;
+                World world = this.ghast.getWorld();
                 ++this.cooldown;
                 if (this.cooldown == 10 && !this.ghast.isSilent()) {
                     world.syncWorldEvent(null, 1015, this.ghast.getBlockPos(), 0);

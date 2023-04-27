@@ -35,7 +35,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.event.listener.GameEventListener;
+import net.minecraft.world.event.Vibrations;
 import org.jetbrains.annotations.Nullable;
 
 public class SculkShriekerBlock
@@ -148,19 +148,9 @@ implements Waterloggable {
 
     @Override
     @Nullable
-    public <T extends BlockEntity> GameEventListener getGameEventListener(ServerWorld world, T blockEntity) {
-        if (blockEntity instanceof SculkShriekerBlockEntity) {
-            SculkShriekerBlockEntity sculkShriekerBlockEntity = (SculkShriekerBlockEntity)blockEntity;
-            return sculkShriekerBlockEntity.getVibrationListener();
-        }
-        return null;
-    }
-
-    @Override
-    @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world2, BlockState state2, BlockEntityType<T> type) {
         if (!world2.isClient) {
-            return BlockWithEntity.checkType(type, BlockEntityType.SCULK_SHRIEKER, (world, pos, state, blockEntity) -> blockEntity.getVibrationListener().tick(world));
+            return BlockWithEntity.checkType(type, BlockEntityType.SCULK_SHRIEKER, (world, pos, state, sculkShriekerBlockEntity) -> Vibrations.Ticker.tick(world, sculkShriekerBlockEntity.getVibrationListenerData(), sculkShriekerBlockEntity.getVibrationCallback()));
         }
         return null;
     }

@@ -85,21 +85,21 @@ extends StructurePiece {
             List<StructureTemplate.StructureBlockInfo> list = this.template.getInfosForBlock(this.pos, this.placementData, Blocks.STRUCTURE_BLOCK);
             for (StructureTemplate.StructureBlockInfo structureBlockInfo : list) {
                 StructureBlockMode structureBlockMode;
-                if (structureBlockInfo.nbt == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.nbt.getString("mode"))) != StructureBlockMode.DATA) continue;
-                this.handleMetadata(structureBlockInfo.nbt.getString("metadata"), structureBlockInfo.pos, world, random, chunkBox);
+                if (structureBlockInfo.nbt() == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.nbt().getString("mode"))) != StructureBlockMode.DATA) continue;
+                this.handleMetadata(structureBlockInfo.nbt().getString("metadata"), structureBlockInfo.pos(), world, random, chunkBox);
             }
             List<StructureTemplate.StructureBlockInfo> list2 = this.template.getInfosForBlock(this.pos, this.placementData, Blocks.JIGSAW);
             for (StructureTemplate.StructureBlockInfo structureBlockInfo2 : list2) {
-                if (structureBlockInfo2.nbt == null) continue;
-                String string = structureBlockInfo2.nbt.getString("final_state");
+                if (structureBlockInfo2.nbt() == null) continue;
+                String string = structureBlockInfo2.nbt().getString("final_state");
                 BlockState blockState = Blocks.AIR.getDefaultState();
                 try {
                     blockState = BlockArgumentParser.block(world.createCommandRegistryWrapper(RegistryKeys.BLOCK), string, true).blockState();
                 }
                 catch (CommandSyntaxException commandSyntaxException) {
-                    LOGGER.error("Error while parsing blockstate {} in jigsaw block @ {}", (Object)string, (Object)structureBlockInfo2.pos);
+                    LOGGER.error("Error while parsing blockstate {} in jigsaw block @ {}", (Object)string, (Object)structureBlockInfo2.pos());
                 }
-                world.setBlockState(structureBlockInfo2.pos, blockState, 3);
+                world.setBlockState(structureBlockInfo2.pos(), blockState, 3);
             }
         }
     }

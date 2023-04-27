@@ -81,11 +81,11 @@ extends AbstractPhase {
                     double p = this.target.getBodyY(0.5) - m;
                     double q = this.target.getZ() - n;
                     if (!this.dragon.isSilent()) {
-                        this.dragon.world.syncWorldEvent(null, 1017, this.dragon.getBlockPos(), 0);
+                        this.dragon.getWorld().syncWorldEvent(null, 1017, this.dragon.getBlockPos(), 0);
                     }
-                    DragonFireballEntity dragonFireballEntity = new DragonFireballEntity(this.dragon.world, this.dragon, o, p, q);
+                    DragonFireballEntity dragonFireballEntity = new DragonFireballEntity(this.dragon.getWorld(), this.dragon, o, p, q);
                     dragonFireballEntity.refreshPositionAndAngles(l, m, n, 0.0f, 0.0f);
-                    this.dragon.world.spawnEntity(dragonFireballEntity);
+                    this.dragon.getWorld().spawnEntity(dragonFireballEntity);
                     this.seenTargetTimes = 0;
                     if (this.path != null) {
                         while (!this.path.isFinished()) {

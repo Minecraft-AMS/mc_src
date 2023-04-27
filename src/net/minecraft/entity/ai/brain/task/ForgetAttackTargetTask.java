@@ -34,7 +34,7 @@ public class ForgetAttackTargetTask {
     public static <E extends MobEntity> Task<E> create(Predicate<LivingEntity> alternativeCondition, BiConsumer<E, LivingEntity> forgetCallback, boolean shouldForgetIfTargetUnreachable) {
         return TaskTriggerer.task(context -> context.group(context.queryMemoryValue(MemoryModuleType.ATTACK_TARGET), context.queryMemoryOptional(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)).apply((Applicative)context, (attackTarget, cantReachWalkTargetSince) -> (world, entity, time) -> {
             LivingEntity livingEntity = (LivingEntity)context.getValue(attackTarget);
-            if (!entity.canTarget(livingEntity) || shouldForgetIfTargetUnreachable && ForgetAttackTargetTask.cannotReachTarget(entity, context.getOptionalValue(cantReachWalkTargetSince)) || !livingEntity.isAlive() || livingEntity.world != entity.world || alternativeCondition.test(livingEntity)) {
+            if (!entity.canTarget(livingEntity) || shouldForgetIfTargetUnreachable && ForgetAttackTargetTask.cannotReachTarget(entity, context.getOptionalValue(cantReachWalkTargetSince)) || !livingEntity.isAlive() || livingEntity.getWorld() != entity.getWorld() || alternativeCondition.test(livingEntity)) {
                 forgetCallback.accept(entity, livingEntity);
                 attackTarget.forget();
                 return true;
@@ -44,7 +44,7 @@ public class ForgetAttackTargetTask {
     }
 
     private static boolean cannotReachTarget(LivingEntity livingEntity, Optional<Long> optional) {
-        return optional.isPresent() && livingEntity.world.getTime() - optional.get() > 200L;
+        return optional.isPresent() && livingEntity.getWorld().getTime() - optional.get() > 200L;
     }
 }
 

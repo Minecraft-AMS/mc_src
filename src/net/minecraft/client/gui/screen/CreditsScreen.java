@@ -11,6 +11,7 @@
  *  it.unimi.dsi.fastutil.ints.IntSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.apache.commons.lang3.StringUtils
  *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen;
@@ -30,17 +31,19 @@ import java.io.Reader;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.LogoDrawer;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.sound.MusicType;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.sound.MusicSound;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.random.Random;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
@@ -63,6 +66,7 @@ extends Screen {
     private final IntSet pressedCtrlKeys = new IntOpenHashSet();
     private float speed;
     private final float baseSpeed;
+    private int speedMultiplier;
     private final LogoDrawer logoDrawer = new LogoDrawer(false);
 
     public CreditsScreen(boolean endCredits, Runnable finishAction) {
@@ -70,14 +74,15 @@ extends Screen {
         this.endCredits = endCredits;
         this.finishAction = finishAction;
         this.baseSpeed = !endCredits ? 0.75f : 0.5f;
+        this.speedMultiplier = 1;
         this.speed = this.baseSpeed;
     }
 
     private float getSpeed() {
         if (this.spaceKeyPressed) {
-            return this.baseSpeed * (5.0f + (float)this.pressedCtrlKeys.size() * 15.0f);
+            return this.baseSpeed * (5.0f + (float)this.pressedCtrlKeys.size() * 15.0f) * (float)this.speedMultiplier;
         }
-        return this.baseSpeed;
+        return this.baseSpeed * (float)this.speedMultiplier;
     }
 
     @Override
@@ -92,7 +97,9 @@ extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 341 || keyCode == 345) {
+        if (keyCode == 265) {
+            this.speedMultiplier = -1;
+        } else if (keyCode == 341 || keyCode == 345) {
             this.pressedCtrlKeys.add(keyCode);
         } else if (keyCode == 32) {
             this.spaceKeyPressed = true;
@@ -103,6 +110,9 @@ extends Screen {
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 265) {
+            this.speedMultiplier = 1;
+        }
         if (keyCode == 32) {
             this.spaceKeyPressed = false;
         } else if (keyCode == 341 || keyCode == 345) {
@@ -177,18 +187,28 @@ extends Screen {
             this.addText(SEPARATOR_LINE, true);
             this.addEmptyLine();
             this.addEmptyLine();
-            JsonArray jsonArray2 = jsonObject.getAsJsonArray("titles");
+            JsonArray jsonArray2 = jsonObject.getAsJsonArray("disciplines");
             for (JsonElement jsonElement2 : jsonArray2) {
                 JsonObject jsonObject2 = jsonElement2.getAsJsonObject();
-                String string2 = jsonObject2.get("title").getAsString();
-                JsonArray jsonArray3 = jsonObject2.getAsJsonArray("names");
-                this.addText(Text.literal(string2).formatted(Formatting.GRAY), false);
-                for (JsonElement jsonElement3 : jsonArray3) {
-                    String string3 = jsonElement3.getAsString();
-                    this.addText(Text.literal(CENTERED_LINE_PREFIX).append(string3).formatted(Formatting.WHITE), false);
+                String string2 = jsonObject2.get("discipline").getAsString();
+                if (StringUtils.isNotEmpty((CharSequence)string2)) {
+                    this.addText(Text.literal(string2).formatted(Formatting.YELLOW), true);
+                    this.addEmptyLine();
+                    this.addEmptyLine();
                 }
-                this.addEmptyLine();
-                this.addEmptyLine();
+                JsonArray jsonArray3 = jsonObject2.getAsJsonArray("titles");
+                for (JsonElement jsonElement3 : jsonArray3) {
+                    JsonObject jsonObject3 = jsonElement3.getAsJsonObject();
+                    String string3 = jsonObject3.get("title").getAsString();
+                    JsonArray jsonArray4 = jsonObject3.getAsJsonArray("names");
+                    this.addText(Text.literal(string3).formatted(Formatting.GRAY), false);
+                    for (JsonElement jsonElement4 : jsonArray4) {
+                        String string4 = jsonElement4.getAsString();
+                        this.addText(Text.literal(CENTERED_LINE_PREFIX).append(string4).formatted(Formatting.WHITE), false);
+                    }
+                    this.addEmptyLine();
+                    this.addEmptyLine();
+                }
             }
         }
     }
@@ -198,7 +218,7 @@ extends Screen {
     }
 
     private void addText(String text) {
-        this.credits.addAll(this.client.textRenderer.wrapLines(Text.literal(text), 274));
+        this.credits.addAll(this.client.textRenderer.wrapLines(Text.literal(text), 256));
     }
 
     private void addText(Text text, boolean centered) {
@@ -209,15 +229,14 @@ extends Screen {
     }
 
     @Override
-    private void renderBackground(MatrixStack matrices) {
-        RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
+    private void renderBackground(DrawContext context) {
         int i = this.width;
         float f = this.time * 0.5f;
         int j = 64;
-        float g = this.time / this.baseSpeed;
-        float h = g * 0.02f;
         float k = (float)(this.creditsHeight + this.height + this.height + 24) / this.baseSpeed;
+        float g = this.time / this.baseSpeed;
         float l = (k - 20.0f - g) * 0.005f;
+        float h = g * 0.02f;
         if (l < h) {
             h = l;
         }
@@ -226,45 +245,54 @@ extends Screen {
         }
         h *= h;
         h = h * 96.0f / 255.0f;
-        RenderSystem.setShaderColor(h, h, h, 1.0f);
-        CreditsScreen.drawTexture(matrices, 0, 0, 0, 0.0f, f, i, this.height, 64, 64);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.setShaderColor(h, h, h, 1.0f);
+        context.drawTexture(OPTIONS_BACKGROUND_TEXTURE, 0, 0, 0, 0.0f, f, i, this.height, 64, 64);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.time += delta * this.speed;
-        this.renderBackground(matrices);
-        int i = this.width / 2 - 137;
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.time = Math.max(0.0f, this.time + delta * this.speed);
+        this.renderBackground(context);
+        int i = this.width / 2 - 128;
         int j = this.height + 50;
         float f = -this.time;
-        matrices.push();
-        matrices.translate(0.0f, f, 0.0f);
-        this.logoDrawer.draw(matrices, this.width, 1.0f, j);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, f, 0.0f);
+        this.logoDrawer.draw(context, this.width, 1.0f, j);
         int k = j + 100;
         for (int l = 0; l < this.credits.size(); ++l) {
             float g;
             if (l == this.credits.size() - 1 && (g = (float)k + f - (float)(this.height / 2 - 6)) < 0.0f) {
-                matrices.translate(0.0f, -g, 0.0f);
+                context.getMatrices().translate(0.0f, -g, 0.0f);
             }
             if ((float)k + f + 12.0f + 8.0f > 0.0f && (float)k + f < (float)this.height) {
                 OrderedText orderedText = this.credits.get(l);
                 if (this.centeredLines.contains(l)) {
-                    this.textRenderer.drawWithShadow(matrices, orderedText, (float)(i + (274 - this.textRenderer.getWidth(orderedText)) / 2), (float)k, 0xFFFFFF);
+                    context.drawCenteredTextWithShadow(this.textRenderer, orderedText, i + 128, k, 0xFFFFFF);
                 } else {
-                    this.textRenderer.drawWithShadow(matrices, orderedText, (float)i, (float)k, 0xFFFFFF);
+                    context.drawTextWithShadow(this.textRenderer, orderedText, i, k, 0xFFFFFF);
                 }
             }
             k += 12;
         }
-        matrices.pop();
-        RenderSystem.setShaderTexture(0, VIGNETTE_TEXTURE);
+        context.getMatrices().pop();
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE_MINUS_SRC_COLOR);
-        CreditsScreen.drawTexture(matrices, 0, 0, 0, 0.0f, 0.0f, this.width, this.height, this.width, this.height);
+        context.drawTexture(VIGNETTE_TEXTURE, 0, 0, 0, 0.0f, 0.0f, this.width, this.height, this.width, this.height);
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
-        super.render(matrices, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public void removed() {
+        this.client.getMusicTracker().stop(MusicType.CREDITS);
+    }
+
+    @Override
+    public MusicSound getMusic() {
+        return MusicType.CREDITS;
     }
 
     @FunctionalInterface

@@ -39,6 +39,7 @@ import net.minecraft.command.FloatRangeArgument;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.LootDataType;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameters;
@@ -404,15 +405,16 @@ public class EntitySelectorOptions {
             boolean bl = reader.readNegationCharacter();
             Identifier identifier = Identifier.fromCommandInput(reader.getReader());
             reader.setPredicate(entity -> {
-                if (!(entity.world instanceof ServerWorld)) {
+                if (!(entity.getWorld() instanceof ServerWorld)) {
                     return false;
                 }
-                ServerWorld serverWorld = (ServerWorld)entity.world;
-                LootCondition lootCondition = serverWorld.getServer().getPredicateManager().get(identifier);
+                ServerWorld serverWorld = (ServerWorld)entity.getWorld();
+                LootCondition lootCondition = serverWorld.getServer().getLootManager().getElement(LootDataType.PREDICATES, identifier);
                 if (lootCondition == null) {
                     return false;
                 }
                 LootContext lootContext = new LootContext.Builder(serverWorld).parameter(LootContextParameters.THIS_ENTITY, entity).parameter(LootContextParameters.ORIGIN, entity.getPos()).build(LootContextTypes.SELECTOR);
+                lootContext.markActive(LootContext.predicate(lootCondition));
                 return bl ^ lootCondition.test(lootContext);
             });
         }, reader -> true, Text.translatable("argument.entity.options.predicate.description"));

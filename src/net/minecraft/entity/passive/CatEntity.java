@@ -373,7 +373,7 @@ implements VariantHolder<CatVariant> {
         ActionResult actionResult;
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             if (this.isTamed() && this.isOwner(player)) {
                 return ActionResult.SUCCESS;
             }
@@ -412,9 +412,9 @@ implements VariantHolder<CatVariant> {
             if (this.random.nextInt(3) == 0) {
                 this.setOwner(player);
                 this.setSitting(true);
-                this.world.sendEntityStatus(this, (byte)7);
+                this.getWorld().sendEntityStatus(this, (byte)7);
             } else {
-                this.world.sendEntityStatus(this, (byte)6);
+                this.getWorld().sendEntityStatus(this, (byte)6);
             }
             this.setPersistent();
             return ActionResult.CONSUME;
@@ -533,7 +533,7 @@ implements VariantHolder<CatVariant> {
                     return false;
                 }
                 BlockPos blockPos = this.owner.getBlockPos();
-                BlockState blockState = this.cat.world.getBlockState(blockPos);
+                BlockState blockState = this.cat.getWorld().getBlockState(blockPos);
                 if (blockState.isIn(BlockTags.BEDS)) {
                     this.bedPos = blockState.getOrEmpty(BedBlock.FACING).map(direction -> blockPos.offset(direction.getOpposite())).orElseGet(() -> new BlockPos(blockPos));
                     return !this.cannotSleep();
@@ -543,7 +543,7 @@ implements VariantHolder<CatVariant> {
         }
 
         private boolean cannotSleep() {
-            List<CatEntity> list = this.cat.world.getNonSpectatingEntities(CatEntity.class, new Box(this.bedPos).expand(2.0));
+            List<CatEntity> list = this.cat.getWorld().getNonSpectatingEntities(CatEntity.class, new Box(this.bedPos).expand(2.0));
             for (CatEntity catEntity : list) {
                 if (catEntity == this.cat || !catEntity.isInSleepingPose() && !catEntity.isHeadDown()) continue;
                 return true;
@@ -567,8 +567,8 @@ implements VariantHolder<CatVariant> {
         @Override
         public void stop() {
             this.cat.setInSleepingPose(false);
-            float f = this.cat.world.getSkyAngle(1.0f);
-            if (this.owner.getSleepTimer() >= 100 && (double)f > 0.77 && (double)f < 0.8 && (double)this.cat.world.getRandom().nextFloat() < 0.7) {
+            float f = this.cat.getWorld().getSkyAngle(1.0f);
+            if (this.owner.getSleepTimer() >= 100 && (double)f > 0.77 && (double)f < 0.8 && (double)this.cat.getWorld().getRandom().nextFloat() < 0.7) {
                 this.dropMorningGifts();
             }
             this.ticksOnBed = 0;
@@ -582,11 +582,11 @@ implements VariantHolder<CatVariant> {
             mutable.set(this.cat.isLeashed() ? this.cat.getHoldingEntity().getBlockPos() : this.cat.getBlockPos());
             this.cat.teleport(mutable.getX() + random.nextInt(11) - 5, mutable.getY() + random.nextInt(5) - 2, mutable.getZ() + random.nextInt(11) - 5, false);
             mutable.set(this.cat.getBlockPos());
-            LootTable lootTable = this.cat.world.getServer().getLootManager().getTable(LootTables.CAT_MORNING_GIFT_GAMEPLAY);
-            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.cat.world).parameter(LootContextParameters.ORIGIN, this.cat.getPos()).parameter(LootContextParameters.THIS_ENTITY, this.cat).random(random);
+            LootTable lootTable = this.cat.getWorld().getServer().getLootManager().getLootTable(LootTables.CAT_MORNING_GIFT_GAMEPLAY);
+            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.cat.getWorld()).parameter(LootContextParameters.ORIGIN, this.cat.getPos()).parameter(LootContextParameters.THIS_ENTITY, this.cat).random(random);
             ObjectArrayList<ItemStack> list = lootTable.generateLoot(builder.build(LootContextTypes.GIFT));
             for (ItemStack itemStack : list) {
-                this.cat.world.spawnEntity(new ItemEntity(this.cat.world, (double)mutable.getX() - (double)MathHelper.sin(this.cat.bodyYaw * ((float)Math.PI / 180)), mutable.getY(), (double)mutable.getZ() + (double)MathHelper.cos(this.cat.bodyYaw * ((float)Math.PI / 180)), itemStack));
+                this.cat.getWorld().spawnEntity(new ItemEntity(this.cat.getWorld(), (double)mutable.getX() - (double)MathHelper.sin(this.cat.bodyYaw * ((float)Math.PI / 180)), mutable.getY(), (double)mutable.getZ() + (double)MathHelper.cos(this.cat.bodyYaw * ((float)Math.PI / 180)), itemStack));
             }
         }
 

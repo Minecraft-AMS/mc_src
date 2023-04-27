@@ -283,7 +283,7 @@ extends LivingEntity {
 
     @Override
     protected void tickCramming() {
-        List<Entity> list = this.world.getOtherEntities(this, this.getBoundingBox(), RIDEABLE_MINECART_PREDICATE);
+        List<Entity> list = this.getWorld().getOtherEntities(this, this.getBoundingBox(), RIDEABLE_MINECART_PREDICATE);
         for (int i = 0; i < list.size(); ++i) {
             Entity entity = list.get(i);
             if (!(this.squaredDistanceTo(entity) <= 0.2)) continue;
@@ -300,7 +300,7 @@ extends LivingEntity {
         if (player.isSpectator()) {
             return ActionResult.SUCCESS;
         }
-        if (player.world.isClient) {
+        if (player.getWorld().isClient) {
             return ActionResult.CONSUME;
         }
         EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(itemStack);
@@ -374,19 +374,14 @@ extends LivingEntity {
             return false;
         }
         if (player.getAbilities().creativeMode && itemStack.isEmpty() && !stack.isEmpty()) {
-            ItemStack itemStack2 = stack.copy();
-            itemStack2.setCount(1);
-            this.equipStack(slot, itemStack2);
+            this.equipStack(slot, stack.copyWithCount(1));
             return true;
         }
         if (!stack.isEmpty() && stack.getCount() > 1) {
             if (!itemStack.isEmpty()) {
                 return false;
             }
-            ItemStack itemStack2 = stack.copy();
-            itemStack2.setCount(1);
-            this.equipStack(slot, itemStack2);
-            stack.decrement(1);
+            this.equipStack(slot, stack.split(1));
             return true;
         }
         this.equipStack(slot, stack);
@@ -396,7 +391,7 @@ extends LivingEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (this.world.isClient || this.isRemoved()) {
+        if (this.getWorld().isClient || this.isRemoved()) {
             return false;
         }
         if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
@@ -442,13 +437,13 @@ extends LivingEntity {
             this.kill();
             return bl2;
         }
-        long l = this.world.getTime();
+        long l = this.getWorld().getTime();
         if (l - this.lastHitTime <= 5L || bl) {
             this.breakAndDropItem(source);
             this.spawnBreakParticles();
             this.kill();
         } else {
-            this.world.sendEntityStatus(this, (byte)32);
+            this.getWorld().sendEntityStatus(this, (byte)32);
             this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
             this.lastHitTime = l;
         }
@@ -458,9 +453,9 @@ extends LivingEntity {
     @Override
     public void handleStatus(byte status) {
         if (status == 32) {
-            if (this.world.isClient) {
-                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_HIT, this.getSoundCategory(), 0.3f, 1.0f, false);
-                this.lastHitTime = this.world.getTime();
+            if (this.getWorld().isClient) {
+                this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_HIT, this.getSoundCategory(), 0.3f, 1.0f, false);
+                this.lastHitTime = this.getWorld().getTime();
             }
         } else {
             super.handleStatus(status);
@@ -477,8 +472,8 @@ extends LivingEntity {
     }
 
     private void spawnBreakParticles() {
-        if (this.world instanceof ServerWorld) {
-            ((ServerWorld)this.world).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_PLANKS.getDefaultState()), this.getX(), this.getBodyY(0.6666666666666666), this.getZ(), 10, this.getWidth() / 4.0f, this.getHeight() / 4.0f, this.getWidth() / 4.0f, 0.05);
+        if (this.getWorld() instanceof ServerWorld) {
+            ((ServerWorld)this.getWorld()).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_PLANKS.getDefaultState()), this.getX(), this.getBodyY(0.6666666666666666), this.getZ(), 10, this.getWidth() / 4.0f, this.getHeight() / 4.0f, this.getWidth() / 4.0f, 0.05);
         }
     }
 
@@ -498,7 +493,7 @@ extends LivingEntity {
         if (this.hasCustomName()) {
             itemStack.setCustomName(this.getCustomName());
         }
-        Block.dropStack(this.world, this.getBlockPos(), itemStack);
+        Block.dropStack(this.getWorld(), this.getBlockPos(), itemStack);
         this.onBreak(damageSource);
     }
 
@@ -510,19 +505,19 @@ extends LivingEntity {
         for (i = 0; i < this.heldItems.size(); ++i) {
             itemStack = this.heldItems.get(i);
             if (itemStack.isEmpty()) continue;
-            Block.dropStack(this.world, this.getBlockPos().up(), itemStack);
+            Block.dropStack(this.getWorld(), this.getBlockPos().up(), itemStack);
             this.heldItems.set(i, ItemStack.EMPTY);
         }
         for (i = 0; i < this.armorItems.size(); ++i) {
             itemStack = this.armorItems.get(i);
             if (itemStack.isEmpty()) continue;
-            Block.dropStack(this.world, this.getBlockPos().up(), itemStack);
+            Block.dropStack(this.getWorld(), this.getBlockPos().up(), itemStack);
             this.armorItems.set(i, ItemStack.EMPTY);
         }
     }
 
     private void playBreakSound() {
-        this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_BREAK, this.getSoundCategory(), 1.0f, 1.0f);
+        this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_BREAK, this.getSoundCategory(), 1.0f, 1.0f);
     }
 
     @Override
@@ -724,7 +719,7 @@ extends LivingEntity {
 
     @Override
     public boolean handleAttack(Entity attacker) {
-        return attacker instanceof PlayerEntity && !this.world.canPlayerModifyAt((PlayerEntity)attacker, this.getBlockPos());
+        return attacker instanceof PlayerEntity && !this.getWorld().canPlayerModifyAt((PlayerEntity)attacker, this.getBlockPos());
     }
 
     @Override
@@ -791,7 +786,7 @@ extends LivingEntity {
             BlockPos blockPos = this.getBlockPos();
             int i = Integer.MIN_VALUE;
             for (BlockPos blockPos2 : BlockPos.iterate(BlockPos.ofFloored(box.minX, box.minY, box.minZ), BlockPos.ofFloored(box.maxX, box.maxY, box.maxZ))) {
-                int j = Math.max(this.world.getLightLevel(LightType.BLOCK, blockPos2), this.world.getLightLevel(LightType.SKY, blockPos2));
+                int j = Math.max(this.getWorld().getLightLevel(LightType.BLOCK, blockPos2), this.getWorld().getLightLevel(LightType.SKY, blockPos2));
                 if (j == 15) {
                     return Vec3d.ofCenter(blockPos2);
                 }

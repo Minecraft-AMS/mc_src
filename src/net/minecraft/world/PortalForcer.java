@@ -145,7 +145,7 @@ public class PortalForcer {
         for (int i = -1; i < 3; ++i) {
             for (int j = -1; j < 4; ++j) {
                 temp.set(pos, portalDirection.getOffsetX() * i + direction.getOffsetX() * distanceOrthogonalToPortal, j, portalDirection.getOffsetZ() * i + direction.getOffsetZ() * distanceOrthogonalToPortal);
-                if (j < 0 && !this.world.getBlockState(temp).getMaterial().isSolid()) {
+                if (j < 0 && !this.world.getBlockState(temp).isSolid()) {
                     return false;
                 }
                 if (j < 0 || this.isBlockStateValid(temp)) continue;

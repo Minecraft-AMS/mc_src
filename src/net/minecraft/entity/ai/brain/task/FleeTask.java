@@ -23,6 +23,7 @@ import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
 import org.jetbrains.annotations.Nullable;
@@ -91,7 +92,8 @@ extends MultiTickTask<PathAwareEntity> {
         if (!world.getBlockState(blockPos).getCollisionShape(world, blockPos).isEmpty()) {
             return Optional.empty();
         }
-        return BlockPos.findClosest(blockPos, 5, 1, pos -> world.getFluidState((BlockPos)pos).isIn(FluidTags.WATER));
+        Predicate<BlockPos> predicate = MathHelper.ceil(entity.getWidth()) == 2 ? pos2 -> BlockPos.streamSouthEastSquare(pos2).allMatch(pos -> world.getFluidState((BlockPos)pos).isIn(FluidTags.WATER)) : pos -> world.getFluidState((BlockPos)pos).isIn(FluidTags.WATER);
+        return BlockPos.findClosest(blockPos, 5, 1, predicate);
     }
 
     @Override

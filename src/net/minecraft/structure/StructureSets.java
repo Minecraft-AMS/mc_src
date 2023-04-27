@@ -43,6 +43,7 @@ public interface StructureSets {
         structureSetRegisterable.register(StructureSetKeys.NETHER_FOSSILS, new StructureSet(registryEntryLookup.getOrThrow(StructureKeys.NETHER_FOSSIL), (StructurePlacement)new RandomSpreadStructurePlacement(2, 1, SpreadType.LINEAR, 14357921)));
         structureSetRegisterable.register(StructureSetKeys.END_CITIES, new StructureSet(registryEntryLookup.getOrThrow(StructureKeys.END_CITY), (StructurePlacement)new RandomSpreadStructurePlacement(20, 11, SpreadType.TRIANGULAR, 10387313)));
         structureSetRegisterable.register(StructureSetKeys.STRONGHOLDS, new StructureSet(registryEntryLookup.getOrThrow(StructureKeys.STRONGHOLD), (StructurePlacement)new ConcentricRingsStructurePlacement(32, 3, 128, registryEntryLookup2.getOrThrow(BiomeTags.STRONGHOLD_BIASED_TO))));
+        structureSetRegisterable.register(StructureSetKeys.TRAIL_RUINS, new StructureSet(registryEntryLookup.getOrThrow(StructureKeys.TRAIL_RUINS), (StructurePlacement)new RandomSpreadStructurePlacement(34, 8, SpreadType.LINEAR, 83469867)));
     }
 }
 

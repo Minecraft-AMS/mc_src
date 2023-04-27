@@ -48,13 +48,7 @@ public abstract class Language {
     private static Language create() {
         ImmutableMap.Builder builder = ImmutableMap.builder();
         BiConsumer<String, String> biConsumer = (arg_0, arg_1) -> ((ImmutableMap.Builder)builder).put(arg_0, arg_1);
-        String string = "/assets/minecraft/lang/en_us.json";
-        try (InputStream inputStream = Language.class.getResourceAsStream("/assets/minecraft/lang/en_us.json");){
-            Language.load(inputStream, biConsumer);
-        }
-        catch (JsonParseException | IOException exception) {
-            LOGGER.error("Couldn't read strings from {}", (Object)"/assets/minecraft/lang/en_us.json", (Object)exception);
-        }
+        Language.load(biConsumer, "/assets/minecraft/lang/en_us.json");
         ImmutableMap map = builder.build();
         return new Language((Map)map){
             final /* synthetic */ Map field_25308;
@@ -82,6 +76,15 @@ public abstract class Language {
                 return visitor -> text.visit((style, string) -> TextVisitFactory.visitFormatted(string, style, visitor) ? Optional.empty() : StringVisitable.TERMINATE_VISIT, Style.EMPTY).isPresent();
             }
         };
+    }
+
+    private static void load(BiConsumer<String, String> entryConsumer, String path) {
+        try (InputStream inputStream = Language.class.getResourceAsStream(path);){
+            Language.load(inputStream, entryConsumer);
+        }
+        catch (JsonParseException | IOException exception) {
+            LOGGER.error("Couldn't read strings from {}", (Object)path, (Object)exception);
+        }
     }
 
     public static void load(InputStream inputStream, BiConsumer<String, String> entryConsumer) {

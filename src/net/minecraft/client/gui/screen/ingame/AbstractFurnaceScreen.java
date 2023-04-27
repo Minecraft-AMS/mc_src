@@ -7,15 +7,14 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.recipebook.AbstractFurnaceRecipeBookScreen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.AbstractFurnaceScreenHandler;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
@@ -60,33 +59,32 @@ implements RecipeBookProvider {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
         if (this.recipeBook.isOpen() && this.narrow) {
-            this.drawBackground(matrices, delta, mouseX, mouseY);
-            this.recipeBook.render(matrices, mouseX, mouseY, delta);
+            this.drawBackground(context, delta, mouseX, mouseY);
+            this.recipeBook.render(context, mouseX, mouseY, delta);
         } else {
-            this.recipeBook.render(matrices, mouseX, mouseY, delta);
-            super.render(matrices, mouseX, mouseY, delta);
-            this.recipeBook.drawGhostSlots(matrices, this.x, this.y, true, delta);
+            this.recipeBook.render(context, mouseX, mouseY, delta);
+            super.render(context, mouseX, mouseY, delta);
+            this.recipeBook.drawGhostSlots(context, this.x, this.y, true, delta);
         }
-        this.drawMouseoverTooltip(matrices, mouseX, mouseY);
-        this.recipeBook.drawTooltip(matrices, this.x, this.y, mouseX, mouseY);
+        this.drawMouseoverTooltip(context, mouseX, mouseY);
+        this.recipeBook.drawTooltip(context, this.x, this.y, mouseX, mouseY);
     }
 
     @Override
-    protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
         int k;
-        RenderSystem.setShaderTexture(0, this.background);
         int i = this.x;
         int j = this.y;
-        AbstractFurnaceScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        context.drawTexture(this.background, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
         if (((AbstractFurnaceScreenHandler)this.handler).isBurning()) {
             k = ((AbstractFurnaceScreenHandler)this.handler).getFuelProgress();
-            AbstractFurnaceScreen.drawTexture(matrices, i + 56, j + 36 + 12 - k, 176, 12 - k, 14, k + 1);
+            context.drawTexture(this.background, i + 56, j + 36 + 12 - k, 176, 12 - k, 14, k + 1);
         }
         k = ((AbstractFurnaceScreenHandler)this.handler).getCookProgress();
-        AbstractFurnaceScreen.drawTexture(matrices, i + 79, j + 34, 176, 14, k + 1, 16);
+        context.drawTexture(this.background, i + 79, j + 34, 176, 14, k + 1, 16);
     }
 
     @Override

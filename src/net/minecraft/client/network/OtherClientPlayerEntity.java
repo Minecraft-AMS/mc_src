@@ -73,11 +73,11 @@ extends AbstractClientPlayerEntity {
         }
         this.prevStrideDistance = this.strideDistance;
         this.tickHandSwing();
-        float g = !this.onGround || this.isDead() ? 0.0f : (float)Math.min(0.1, this.getVelocity().horizontalLength());
+        float g = !this.isOnGround() || this.isDead() ? 0.0f : (float)Math.min(0.1, this.getVelocity().horizontalLength());
         this.strideDistance += (g - this.strideDistance) * 0.4f;
-        this.world.getProfiler().push("push");
+        this.getWorld().getProfiler().push("push");
         this.tickCramming();
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
     }
 
     @Override

@@ -11,7 +11,6 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
- *  org.joml.Matrix4f
  */
 package net.minecraft.client.gui.hud;
 
@@ -43,14 +42,7 @@ import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gl.PostEffectProcessor;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.fluid.FluidState;
@@ -66,7 +58,6 @@ import net.minecraft.util.MetricsData;
 import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.AffineTransformation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -85,11 +76,9 @@ import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.noise.NoiseConfig;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
-public class DebugHud
-extends DrawableHelper {
+public class DebugHud {
     private static final int TEXT_COLOR = 0xE0E0E0;
     private static final int field_32188 = 2;
     private static final int field_32189 = 2;
@@ -128,25 +117,25 @@ extends DrawableHelper {
         this.chunk = null;
     }
 
-    public void render(MatrixStack matrices) {
+    public void render(DrawContext context) {
         this.client.getProfiler().push("debug");
         Entity entity = this.client.getCameraEntity();
         this.blockHit = entity.raycast(20.0, 0.0f, false);
         this.fluidHit = entity.raycast(20.0, 0.0f, true);
-        this.renderLeftText(matrices);
-        this.renderRightText(matrices);
+        this.renderLeftText(context);
+        this.renderRightText(context);
         if (this.client.options.debugTpsEnabled) {
             int i = this.client.getWindow().getScaledWidth();
-            this.drawMetricsData(matrices, this.client.getMetricsData(), 0, i / 2, true);
+            this.drawMetricsData(context, this.client.getMetricsData(), 0, i / 2, true);
             IntegratedServer integratedServer = this.client.getServer();
             if (integratedServer != null) {
-                this.drawMetricsData(matrices, integratedServer.getMetricsData(), i - Math.min(i / 2, 240), i / 2, false);
+                this.drawMetricsData(context, integratedServer.getMetricsData(), i - Math.min(i / 2, 240), i / 2, false);
             }
         }
         this.client.getProfiler().pop();
     }
 
-    protected void renderLeftText(MatrixStack matrices) {
+    protected void renderLeftText(DrawContext context) {
         List<String> list = this.getLeftText();
         list.add("");
         boolean bl = this.client.getServer() != null;
@@ -159,12 +148,12 @@ extends DrawableHelper {
             int k = this.textRenderer.getWidth(string);
             int l = 2;
             int m = 2 + j * i;
-            DebugHud.fill(matrices, 1, m - 1, 2 + k + 1, m + j - 1, -1873784752);
-            this.textRenderer.draw(matrices, string, 2.0f, (float)m, 0xE0E0E0);
+            context.fill(1, m - 1, 2 + k + 1, m + j - 1, -1873784752);
+            context.drawText(this.textRenderer, string, 2, m, 0xE0E0E0, false);
         }
     }
 
-    protected void renderRightText(MatrixStack matrices) {
+    protected void renderRightText(DrawContext context) {
         List<String> list = this.getRightText();
         for (int i = 0; i < list.size(); ++i) {
             String string = list.get(i);
@@ -173,8 +162,8 @@ extends DrawableHelper {
             int k = this.textRenderer.getWidth(string);
             int l = this.client.getWindow().getScaledWidth() - 2 - k;
             int m = 2 + j * i;
-            DebugHud.fill(matrices, l - 1, m - 1, l + k + 1, m + j - 1, -1873784752);
-            this.textRenderer.draw(matrices, string, (float)l, (float)m, 0xE0E0E0);
+            context.fill(l - 1, m - 1, l + k + 1, m + j - 1, -1873784752);
+            context.drawText(this.textRenderer, string, l, m, 0xE0E0E0, false);
         }
     }
 
@@ -383,8 +372,8 @@ extends DrawableHelper {
         return property.getName() + ": " + (String)string;
     }
 
-    private void drawMetricsData(MatrixStack matrices, MetricsData metricsData, int x, int width, boolean showFps) {
-        int t;
+    private void drawMetricsData(DrawContext context, MetricsData metricsData, int x, int width, boolean showFps) {
+        int s;
         int r;
         RenderSystem.disableDepthTest();
         int i = metricsData.getStartIndex();
@@ -399,62 +388,46 @@ extends DrawableHelper {
         int p = Integer.MAX_VALUE;
         int q = Integer.MIN_VALUE;
         for (r = 0; r < n; ++r) {
-            int s = (int)(ls[metricsData.wrapIndex(k + r)] / 1000000L);
+            s = (int)(ls[metricsData.wrapIndex(k + r)] / 1000000L);
             p = Math.min(p, s);
             q = Math.max(q, s);
             o += (long)s;
         }
         r = this.client.getWindow().getScaledHeight();
-        DebugHud.fill(matrices, x, r - 60, x + n, r, -1873784752);
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-        Matrix4f matrix4f = AffineTransformation.identity().getMatrix();
+        context.fill(x, r - 60, x + n, r, -1873784752);
         while (k != j) {
-            t = metricsData.scaleSample(ls[k], showFps ? 30 : 60, showFps ? 60 : 20);
-            int u = showFps ? 100 : 60;
-            int v = this.getMetricsLineColor(MathHelper.clamp(t, 0, u), 0, u / 2, u);
-            int w = v >> 24 & 0xFF;
-            int y = v >> 16 & 0xFF;
-            int z = v >> 8 & 0xFF;
-            int aa = v & 0xFF;
-            bufferBuilder.vertex(matrix4f, l + 1, r, 0.0f).color(y, z, aa, w).next();
-            bufferBuilder.vertex(matrix4f, l + 1, r - t + 1, 0.0f).color(y, z, aa, w).next();
-            bufferBuilder.vertex(matrix4f, l, r - t + 1, 0.0f).color(y, z, aa, w).next();
-            bufferBuilder.vertex(matrix4f, l, r, 0.0f).color(y, z, aa, w).next();
+            s = metricsData.scaleSample(ls[k], showFps ? 30 : 60, showFps ? 60 : 20);
+            int t = showFps ? 100 : 60;
+            int u = this.getMetricsLineColor(MathHelper.clamp(s, 0, t), 0, t / 2, t);
+            context.fill(l, r - s, l + 1, r, u);
             ++l;
             k = metricsData.wrapIndex(k + 1);
         }
-        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
-        RenderSystem.disableBlend();
         if (showFps) {
-            DebugHud.fill(matrices, x + 1, r - 30 + 1, x + 14, r - 30 + 10, -1873784752);
-            this.textRenderer.draw(matrices, "60 FPS", (float)(x + 2), (float)(r - 30 + 2), 0xE0E0E0);
-            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 30, -1);
-            DebugHud.fill(matrices, x + 1, r - 60 + 1, x + 14, r - 60 + 10, -1873784752);
-            this.textRenderer.draw(matrices, "30 FPS", (float)(x + 2), (float)(r - 60 + 2), 0xE0E0E0);
-            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 60, -1);
+            context.fill(x + 1, r - 30 + 1, x + 14, r - 30 + 10, -1873784752);
+            context.drawText(this.textRenderer, "60 FPS", x + 2, r - 30 + 2, 0xE0E0E0, false);
+            context.drawHorizontalLine(x, x + n - 1, r - 30, -1);
+            context.fill(x + 1, r - 60 + 1, x + 14, r - 60 + 10, -1873784752);
+            context.drawText(this.textRenderer, "30 FPS", x + 2, r - 60 + 2, 0xE0E0E0, false);
+            context.drawHorizontalLine(x, x + n - 1, r - 60, -1);
         } else {
-            DebugHud.fill(matrices, x + 1, r - 60 + 1, x + 14, r - 60 + 10, -1873784752);
-            this.textRenderer.draw(matrices, "20 TPS", (float)(x + 2), (float)(r - 60 + 2), 0xE0E0E0);
-            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 60, -1);
+            context.fill(x + 1, r - 60 + 1, x + 14, r - 60 + 10, -1873784752);
+            context.drawText(this.textRenderer, "20 TPS", x + 2, r - 60 + 2, 0xE0E0E0, false);
+            context.drawHorizontalLine(x, x + n - 1, r - 60, -1);
         }
-        DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 1, -1);
-        DebugHud.drawVerticalLine(matrices, x, r - 60, r, -1);
-        DebugHud.drawVerticalLine(matrices, x + n - 1, r - 60, r, -1);
-        t = this.client.options.getMaxFps().getValue();
-        if (showFps && t > 0 && t <= 250) {
-            DebugHud.drawHorizontalLine(matrices, x, x + n - 1, r - 1 - (int)(1800.0 / (double)t), -16711681);
+        context.drawHorizontalLine(x, x + n - 1, r - 1, -1);
+        context.drawVerticalLine(x, r - 60, r, -1);
+        context.drawVerticalLine(x + n - 1, r - 60, r, -1);
+        s = this.client.options.getMaxFps().getValue();
+        if (showFps && s > 0 && s <= 250) {
+            context.drawHorizontalLine(x, x + n - 1, r - 1 - (int)(1800.0 / (double)s), -16711681);
         }
         String string = p + " ms min";
         String string2 = o / (long)n + " ms avg";
         String string3 = q + " ms max";
-        this.textRenderer.drawWithShadow(matrices, string, (float)(x + 2), (float)(r - 60 - this.textRenderer.fontHeight), 0xE0E0E0);
-        this.textRenderer.drawWithShadow(matrices, string2, (float)(x + n / 2 - this.textRenderer.getWidth(string2) / 2), (float)(r - 60 - this.textRenderer.fontHeight), 0xE0E0E0);
-        this.textRenderer.drawWithShadow(matrices, string3, (float)(x + n - this.textRenderer.getWidth(string3)), (float)(r - 60 - this.textRenderer.fontHeight), 0xE0E0E0);
-        RenderSystem.enableDepthTest();
+        context.drawTextWithShadow(this.textRenderer, string, x + 2, r - 60 - this.textRenderer.fontHeight, 0xE0E0E0);
+        context.drawCenteredTextWithShadow(this.textRenderer, string2, x + n / 2, r - 60 - this.textRenderer.fontHeight, 0xE0E0E0);
+        context.drawTextWithShadow(this.textRenderer, string3, x + n - this.textRenderer.getWidth(string3), r - 60 - this.textRenderer.fontHeight, 0xE0E0E0);
     }
 
     private int getMetricsLineColor(int value, int greenValue, int yellowValue, int redValue) {

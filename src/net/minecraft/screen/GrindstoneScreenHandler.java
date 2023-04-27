@@ -193,7 +193,7 @@ extends ScreenHandler {
     }
 
     private ItemStack grind(ItemStack item, int damage, int amount) {
-        ItemStack itemStack = item.copy();
+        ItemStack itemStack = item.copyWithCount(amount);
         itemStack.removeSubNbt("Enchantments");
         itemStack.removeSubNbt("StoredEnchantments");
         if (damage > 0) {
@@ -201,7 +201,6 @@ extends ScreenHandler {
         } else {
             itemStack.removeSubNbt("Damage");
         }
-        itemStack.setCount(amount);
         Map<Enchantment, Integer> map = EnchantmentHelper.get(item).entrySet().stream().filter(entry -> ((Enchantment)entry.getKey()).isCursed()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         EnchantmentHelper.set(map, itemStack);
         itemStack.setRepairCost(0);

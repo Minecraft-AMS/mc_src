@@ -21,7 +21,6 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BedBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.enums.BedPart;
-import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Dismounting;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -276,11 +275,6 @@ implements BlockEntityProvider {
             return Optional.of(vec3d);
         }
         return Optional.empty();
-    }
-
-    @Override
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return PistonBehavior.DESTROY;
     }
 
     @Override

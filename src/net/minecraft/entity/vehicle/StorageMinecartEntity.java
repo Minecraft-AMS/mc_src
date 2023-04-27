@@ -45,7 +45,7 @@ implements VehicleInventory {
     @Override
     public void dropItems(DamageSource damageSource) {
         super.dropItems(damageSource);
-        this.onBroken(damageSource, this.world, this);
+        this.onBroken(damageSource, this.getWorld(), this);
     }
 
     @Override
@@ -84,8 +84,8 @@ implements VehicleInventory {
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (!this.world.isClient && reason.shouldDestroy()) {
-            ItemScatterer.spawn(this.world, this, (Inventory)this);
+        if (!this.getWorld().isClient && reason.shouldDestroy()) {
+            ItemScatterer.spawn(this.getWorld(), this, (Inventory)this);
         }
         super.remove(reason);
     }

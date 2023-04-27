@@ -9,7 +9,6 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -19,11 +18,11 @@ import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.block.entity.BannerPatterns;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BannerBlockEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.model.ModelLoader;
@@ -83,9 +82,9 @@ extends HandledScreen<LoomScreenHandler> {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        super.render(matrices, mouseX, mouseY, delta);
-        this.drawMouseoverTooltip(matrices, mouseX, mouseY);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
+        this.drawMouseoverTooltip(context, mouseX, mouseY);
     }
 
     private int getRows() {
@@ -93,43 +92,41 @@ extends HandledScreen<LoomScreenHandler> {
     }
 
     @Override
-    protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        this.renderBackground(matrices);
-        RenderSystem.setShaderTexture(0, TEXTURE);
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
+        this.renderBackground(context);
         int i = this.x;
         int j = this.y;
-        LoomScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        context.drawTexture(TEXTURE, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
         Slot slot = ((LoomScreenHandler)this.handler).getBannerSlot();
         Slot slot2 = ((LoomScreenHandler)this.handler).getDyeSlot();
         Slot slot3 = ((LoomScreenHandler)this.handler).getPatternSlot();
         Slot slot4 = ((LoomScreenHandler)this.handler).getOutputSlot();
         if (!slot.hasStack()) {
-            LoomScreen.drawTexture(matrices, i + slot.x, j + slot.y, this.backgroundWidth, 0, 16, 16);
+            context.drawTexture(TEXTURE, i + slot.x, j + slot.y, this.backgroundWidth, 0, 16, 16);
         }
         if (!slot2.hasStack()) {
-            LoomScreen.drawTexture(matrices, i + slot2.x, j + slot2.y, this.backgroundWidth + 16, 0, 16, 16);
+            context.drawTexture(TEXTURE, i + slot2.x, j + slot2.y, this.backgroundWidth + 16, 0, 16, 16);
         }
         if (!slot3.hasStack()) {
-            LoomScreen.drawTexture(matrices, i + slot3.x, j + slot3.y, this.backgroundWidth + 32, 0, 16, 16);
+            context.drawTexture(TEXTURE, i + slot3.x, j + slot3.y, this.backgroundWidth + 32, 0, 16, 16);
         }
         int k = (int)(41.0f * this.scrollPosition);
-        LoomScreen.drawTexture(matrices, i + 119, j + 13 + k, 232 + (this.canApplyDyePattern ? 0 : 12), 0, 12, 15);
+        context.drawTexture(TEXTURE, i + 119, j + 13 + k, 232 + (this.canApplyDyePattern ? 0 : 12), 0, 12, 15);
         DiffuseLighting.disableGuiDepthLighting();
         if (this.bannerPatterns != null && !this.hasTooManyPatterns) {
-            VertexConsumerProvider.Immediate immediate = this.client.getBufferBuilders().getEntityVertexConsumers();
-            matrices.push();
-            matrices.translate(i + 139, j + 52, 0.0f);
-            matrices.scale(24.0f, -24.0f, 1.0f);
-            matrices.translate(0.5f, 0.5f, 0.5f);
+            context.getMatrices().push();
+            context.getMatrices().translate(i + 139, j + 52, 0.0f);
+            context.getMatrices().scale(24.0f, -24.0f, 1.0f);
+            context.getMatrices().translate(0.5f, 0.5f, 0.5f);
             float f = 0.6666667f;
-            matrices.scale(0.6666667f, -0.6666667f, -0.6666667f);
+            context.getMatrices().scale(0.6666667f, -0.6666667f, -0.6666667f);
             this.bannerField.pitch = 0.0f;
             this.bannerField.pivotY = -32.0f;
-            BannerBlockEntityRenderer.renderCanvas(matrices, immediate, 0xF000F0, OverlayTexture.DEFAULT_UV, this.bannerField, ModelLoader.BANNER_BASE, true, this.bannerPatterns);
-            matrices.pop();
-            immediate.draw();
+            BannerBlockEntityRenderer.renderCanvas(context.getMatrices(), context.getVertexConsumers(), 0xF000F0, OverlayTexture.DEFAULT_UV, this.bannerField, ModelLoader.BANNER_BASE, true, this.bannerPatterns);
+            context.getMatrices().pop();
+            context.draw();
         } else if (this.hasTooManyPatterns) {
-            LoomScreen.drawTexture(matrices, i + slot4.x - 2, j + slot4.y - 2, this.backgroundWidth, 17, 17, 16);
+            context.drawTexture(TEXTURE, i + slot4.x - 2, j + slot4.y - 2, this.backgroundWidth, 17, 17, 16);
         }
         if (this.canApplyDyePattern) {
             int l = i + 60;
@@ -141,22 +138,21 @@ extends HandledScreen<LoomScreenHandler> {
                     int p = n + this.visibleTopRow;
                     int q = p * 4 + o;
                     if (q >= list.size()) break block0;
-                    RenderSystem.setShaderTexture(0, TEXTURE);
                     int r = l + o * 14;
                     int s = m + n * 14;
                     boolean bl2 = bl = mouseX >= r && mouseY >= s && mouseX < r + 14 && mouseY < s + 14;
                     int t = q == ((LoomScreenHandler)this.handler).getSelectedPattern() ? this.backgroundHeight + 14 : (bl ? this.backgroundHeight + 28 : this.backgroundHeight);
-                    LoomScreen.drawTexture(matrices, r, s, 0, t, 14, 14);
-                    this.drawBanner(list.get(q), r, s);
+                    context.drawTexture(TEXTURE, r, s, 0, t, 14, 14);
+                    this.drawBanner(context, list.get(q), r, s);
                 }
             }
         }
         DiffuseLighting.enableGuiDepthLighting();
     }
 
-    private void drawBanner(RegistryEntry<BannerPattern> bannerPattern, int x, int y) {
+    private void drawBanner(DrawContext context, RegistryEntry<BannerPattern> pattern, int x, int y) {
         NbtCompound nbtCompound = new NbtCompound();
-        NbtList nbtList = new BannerPattern.Patterns().add(BannerPatterns.BASE, DyeColor.GRAY).add(bannerPattern, DyeColor.WHITE).toNbt();
+        NbtList nbtList = new BannerPattern.Patterns().add(BannerPatterns.BASE, DyeColor.GRAY).add(pattern, DyeColor.WHITE).toNbt();
         nbtCompound.put("Patterns", nbtList);
         ItemStack itemStack = new ItemStack(Items.GRAY_BANNER);
         BlockItem.setBlockEntityNbt(itemStack, BlockEntityType.BANNER, nbtCompound);
@@ -168,13 +164,12 @@ extends HandledScreen<LoomScreenHandler> {
         matrixStack.translate(0.5f, 0.5f, 0.5f);
         float f = 0.6666667f;
         matrixStack.scale(0.6666667f, -0.6666667f, -0.6666667f);
-        VertexConsumerProvider.Immediate immediate = this.client.getBufferBuilders().getEntityVertexConsumers();
         this.bannerField.pitch = 0.0f;
         this.bannerField.pivotY = -32.0f;
         List<Pair<RegistryEntry<BannerPattern>, DyeColor>> list = BannerBlockEntity.getPatternsFromNbt(DyeColor.GRAY, BannerBlockEntity.getPatternListNbt(itemStack));
-        BannerBlockEntityRenderer.renderCanvas(matrixStack, immediate, 0xF000F0, OverlayTexture.DEFAULT_UV, this.bannerField, ModelLoader.BANNER_BASE, true, list);
+        BannerBlockEntityRenderer.renderCanvas(matrixStack, context.getVertexConsumers(), 0xF000F0, OverlayTexture.DEFAULT_UV, this.bannerField, ModelLoader.BANNER_BASE, true, list);
         matrixStack.pop();
-        immediate.draw();
+        context.draw();
     }
 
     @Override

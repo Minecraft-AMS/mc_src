@@ -58,6 +58,12 @@ public class MusicTracker {
         this.timeUntilNextSong = Integer.MAX_VALUE;
     }
 
+    public void stop(MusicSound type) {
+        if (this.isPlayingType(type)) {
+            this.stop();
+        }
+    }
+
     public void stop() {
         if (this.current != null) {
             this.client.getSoundManager().stop(this.current);

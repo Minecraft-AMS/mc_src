@@ -35,11 +35,11 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Material;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.Vec2ArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -254,8 +254,7 @@ public class SpreadPlayersCommand {
         public boolean isSafe(BlockView world, int maxY) {
             BlockPos blockPos = BlockPos.ofFloored(this.x, this.getY(world, maxY) - 1, this.z);
             BlockState blockState = world.getBlockState(blockPos);
-            Material material = blockState.getMaterial();
-            return blockPos.getY() < maxY && !material.isLiquid() && material != Material.FIRE;
+            return blockPos.getY() < maxY && !blockState.isLiquid() && !blockState.isIn(BlockTags.FIRE);
         }
 
         public void setPileLocation(Random random, double minX, double minZ, double maxX, double maxZ) {

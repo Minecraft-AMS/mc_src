@@ -15,7 +15,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.Material;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
@@ -76,11 +75,11 @@ extends Feature<Config> {
                     boolean bl;
                     boolean bl2 = bl = !bls[(s * 16 + t) * 8 + u] && (s < 15 && bls[((s + 1) * 16 + t) * 8 + u] || s > 0 && bls[((s - 1) * 16 + t) * 8 + u] || t < 15 && bls[(s * 16 + t + 1) * 8 + u] || t > 0 && bls[(s * 16 + (t - 1)) * 8 + u] || u < 7 && bls[(s * 16 + t) * 8 + u + 1] || u > 0 && bls[(s * 16 + t) * 8 + (u - 1)]);
                     if (!bl) continue;
-                    Material material = structureWorldAccess.getBlockState(blockPos.add(s, u, t)).getMaterial();
-                    if (u >= 4 && material.isLiquid()) {
+                    BlockState blockState2 = structureWorldAccess.getBlockState(blockPos.add(s, u, t));
+                    if (u >= 4 && blockState2.isLiquid()) {
                         return false;
                     }
-                    if (u >= 4 || material.isSolid() || structureWorldAccess.getBlockState(blockPos.add(s, u, t)) == blockState) continue;
+                    if (u >= 4 || blockState2.isSolid() || structureWorldAccess.getBlockState(blockPos.add(s, u, t)) == blockState) continue;
                     return false;
                 }
             }
@@ -98,17 +97,17 @@ extends Feature<Config> {
                 }
             }
         }
-        BlockState blockState2 = config.barrier().get(random, blockPos);
-        if (!blockState2.isAir()) {
+        BlockState blockState3 = config.barrier().get(random, blockPos);
+        if (!blockState3.isAir()) {
             for (t = 0; t < 16; ++t) {
                 for (int u = 0; u < 16; ++u) {
                     for (int v = 0; v < 8; ++v) {
-                        BlockState blockState3;
+                        BlockState blockState4;
                         boolean bl2;
                         boolean bl = bl2 = !bls[(t * 16 + u) * 8 + v] && (t < 15 && bls[((t + 1) * 16 + u) * 8 + v] || t > 0 && bls[((t - 1) * 16 + u) * 8 + v] || u < 15 && bls[(t * 16 + u + 1) * 8 + v] || u > 0 && bls[(t * 16 + (u - 1)) * 8 + v] || v < 7 && bls[(t * 16 + u) * 8 + v + 1] || v > 0 && bls[(t * 16 + u) * 8 + (v - 1)]);
-                        if (!bl2 || v >= 4 && random.nextInt(2) == 0 || !(blockState3 = structureWorldAccess.getBlockState(blockPos.add(t, v, u))).getMaterial().isSolid() || blockState3.isIn(BlockTags.LAVA_POOL_STONE_CANNOT_REPLACE)) continue;
+                        if (!bl2 || v >= 4 && random.nextInt(2) == 0 || !(blockState4 = structureWorldAccess.getBlockState(blockPos.add(t, v, u))).isSolid() || blockState4.isIn(BlockTags.LAVA_POOL_STONE_CANNOT_REPLACE)) continue;
                         BlockPos blockPos3 = blockPos.add(t, v, u);
-                        structureWorldAccess.setBlockState(blockPos3, blockState2, 2);
+                        structureWorldAccess.setBlockState(blockPos3, blockState3, 2);
                         this.markBlocksAboveForPostProcessing(structureWorldAccess, blockPos3);
                     }
                 }

@@ -14,7 +14,6 @@ package net.minecraft.client.gui.screen;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,13 +26,13 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.CustomizeFlatLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.input.KeyCodes;
 import net.minecraft.client.world.GeneratorOptionsHolder;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -214,17 +213,17 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        this.listWidget.render(matrices, mouseX, mouseY, delta);
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, 400.0f);
-        PresetsScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
-        PresetsScreen.drawTextWithShadow(matrices, this.textRenderer, this.shareText, 50, 30, 0xA0A0A0);
-        PresetsScreen.drawTextWithShadow(matrices, this.textRenderer, this.listText, 50, 70, 0xA0A0A0);
-        matrices.pop();
-        this.customPresetField.render(matrices, mouseX, mouseY, delta);
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        this.listWidget.render(context, mouseX, mouseY, delta);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 400.0f);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
+        context.drawTextWithShadow(this.textRenderer, this.shareText, 50, 30, 0xA0A0A0);
+        context.drawTextWithShadow(this.textRenderer, this.listText, 50, 70, 0xA0A0A0);
+        context.getMatrices().pop();
+        this.customPresetField.render(context, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
@@ -263,7 +262,7 @@ extends Screen {
             if (super.keyPressed(keyCode, scanCode, modifiers)) {
                 return true;
             }
-            if ((keyCode == 257 || keyCode == 335) && this.getSelectedOrNull() != null) {
+            if (KeyCodes.isToggle(keyCode) && this.getSelectedOrNull() != null) {
                 ((SuperflatPresetEntry)this.getSelectedOrNull()).setPreset();
             }
             return false;
@@ -272,6 +271,7 @@ extends Screen {
         @Environment(value=EnvType.CLIENT)
         public class SuperflatPresetEntry
         extends AlwaysSelectedEntryListWidget.Entry<SuperflatPresetEntry> {
+            private static final Identifier STATS_ICONS_TEXTURE = new Identifier("textures/gui/container/stats_icons.png");
             private final FlatLevelGeneratorPreset preset;
             private final Text text;
 
@@ -281,9 +281,9 @@ extends Screen {
             }
 
             @Override
-            public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-                this.renderIcon(matrices, x, y, this.preset.displayItem().value());
-                PresetsScreen.this.textRenderer.draw(matrices, this.text, (float)(x + 18 + 5), (float)(y + 6), 0xFFFFFF);
+            public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+                this.renderIcon(context, x, y, this.preset.displayItem().value());
+                context.drawText(PresetsScreen.this.textRenderer, this.text, x + 18 + 5, y + 6, 0xFFFFFF, false);
             }
 
             @Override
@@ -301,14 +301,13 @@ extends Screen {
                 PresetsScreen.this.customPresetField.setCursorToStart();
             }
 
-            private void renderIcon(MatrixStack matrices, int x, int y, Item iconItem) {
-                this.drawIconBackground(matrices, x + 1, y + 1);
-                PresetsScreen.this.itemRenderer.renderGuiItemIcon(matrices, new ItemStack(iconItem), x + 2, y + 2);
+            private void renderIcon(DrawContext context, int x, int y, Item iconItem) {
+                this.drawIconBackground(context, x + 1, y + 1);
+                context.drawItemWithoutEntity(new ItemStack(iconItem), x + 2, y + 2);
             }
 
-            private void drawIconBackground(MatrixStack matrices, int x, int y) {
-                RenderSystem.setShaderTexture(0, DrawableHelper.STATS_ICON_TEXTURE);
-                DrawableHelper.drawTexture(matrices, x, y, 0, 0.0f, 0.0f, 18, 18, 128, 128);
+            private void drawIconBackground(DrawContext context, int x, int y) {
+                context.drawTexture(STATS_ICONS_TEXTURE, x, y, 0, 0.0f, 0.0f, 18, 18, 128, 128);
             }
 
             @Override

@@ -12,7 +12,6 @@
 package net.minecraft.client.gui.screen.recipebook;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 import java.util.ArrayList;
@@ -22,8 +21,8 @@ import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
@@ -41,7 +40,6 @@ import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.client.resource.language.LanguageDefinition;
 import net.minecraft.client.resource.language.LanguageManager;
 import net.minecraft.client.search.SearchManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.RecipeCategoryOptionsC2SPacket;
 import net.minecraft.recipe.Ingredient;
@@ -58,7 +56,6 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RecipeBookWidget
-extends DrawableHelper
 implements RecipeGridAligner<Ingredient>,
 Drawable,
 Element,
@@ -245,38 +242,37 @@ RecipeDisplayListener {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if (!this.isOpen()) {
             return;
         }
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, 100.0f);
-        RenderSystem.setShaderTexture(0, TEXTURE);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 100.0f);
         int i = (this.parentWidth - 147) / 2 - this.leftOffset;
         int j = (this.parentHeight - 166) / 2;
-        RecipeBookWidget.drawTexture(matrices, i, j, 1, 1, 147, 166);
-        this.searchField.render(matrices, mouseX, mouseY, delta);
+        context.drawTexture(TEXTURE, i, j, 1, 1, 147, 166);
+        this.searchField.render(context, mouseX, mouseY, delta);
         for (RecipeGroupButtonWidget recipeGroupButtonWidget : this.tabButtons) {
-            recipeGroupButtonWidget.render(matrices, mouseX, mouseY, delta);
+            recipeGroupButtonWidget.render(context, mouseX, mouseY, delta);
         }
-        this.toggleCraftableButton.render(matrices, mouseX, mouseY, delta);
-        this.recipesArea.draw(matrices, i, j, mouseX, mouseY, delta);
-        matrices.pop();
+        this.toggleCraftableButton.render(context, mouseX, mouseY, delta);
+        this.recipesArea.draw(context, i, j, mouseX, mouseY, delta);
+        context.getMatrices().pop();
     }
 
-    public void drawTooltip(MatrixStack matrices, int i, int j, int k, int l) {
+    public void drawTooltip(DrawContext context, int x, int y, int mouseX, int mouseY) {
         if (!this.isOpen()) {
             return;
         }
-        this.recipesArea.drawTooltip(matrices, k, l);
-        this.drawGhostSlotTooltip(matrices, i, j, k, l);
+        this.recipesArea.drawTooltip(context, mouseX, mouseY);
+        this.drawGhostSlotTooltip(context, x, y, mouseX, mouseY);
     }
 
     protected Text getToggleCraftableButtonText() {
         return TOGGLE_CRAFTABLE_RECIPES_TEXT;
     }
 
-    private void drawGhostSlotTooltip(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
+    private void drawGhostSlotTooltip(DrawContext context, int x, int y, int mouseX, int mouseY) {
         ItemStack itemStack = null;
         for (int i = 0; i < this.ghostSlots.getSlotCount(); ++i) {
             RecipeBookGhostSlots.GhostInputSlot ghostInputSlot = this.ghostSlots.getSlot(i);
@@ -286,12 +282,12 @@ RecipeDisplayListener {
             itemStack = ghostInputSlot.getCurrentItemStack();
         }
         if (itemStack != null && this.client.currentScreen != null) {
-            this.client.currentScreen.renderTooltip(matrices, this.client.currentScreen.getTooltipFromItem(itemStack), mouseX, mouseY);
+            context.drawTooltip(this.client.textRenderer, Screen.getTooltipFromItem(this.client, itemStack), mouseX, mouseY);
         }
     }
 
-    public void drawGhostSlots(MatrixStack matrices, int x, int y, boolean notInventory, float delta) {
-        this.ghostSlots.draw(matrices, this.client, x, y, notInventory, delta);
+    public void drawGhostSlots(DrawContext context, int x, int y, boolean notInventory, float delta) {
+        this.ghostSlots.draw(context, this.client, x, y, notInventory, delta);
     }
 
     @Override
@@ -315,8 +311,10 @@ RecipeDisplayListener {
             return true;
         }
         if (this.searchField.mouseClicked(mouseX, mouseY, button)) {
+            this.searchField.setFocused(true);
             return true;
         }
+        this.searchField.setFocused(false);
         if (this.toggleCraftableButton.mouseClicked(mouseX, mouseY, button)) {
             boolean bl = this.toggleFilteringCraftable();
             this.toggleCraftableButton.setToggled(bl);

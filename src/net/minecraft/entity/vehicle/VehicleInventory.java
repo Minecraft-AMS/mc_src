@@ -95,7 +95,7 @@ NamedScreenHandlerFactory {
 
     default public ActionResult open(PlayerEntity player) {
         player.openHandledScreen(this);
-        if (!player.world.isClient) {
+        if (!player.getWorld().isClient) {
             return ActionResult.CONSUME;
         }
         return ActionResult.SUCCESS;
@@ -104,7 +104,7 @@ NamedScreenHandlerFactory {
     default public void generateInventoryLoot(@Nullable PlayerEntity player) {
         MinecraftServer minecraftServer = this.getWorld().getServer();
         if (this.getLootTableId() != null && minecraftServer != null) {
-            LootTable lootTable = minecraftServer.getLootManager().getTable(this.getLootTableId());
+            LootTable lootTable = minecraftServer.getLootManager().getLootTable(this.getLootTableId());
             if (player != null) {
                 Criteria.PLAYER_GENERATES_CONTAINER_LOOT.trigger((ServerPlayerEntity)player, this.getLootTableId());
             }

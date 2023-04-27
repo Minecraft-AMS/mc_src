@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.StructureBlockMode;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.StructureTemplate;
@@ -96,7 +97,8 @@ extends StructurePoolElement {
         ArrayList list2 = Lists.newArrayList();
         for (StructureTemplate.StructureBlockInfo structureBlockInfo : list) {
             StructureBlockMode structureBlockMode;
-            if (structureBlockInfo.nbt == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.nbt.getString("mode"))) != StructureBlockMode.DATA) continue;
+            NbtCompound nbtCompound = structureBlockInfo.nbt();
+            if (nbtCompound == null || (structureBlockMode = StructureBlockMode.valueOf(nbtCompound.getString("mode"))) != StructureBlockMode.DATA) continue;
             list2.add(structureBlockInfo);
         }
         return list2;

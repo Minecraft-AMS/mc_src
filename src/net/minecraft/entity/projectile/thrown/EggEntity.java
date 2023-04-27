@@ -34,7 +34,7 @@ extends ThrownItemEntity {
         if (status == 3) {
             double d = 0.08;
             for (int i = 0; i < 8; ++i) {
-                this.world.addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, this.getStack()), this.getX(), this.getY(), this.getZ(), ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08);
+                this.getWorld().addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, this.getStack()), this.getX(), this.getY(), this.getZ(), ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08);
             }
         }
     }
@@ -48,21 +48,21 @@ extends ThrownItemEntity {
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             if (this.random.nextInt(8) == 0) {
                 int i = 1;
                 if (this.random.nextInt(32) == 0) {
                     i = 4;
                 }
                 for (int j = 0; j < i; ++j) {
-                    ChickenEntity chickenEntity = EntityType.CHICKEN.create(this.world);
+                    ChickenEntity chickenEntity = EntityType.CHICKEN.create(this.getWorld());
                     if (chickenEntity == null) continue;
                     chickenEntity.setBreedingAge(-24000);
                     chickenEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), 0.0f);
-                    this.world.spawnEntity(chickenEntity);
+                    this.getWorld().spawnEntity(chickenEntity);
                 }
             }
-            this.world.sendEntityStatus(this, (byte)3);
+            this.getWorld().sendEntityStatus(this, (byte)3);
             this.discard();
         }
     }

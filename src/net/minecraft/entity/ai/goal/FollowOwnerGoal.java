@@ -36,7 +36,7 @@ extends Goal {
 
     public FollowOwnerGoal(TameableEntity tameable, double speed, float minDistance, float maxDistance, boolean leavesAllowed) {
         this.tameable = tameable;
-        this.world = tameable.world;
+        this.world = tameable.getWorld();
         this.speed = speed;
         this.navigation = tameable.getNavigation();
         this.minDistance = minDistance;

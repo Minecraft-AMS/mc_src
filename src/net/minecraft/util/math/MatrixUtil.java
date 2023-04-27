@@ -104,17 +104,17 @@ public class MatrixUtil {
         matrix3f.transpose();
         matrix3f.mul((Matrix3fc)A);
         Quaternionf quaternionf = MatrixUtil.method_49741(matrix3f, 5);
-        boolean bl = (double)matrix3f.m00 < 1.0E-6;
-        boolean bl2 = (double)matrix3f.m11 < 1.0E-6;
+        float f = matrix3f.m00;
+        float g = matrix3f.m11;
+        boolean bl = (double)f < 1.0E-6;
+        boolean bl2 = (double)g < 1.0E-6;
         Matrix3f matrix3f2 = matrix3f;
         Matrix3f matrix3f3 = A.rotate((Quaternionfc)quaternionf);
-        float f = 1.0f;
         Quaternionf quaternionf2 = new Quaternionf();
         Quaternionf quaternionf3 = new Quaternionf();
         GivensPair givensPair = bl ? MatrixUtil.qrGivensQuaternion(matrix3f3.m11, -matrix3f3.m10) : MatrixUtil.qrGivensQuaternion(matrix3f3.m00, matrix3f3.m01);
         Quaternionf quaternionf4 = givensPair.method_49735(quaternionf3);
         Matrix3f matrix3f4 = givensPair.method_49734(matrix3f2);
-        f *= matrix3f4.m22;
         quaternionf2.mul((Quaternionfc)quaternionf4);
         matrix3f4.transpose().mul((Matrix3fc)matrix3f3);
         matrix3f2 = matrix3f3;
@@ -122,19 +122,15 @@ public class MatrixUtil {
         givensPair = givensPair.negateSin();
         Quaternionf quaternionf5 = givensPair.method_49732(quaternionf3);
         Matrix3f matrix3f5 = givensPair.method_49731(matrix3f2);
-        f *= matrix3f5.m11;
         quaternionf2.mul((Quaternionfc)quaternionf5);
         matrix3f5.transpose().mul((Matrix3fc)matrix3f4);
         matrix3f2 = matrix3f4;
         givensPair = bl2 ? MatrixUtil.qrGivensQuaternion(matrix3f5.m22, -matrix3f5.m21) : MatrixUtil.qrGivensQuaternion(matrix3f5.m11, matrix3f5.m12);
         Quaternionf quaternionf6 = givensPair.method_49729(quaternionf3);
         Matrix3f matrix3f6 = givensPair.method_49728(matrix3f2);
-        f *= matrix3f6.m00;
         quaternionf2.mul((Quaternionfc)quaternionf6);
         matrix3f6.transpose().mul((Matrix3fc)matrix3f5);
-        f = 1.0f / f;
-        quaternionf2.mul(Math.sqrt((float)f));
-        Vector3f vector3f = new Vector3f(matrix3f6.m00 * f, matrix3f6.m11 * f, matrix3f6.m22 * f);
+        Vector3f vector3f = new Vector3f(matrix3f6.m00, matrix3f6.m11, matrix3f6.m22);
         return Triple.of((Object)quaternionf2, (Object)vector3f, (Object)quaternionf.conjugate());
     }
 }

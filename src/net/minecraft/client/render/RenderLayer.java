@@ -9,6 +9,7 @@
 package net.minecraft.client.render;
 
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.systems.VertexSorter;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -133,8 +134,9 @@ extends RenderPhase {
     public static final MultiPhase LINES = RenderLayer.of("lines", VertexFormats.LINES, VertexFormat.DrawMode.LINES, 256, MultiPhaseParameters.builder().program(LINES_PROGRAM).lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).cull(DISABLE_CULLING).build(false));
     public static final MultiPhase LINE_STRIP = RenderLayer.of("line_strip", VertexFormats.LINES, VertexFormat.DrawMode.LINE_STRIP, 256, MultiPhaseParameters.builder().program(LINES_PROGRAM).lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).cull(DISABLE_CULLING).build(false));
     private static final Function<Double, MultiPhase> DEBUG_LINE_STRIP = Util.memoize(lineWidth -> RenderLayer.of("debug_line_strip", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.DEBUG_LINE_STRIP, 256, MultiPhaseParameters.builder().program(COLOR_PROGRAM).lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(lineWidth))).transparency(NO_TRANSPARENCY).cull(DISABLE_CULLING).build(false)));
-    private static final MultiPhase DEBUG_FILLED_BOX = RenderLayer.of("debug_filled_box", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.TRIANGLE_STRIP, 131072, MultiPhaseParameters.builder().program(COLOR_PROGRAM).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).build(false));
-    private static final MultiPhase DEBUG_QUADS = RenderLayer.of("debug_quads", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.QUADS, 131072, MultiPhaseParameters.builder().program(COLOR_PROGRAM).transparency(TRANSLUCENT_TRANSPARENCY).cull(DISABLE_CULLING).build(false));
+    private static final MultiPhase DEBUG_FILLED_BOX = RenderLayer.of("debug_filled_box", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.TRIANGLE_STRIP, 131072, false, true, MultiPhaseParameters.builder().program(COLOR_PROGRAM).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).build(false));
+    private static final MultiPhase DEBUG_QUADS = RenderLayer.of("debug_quads", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.QUADS, 131072, false, true, MultiPhaseParameters.builder().program(COLOR_PROGRAM).transparency(TRANSLUCENT_TRANSPARENCY).cull(DISABLE_CULLING).build(false));
+    private static final MultiPhase DEBUG_SECTION_QUADS = RenderLayer.of("debug_section_quads", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.QUADS, 131072, false, true, MultiPhaseParameters.builder().program(COLOR_PROGRAM).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).cull(ENABLE_CULLING).build(false));
     private static final ImmutableList<RenderLayer> BLOCK_LAYERS = ImmutableList.of((Object)RenderLayer.getSolid(), (Object)RenderLayer.getCutoutMipped(), (Object)RenderLayer.getCutout(), (Object)RenderLayer.getTranslucent(), (Object)RenderLayer.getTripwire());
     private final VertexFormat vertexFormat;
     private final VertexFormat.DrawMode drawMode;
@@ -375,6 +377,10 @@ extends RenderPhase {
         return DEBUG_QUADS;
     }
 
+    public static RenderLayer getDebugSectionQuads() {
+        return DEBUG_SECTION_QUADS;
+    }
+
     public RenderLayer(String name, VertexFormat vertexFormat, VertexFormat.DrawMode drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, Runnable startAction, Runnable endAction) {
         super(name, startAction, endAction);
         this.vertexFormat = vertexFormat;
@@ -393,12 +399,12 @@ extends RenderPhase {
         return new MultiPhase(name, vertexFormat, drawMode, expectedBufferSize, hasCrumbling, translucent, phases);
     }
 
-    public void draw(BufferBuilder buffer, int cameraX, int cameraY, int cameraZ) {
+    public void draw(BufferBuilder buffer, VertexSorter sorter) {
         if (!buffer.isBuilding()) {
             return;
         }
         if (this.translucent) {
-            buffer.sortFrom(cameraX, cameraY, cameraZ);
+            buffer.setSorter(sorter);
         }
         BufferBuilder.BuiltBuffer builtBuffer = buffer.end();
         this.startDrawing();

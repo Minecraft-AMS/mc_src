@@ -6,9 +6,8 @@
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
+ *  com.mojang.datafixers.util.Either
  *  com.mojang.logging.LogUtils
- *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
- *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
  *  it.unimi.dsi.fastutil.ints.IntSet
  *  it.unimi.dsi.fastutil.ints.IntSets
  *  net.fabricmc.api.EnvType
@@ -22,9 +21,8 @@ import com.google.common.collect.Lists;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import java.io.IOException;
@@ -39,6 +37,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.FontLoader;
 import net.minecraft.client.font.Glyph;
+import net.minecraft.client.font.GlyphContainer;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
 import net.minecraft.client.texture.NativeImage;
@@ -53,9 +52,9 @@ public class BitmapFont
 implements Font {
     static final Logger LOGGER = LogUtils.getLogger();
     private final NativeImage image;
-    private final Int2ObjectMap<BitmapFontGlyph> glyphs;
+    private final GlyphContainer<BitmapFontGlyph> glyphs;
 
-    BitmapFont(NativeImage image, Int2ObjectMap<BitmapFontGlyph> glyphs) {
+    BitmapFont(NativeImage image, GlyphContainer<BitmapFontGlyph> glyphs) {
         this.image = image;
         this.glyphs = glyphs;
     }
@@ -68,12 +67,12 @@ implements Font {
     @Override
     @Nullable
     public Glyph getGlyph(int codePoint) {
-        return (Glyph)this.glyphs.get(codePoint);
+        return this.glyphs.getGlyphs(codePoint);
     }
 
     @Override
     public IntSet getProvidedGlyphs() {
-        return IntSets.unmodifiable((IntSet)this.glyphs.keySet());
+        return IntSets.unmodifiable((IntSet)this.glyphs.getProvidedGlyphs());
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -217,7 +216,7 @@ implements Font {
                 String string = JsonHelper.asString(jsonArray.get(k), "chars[" + k + "]");
                 int[] is = string.codePoints().toArray();
                 if (k > 0 && is.length != (l = ((int[])list.get(0)).length)) {
-                    throw new JsonParseException("Elements of chars have to be the same length (found: " + is.length + ", expected: " + l + "), pad with space or \\u0000");
+                    throw new JsonParseException("Elements of chars have to be the same length (found: " + is.length + ", expected: " + l + "), pad with \\u0000");
                 }
                 list.add(is);
             }
@@ -228,51 +227,32 @@ implements Font {
         }
 
         @Override
-        @Nullable
-        public Font load(ResourceManager manager) {
-            BitmapFont bitmapFont;
-            block10: {
-                InputStream inputStream = manager.open(this.filename);
-                try {
-                    NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);
-                    int i = nativeImage.getWidth();
-                    int j = nativeImage.getHeight();
-                    int k = i / this.chars.get(0).length;
-                    int l = j / this.chars.size();
-                    float f = (float)this.height / (float)l;
-                    Int2ObjectOpenHashMap int2ObjectMap = new Int2ObjectOpenHashMap();
-                    for (int m = 0; m < this.chars.size(); ++m) {
-                        int n = 0;
-                        for (int o : this.chars.get(m)) {
-                            int q;
-                            BitmapFontGlyph bitmapFontGlyph;
-                            int p = n++;
-                            if (o == 0 || (bitmapFontGlyph = (BitmapFontGlyph)int2ObjectMap.put(o, (Object)new BitmapFontGlyph(f, nativeImage, p * k, m * l, k, l, (int)(0.5 + (double)((float)(q = this.findCharacterStartX(nativeImage, k, l, p, m)) * f)) + 1, this.ascent))) == null) continue;
-                            LOGGER.warn("Codepoint '{}' declared multiple times in {}", (Object)Integer.toHexString(o), (Object)this.filename);
-                        }
-                    }
-                    bitmapFont = new BitmapFont(nativeImage, (Int2ObjectMap<BitmapFontGlyph>)int2ObjectMap);
-                    if (inputStream == null) break block10;
-                }
-                catch (Throwable throwable) {
-                    try {
-                        if (inputStream != null) {
-                            try {
-                                inputStream.close();
-                            }
-                            catch (Throwable throwable2) {
-                                throwable.addSuppressed(throwable2);
-                            }
-                        }
-                        throw throwable;
-                    }
-                    catch (IOException iOException) {
-                        throw new RuntimeException(iOException.getMessage());
+        public Either<FontLoader.Loadable, FontLoader.Reference> build() {
+            return Either.left(this::load);
+        }
+
+        private Font load(ResourceManager resourceManager) throws IOException {
+            try (InputStream inputStream = resourceManager.open(this.filename);){
+                NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);
+                int i2 = nativeImage.getWidth();
+                int j = nativeImage.getHeight();
+                int k = i2 / this.chars.get(0).length;
+                int l = j / this.chars.size();
+                float f = (float)this.height / (float)l;
+                GlyphContainer<BitmapFontGlyph> glyphContainer = new GlyphContainer<BitmapFontGlyph>(BitmapFontGlyph[]::new, i -> new BitmapFontGlyph[i][]);
+                for (int m = 0; m < this.chars.size(); ++m) {
+                    int n = 0;
+                    for (int o : this.chars.get(m)) {
+                        int q;
+                        BitmapFontGlyph bitmapFontGlyph;
+                        int p = n++;
+                        if (o == 0 || (bitmapFontGlyph = glyphContainer.put(o, new BitmapFontGlyph(f, nativeImage, p * k, m * l, k, l, (int)(0.5 + (double)((float)(q = this.findCharacterStartX(nativeImage, k, l, p, m)) * f)) + 1, this.ascent))) == null) continue;
+                        LOGGER.warn("Codepoint '{}' declared multiple times in {}", (Object)Integer.toHexString(o), (Object)this.filename);
                     }
                 }
-                inputStream.close();
+                BitmapFont bitmapFont = new BitmapFont(nativeImage, glyphContainer);
+                return bitmapFont;
             }
-            return bitmapFont;
         }
 
         private int findCharacterStartX(NativeImage image, int characterWidth, int characterHeight, int charPosX, int charPosY) {

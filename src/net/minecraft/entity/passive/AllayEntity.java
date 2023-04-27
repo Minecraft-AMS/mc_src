@@ -75,17 +75,17 @@ import net.minecraft.world.World;
 import net.minecraft.world.event.EntityPositionSource;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.PositionSource;
+import net.minecraft.world.event.Vibrations;
 import net.minecraft.world.event.listener.EntityGameEventHandler;
 import net.minecraft.world.event.listener.GameEventListener;
-import net.minecraft.world.event.listener.VibrationListener;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class AllayEntity
 extends PathAwareEntity
-implements InventoryOwner {
+implements InventoryOwner,
+Vibrations {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final int field_38405 = 16;
     private static final Vec3i ITEM_PICKUP_RANGE_EXPANDER = new Vec3i(1, 1, 1);
     private static final int field_39461 = 5;
     private static final float field_39462 = 55.0f;
@@ -99,8 +99,9 @@ implements InventoryOwner {
     protected static final ImmutableList<SensorType<? extends Sensor<? super AllayEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.NEAREST_ITEMS);
     protected static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.PATH, MemoryModuleType.LOOK_TARGET, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.HURT_BY, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.LIKED_PLAYER, MemoryModuleType.LIKED_NOTEBLOCK, MemoryModuleType.LIKED_NOTEBLOCK_COOLDOWN_TICKS, MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, MemoryModuleType.IS_PANICKING, (Object[])new MemoryModuleType[0]);
     public static final ImmutableList<Float> THROW_SOUND_PITCHES = ImmutableList.of((Object)Float.valueOf(0.5625f), (Object)Float.valueOf(0.625f), (Object)Float.valueOf(0.75f), (Object)Float.valueOf(0.9375f), (Object)Float.valueOf(1.0f), (Object)Float.valueOf(1.0f), (Object)Float.valueOf(1.125f), (Object)Float.valueOf(1.25f), (Object)Float.valueOf(1.5f), (Object)Float.valueOf(1.875f), (Object)Float.valueOf(2.0f), (Object)Float.valueOf(2.25f), (Object[])new Float[]{Float.valueOf(2.5f), Float.valueOf(3.0f), Float.valueOf(3.75f), Float.valueOf(4.0f)});
-    private final EntityGameEventHandler<VibrationListener> gameEventHandler;
-    private final VibrationListener.Callback listenerCallback;
+    private final EntityGameEventHandler<Vibrations.VibrationListener> gameEventHandler;
+    private Vibrations.ListenerData vibrationListenerData;
+    private final Vibrations.Callback vibrationCallback;
     private final EntityGameEventHandler<JukeboxEventListener> jukeboxEventHandler;
     private final SimpleInventory inventory = new SimpleInventory(1);
     @Nullable
@@ -116,10 +117,10 @@ implements InventoryOwner {
         super((EntityType<? extends PathAwareEntity>)entityType, world);
         this.moveControl = new FlightMoveControl(this, 20, true);
         this.setCanPickUpLoot(this.canPickUpLoot());
-        EntityPositionSource positionSource = new EntityPositionSource(this, this.getStandingEyeHeight());
-        this.listenerCallback = new VibrationListenerCallback();
-        this.gameEventHandler = new EntityGameEventHandler<VibrationListener>(new VibrationListener(positionSource, 16, this.listenerCallback));
-        this.jukeboxEventHandler = new EntityGameEventHandler<JukeboxEventListener>(new JukeboxEventListener(positionSource, GameEvent.JUKEBOX_PLAY.getRange()));
+        this.vibrationCallback = new VibrationCallback();
+        this.vibrationListenerData = new Vibrations.ListenerData();
+        this.gameEventHandler = new EntityGameEventHandler<Vibrations.VibrationListener>(new Vibrations.VibrationListener(this));
+        this.jukeboxEventHandler = new EntityGameEventHandler<JukeboxEventListener>(new JukeboxEventListener(this.vibrationCallback.getPositionSource(), GameEvent.JUKEBOX_PLAY.getRange()));
     }
 
     protected Brain.Profile<AllayEntity> createBrainProfile() {
@@ -223,19 +224,19 @@ implements InventoryOwner {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("allayBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("allayActivityUpdate");
+        this.getWorld().getProfiler().push("allayBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("allayActivityUpdate");
         AllayBrain.updateActivities(this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
         super.mobTick();
     }
 
     @Override
     public void tickMovement() {
         super.tickMovement();
-        if (!this.world.isClient && this.isAlive() && this.age % 10 == 0) {
+        if (!this.getWorld().isClient && this.isAlive() && this.age % 10 == 0) {
             this.heal(1.0f);
         }
         if (this.isDancing() && this.shouldStopDancing() && this.age % 20 == 0) {
@@ -248,7 +249,7 @@ implements InventoryOwner {
     @Override
     public void tick() {
         super.tick();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             this.field_38936 = this.field_38935;
             this.field_38935 = this.isHoldingItem() ? MathHelper.clamp(this.field_38935 + 1.0f, 0.0f, 5.0f) : MathHelper.clamp(this.field_38935 - 1.0f, 0.0f, 5.0f);
             if (this.isDancing()) {
@@ -262,7 +263,7 @@ implements InventoryOwner {
                 this.field_39474 = 0.0f;
             }
         } else {
-            this.gameEventHandler.getListener().tick(this.world);
+            Vibrations.Ticker.tick(this.getWorld(), this.vibrationListenerData, this.vibrationCallback);
             if (this.isPanicking()) {
                 this.setDancing(false);
             }
@@ -293,23 +294,22 @@ implements InventoryOwner {
         ItemStack itemStack2 = this.getStackInHand(Hand.MAIN_HAND);
         if (this.isDancing() && this.matchesDuplicationIngredient(itemStack) && this.canDuplicate()) {
             this.duplicate();
-            this.world.sendEntityStatus(this, (byte)18);
-            this.world.playSoundFromEntity(player, this, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.NEUTRAL, 2.0f, 1.0f);
+            this.getWorld().sendEntityStatus(this, (byte)18);
+            this.getWorld().playSoundFromEntity(player, this, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.NEUTRAL, 2.0f, 1.0f);
             this.decrementStackUnlessInCreative(player, itemStack);
             return ActionResult.SUCCESS;
         }
         if (itemStack2.isEmpty() && !itemStack.isEmpty()) {
-            ItemStack itemStack3 = itemStack.copy();
-            itemStack3.setCount(1);
+            ItemStack itemStack3 = itemStack.copyWithCount(1);
             this.setStackInHand(Hand.MAIN_HAND, itemStack3);
             this.decrementStackUnlessInCreative(player, itemStack);
-            this.world.playSoundFromEntity(player, this, SoundEvents.ENTITY_ALLAY_ITEM_GIVEN, SoundCategory.NEUTRAL, 2.0f, 1.0f);
+            this.getWorld().playSoundFromEntity(player, this, SoundEvents.ENTITY_ALLAY_ITEM_GIVEN, SoundCategory.NEUTRAL, 2.0f, 1.0f);
             this.getBrain().remember(MemoryModuleType.LIKED_PLAYER, player.getUuid());
             return ActionResult.SUCCESS;
         }
         if (!itemStack2.isEmpty() && hand == Hand.MAIN_HAND && itemStack.isEmpty()) {
             this.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-            this.world.playSoundFromEntity(player, this, SoundEvents.ENTITY_ALLAY_ITEM_TAKEN, SoundCategory.NEUTRAL, 2.0f, 1.0f);
+            this.getWorld().playSoundFromEntity(player, this, SoundEvents.ENTITY_ALLAY_ITEM_TAKEN, SoundCategory.NEUTRAL, 2.0f, 1.0f);
             this.swingHand(Hand.MAIN_HAND);
             for (ItemStack itemStack4 : this.getInventory().clearToList()) {
                 LookTargetUtil.give(this, itemStack4, this.getPos());
@@ -346,7 +346,7 @@ implements InventoryOwner {
     @Override
     public boolean canGather(ItemStack stack) {
         ItemStack itemStack = this.getStackInHand(Hand.MAIN_HAND);
-        return !itemStack.isEmpty() && this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) && this.inventory.canInsert(stack) && this.areItemsEqual(itemStack, stack);
+        return !itemStack.isEmpty() && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) && this.inventory.canInsert(stack) && this.areItemsEqual(itemStack, stack);
     }
 
     private boolean areItemsEqual(ItemStack stack, ItemStack stack2) {
@@ -389,7 +389,7 @@ implements InventoryOwner {
 
     @Override
     public void updateEventHandler(BiConsumer<EntityGameEventHandler<?>, ServerWorld> callback) {
-        World world = this.world;
+        World world = this.getWorld();
         if (world instanceof ServerWorld) {
             ServerWorld serverWorld = (ServerWorld)world;
             callback.accept(this.gameEventHandler, serverWorld);
@@ -406,14 +406,14 @@ implements InventoryOwner {
     }
 
     public void setDancing(boolean dancing) {
-        if (this.world.isClient || !this.canMoveVoluntarily() || dancing && this.isPanicking()) {
+        if (this.getWorld().isClient || !this.canMoveVoluntarily() || dancing && this.isPanicking()) {
             return;
         }
         this.dataTracker.set(DANCING, dancing);
     }
 
     private boolean shouldStopDancing() {
-        return this.jukeboxPos == null || !this.jukeboxPos.isWithinDistance(this.getPos(), (double)GameEvent.JUKEBOX_PLAY.getRange()) || !this.world.getBlockState(this.jukeboxPos).isOf(Blocks.JUKEBOX);
+        return this.jukeboxPos == null || !this.jukeboxPos.isWithinDistance(this.getPos(), (double)GameEvent.JUKEBOX_PLAY.getRange()) || !this.getWorld().getBlockState(this.jukeboxPos).isOf(Blocks.JUKEBOX);
     }
 
     public float method_43397(float f) {
@@ -454,7 +454,7 @@ implements InventoryOwner {
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
         this.writeInventory(nbt);
-        VibrationListener.createCodec(this.listenerCallback).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.gameEventHandler.getListener()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("listener", (NbtElement)nbtElement));
+        Vibrations.ListenerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.vibrationListenerData).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("listener", (NbtElement)nbtElement));
         nbt.putLong("DuplicationCooldown", this.duplicationCooldown);
         nbt.putBoolean("CanDuplicate", this.canDuplicate());
     }
@@ -464,7 +464,9 @@ implements InventoryOwner {
         super.readCustomDataFromNbt(nbt);
         this.readInventory(nbt);
         if (nbt.contains("listener", 10)) {
-            VibrationListener.createCodec(this.listenerCallback).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(vibrationListener -> this.gameEventHandler.setListener((VibrationListener)vibrationListener, this.world));
+            Vibrations.ListenerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(listenerData -> {
+                this.vibrationListenerData = listenerData;
+            });
         }
         this.duplicationCooldown = nbt.getInt("DuplicationCooldown");
         this.dataTracker.set(CAN_DUPLICATE, nbt.getBoolean("CanDuplicate"));
@@ -479,7 +481,7 @@ implements InventoryOwner {
         if (this.duplicationCooldown > 0L) {
             --this.duplicationCooldown;
         }
-        if (!this.world.isClient() && this.duplicationCooldown == 0L && !this.canDuplicate()) {
+        if (!this.getWorld().isClient() && this.duplicationCooldown == 0L && !this.canDuplicate()) {
             this.dataTracker.set(CAN_DUPLICATE, true);
         }
     }
@@ -489,13 +491,13 @@ implements InventoryOwner {
     }
 
     private void duplicate() {
-        AllayEntity allayEntity = EntityType.ALLAY.create(this.world);
+        AllayEntity allayEntity = EntityType.ALLAY.create(this.getWorld());
         if (allayEntity != null) {
             allayEntity.refreshPositionAfterTeleport(this.getPos());
             allayEntity.setPersistent();
             allayEntity.startDuplicationCooldown();
             this.startDuplicationCooldown();
-            this.world.spawnEntity(allayEntity);
+            this.getWorld().spawnEntity(allayEntity);
         }
     }
 
@@ -539,16 +541,40 @@ implements InventoryOwner {
         double d = this.random.nextGaussian() * 0.02;
         double e = this.random.nextGaussian() * 0.02;
         double f = this.random.nextGaussian() * 0.02;
-        this.world.addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
+        this.getWorld().addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
     }
 
-    class VibrationListenerCallback
-    implements VibrationListener.Callback {
-        VibrationListenerCallback() {
+    @Override
+    public Vibrations.ListenerData getVibrationListenerData() {
+        return this.vibrationListenerData;
+    }
+
+    @Override
+    public Vibrations.Callback getVibrationCallback() {
+        return this.vibrationCallback;
+    }
+
+    class VibrationCallback
+    implements Vibrations.Callback {
+        private static final int RANGE = 16;
+        private final PositionSource positionSource;
+
+        VibrationCallback() {
+            this.positionSource = new EntityPositionSource(AllayEntity.this, AllayEntity.this.getStandingEyeHeight());
         }
 
         @Override
-        public boolean accepts(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, GameEvent.Emitter emitter) {
+        public int getRange() {
+            return 16;
+        }
+
+        @Override
+        public PositionSource getPositionSource() {
+            return this.positionSource;
+        }
+
+        @Override
+        public boolean accepts(ServerWorld world, BlockPos pos, GameEvent event, GameEvent.Emitter emitter) {
             if (AllayEntity.this.isAiDisabled()) {
                 return false;
             }
@@ -561,7 +587,7 @@ implements InventoryOwner {
         }
 
         @Override
-        public void accept(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, @Nullable Entity entity, @Nullable Entity sourceEntity, float distance) {
+        public void accept(ServerWorld world, BlockPos pos, GameEvent event, @Nullable Entity sourceEntity, @Nullable Entity entity, float distance) {
             if (event == GameEvent.NOTE_BLOCK_PLAY) {
                 AllayBrain.rememberNoteBlock(AllayEntity.this, new BlockPos(pos));
             }

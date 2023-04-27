@@ -38,7 +38,7 @@ extends StructureProcessor {
     @Override
     @Nullable
     public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
-        if (this.blocks.contains((Object)currentBlockInfo.state.getBlock())) {
+        if (this.blocks.contains((Object)currentBlockInfo.state().getBlock())) {
             return null;
         }
         return currentBlockInfo;

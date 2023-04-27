@@ -117,7 +117,7 @@ Saddleable {
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        if (BOOST_TIME.equals(data) && this.world.isClient) {
+        if (BOOST_TIME.equals(data) && this.getWorld().isClient) {
             this.saddledComponent.boost();
         }
         super.onTrackedDataSet(data);
@@ -157,7 +157,7 @@ Saddleable {
     public void saddle(@Nullable SoundCategory sound) {
         this.saddledComponent.setSaddled(true);
         if (sound != null) {
-            this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_STRIDER_SADDLE, sound, 0.5f, 1.0f);
+            this.getWorld().playSoundFromEntity(null, this, SoundEvents.ENTITY_STRIDER_SADDLE, sound, 0.5f, 1.0f);
         }
     }
 
@@ -235,11 +235,11 @@ Saddleable {
         }
         for (BlockPos blockPos : set) {
             double g;
-            if (this.world.getFluidState(blockPos).isIn(FluidTags.LAVA) || !Dismounting.canDismountInBlock(g = this.world.getDismountHeight(blockPos))) continue;
+            if (this.getWorld().getFluidState(blockPos).isIn(FluidTags.LAVA) || !Dismounting.canDismountInBlock(g = this.getWorld().getDismountHeight(blockPos))) continue;
             Vec3d vec3d2 = Vec3d.ofCenter(blockPos, g);
             for (EntityPose entityPose : passenger.getPoses()) {
                 Box box = passenger.getBoundingBox(entityPose);
-                if (!Dismounting.canPlaceEntityAt(this.world, passenger, box.offset(vec3d2))) continue;
+                if (!Dismounting.canPlaceEntityAt(this.getWorld(), passenger, box.offset(vec3d2))) continue;
                 passenger.setPose(entityPose);
                 return vec3d2;
             }
@@ -248,21 +248,21 @@ Saddleable {
     }
 
     @Override
-    protected void tickControlled(LivingEntity controllingPassenger, Vec3d movementInput) {
-        this.setRotation(controllingPassenger.getYaw(), controllingPassenger.getPitch() * 0.5f);
+    protected void tickControlled(PlayerEntity controllingPlayer, Vec3d movementInput) {
+        this.setRotation(controllingPlayer.getYaw(), controllingPlayer.getPitch() * 0.5f);
         this.bodyYaw = this.headYaw = this.getYaw();
         this.prevYaw = this.headYaw;
         this.saddledComponent.tickBoost();
-        super.tickControlled(controllingPassenger, movementInput);
+        super.tickControlled(controllingPlayer, movementInput);
     }
 
     @Override
-    protected Vec3d getControlledMovementInput(LivingEntity controllingPassenger, Vec3d movementInput) {
+    protected Vec3d getControlledMovementInput(PlayerEntity controllingPlayer, Vec3d movementInput) {
         return new Vec3d(0.0, 0.0, 1.0);
     }
 
     @Override
-    protected float getSaddledSpeed(LivingEntity controllingPassenger) {
+    protected float getSaddledSpeed(PlayerEntity controllingPlayer) {
         return (float)(this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) * (double)(this.isCold() ? 0.35f : 0.55f) * (double)this.saddledComponent.getMovementSpeedMultiplier());
     }
 
@@ -300,7 +300,7 @@ Saddleable {
         }
         if (!this.isAiDisabled()) {
             StriderEntity striderEntity;
-            BlockState blockState = this.world.getBlockState(this.getBlockPos());
+            BlockState blockState = this.getWorld().getBlockState(this.getBlockPos());
             BlockState blockState2 = this.getLandingBlockState();
             boolean bl = blockState.isIn(BlockTags.STRIDER_WARM_BLOCKS) || blockState2.isIn(BlockTags.STRIDER_WARM_BLOCKS) || this.getFluidHeight(FluidTags.LAVA) > 0.0;
             Entity entity = this.getVehicle();
@@ -328,10 +328,10 @@ Saddleable {
     private void updateFloating() {
         if (this.isInLava()) {
             ShapeContext shapeContext = ShapeContext.of(this);
-            if (!shapeContext.isAbove(FluidBlock.COLLISION_SHAPE, this.getBlockPos(), true) || this.world.getFluidState(this.getBlockPos().up()).isIn(FluidTags.LAVA)) {
+            if (!shapeContext.isAbove(FluidBlock.COLLISION_SHAPE, this.getBlockPos(), true) || this.getWorld().getFluidState(this.getBlockPos().up()).isIn(FluidTags.LAVA)) {
                 this.setVelocity(this.getVelocity().multiply(0.5).add(0.0, 0.05, 0.0));
             } else {
-                this.onGround = true;
+                this.setOnGround(true);
             }
         }
     }
@@ -409,10 +409,10 @@ Saddleable {
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         boolean bl = this.isBreedingItem(player.getStackInHand(hand));
         if (!bl && this.isSaddled() && !this.hasPassengers() && !player.shouldCancelInteraction()) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 player.startRiding(this);
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         ActionResult actionResult = super.interactMob(player, hand);
         if (!actionResult.isAccepted()) {
@@ -423,7 +423,7 @@ Saddleable {
             return ActionResult.PASS;
         }
         if (bl && !this.isSilent()) {
-            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_STRIDER_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+            this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_STRIDER_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
         }
         return actionResult;
     }
@@ -488,7 +488,7 @@ Saddleable {
 
         @Override
         public boolean shouldContinue() {
-            return !this.strider.isInLava() && this.isTargetPos(this.strider.world, this.targetPos);
+            return !this.strider.isInLava() && this.isTargetPos(this.strider.getWorld(), this.targetPos);
         }
 
         @Override

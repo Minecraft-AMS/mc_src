@@ -45,6 +45,7 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkStatus;
 import org.jetbrains.annotations.Nullable;
 
 public class BlendingData {
@@ -93,7 +94,7 @@ public class BlendingData {
     public static BlendingData getBlendingData(ChunkRegion chunkRegion, int chunkX, int chunkZ) {
         Chunk chunk = chunkRegion.getChunk(chunkX, chunkZ);
         BlendingData blendingData = chunk.getBlendingData();
-        if (blendingData == null) {
+        if (blendingData == null || !chunk.method_51526().isAtLeast(ChunkStatus.BIOMES)) {
             return null;
         }
         blendingData.initChunkBlendingData(chunk, BlendingData.getAdjacentChunksWithNoise(chunkRegion, chunkX, chunkZ, false));

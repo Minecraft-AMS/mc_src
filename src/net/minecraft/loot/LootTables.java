@@ -92,7 +92,14 @@ public class LootTables {
     public static final Identifier HERO_OF_THE_VILLAGE_SHEPHERD_GIFT_GAMEPLAY = LootTables.register("gameplay/hero_of_the_village/shepherd_gift");
     public static final Identifier HERO_OF_THE_VILLAGE_TOOLSMITH_GIFT_GAMEPLAY = LootTables.register("gameplay/hero_of_the_village/toolsmith_gift");
     public static final Identifier HERO_OF_THE_VILLAGE_WEAPONSMITH_GIFT_GAMEPLAY = LootTables.register("gameplay/hero_of_the_village/weaponsmith_gift");
+    public static final Identifier SNIFFER_DIGGING_GAMEPLAY = LootTables.register("gameplay/sniffer_digging");
     public static final Identifier PIGLIN_BARTERING_GAMEPLAY = LootTables.register("gameplay/piglin_bartering");
+    public static final Identifier DESERT_WELL_ARCHAEOLOGY = LootTables.register("archaeology/desert_well");
+    public static final Identifier DESERT_PYRAMID_ARCHAEOLOGY = LootTables.register("archaeology/desert_pyramid");
+    public static final Identifier TRAIL_RUINS_COMMON_ARCHAEOLOGY = LootTables.register("archaeology/trail_ruins_common");
+    public static final Identifier TRAIL_RUINS_RARE_ARCHAEOLOGY = LootTables.register("archaeology/trail_ruins_rare");
+    public static final Identifier OCEAN_RUIN_WARM_ARCHAEOLOGY = LootTables.register("archaeology/ocean_ruin_warm");
+    public static final Identifier OCEAN_RUIN_COLD_ARCHAEOLOGY = LootTables.register("archaeology/ocean_ruin_cold");
 
     private static Identifier register(String id) {
         return LootTables.registerLootTable(new Identifier(id));

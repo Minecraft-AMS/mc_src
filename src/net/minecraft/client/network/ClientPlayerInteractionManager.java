@@ -169,7 +169,7 @@ public class ClientPlayerInteractionManager {
                 if (bl && this.currentBreakingProgress == 0.0f) {
                     blockState.onBlockBreakStart(this.client.world, pos, this.client.player);
                 }
-                if (bl && blockState.calcBlockBreakingDelta(this.client.player, this.client.player.world, pos) >= 1.0f) {
+                if (bl && blockState.calcBlockBreakingDelta(this.client.player, this.client.player.getWorld(), pos) >= 1.0f) {
                     this.breakBlock(pos);
                 } else {
                     this.breakingBlock = true;
@@ -219,7 +219,7 @@ public class ClientPlayerInteractionManager {
                 this.breakingBlock = false;
                 return false;
             }
-            this.currentBreakingProgress += blockState.calcBlockBreakingDelta(this.client.player, this.client.player.world, pos);
+            this.currentBreakingProgress += blockState.calcBlockBreakingDelta(this.client.player, this.client.player.getWorld(), pos);
             if (this.blockBreakingSoundCooldown % 4.0f == 0.0f) {
                 BlockSoundGroup blockSoundGroup = blockState.getSoundGroup();
                 this.client.getSoundManager().play(new PositionedSoundInstance(blockSoundGroup.getHitSound(), SoundCategory.BLOCKS, (blockSoundGroup.getVolume() + 1.0f) / 8.0f, blockSoundGroup.getPitch() * 0.5f, SoundInstance.createRandom(), pos));

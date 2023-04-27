@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
@@ -21,12 +22,14 @@ import net.minecraft.block.SideShapeType;
 import net.minecraft.block.WallHangingSignBlock;
 import net.minecraft.block.WoodType;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.HangingSignBlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.item.BlockItem;
+import net.minecraft.item.HangingSignItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.tag.BlockTags;
@@ -47,6 +50,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import org.jetbrains.annotations.Nullable;
 
 public class HangingSignBlock
 extends AbstractSignBlock {
@@ -63,15 +67,17 @@ extends AbstractSignBlock {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        ItemStack itemStack;
+        SignBlockEntity signBlockEntity;
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        if (blockEntity instanceof SignBlockEntity) {
-            SignBlockEntity signBlockEntity = (SignBlockEntity)blockEntity;
-            ItemStack itemStack = player.getStackInHand(hand);
-            if (!signBlockEntity.shouldRunCommand(player) && itemStack.getItem() instanceof BlockItem) {
-                return ActionResult.PASS;
-            }
+        if (blockEntity instanceof SignBlockEntity && this.shouldTryAttaching(player, hit, signBlockEntity = (SignBlockEntity)blockEntity, itemStack = player.getStackInHand(hand))) {
+            return ActionResult.PASS;
         }
         return super.onUse(state, world, pos, player, hand, hit);
+    }
+
+    private boolean shouldTryAttaching(PlayerEntity player, BlockHitResult hitResult, SignBlockEntity sign, ItemStack stack) {
+        return !sign.canRunCommandClickEvent(sign.isPlayerFacingFront(player), player) && stack.getItem() instanceof HangingSignItem && hitResult.getSide().equals(Direction.DOWN);
     }
 
     @Override
@@ -124,6 +130,11 @@ extends AbstractSignBlock {
     }
 
     @Override
+    public float getRotationDegrees(BlockState state) {
+        return RotationPropertyHelper.toDegrees(state.get(ROTATION));
+    }
+
+    @Override
     public BlockState rotate(BlockState state, BlockRotation rotation) {
         return (BlockState)state.with(ROTATION, rotation.rotate(state.get(ROTATION), 16));
     }
@@ -141,6 +152,12 @@ extends AbstractSignBlock {
     @Override
     public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
         return new HangingSignBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return HangingSignBlock.checkType(type, BlockEntityType.HANGING_SIGN, SignBlockEntity::tick);
     }
 }
 

@@ -15,15 +15,14 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.AbstractInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
@@ -45,13 +44,11 @@ implements RecipeBookProvider {
     private float mouseX;
     private float mouseY;
     private final RecipeBookWidget recipeBook = new RecipeBookWidget();
-    private boolean open;
     private boolean narrow;
     private boolean mouseDown;
 
     public InventoryScreen(PlayerEntity player) {
         super(player.playerScreenHandler, player.getInventory(), Text.translatable("container.crafting"));
-        this.passEvents = true;
         this.titleX = 97;
     }
 
@@ -73,7 +70,6 @@ implements RecipeBookProvider {
         super.init();
         this.narrow = this.width < 379;
         this.recipeBook.initialize(this.width, this.height, this.client, this.narrow, (AbstractRecipeScreenHandler)this.handler);
-        this.open = true;
         this.x = this.recipeBook.findLeftEdge(this.width, this.backgroundWidth);
         this.addDrawableChild(new TexturedButtonWidget(this.x + 104, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, button -> {
             this.recipeBook.toggleOpen();
@@ -86,37 +82,36 @@ implements RecipeBookProvider {
     }
 
     @Override
-    protected void drawForeground(MatrixStack matrices, int mouseX, int mouseY) {
-        this.textRenderer.draw(matrices, this.title, (float)this.titleX, (float)this.titleY, 0x404040);
+    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+        context.drawText(this.textRenderer, this.title, this.titleX, this.titleY, 0x404040, false);
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
         if (this.recipeBook.isOpen() && this.narrow) {
-            this.drawBackground(matrices, delta, mouseX, mouseY);
-            this.recipeBook.render(matrices, mouseX, mouseY, delta);
+            this.drawBackground(context, delta, mouseX, mouseY);
+            this.recipeBook.render(context, mouseX, mouseY, delta);
         } else {
-            this.recipeBook.render(matrices, mouseX, mouseY, delta);
-            super.render(matrices, mouseX, mouseY, delta);
-            this.recipeBook.drawGhostSlots(matrices, this.x, this.y, false, delta);
+            this.recipeBook.render(context, mouseX, mouseY, delta);
+            super.render(context, mouseX, mouseY, delta);
+            this.recipeBook.drawGhostSlots(context, this.x, this.y, false, delta);
         }
-        this.drawMouseoverTooltip(matrices, mouseX, mouseY);
-        this.recipeBook.drawTooltip(matrices, this.x, this.y, mouseX, mouseY);
+        this.drawMouseoverTooltip(context, mouseX, mouseY);
+        this.recipeBook.drawTooltip(context, this.x, this.y, mouseX, mouseY);
         this.mouseX = mouseX;
         this.mouseY = mouseY;
     }
 
     @Override
-    protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
         int i = this.x;
         int j = this.y;
-        InventoryScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
-        InventoryScreen.drawEntity(matrices, i + 51, j + 75, 30, (float)(i + 51) - this.mouseX, (float)(j + 75 - 50) - this.mouseY, (LivingEntity)this.client.player);
+        context.drawTexture(BACKGROUND_TEXTURE, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        InventoryScreen.drawEntity(context, i + 51, j + 75, 30, (float)(i + 51) - this.mouseX, (float)(j + 75 - 50) - this.mouseY, (LivingEntity)this.client.player);
     }
 
-    public static void drawEntity(MatrixStack matrices, int x, int y, int size, float mouseX, float mouseY, LivingEntity entity) {
+    public static void drawEntity(DrawContext context, int x, int y, int size, float mouseX, float mouseY, LivingEntity entity) {
         float f = (float)Math.atan(mouseX / 40.0f);
         float g = (float)Math.atan(mouseY / 40.0f);
         Quaternionf quaternionf = new Quaternionf().rotateZ((float)Math.PI);
@@ -132,7 +127,7 @@ implements RecipeBookProvider {
         entity.setPitch(-g * 20.0f);
         entity.headYaw = entity.getYaw();
         entity.prevHeadYaw = entity.getYaw();
-        InventoryScreen.drawEntity(matrices, x, y, size, quaternionf, quaternionf2, entity);
+        InventoryScreen.drawEntity(context, x, y, size, quaternionf, quaternionf2, entity);
         entity.bodyYaw = h;
         entity.setYaw(i);
         entity.setPitch(j);
@@ -140,16 +135,11 @@ implements RecipeBookProvider {
         entity.headYaw = l;
     }
 
-    public static void drawEntity(MatrixStack matrices, int x, int y, int size, Quaternionf quaternionf, @Nullable Quaternionf quaternionf2, LivingEntity entity) {
-        double d = 1000.0;
-        MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        matrixStack.push();
-        matrixStack.translate(0.0, 0.0, 1000.0);
-        RenderSystem.applyModelViewMatrix();
-        matrices.push();
-        matrices.translate((double)x, (double)y, -950.0);
-        matrices.multiplyPositionMatrix(new Matrix4f().scaling((float)size, (float)size, (float)(-size)));
-        matrices.multiply(quaternionf);
+    public static void drawEntity(DrawContext context, int x, int y, int size, Quaternionf quaternionf, @Nullable Quaternionf quaternionf2, LivingEntity entity) {
+        context.getMatrices().push();
+        context.getMatrices().translate((double)x, (double)y, 50.0);
+        context.getMatrices().multiplyPositionMatrix(new Matrix4f().scaling((float)size, (float)size, (float)(-size)));
+        context.getMatrices().multiply(quaternionf);
         DiffuseLighting.method_34742();
         EntityRenderDispatcher entityRenderDispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
         if (quaternionf2 != null) {
@@ -157,14 +147,11 @@ implements RecipeBookProvider {
             entityRenderDispatcher.setRotation(quaternionf2);
         }
         entityRenderDispatcher.setRenderShadows(false);
-        VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        RenderSystem.runAsFancy(() -> entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, matrices, immediate, 0xF000F0));
-        immediate.draw();
+        RenderSystem.runAsFancy(() -> entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, context.getMatrices(), context.getVertexConsumers(), 0xF000F0));
+        context.draw();
         entityRenderDispatcher.setRenderShadows(true);
-        matrices.pop();
+        context.getMatrices().pop();
         DiffuseLighting.enableGuiDepthLighting();
-        matrixStack.pop();
-        RenderSystem.applyModelViewMatrix();
     }
 
     @Override

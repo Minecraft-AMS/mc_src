@@ -417,7 +417,7 @@ public class Raid {
             Set<RaiderEntity> set2 = iterator.next();
             for (RaiderEntity raiderEntity : set2) {
                 BlockPos blockPos = raiderEntity.getBlockPos();
-                if (raiderEntity.isRemoved() || raiderEntity.world.getRegistryKey() != this.world.getRegistryKey() || this.center.getSquaredDistance(blockPos) >= 12544.0) {
+                if (raiderEntity.isRemoved() || raiderEntity.getWorld().getRegistryKey() != this.world.getRegistryKey() || this.center.getSquaredDistance(blockPos) >= 12544.0) {
                     set.add(raiderEntity);
                     continue;
                 }

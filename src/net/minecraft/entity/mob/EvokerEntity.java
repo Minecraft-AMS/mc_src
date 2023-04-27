@@ -159,6 +159,7 @@ extends SpellcastingIllagerEntity {
     class LookAtTargetOrWololoTarget
     extends SpellcastingIllagerEntity.LookAtTargetGoal {
         LookAtTargetOrWololoTarget() {
+            super(EvokerEntity.this);
         }
 
         @Override
@@ -173,9 +174,11 @@ extends SpellcastingIllagerEntity {
 
     class SummonVexGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
-        private final TargetPredicate closeVexPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).ignoreVisibility().ignoreDistanceScalingFactor();
+        private final TargetPredicate closeVexPredicate;
 
         SummonVexGoal() {
+            super(EvokerEntity.this);
+            this.closeVexPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).ignoreVisibility().ignoreDistanceScalingFactor();
         }
 
         @Override
@@ -183,7 +186,7 @@ extends SpellcastingIllagerEntity {
             if (!super.canStart()) {
                 return false;
             }
-            int i = EvokerEntity.this.world.getTargets(VexEntity.class, this.closeVexPredicate, EvokerEntity.this, EvokerEntity.this.getBoundingBox().expand(16.0)).size();
+            int i = EvokerEntity.this.getWorld().getTargets(VexEntity.class, this.closeVexPredicate, EvokerEntity.this, EvokerEntity.this.getBoundingBox().expand(16.0)).size();
             return EvokerEntity.this.random.nextInt(8) + 1 > i;
         }
 
@@ -199,13 +202,13 @@ extends SpellcastingIllagerEntity {
 
         @Override
         protected void castSpell() {
-            ServerWorld serverWorld = (ServerWorld)EvokerEntity.this.world;
+            ServerWorld serverWorld = (ServerWorld)EvokerEntity.this.getWorld();
             for (int i = 0; i < 3; ++i) {
                 BlockPos blockPos = EvokerEntity.this.getBlockPos().add(-2 + EvokerEntity.this.random.nextInt(5), 1, -2 + EvokerEntity.this.random.nextInt(5));
-                VexEntity vexEntity = EntityType.VEX.create(EvokerEntity.this.world);
+                VexEntity vexEntity = EntityType.VEX.create(EvokerEntity.this.getWorld());
                 if (vexEntity == null) continue;
                 vexEntity.refreshPositionAndAngles(blockPos, 0.0f, 0.0f);
-                vexEntity.initialize(serverWorld, EvokerEntity.this.world.getLocalDifficulty(blockPos), SpawnReason.MOB_SUMMONED, null, null);
+                vexEntity.initialize(serverWorld, EvokerEntity.this.getWorld().getLocalDifficulty(blockPos), SpawnReason.MOB_SUMMONED, null, null);
                 vexEntity.setOwner(EvokerEntity.this);
                 vexEntity.setBounds(blockPos);
                 vexEntity.setLifeTicks(20 * (30 + EvokerEntity.this.random.nextInt(90)));
@@ -227,6 +230,7 @@ extends SpellcastingIllagerEntity {
     class ConjureFangsGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
         ConjureFangsGoal() {
+            super(EvokerEntity.this);
         }
 
         @Override
@@ -272,17 +276,17 @@ extends SpellcastingIllagerEntity {
             do {
                 BlockState blockState2;
                 VoxelShape voxelShape;
-                BlockPos blockPos2;
-                BlockState blockState;
-                if (!(blockState = EvokerEntity.this.world.getBlockState(blockPos2 = blockPos.down())).isSideSolidFullSquare(EvokerEntity.this.world, blockPos2, Direction.UP)) continue;
-                if (!EvokerEntity.this.world.isAir(blockPos) && !(voxelShape = (blockState2 = EvokerEntity.this.world.getBlockState(blockPos)).getCollisionShape(EvokerEntity.this.world, blockPos)).isEmpty()) {
+                BlockPos blockPos2 = blockPos.down();
+                BlockState blockState = EvokerEntity.this.getWorld().getBlockState(blockPos2);
+                if (!blockState.isSideSolidFullSquare(EvokerEntity.this.getWorld(), blockPos2, Direction.UP)) continue;
+                if (!EvokerEntity.this.getWorld().isAir(blockPos) && !(voxelShape = (blockState2 = EvokerEntity.this.getWorld().getBlockState(blockPos)).getCollisionShape(EvokerEntity.this.getWorld(), blockPos)).isEmpty()) {
                     d = voxelShape.getMax(Direction.Axis.Y);
                 }
                 bl = true;
                 break;
             } while ((blockPos = blockPos.down()).getY() >= MathHelper.floor(maxY) - 1);
             if (bl) {
-                EvokerEntity.this.world.spawnEntity(new EvokerFangsEntity(EvokerEntity.this.world, x, (double)blockPos.getY() + d, z, yaw, warmup, EvokerEntity.this));
+                EvokerEntity.this.getWorld().spawnEntity(new EvokerFangsEntity(EvokerEntity.this.getWorld(), x, (double)blockPos.getY() + d, z, yaw, warmup, EvokerEntity.this));
             }
         }
 
@@ -299,7 +303,12 @@ extends SpellcastingIllagerEntity {
 
     public class WololoGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
-        private final TargetPredicate convertibleSheepPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).setPredicate(livingEntity -> ((SheepEntity)livingEntity).getColor() == DyeColor.BLUE);
+        private final TargetPredicate convertibleSheepPredicate;
+
+        public WololoGoal() {
+            super(EvokerEntity.this);
+            this.convertibleSheepPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).setPredicate(livingEntity -> ((SheepEntity)livingEntity).getColor() == DyeColor.BLUE);
+        }
 
         @Override
         public boolean canStart() {
@@ -312,10 +321,10 @@ extends SpellcastingIllagerEntity {
             if (EvokerEntity.this.age < this.startTime) {
                 return false;
             }
-            if (!EvokerEntity.this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (!EvokerEntity.this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return false;
             }
-            List<SheepEntity> list = EvokerEntity.this.world.getTargets(SheepEntity.class, this.convertibleSheepPredicate, EvokerEntity.this, EvokerEntity.this.getBoundingBox().expand(16.0, 4.0, 16.0));
+            List<SheepEntity> list = EvokerEntity.this.getWorld().getTargets(SheepEntity.class, this.convertibleSheepPredicate, EvokerEntity.this, EvokerEntity.this.getBoundingBox().expand(16.0, 4.0, 16.0));
             if (list.isEmpty()) {
                 return false;
             }

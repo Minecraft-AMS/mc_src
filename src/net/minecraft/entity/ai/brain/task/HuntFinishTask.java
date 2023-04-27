@@ -19,7 +19,7 @@ public class HuntFinishTask {
         return TaskTriggerer.task(context -> context.group(context.queryMemoryValue(MemoryModuleType.ATTACK_TARGET), context.queryMemoryOptional(MemoryModuleType.HUNTED_RECENTLY)).apply((Applicative)context, (attackTarget, huntedRecently) -> (world, entity, time) -> {
             LivingEntity livingEntity = (LivingEntity)context.getValue(attackTarget);
             if (livingEntity.getType() == EntityType.HOGLIN && livingEntity.isDead()) {
-                huntedRecently.remember(true, PiglinBrain.HUNT_MEMORY_DURATION.get(entity.world.random));
+                huntedRecently.remember(true, PiglinBrain.HUNT_MEMORY_DURATION.get(entity.getWorld().random));
             }
             return true;
         }));

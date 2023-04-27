@@ -9,9 +9,9 @@ package net.minecraft.client.gui.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 
@@ -32,11 +32,11 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        FatalErrorScreen.fillGradient(matrices, 0, 0, this.width, this.height, -12574688, -11530224);
-        FatalErrorScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 90, 0xFFFFFF);
-        FatalErrorScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.message, this.width / 2, 110, 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        context.fillGradient(0, 0, this.width, this.height, -12574688, -11530224);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 90, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.message, this.width / 2, 110, 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override

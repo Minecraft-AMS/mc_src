@@ -28,7 +28,6 @@ public class GameEvent {
     public static final GameEvent BLOCK_PLACE = GameEvent.register("block_place");
     public static final GameEvent CONTAINER_CLOSE = GameEvent.register("container_close");
     public static final GameEvent CONTAINER_OPEN = GameEvent.register("container_open");
-    public static final GameEvent DISPENSE_FAIL = GameEvent.register("dispense_fail");
     public static final GameEvent DRINK = GameEvent.register("drink");
     public static final GameEvent EAT = GameEvent.register("eat");
     public static final GameEvent ELYTRA_GLIDE = GameEvent.register("elytra_glide");
@@ -53,8 +52,6 @@ public class GameEvent {
     public static final GameEvent JUKEBOX_STOP_PLAY = GameEvent.register("jukebox_stop_play", 10);
     public static final GameEvent LIGHTNING_STRIKE = GameEvent.register("lightning_strike");
     public static final GameEvent NOTE_BLOCK_PLAY = GameEvent.register("note_block_play");
-    public static final GameEvent PISTON_CONTRACT = GameEvent.register("piston_contract");
-    public static final GameEvent PISTON_EXTEND = GameEvent.register("piston_extend");
     public static final GameEvent PRIME_FUSE = GameEvent.register("prime_fuse");
     public static final GameEvent PROJECTILE_LAND = GameEvent.register("projectile_land");
     public static final GameEvent PROJECTILE_SHOOT = GameEvent.register("projectile_shoot");
@@ -65,6 +62,21 @@ public class GameEvent {
     public static final GameEvent STEP = GameEvent.register("step");
     public static final GameEvent SWIM = GameEvent.register("swim");
     public static final GameEvent TELEPORT = GameEvent.register("teleport");
+    public static final GameEvent RESONATE_1 = GameEvent.register("resonate_1");
+    public static final GameEvent RESONATE_2 = GameEvent.register("resonate_2");
+    public static final GameEvent RESONATE_3 = GameEvent.register("resonate_3");
+    public static final GameEvent RESONATE_4 = GameEvent.register("resonate_4");
+    public static final GameEvent RESONATE_5 = GameEvent.register("resonate_5");
+    public static final GameEvent RESONATE_6 = GameEvent.register("resonate_6");
+    public static final GameEvent RESONATE_7 = GameEvent.register("resonate_7");
+    public static final GameEvent RESONATE_8 = GameEvent.register("resonate_8");
+    public static final GameEvent RESONATE_9 = GameEvent.register("resonate_9");
+    public static final GameEvent RESONATE_10 = GameEvent.register("resonate_10");
+    public static final GameEvent RESONATE_11 = GameEvent.register("resonate_11");
+    public static final GameEvent RESONATE_12 = GameEvent.register("resonate_12");
+    public static final GameEvent RESONATE_13 = GameEvent.register("resonate_13");
+    public static final GameEvent RESONATE_14 = GameEvent.register("resonate_14");
+    public static final GameEvent RESONATE_15 = GameEvent.register("resonate_15");
     public static final int DEFAULT_RANGE = 16;
     private final String id;
     private final int range;

@@ -39,7 +39,7 @@ implements NeighborUpdater {
 
     @Override
     public void replaceWithStateForNeighborUpdate(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, int flags, int maxUpdateDepth) {
-        this.enqueue(pos, new StateReplacementEntry(direction, neighborState, pos.toImmutable(), neighborPos.toImmutable(), flags));
+        this.enqueue(pos, new StateReplacementEntry(direction, neighborState, pos.toImmutable(), neighborPos.toImmutable(), flags, maxUpdateDepth));
     }
 
     @Override
@@ -97,27 +97,27 @@ implements NeighborUpdater {
         }
     }
 
-    record StateReplacementEntry(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, int updateFlags) implements Entry
+    record StateReplacementEntry(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, int updateFlags, int updateLimit) implements Entry
     {
         @Override
         public boolean update(World world) {
-            NeighborUpdater.replaceWithStateForNeighborUpdate(world, this.direction, this.neighborState, this.pos, this.neighborPos, this.updateFlags, 512);
+            NeighborUpdater.replaceWithStateForNeighborUpdate(world, this.direction, this.neighborState, this.pos, this.neighborPos, this.updateFlags, this.updateLimit);
             return false;
         }
 
         @Override
         public final String toString() {
-            return ObjectMethods.bootstrap("toString", new MethodHandle[]{StateReplacementEntry.class, "direction;state;pos;neighborPos;updateFlags", "direction", "neighborState", "pos", "neighborPos", "updateFlags"}, this);
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{StateReplacementEntry.class, "direction;state;pos;neighborPos;updateFlags;updateLimit", "direction", "neighborState", "pos", "neighborPos", "updateFlags", "updateLimit"}, this);
         }
 
         @Override
         public final int hashCode() {
-            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{StateReplacementEntry.class, "direction;state;pos;neighborPos;updateFlags", "direction", "neighborState", "pos", "neighborPos", "updateFlags"}, this);
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{StateReplacementEntry.class, "direction;state;pos;neighborPos;updateFlags;updateLimit", "direction", "neighborState", "pos", "neighborPos", "updateFlags", "updateLimit"}, this);
         }
 
         @Override
         public final boolean equals(Object object) {
-            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{StateReplacementEntry.class, "direction;state;pos;neighborPos;updateFlags", "direction", "neighborState", "pos", "neighborPos", "updateFlags"}, this, object);
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{StateReplacementEntry.class, "direction;state;pos;neighborPos;updateFlags;updateLimit", "direction", "neighborState", "pos", "neighborPos", "updateFlags", "updateLimit"}, this, object);
         }
     }
 

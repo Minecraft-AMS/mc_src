@@ -32,7 +32,7 @@ public class HungerManager {
 
     public void update(PlayerEntity player) {
         boolean bl;
-        Difficulty difficulty = player.world.getDifficulty();
+        Difficulty difficulty = player.getWorld().getDifficulty();
         this.prevFoodLevel = this.foodLevel;
         if (this.exhaustion > 4.0f) {
             this.exhaustion -= 4.0f;
@@ -42,7 +42,7 @@ public class HungerManager {
                 this.foodLevel = Math.max(this.foodLevel - 1, 0);
             }
         }
-        if ((bl = player.world.getGameRules().getBoolean(GameRules.NATURAL_REGENERATION)) && this.saturationLevel > 0.0f && player.canFoodHeal() && this.foodLevel >= 20) {
+        if ((bl = player.getWorld().getGameRules().getBoolean(GameRules.NATURAL_REGENERATION)) && this.saturationLevel > 0.0f && player.canFoodHeal() && this.foodLevel >= 20) {
             ++this.foodTickTimer;
             if (this.foodTickTimer >= 10) {
                 float f = Math.min(this.saturationLevel, 6.0f);

@@ -75,13 +75,13 @@ OperatorBlock {
     }
 
     public static boolean attachmentMatches(StructureTemplate.StructureBlockInfo info1, StructureTemplate.StructureBlockInfo info2) {
-        Direction direction = JigsawBlock.getFacing(info1.state);
-        Direction direction2 = JigsawBlock.getFacing(info2.state);
-        Direction direction3 = JigsawBlock.getRotation(info1.state);
-        Direction direction4 = JigsawBlock.getRotation(info2.state);
-        JigsawBlockEntity.Joint joint = JigsawBlockEntity.Joint.byName(info1.nbt.getString("joint")).orElseGet(() -> direction.getAxis().isHorizontal() ? JigsawBlockEntity.Joint.ALIGNED : JigsawBlockEntity.Joint.ROLLABLE);
+        Direction direction = JigsawBlock.getFacing(info1.state());
+        Direction direction2 = JigsawBlock.getFacing(info2.state());
+        Direction direction3 = JigsawBlock.getRotation(info1.state());
+        Direction direction4 = JigsawBlock.getRotation(info2.state());
+        JigsawBlockEntity.Joint joint = JigsawBlockEntity.Joint.byName(info1.nbt().getString("joint")).orElseGet(() -> direction.getAxis().isHorizontal() ? JigsawBlockEntity.Joint.ALIGNED : JigsawBlockEntity.Joint.ROLLABLE);
         boolean bl = joint == JigsawBlockEntity.Joint.ROLLABLE;
-        return direction == direction2.getOpposite() && (bl || direction3 == direction4) && info1.nbt.getString("target").equals(info2.nbt.getString("name"));
+        return direction == direction2.getOpposite() && (bl || direction3 == direction4) && info1.nbt().getString("target").equals(info2.nbt().getString("name"));
     }
 
     public static Direction getFacing(BlockState state) {

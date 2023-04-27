@@ -160,7 +160,7 @@ implements Angerable {
         if (nbt.contains("CollarColor", 99)) {
             this.setCollarColor(DyeColor.byId(nbt.getInt("CollarColor")));
         }
-        this.readAngerFromNbt(this.world, nbt);
+        this.readAngerFromNbt(this.getWorld(), nbt);
     }
 
     @Override
@@ -195,14 +195,14 @@ implements Angerable {
     @Override
     public void tickMovement() {
         super.tickMovement();
-        if (!this.world.isClient && this.furWet && !this.canShakeWaterOff && !this.isNavigating() && this.onGround) {
+        if (!this.getWorld().isClient && this.furWet && !this.canShakeWaterOff && !this.isNavigating() && this.isOnGround()) {
             this.canShakeWaterOff = true;
             this.shakeProgress = 0.0f;
             this.lastShakeProgress = 0.0f;
-            this.world.sendEntityStatus(this, (byte)8);
+            this.getWorld().sendEntityStatus(this, (byte)8);
         }
-        if (!this.world.isClient) {
-            this.tickAngerLogic((ServerWorld)this.world, true);
+        if (!this.getWorld().isClient) {
+            this.tickAngerLogic((ServerWorld)this.getWorld(), true);
         }
     }
 
@@ -216,8 +216,8 @@ implements Angerable {
         this.begAnimationProgress = this.isBegging() ? (this.begAnimationProgress += (1.0f - this.begAnimationProgress) * 0.4f) : (this.begAnimationProgress += (0.0f - this.begAnimationProgress) * 0.4f);
         if (this.isWet()) {
             this.furWet = true;
-            if (this.canShakeWaterOff && !this.world.isClient) {
-                this.world.sendEntityStatus(this, (byte)56);
+            if (this.canShakeWaterOff && !this.getWorld().isClient) {
+                this.getWorld().sendEntityStatus(this, (byte)56);
                 this.resetShake();
             }
         } else if ((this.furWet || this.canShakeWaterOff) && this.canShakeWaterOff) {
@@ -240,7 +240,7 @@ implements Angerable {
                 for (int j = 0; j < i; ++j) {
                     float g = (this.random.nextFloat() * 2.0f - 1.0f) * this.getWidth() * 0.5f;
                     float h = (this.random.nextFloat() * 2.0f - 1.0f) * this.getWidth() * 0.5f;
-                    this.world.addParticle(ParticleTypes.SPLASH, this.getX() + (double)g, f + 0.8f, this.getZ() + (double)h, vec3d.x, vec3d.y, vec3d.z);
+                    this.getWorld().addParticle(ParticleTypes.SPLASH, this.getX() + (double)g, f + 0.8f, this.getZ() + (double)h, vec3d.x, vec3d.y, vec3d.z);
                 }
             }
         }
@@ -302,7 +302,7 @@ implements Angerable {
             return false;
         }
         Entity entity = source.getAttacker();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.setSitting(false);
         }
         if (entity != null && !(entity instanceof PlayerEntity) && !(entity instanceof PersistentProjectileEntity)) {
@@ -340,11 +340,12 @@ implements Angerable {
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             boolean bl = this.isOwner(player) || this.isTamed() || itemStack.isOf(Items.BONE) && !this.isTamed() && !this.hasAngerTime();
             return bl ? ActionResult.CONSUME : ActionResult.PASS;
         }
         if (this.isTamed()) {
+            ActionResult actionResult;
             if (this.isBreedingItem(itemStack) && this.getHealth() < this.getMaxHealth()) {
                 if (!player.getAbilities().creativeMode) {
                     itemStack.decrement(1);
@@ -353,15 +354,17 @@ implements Angerable {
                 return ActionResult.SUCCESS;
             }
             if (item instanceof DyeItem) {
-                DyeColor dyeColor = ((DyeItem)item).getColor();
-                if (dyeColor == this.getCollarColor()) return super.interactMob(player, hand);
-                this.setCollarColor(dyeColor);
-                if (player.getAbilities().creativeMode) return ActionResult.SUCCESS;
-                itemStack.decrement(1);
-                return ActionResult.SUCCESS;
+                DyeItem dyeItem = (DyeItem)item;
+                if (this.isOwner(player)) {
+                    DyeColor dyeColor = dyeItem.getColor();
+                    if (dyeColor == this.getCollarColor()) return super.interactMob(player, hand);
+                    this.setCollarColor(dyeColor);
+                    if (player.getAbilities().creativeMode) return ActionResult.SUCCESS;
+                    itemStack.decrement(1);
+                    return ActionResult.SUCCESS;
+                }
             }
-            ActionResult actionResult = super.interactMob(player, hand);
-            if (actionResult.isAccepted() && !this.isBaby() || !this.isOwner(player)) return actionResult;
+            if ((actionResult = super.interactMob(player, hand)).isAccepted() && !this.isBaby() || !this.isOwner(player)) return actionResult;
             this.setSitting(!this.isSitting());
             this.jumping = false;
             this.navigation.stop();
@@ -377,10 +380,10 @@ implements Angerable {
             this.navigation.stop();
             this.setTarget(null);
             this.setSitting(true);
-            this.world.sendEntityStatus(this, (byte)7);
+            this.getWorld().sendEntityStatus(this, (byte)7);
             return ActionResult.SUCCESS;
         } else {
-            this.world.sendEntityStatus(this, (byte)6);
+            this.getWorld().sendEntityStatus(this, (byte)6);
         }
         return ActionResult.SUCCESS;
     }

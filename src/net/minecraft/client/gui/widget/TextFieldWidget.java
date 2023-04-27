@@ -19,15 +19,15 @@ import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.navigation.GuiNavigation;
 import net.minecraft.client.gui.navigation.GuiNavigationPath;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.sound.SoundManager;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
@@ -346,37 +346,29 @@ implements Drawable {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        boolean bl;
-        if (!this.isVisible() || button != 0) {
-            return false;
+    public void onClick(double mouseX, double mouseY) {
+        int i = MathHelper.floor(mouseX) - this.getX();
+        if (this.drawsBackground) {
+            i -= 4;
         }
-        boolean bl2 = bl = mouseX >= (double)this.getX() && mouseX < (double)(this.getX() + this.width) && mouseY >= (double)this.getY() && mouseY < (double)(this.getY() + this.height);
-        if (this.focusUnlocked) {
-            this.setFocused(bl);
-        }
-        if (this.isFocused() && bl && button == 0) {
-            int i = MathHelper.floor(mouseX) - this.getX();
-            if (this.drawsBackground) {
-                i -= 4;
-            }
-            String string = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), this.getInnerWidth());
-            this.setCursor(this.textRenderer.trimToWidth(string, i).length() + this.firstCharacterIndex);
-            return true;
-        }
-        return false;
+        String string = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), this.getInnerWidth());
+        this.setCursor(this.textRenderer.trimToWidth(string, i).length() + this.firstCharacterIndex);
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void playDownSound(SoundManager soundManager) {
+    }
+
+    @Override
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         int i;
         if (!this.isVisible()) {
             return;
         }
         if (this.drawsBackground()) {
             i = this.isFocused() ? -1 : -6250336;
-            TextFieldWidget.fill(matrices, this.getX() - 1, this.getY() - 1, this.getX() + this.width + 1, this.getY() + this.height + 1, i);
-            TextFieldWidget.fill(matrices, this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -16777216);
+            context.fill(this.getX() - 1, this.getY() - 1, this.getX() + this.width + 1, this.getY() + this.height + 1, i);
+            context.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -16777216);
         }
         i = this.editable ? this.editableColor : this.uneditableColor;
         int j = this.selectionStart - this.firstCharacterIndex;
@@ -392,7 +384,7 @@ implements Drawable {
         }
         if (!string.isEmpty()) {
             String string2 = bl ? string.substring(0, j) : string;
-            n = this.textRenderer.drawWithShadow(matrices, this.renderTextProvider.apply(string2, this.firstCharacterIndex), (float)n, (float)m, i);
+            n = context.drawTextWithShadow(this.textRenderer, this.renderTextProvider.apply(string2, this.firstCharacterIndex), n, m, i);
         }
         boolean bl3 = this.selectionStart < this.text.length() || this.text.length() >= this.getMaxLength();
         int o = n;
@@ -403,28 +395,28 @@ implements Drawable {
             --n;
         }
         if (!string.isEmpty() && bl && j < string.length()) {
-            this.textRenderer.drawWithShadow(matrices, this.renderTextProvider.apply(string.substring(j), this.selectionStart), (float)n, (float)m, i);
+            context.drawTextWithShadow(this.textRenderer, this.renderTextProvider.apply(string.substring(j), this.selectionStart), n, m, i);
         }
         if (this.placeholder != null && string.isEmpty() && !this.isFocused()) {
-            this.textRenderer.drawWithShadow(matrices, this.placeholder, (float)n, (float)m, i);
+            context.drawTextWithShadow(this.textRenderer, this.placeholder, n, m, i);
         }
         if (!bl3 && this.suggestion != null) {
-            this.textRenderer.drawWithShadow(matrices, this.suggestion, (float)(o - 1), (float)m, -8355712);
+            context.drawTextWithShadow(this.textRenderer, this.suggestion, o - 1, m, -8355712);
         }
         if (bl2) {
             if (bl3) {
-                DrawableHelper.fill(matrices, o, m - 1, o + 1, m + 1 + this.textRenderer.fontHeight, -3092272);
+                context.fill(o, m - 1, o + 1, m + 1 + this.textRenderer.fontHeight, -3092272);
             } else {
-                this.textRenderer.drawWithShadow(matrices, HORIZONTAL_CURSOR, (float)o, (float)m, i);
+                context.drawTextWithShadow(this.textRenderer, HORIZONTAL_CURSOR, o, m, i);
             }
         }
         if (k != j) {
             int p = l + this.textRenderer.getWidth(string.substring(0, k));
-            this.drawSelectionHighlight(matrices, o, m - 1, p - 1, m + 1 + this.textRenderer.fontHeight);
+            this.drawSelectionHighlight(context, o, m - 1, p - 1, m + 1 + this.textRenderer.fontHeight);
         }
     }
 
-    private void drawSelectionHighlight(MatrixStack matrices, int x1, int y1, int x2, int y2) {
+    private void drawSelectionHighlight(DrawContext context, int x1, int y1, int x2, int y2) {
         int i;
         if (x1 < x2) {
             i = x1;
@@ -444,7 +436,7 @@ implements Drawable {
         }
         RenderSystem.enableColorLogicOp();
         RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
-        TextFieldWidget.fill(matrices, x1, y1, x2, y2, -16776961);
+        context.fill(x1, y1, x2, y2, -16776961);
         RenderSystem.disableColorLogicOp();
     }
 

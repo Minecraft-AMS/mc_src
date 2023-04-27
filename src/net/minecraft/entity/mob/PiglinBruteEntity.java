@@ -98,9 +98,9 @@ extends AbstractPiglinEntity {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("piglinBruteBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().push("piglinBruteBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
         PiglinBruteBrain.tick(this);
         PiglinBruteBrain.playSoundRandomly(this);
         super.mobTick();
@@ -117,7 +117,7 @@ extends AbstractPiglinEntity {
     @Override
     public boolean damage(DamageSource source, float amount) {
         boolean bl = super.damage(source, amount);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return false;
         }
         if (bl && source.getAttacker() instanceof LivingEntity) {

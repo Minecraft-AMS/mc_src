@@ -126,18 +126,18 @@ implements Monster {
     @Override
     public void tick() {
         super.tick();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             float f = MathHelper.cos((float)(this.getWingFlapTickOffset() + this.age) * 7.448451f * ((float)Math.PI / 180) + (float)Math.PI);
             float g = MathHelper.cos((float)(this.getWingFlapTickOffset() + this.age + 1) * 7.448451f * ((float)Math.PI / 180) + (float)Math.PI);
             if (f > 0.0f && g <= 0.0f) {
-                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PHANTOM_FLAP, this.getSoundCategory(), 0.95f + this.random.nextFloat() * 0.05f, 0.95f + this.random.nextFloat() * 0.05f, false);
+                this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PHANTOM_FLAP, this.getSoundCategory(), 0.95f + this.random.nextFloat() * 0.05f, 0.95f + this.random.nextFloat() * 0.05f, false);
             }
             int i = this.getPhantomSize();
             float h = MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)) * (1.3f + 0.21f * (float)i);
             float j = MathHelper.sin(this.getYaw() * ((float)Math.PI / 180)) * (1.3f + 0.21f * (float)i);
             float k = (0.3f + f * 0.45f) * ((float)i * 0.2f + 1.0f);
-            this.world.addParticle(ParticleTypes.MYCELIUM, this.getX() + (double)h, this.getY() + (double)k, this.getZ() + (double)j, 0.0, 0.0, 0.0);
-            this.world.addParticle(ParticleTypes.MYCELIUM, this.getX() - (double)h, this.getY() + (double)k, this.getZ() - (double)j, 0.0, 0.0, 0.0);
+            this.getWorld().addParticle(ParticleTypes.MYCELIUM, this.getX() + (double)h, this.getY() + (double)k, this.getZ() + (double)j, 0.0, 0.0, 0.0);
+            this.getWorld().addParticle(ParticleTypes.MYCELIUM, this.getX() - (double)h, this.getY() + (double)k, this.getZ() - (double)j, 0.0, 0.0, 0.0);
         }
     }
 
@@ -346,7 +346,7 @@ implements Monster {
 
         @Override
         public void stop() {
-            PhantomEntity.this.circlingCenter = PhantomEntity.this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, PhantomEntity.this.circlingCenter).up(10 + PhantomEntity.this.random.nextInt(20));
+            PhantomEntity.this.circlingCenter = PhantomEntity.this.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING, PhantomEntity.this.circlingCenter).up(10 + PhantomEntity.this.random.nextInt(20));
         }
 
         @Override
@@ -364,8 +364,8 @@ implements Monster {
 
         private void startSwoop() {
             PhantomEntity.this.circlingCenter = PhantomEntity.this.getTarget().getBlockPos().up(20 + PhantomEntity.this.random.nextInt(20));
-            if (PhantomEntity.this.circlingCenter.getY() < PhantomEntity.this.world.getSeaLevel()) {
-                PhantomEntity.this.circlingCenter = new BlockPos(PhantomEntity.this.circlingCenter.getX(), PhantomEntity.this.world.getSeaLevel() + 1, PhantomEntity.this.circlingCenter.getZ());
+            if (PhantomEntity.this.circlingCenter.getY() < PhantomEntity.this.getWorld().getSeaLevel()) {
+                PhantomEntity.this.circlingCenter = new BlockPos(PhantomEntity.this.circlingCenter.getX(), PhantomEntity.this.getWorld().getSeaLevel() + 1, PhantomEntity.this.circlingCenter.getZ());
             }
         }
     }
@@ -404,7 +404,7 @@ implements Monster {
             }
             if (PhantomEntity.this.age > this.nextCatCheckAge) {
                 this.nextCatCheckAge = PhantomEntity.this.age + 20;
-                List<Entity> list = PhantomEntity.this.world.getEntitiesByClass(CatEntity.class, PhantomEntity.this.getBoundingBox().expand(16.0), EntityPredicates.VALID_ENTITY);
+                List<Entity> list = PhantomEntity.this.getWorld().getEntitiesByClass(CatEntity.class, PhantomEntity.this.getBoundingBox().expand(16.0), EntityPredicates.VALID_ENTITY);
                 for (CatEntity catEntity : list) {
                     catEntity.hiss();
                 }
@@ -434,7 +434,7 @@ implements Monster {
                 PhantomEntity.this.tryAttack(livingEntity);
                 PhantomEntity.this.movementType = PhantomMovementType.CIRCLE;
                 if (!PhantomEntity.this.isSilent()) {
-                    PhantomEntity.this.world.syncWorldEvent(1039, PhantomEntity.this.getBlockPos(), 0);
+                    PhantomEntity.this.getWorld().syncWorldEvent(1039, PhantomEntity.this.getBlockPos(), 0);
                 }
             } else if (PhantomEntity.this.horizontalCollision || PhantomEntity.this.hurtTime > 0) {
                 PhantomEntity.this.movementType = PhantomMovementType.CIRCLE;
@@ -484,11 +484,11 @@ implements Monster {
             if (this.isNearTarget()) {
                 this.adjustDirection();
             }
-            if (PhantomEntity.this.targetPosition.y < PhantomEntity.this.getY() && !PhantomEntity.this.world.isAir(PhantomEntity.this.getBlockPos().down(1))) {
+            if (PhantomEntity.this.targetPosition.y < PhantomEntity.this.getY() && !PhantomEntity.this.getWorld().isAir(PhantomEntity.this.getBlockPos().down(1))) {
                 this.yOffset = Math.max(1.0f, this.yOffset);
                 this.adjustDirection();
             }
-            if (PhantomEntity.this.targetPosition.y > PhantomEntity.this.getY() && !PhantomEntity.this.world.isAir(PhantomEntity.this.getBlockPos().up(1))) {
+            if (PhantomEntity.this.targetPosition.y > PhantomEntity.this.getY() && !PhantomEntity.this.getWorld().isAir(PhantomEntity.this.getBlockPos().up(1))) {
                 this.yOffset = Math.min(-1.0f, this.yOffset);
                 this.adjustDirection();
             }
@@ -518,7 +518,7 @@ implements Monster {
                 return false;
             }
             this.delay = FindTargetGoal.toGoalTicks(60);
-            List<PlayerEntity> list = PhantomEntity.this.world.getPlayers(this.PLAYERS_IN_RANGE_PREDICATE, PhantomEntity.this, PhantomEntity.this.getBoundingBox().expand(16.0, 64.0, 16.0));
+            List<PlayerEntity> list = PhantomEntity.this.getWorld().getPlayers(this.PLAYERS_IN_RANGE_PREDICATE, PhantomEntity.this, PhantomEntity.this.getBoundingBox().expand(16.0, 64.0, 16.0));
             if (!list.isEmpty()) {
                 list.sort(Comparator.comparing(Entity::getY).reversed());
                 for (PlayerEntity playerEntity : list) {

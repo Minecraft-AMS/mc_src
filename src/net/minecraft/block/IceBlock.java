@@ -9,10 +9,8 @@ package net.minecraft.block;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.Material;
 import net.minecraft.block.TransparentBlock;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.player.PlayerEntity;
@@ -30,6 +28,10 @@ extends TransparentBlock {
         super(settings);
     }
 
+    public static BlockState getMeltedState() {
+        return Blocks.WATER.getDefaultState();
+    }
+
     @Override
     public void afterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool) {
         super.afterBreak(world, player, pos, state, blockEntity, tool);
@@ -38,9 +40,9 @@ extends TransparentBlock {
                 world.removeBlock(pos, false);
                 return;
             }
-            Material material = world.getBlockState(pos.down()).getMaterial();
-            if (material.blocksMovement() || material.isLiquid()) {
-                world.setBlockState(pos, Blocks.WATER.getDefaultState());
+            BlockState blockState = world.getBlockState(pos.down());
+            if (blockState.blocksMovement() || blockState.isLiquid()) {
+                world.setBlockState(pos, IceBlock.getMeltedState());
             }
         }
     }
@@ -57,13 +59,8 @@ extends TransparentBlock {
             world.removeBlock(pos, false);
             return;
         }
-        world.setBlockState(pos, Blocks.WATER.getDefaultState());
-        world.updateNeighbor(pos, Blocks.WATER, pos);
-    }
-
-    @Override
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return PistonBehavior.NORMAL;
+        world.setBlockState(pos, IceBlock.getMeltedState());
+        world.updateNeighbor(pos, IceBlock.getMeltedState().getBlock(), pos);
     }
 }
 

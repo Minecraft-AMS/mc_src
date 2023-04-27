@@ -35,18 +35,18 @@ extends Goal {
 
     @Override
     public boolean canStart() {
+        BlockPos blockPos2;
         if (this.mob.hasPassengers()) {
             return false;
         }
-        if (this.mob.world.isDay()) {
+        if (this.mob.getWorld().isDay()) {
             return false;
         }
         if (this.mob.getRandom().nextInt(this.searchRange) != 0) {
             return false;
         }
-        ServerWorld serverWorld = (ServerWorld)this.mob.world;
-        BlockPos blockPos2 = this.mob.getBlockPos();
-        if (!serverWorld.isNearOccupiedPointOfInterest(blockPos2, 6)) {
+        ServerWorld serverWorld = (ServerWorld)this.mob.getWorld();
+        if (!serverWorld.isNearOccupiedPointOfInterest(blockPos2 = this.mob.getBlockPos(), 6)) {
             return false;
         }
         Vec3d vec3d = FuzzyTargeting.find(this.mob, 15, 7, blockPos -> -serverWorld.getOccupiedPointOfInterestDistance(ChunkSectionPos.from(blockPos)));
@@ -72,7 +72,8 @@ extends Goal {
             vec3d = vec3d3.multiply(0.4).add(vec3d);
             Vec3d vec3d4 = vec3d.subtract(vec3d2).normalize().multiply(10.0).add(vec3d2);
             BlockPos blockPos = BlockPos.ofFloored(vec3d4);
-            if (!entityNavigation.startMovingTo((blockPos = this.mob.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, blockPos)).getX(), blockPos.getY(), blockPos.getZ(), 1.0)) {
+            blockPos = this.mob.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, blockPos);
+            if (!entityNavigation.startMovingTo(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1.0)) {
                 this.findOtherWaypoint();
             }
         }
@@ -80,7 +81,7 @@ extends Goal {
 
     private void findOtherWaypoint() {
         Random random = this.mob.getRandom();
-        BlockPos blockPos = this.mob.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, this.mob.getBlockPos().add(-8 + random.nextInt(16), 0, -8 + random.nextInt(16)));
+        BlockPos blockPos = this.mob.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, this.mob.getBlockPos().add(-8 + random.nextInt(16), 0, -8 + random.nextInt(16)));
         this.mob.getNavigation().startMovingTo(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 1.0);
     }
 }

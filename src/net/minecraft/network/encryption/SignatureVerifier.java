@@ -2,18 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.authlib.yggdrasil.ServicesKeyInfo
+ *  com.mojang.authlib.yggdrasil.ServicesKeySet
+ *  com.mojang.authlib.yggdrasil.ServicesKeyType
  *  com.mojang.logging.LogUtils
+ *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.network.encryption;
 
-import com.mojang.authlib.yggdrasil.ServicesKeyInfo;
+import com.mojang.authlib.yggdrasil.ServicesKeySet;
+import com.mojang.authlib.yggdrasil.ServicesKeyType;
 import com.mojang.logging.LogUtils;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.util.Collection;
 import net.minecraft.network.encryption.SignatureUpdatable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public interface SignatureVerifier {
@@ -45,17 +50,22 @@ public interface SignatureVerifier {
         };
     }
 
-    public static SignatureVerifier create(ServicesKeyInfo servicesKeyInfo) {
-        return (updatable, signatureData) -> {
+    @Nullable
+    public static SignatureVerifier create(ServicesKeySet servicesKeySet, ServicesKeyType servicesKeyType) {
+        Collection collection = servicesKeySet.keys(servicesKeyType);
+        if (collection.isEmpty()) {
+            return null;
+        }
+        return (signatureUpdatable, bs) -> collection.stream().anyMatch(servicesKeyInfo -> {
             Signature signature = servicesKeyInfo.signature();
             try {
-                return SignatureVerifier.verify(updatable, signatureData, signature);
+                return SignatureVerifier.verify(signatureUpdatable, bs, signature);
             }
             catch (SignatureException signatureException) {
                 LOGGER.error("Failed to verify Services signature", (Throwable)signatureException);
                 return false;
             }
-        };
+        });
     }
 }
 

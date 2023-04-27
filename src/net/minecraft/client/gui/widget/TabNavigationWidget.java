@@ -11,7 +11,6 @@
 package net.minecraft.client.gui.widget;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -20,6 +19,7 @@ import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.AbstractParentElement;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.ScreenRect;
@@ -35,7 +35,6 @@ import net.minecraft.client.gui.tab.TabManager;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.GridWidget;
 import net.minecraft.client.gui.widget.TabButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -139,12 +138,11 @@ Selectable {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        TabNavigationWidget.fill(matrices, 0, 0, this.tabNavWidth, 24, -16777216);
-        RenderSystem.setShaderTexture(0, CreateWorldScreen.HEADER_SEPARATOR_TEXTURE);
-        TabNavigationWidget.drawTexture(matrices, 0, this.grid.getY() + this.grid.getHeight() - 2, 0.0f, 0.0f, this.tabNavWidth, 2, 32, 2);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        context.fill(0, 0, this.tabNavWidth, 24, -16777216);
+        context.drawTexture(CreateWorldScreen.HEADER_SEPARATOR_TEXTURE, 0, this.grid.getY() + this.grid.getHeight() - 2, 0.0f, 0.0f, this.tabNavWidth, 2, 32, 2);
         for (TabButtonWidget tabButtonWidget : this.tabButtons) {
-            tabButtonWidget.render(matrices, mouseX, mouseY, delta);
+            tabButtonWidget.render(context, mouseX, mouseY, delta);
         }
     }
 

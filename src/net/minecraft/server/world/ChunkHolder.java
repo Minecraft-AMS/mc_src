@@ -58,7 +58,6 @@ public class ChunkHolder {
     private static final CompletableFuture<Either<WorldChunk, Unloaded>> UNLOADED_WORLD_CHUNK_FUTURE = CompletableFuture.completedFuture(UNLOADED_WORLD_CHUNK);
     private static final List<ChunkStatus> CHUNK_STATUSES = ChunkStatus.createOrderedList();
     private static final LevelType[] LEVEL_TYPES = LevelType.values();
-    private static final int field_29668 = 64;
     private final AtomicReferenceArray<CompletableFuture<Either<Chunk, Unloaded>>> futuresByStatus = new AtomicReferenceArray(CHUNK_STATUSES.size());
     private final HeightLimitView world;
     private volatile CompletableFuture<Either<WorldChunk, Unloaded>> accessibleFuture = UNLOADED_WORLD_CHUNK_FUTURE;
@@ -79,7 +78,6 @@ public class ChunkHolder {
     private final LevelUpdateListener levelUpdateListener;
     private final PlayersWatchingChunkProvider playersWatchingChunkProvider;
     private boolean accessible;
-    private boolean noLightingUpdates;
     private CompletableFuture<Void> field_26930 = CompletableFuture.completedFuture(null);
 
     public ChunkHolder(ChunkPos pos, int level, HeightLimitView world, LightingProvider lightingProvider, LevelUpdateListener levelUpdateListener, PlayersWatchingChunkProvider playersWatchingChunkProvider) {
@@ -179,7 +177,7 @@ public class ChunkHolder {
     }
 
     public void markForLightUpdate(LightType lightType, int y) {
-        Either either = this.getValidFutureFor(ChunkStatus.FEATURES).getNow(null);
+        Either either = this.getValidFutureFor(ChunkStatus.INITIALIZE_LIGHT).getNow(null);
         if (either == null) {
             return;
         }
@@ -206,38 +204,32 @@ public class ChunkHolder {
     }
 
     public void flushUpdates(WorldChunk chunk) {
-        int j;
         if (!this.pendingBlockUpdates && this.skyLightUpdateBits.isEmpty() && this.blockLightUpdateBits.isEmpty()) {
             return;
         }
         World world = chunk.getWorld();
-        int i = 0;
-        for (j = 0; j < this.blockUpdatesBySection.length; ++j) {
-            i += this.blockUpdatesBySection[j] != null ? this.blockUpdatesBySection[j].size() : 0;
-        }
-        this.noLightingUpdates |= i >= 64;
         if (!this.skyLightUpdateBits.isEmpty() || !this.blockLightUpdateBits.isEmpty()) {
-            this.sendPacketToPlayersWatching(new LightUpdateS2CPacket(chunk.getPos(), this.lightingProvider, this.skyLightUpdateBits, this.blockLightUpdateBits, true), !this.noLightingUpdates);
+            this.sendPacketToPlayersWatching(new LightUpdateS2CPacket(chunk.getPos(), this.lightingProvider, this.skyLightUpdateBits, this.blockLightUpdateBits), true);
             this.skyLightUpdateBits.clear();
             this.blockLightUpdateBits.clear();
         }
-        for (j = 0; j < this.blockUpdatesBySection.length; ++j) {
-            ShortSet shortSet = this.blockUpdatesBySection[j];
+        for (int i = 0; i < this.blockUpdatesBySection.length; ++i) {
+            ShortSet shortSet = this.blockUpdatesBySection[i];
             if (shortSet == null) continue;
-            int k = this.world.sectionIndexToCoord(j);
-            ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunk.getPos(), k);
+            int j = this.world.sectionIndexToCoord(i);
+            ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunk.getPos(), j);
             if (shortSet.size() == 1) {
                 BlockPos blockPos = chunkSectionPos.unpackBlockPos(shortSet.iterator().nextShort());
                 BlockState blockState = world.getBlockState(blockPos);
                 this.sendPacketToPlayersWatching(new BlockUpdateS2CPacket(blockPos, blockState), false);
                 this.tryUpdateBlockEntityAt(world, blockPos, blockState);
             } else {
-                ChunkSection chunkSection = chunk.getSection(j);
-                ChunkDeltaUpdateS2CPacket chunkDeltaUpdateS2CPacket = new ChunkDeltaUpdateS2CPacket(chunkSectionPos, shortSet, chunkSection, this.noLightingUpdates);
+                ChunkSection chunkSection = chunk.getSection(i);
+                ChunkDeltaUpdateS2CPacket chunkDeltaUpdateS2CPacket = new ChunkDeltaUpdateS2CPacket(chunkSectionPos, shortSet, chunkSection);
                 this.sendPacketToPlayersWatching(chunkDeltaUpdateS2CPacket, false);
                 chunkDeltaUpdateS2CPacket.visitUpdates((pos, state) -> this.tryUpdateBlockEntityAt(world, (BlockPos)pos, (BlockState)state));
             }
-            this.blockUpdatesBySection[j] = null;
+            this.blockUpdatesBySection[i] = null;
         }
         this.pendingBlockUpdates = false;
     }
@@ -386,7 +378,7 @@ public class ChunkHolder {
             if (this.entityTickingFuture != UNLOADED_WORLD_CHUNK_FUTURE) {
                 throw Util.throwOrPause(new IllegalStateException());
             }
-            this.entityTickingFuture = chunkStorage.makeChunkEntitiesTickable(this.pos);
+            this.entityTickingFuture = chunkStorage.makeChunkEntitiesTickable(this);
             this.method_31409(chunkStorage, this.entityTickingFuture, executor, LevelType.ENTITY_TICKING);
             this.combineSavingFuture(this.entityTickingFuture, "entity ticking");
         }

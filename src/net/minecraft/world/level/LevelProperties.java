@@ -23,6 +23,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.Lifecycle;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -98,9 +99,10 @@ SaveProperties {
     private UUID wanderingTraderId;
     private final Set<String> serverBrands;
     private boolean modded;
+    private final Set<String> removedFeatures;
     private final Timer<MinecraftServer> scheduledEvents;
 
-    private LevelProperties(@Nullable DataFixer dataFixer, int dataVersion, @Nullable NbtCompound playerData, boolean modded, int spawnX, int spawnY, int spawnZ, float spawnAngle, long time, long timeOfDay, int version, int clearWeatherTime, int rainTime, boolean raining, int thunderTime, boolean thundering, boolean initialized, boolean difficultyLocked, WorldBorder.Properties worldBorder, int wanderingTraderSpawnDelay, int wanderingTraderSpawnChance, @Nullable UUID wanderingTraderId, Set<String> serverBrands, Timer<MinecraftServer> scheduledEvents, @Nullable NbtCompound customBossEvents, NbtCompound dragonFight, LevelInfo levelInfo, GeneratorOptions generatorOptions, SpecialProperty specialProperty, Lifecycle lifecycle) {
+    private LevelProperties(@Nullable DataFixer dataFixer, int dataVersion, @Nullable NbtCompound playerData, boolean modded, int spawnX, int spawnY, int spawnZ, float spawnAngle, long time, long timeOfDay, int version, int clearWeatherTime, int rainTime, boolean raining, int thunderTime, boolean thundering, boolean initialized, boolean difficultyLocked, WorldBorder.Properties worldBorder, int wanderingTraderSpawnDelay, int wanderingTraderSpawnChance, @Nullable UUID wanderingTraderId, Set<String> serverBrands, Set<String> removedFeatures, Timer<MinecraftServer> scheduledEvents, @Nullable NbtCompound customBossEvents, NbtCompound dragonFight, LevelInfo levelInfo, GeneratorOptions generatorOptions, SpecialProperty specialProperty, Lifecycle lifecycle) {
         this.dataFixer = dataFixer;
         this.modded = modded;
         this.spawnX = spawnX;
@@ -122,6 +124,7 @@ SaveProperties {
         this.wanderingTraderSpawnChance = wanderingTraderSpawnChance;
         this.wanderingTraderId = wanderingTraderId;
         this.serverBrands = serverBrands;
+        this.removedFeatures = removedFeatures;
         this.playerData = playerData;
         this.dataVersion = dataVersion;
         this.scheduledEvents = scheduledEvents;
@@ -134,13 +137,13 @@ SaveProperties {
     }
 
     public LevelProperties(LevelInfo levelInfo, GeneratorOptions generatorOptions, SpecialProperty specialProperty, Lifecycle lifecycle) {
-        this(null, SharedConstants.getGameVersion().getSaveVersion().getId(), null, false, 0, 0, 0, 0.0f, 0L, 0L, 19133, 0, 0, false, 0, false, false, false, WorldBorder.DEFAULT_BORDER, 0, 0, null, Sets.newLinkedHashSet(), new Timer<MinecraftServer>(TimerCallbackSerializer.INSTANCE), null, new NbtCompound(), levelInfo.withCopiedGameRules(), generatorOptions, specialProperty, lifecycle);
+        this(null, SharedConstants.getGameVersion().getSaveVersion().getId(), null, false, 0, 0, 0, 0.0f, 0L, 0L, 19133, 0, 0, false, 0, false, false, false, WorldBorder.DEFAULT_BORDER, 0, 0, null, Sets.newLinkedHashSet(), new HashSet<String>(), new Timer<MinecraftServer>(TimerCallbackSerializer.INSTANCE), null, new NbtCompound(), levelInfo.withCopiedGameRules(), generatorOptions, specialProperty, lifecycle);
     }
 
     public static <T> LevelProperties readProperties(Dynamic<T> dynamic2, DataFixer dataFixer, int dataVersion, @Nullable NbtCompound playerData, LevelInfo levelInfo, SaveVersionInfo saveVersionInfo, SpecialProperty specialProperty, GeneratorOptions generatorOptions, Lifecycle lifecycle) {
         long l = dynamic2.get("Time").asLong(0L);
         NbtCompound nbtCompound = (NbtCompound)dynamic2.get("DragonFight").result().orElseGet(() -> dynamic2.get("DimensionData").get("1").get("DragonFight").orElseEmptyMap()).convert((DynamicOps)NbtOps.INSTANCE).getValue();
-        return new LevelProperties(dataFixer, dataVersion, playerData, dynamic2.get("WasModded").asBoolean(false), dynamic2.get("SpawnX").asInt(0), dynamic2.get("SpawnY").asInt(0), dynamic2.get("SpawnZ").asInt(0), dynamic2.get("SpawnAngle").asFloat(0.0f), l, dynamic2.get("DayTime").asLong(l), saveVersionInfo.getLevelFormatVersion(), dynamic2.get("clearWeatherTime").asInt(0), dynamic2.get("rainTime").asInt(0), dynamic2.get("raining").asBoolean(false), dynamic2.get("thunderTime").asInt(0), dynamic2.get("thundering").asBoolean(false), dynamic2.get("initialized").asBoolean(true), dynamic2.get("DifficultyLocked").asBoolean(false), WorldBorder.Properties.fromDynamic(dynamic2, WorldBorder.DEFAULT_BORDER), dynamic2.get("WanderingTraderSpawnDelay").asInt(0), dynamic2.get("WanderingTraderSpawnChance").asInt(0), dynamic2.get("WanderingTraderId").read(Uuids.INT_STREAM_CODEC).result().orElse(null), dynamic2.get("ServerBrands").asStream().flatMap(dynamic -> dynamic.asString().result().stream()).collect(Collectors.toCollection(Sets::newLinkedHashSet)), new Timer<MinecraftServer>(TimerCallbackSerializer.INSTANCE, dynamic2.get("ScheduledEvents").asStream()), (NbtCompound)dynamic2.get("CustomBossEvents").orElseEmptyMap().getValue(), nbtCompound, levelInfo, generatorOptions, specialProperty, lifecycle);
+        return new LevelProperties(dataFixer, dataVersion, playerData, dynamic2.get("WasModded").asBoolean(false), dynamic2.get("SpawnX").asInt(0), dynamic2.get("SpawnY").asInt(0), dynamic2.get("SpawnZ").asInt(0), dynamic2.get("SpawnAngle").asFloat(0.0f), l, dynamic2.get("DayTime").asLong(l), saveVersionInfo.getLevelFormatVersion(), dynamic2.get("clearWeatherTime").asInt(0), dynamic2.get("rainTime").asInt(0), dynamic2.get("raining").asBoolean(false), dynamic2.get("thunderTime").asInt(0), dynamic2.get("thundering").asBoolean(false), dynamic2.get("initialized").asBoolean(true), dynamic2.get("DifficultyLocked").asBoolean(false), WorldBorder.Properties.fromDynamic(dynamic2, WorldBorder.DEFAULT_BORDER), dynamic2.get("WanderingTraderSpawnDelay").asInt(0), dynamic2.get("WanderingTraderSpawnChance").asInt(0), dynamic2.get("WanderingTraderId").read(Uuids.INT_STREAM_CODEC).result().orElse(null), dynamic2.get("ServerBrands").asStream().flatMap(dynamic -> dynamic.asString().result().stream()).collect(Collectors.toCollection(Sets::newLinkedHashSet)), dynamic2.get("removed_features").asStream().flatMap(dynamic -> dynamic.asString().result().stream()).collect(Collectors.toSet()), new Timer<MinecraftServer>(TimerCallbackSerializer.INSTANCE, dynamic2.get("ScheduledEvents").asStream()), (NbtCompound)dynamic2.get("CustomBossEvents").orElseEmptyMap().getValue(), nbtCompound, levelInfo, generatorOptions, specialProperty, lifecycle);
     }
 
     @Override
@@ -155,10 +158,11 @@ SaveProperties {
     }
 
     private void updateProperties(DynamicRegistryManager registryManager, NbtCompound levelNbt, @Nullable NbtCompound playerNbt) {
-        NbtList nbtList = new NbtList();
-        this.serverBrands.stream().map(NbtString::of).forEach(nbtList::add);
-        levelNbt.put("ServerBrands", nbtList);
+        levelNbt.put("ServerBrands", LevelProperties.createStringList(this.serverBrands));
         levelNbt.putBoolean("WasModded", this.modded);
+        if (!this.removedFeatures.isEmpty()) {
+            levelNbt.put("removed_features", LevelProperties.createStringList(this.removedFeatures));
+        }
         NbtCompound nbtCompound = new NbtCompound();
         nbtCompound.putString("Name", SharedConstants.getGameVersion().getName());
         nbtCompound.putInt("Id", SharedConstants.getGameVersion().getSaveVersion().getId());
@@ -205,6 +209,12 @@ SaveProperties {
         if (this.wanderingTraderId != null) {
             levelNbt.putUuid("WanderingTraderId", this.wanderingTraderId);
         }
+    }
+
+    private static NbtList createStringList(Set<String> strings) {
+        NbtList nbtList = new NbtList();
+        strings.stream().map(NbtString::of).forEach(nbtList::add);
+        return nbtList;
     }
 
     @Override
@@ -526,6 +536,11 @@ SaveProperties {
     @Override
     public Set<String> getServerBrands() {
         return ImmutableSet.copyOf(this.serverBrands);
+    }
+
+    @Override
+    public Set<String> getRemovedFeatures() {
+        return Set.copyOf(this.removedFeatures);
     }
 
     @Override

@@ -66,7 +66,7 @@ public class PiglinBruteBrain {
     }
 
     protected static void setCurrentPosAsHome(PiglinBruteEntity piglinBrute) {
-        GlobalPos globalPos = GlobalPos.create(piglinBrute.world.getRegistryKey(), piglinBrute.getBlockPos());
+        GlobalPos globalPos = GlobalPos.create(piglinBrute.getWorld().getRegistryKey(), piglinBrute.getBlockPos());
         piglinBrute.getBrain().remember(MemoryModuleType.HOME, globalPos);
     }
 
@@ -134,7 +134,7 @@ public class PiglinBruteBrain {
     }
 
     protected static void playSoundRandomly(PiglinBruteEntity piglinBrute) {
-        if ((double)piglinBrute.world.random.nextFloat() < 0.0125) {
+        if ((double)piglinBrute.getWorld().random.nextFloat() < 0.0125) {
             PiglinBruteBrain.playSoundIfAngry(piglinBrute);
         }
     }

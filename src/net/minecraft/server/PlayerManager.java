@@ -185,7 +185,7 @@ public abstract class PlayerManager {
         } else {
             serverWorld2 = serverWorld;
         }
-        player.setWorld(serverWorld2);
+        player.setServerWorld(serverWorld2);
         String string2 = "local";
         if (connection.getAddress() != null) {
             string2 = connection.getAddress().toString();
@@ -337,7 +337,7 @@ public abstract class PlayerManager {
 
     public void remove(ServerPlayerEntity player) {
         Entity entity2;
-        ServerWorld serverWorld = player.getWorld();
+        ServerWorld serverWorld = player.getServerWorld();
         player.incrementStat(Stats.LEAVE_GAME);
         this.savePlayerData(player);
         if (player.hasVehicle() && (entity2 = player.getRootVehicle()).hasPlayerRider()) {
@@ -407,7 +407,7 @@ public abstract class PlayerManager {
 
     public ServerPlayerEntity respawnPlayer(ServerPlayerEntity player, boolean alive) {
         this.players.remove(player);
-        player.getWorld().removePlayer(player, Entity.RemovalReason.DISCARDED);
+        player.getServerWorld().removePlayer(player, Entity.RemovalReason.DISCARDED);
         BlockPos blockPos = player.getSpawnPointPosition();
         float f = player.getSpawnAngle();
         boolean bl = player.isSpawnForced();
@@ -444,8 +444,8 @@ public abstract class PlayerManager {
             serverPlayerEntity.setPosition(serverPlayerEntity.getX(), serverPlayerEntity.getY() + 1.0, serverPlayerEntity.getZ());
         }
         byte b = alive ? (byte)1 : 0;
-        WorldProperties worldProperties = serverPlayerEntity.world.getLevelProperties();
-        serverPlayerEntity.networkHandler.sendPacket(new PlayerRespawnS2CPacket(serverPlayerEntity.world.getDimensionKey(), serverPlayerEntity.world.getRegistryKey(), BiomeAccess.hashSeed(serverPlayerEntity.getWorld().getSeed()), serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.interactionManager.getPreviousGameMode(), serverPlayerEntity.getWorld().isDebugWorld(), serverPlayerEntity.getWorld().isFlat(), b, serverPlayerEntity.getLastDeathPos()));
+        WorldProperties worldProperties = serverPlayerEntity.getWorld().getLevelProperties();
+        serverPlayerEntity.networkHandler.sendPacket(new PlayerRespawnS2CPacket(serverPlayerEntity.getWorld().getDimensionKey(), serverPlayerEntity.getWorld().getRegistryKey(), BiomeAccess.hashSeed(serverPlayerEntity.getServerWorld().getSeed()), serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.interactionManager.getPreviousGameMode(), serverPlayerEntity.getWorld().isDebugWorld(), serverPlayerEntity.getServerWorld().isFlat(), b, serverPlayerEntity.getLastDeathPos()));
         serverPlayerEntity.networkHandler.requestTeleport(serverPlayerEntity.getX(), serverPlayerEntity.getY(), serverPlayerEntity.getZ(), serverPlayerEntity.getYaw(), serverPlayerEntity.getPitch());
         serverPlayerEntity.networkHandler.sendPacket(new PlayerSpawnPositionS2CPacket(serverWorld2.getSpawnPos(), serverWorld2.getSpawnAngle()));
         serverPlayerEntity.networkHandler.sendPacket(new DifficultyS2CPacket(worldProperties.getDifficulty(), worldProperties.isDifficultyLocked()));
@@ -484,7 +484,7 @@ public abstract class PlayerManager {
 
     public void sendToDimension(Packet<?> packet, RegistryKey<World> dimension) {
         for (ServerPlayerEntity serverPlayerEntity : this.players) {
-            if (serverPlayerEntity.world.getRegistryKey() != dimension) continue;
+            if (serverPlayerEntity.getWorld().getRegistryKey() != dimension) continue;
             serverPlayerEntity.networkHandler.sendPacket(packet);
         }
     }
@@ -578,7 +578,7 @@ public abstract class PlayerManager {
             double e;
             double d;
             ServerPlayerEntity serverPlayerEntity = this.players.get(i);
-            if (serverPlayerEntity == player || serverPlayerEntity.world.getRegistryKey() != worldKey || !((d = x - serverPlayerEntity.getX()) * d + (e = y - serverPlayerEntity.getY()) * e + (f = z - serverPlayerEntity.getZ()) * f < distance * distance)) continue;
+            if (serverPlayerEntity == player || serverPlayerEntity.getWorld().getRegistryKey() != worldKey || !((d = x - serverPlayerEntity.getX()) * d + (e = y - serverPlayerEntity.getY()) * e + (f = z - serverPlayerEntity.getZ()) * f < distance * distance)) continue;
             serverPlayerEntity.networkHandler.sendPacket(packet);
         }
     }

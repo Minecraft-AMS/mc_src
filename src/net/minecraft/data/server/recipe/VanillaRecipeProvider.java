@@ -7,8 +7,12 @@
 package net.minecraft.data.server.recipe;
 
 import com.google.common.collect.ImmutableList;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.criterion.ImpossibleCriterion;
 import net.minecraft.advancement.criterion.InventoryChangedCriterion;
@@ -24,6 +28,7 @@ import net.minecraft.data.server.recipe.RecipeProvider;
 import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder;
 import net.minecraft.data.server.recipe.ShapelessRecipeJsonBuilder;
 import net.minecraft.data.server.recipe.SingleItemRecipeJsonBuilder;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.Items;
 import net.minecraft.predicate.NumberRange;
@@ -35,6 +40,7 @@ import net.minecraft.recipe.book.RecipeCategory;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.resource.featuretoggle.FeatureSet;
+import net.minecraft.util.Identifier;
 
 public class VanillaRecipeProvider
 extends RecipeProvider {
@@ -337,7 +343,7 @@ extends RecipeProvider {
         ShapedRecipeJsonBuilder.create(RecipeCategory.REDSTONE, Blocks.COMPARATOR).input(Character.valueOf('#'), Blocks.REDSTONE_TORCH).input(Character.valueOf('X'), Items.QUARTZ).input(Character.valueOf('I'), Blocks.STONE).pattern(" # ").pattern("#X#").pattern("III").criterion("has_quartz", VanillaRecipeProvider.conditionsFromItem(Items.QUARTZ)).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.TOOLS, Items.COMPASS).input(Character.valueOf('#'), Items.IRON_INGOT).input(Character.valueOf('X'), Items.REDSTONE).pattern(" # ").pattern("#X#").pattern(" # ").criterion("has_redstone", VanillaRecipeProvider.conditionsFromItem(Items.REDSTONE)).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.FOOD, Items.COOKIE, 8).input(Character.valueOf('#'), Items.WHEAT).input(Character.valueOf('X'), Items.COCOA_BEANS).pattern("#X#").criterion("has_cocoa", VanillaRecipeProvider.conditionsFromItem(Items.COCOA_BEANS)).offerTo(exporter);
-        ShapedRecipeJsonBuilder.create(RecipeCategory.DECORATIONS, Blocks.CRAFTING_TABLE).input(Character.valueOf('#'), ItemTags.PLANKS).pattern("##").pattern("##").criterion("unlock_right_away", TickCriterion.Conditions.createTick()).method_49380(false).offerTo(exporter);
+        ShapedRecipeJsonBuilder.create(RecipeCategory.DECORATIONS, Blocks.CRAFTING_TABLE).input(Character.valueOf('#'), ItemTags.PLANKS).pattern("##").pattern("##").criterion("unlock_right_away", TickCriterion.Conditions.createTick()).showNotification(false).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.COMBAT, Items.CROSSBOW).input(Character.valueOf('~'), Items.STRING).input(Character.valueOf('#'), Items.STICK).input(Character.valueOf('&'), Items.IRON_INGOT).input(Character.valueOf('$'), Blocks.TRIPWIRE_HOOK).pattern("#&#").pattern("~$~").pattern(" # ").criterion("has_string", VanillaRecipeProvider.conditionsFromItem(Items.STRING)).criterion("has_iron_ingot", VanillaRecipeProvider.conditionsFromItem(Items.IRON_INGOT)).criterion("has_tripwire_hook", VanillaRecipeProvider.conditionsFromItem(Blocks.TRIPWIRE_HOOK)).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.DECORATIONS, Blocks.LOOM).input(Character.valueOf('#'), ItemTags.PLANKS).input(Character.valueOf('@'), Items.STRING).pattern("@@").pattern("##").criterion("has_string", VanillaRecipeProvider.conditionsFromItem(Items.STRING)).offerTo(exporter);
         VanillaRecipeProvider.createChiseledBlockRecipe(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_RED_SANDSTONE, Ingredient.ofItems(Blocks.RED_SANDSTONE_SLAB)).criterion("has_red_sandstone", VanillaRecipeProvider.conditionsFromItem(Blocks.RED_SANDSTONE)).criterion("has_chiseled_red_sandstone", VanillaRecipeProvider.conditionsFromItem(Blocks.CHISELED_RED_SANDSTONE)).criterion("has_cut_red_sandstone", VanillaRecipeProvider.conditionsFromItem(Blocks.CUT_RED_SANDSTONE)).offerTo(exporter);
@@ -345,7 +351,7 @@ extends RecipeProvider {
         VanillaRecipeProvider.offerReversibleCompactingRecipesWithReverseRecipeGroup(exporter, RecipeCategory.MISC, Items.COPPER_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.COPPER_BLOCK, VanillaRecipeProvider.getRecipeName(Items.COPPER_INGOT), VanillaRecipeProvider.getItemPath(Items.COPPER_INGOT));
         ShapelessRecipeJsonBuilder.create(RecipeCategory.MISC, Items.COPPER_INGOT, 9).input(Blocks.WAXED_COPPER_BLOCK).group(VanillaRecipeProvider.getItemPath(Items.COPPER_INGOT)).criterion(VanillaRecipeProvider.hasItem(Blocks.WAXED_COPPER_BLOCK), VanillaRecipeProvider.conditionsFromItem(Blocks.WAXED_COPPER_BLOCK)).offerTo(exporter, VanillaRecipeProvider.convertBetween(Items.COPPER_INGOT, Blocks.WAXED_COPPER_BLOCK));
         VanillaRecipeProvider.offerWaxingRecipes(exporter);
-        ShapelessRecipeJsonBuilder.create(RecipeCategory.MISC, Items.CYAN_DYE, 2).input(Items.BLUE_DYE).input(Items.GREEN_DYE).criterion("has_green_dye", VanillaRecipeProvider.conditionsFromItem(Items.GREEN_DYE)).criterion("has_blue_dye", VanillaRecipeProvider.conditionsFromItem(Items.BLUE_DYE)).offerTo(exporter);
+        ShapelessRecipeJsonBuilder.create(RecipeCategory.MISC, Items.CYAN_DYE, 2).input(Items.BLUE_DYE).input(Items.GREEN_DYE).group("cyan_dye").criterion("has_green_dye", VanillaRecipeProvider.conditionsFromItem(Items.GREEN_DYE)).criterion("has_blue_dye", VanillaRecipeProvider.conditionsFromItem(Items.BLUE_DYE)).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.BUILDING_BLOCKS, Blocks.DARK_PRISMARINE).input(Character.valueOf('S'), Items.PRISMARINE_SHARD).input(Character.valueOf('I'), Items.BLACK_DYE).pattern("SSS").pattern("SIS").pattern("SSS").criterion("has_prismarine_shard", VanillaRecipeProvider.conditionsFromItem(Items.PRISMARINE_SHARD)).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.REDSTONE, Blocks.DAYLIGHT_DETECTOR).input(Character.valueOf('Q'), Items.QUARTZ).input(Character.valueOf('G'), Blocks.GLASS).input(Character.valueOf('W'), Ingredient.fromTag(ItemTags.WOODEN_SLABS)).pattern("GGG").pattern("QQQ").pattern("WWW").criterion("has_quartz", VanillaRecipeProvider.conditionsFromItem(Items.QUARTZ)).offerTo(exporter);
         ShapedRecipeJsonBuilder.create(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICKS, 4).input(Character.valueOf('S'), Blocks.POLISHED_DEEPSLATE).pattern("SS").pattern("SS").criterion("has_polished_deepslate", VanillaRecipeProvider.conditionsFromItem(Blocks.POLISHED_DEEPSLATE)).offerTo(exporter);
@@ -581,6 +587,7 @@ extends RecipeProvider {
         ShapedRecipeJsonBuilder.create(RecipeCategory.BUILDING_BLOCKS, Blocks.TINTED_GLASS, 2).input(Character.valueOf('G'), Blocks.GLASS).input(Character.valueOf('S'), Items.AMETHYST_SHARD).pattern(" S ").pattern("SGS").pattern(" S ").criterion("has_amethyst_shard", VanillaRecipeProvider.conditionsFromItem(Items.AMETHYST_SHARD)).offerTo(exporter);
         VanillaRecipeProvider.offer2x2CompactingRecipe(exporter, RecipeCategory.BUILDING_BLOCKS, Blocks.AMETHYST_BLOCK, Items.AMETHYST_SHARD);
         ShapedRecipeJsonBuilder.create(RecipeCategory.TOOLS, Items.RECOVERY_COMPASS).input(Character.valueOf('C'), Items.COMPASS).input(Character.valueOf('S'), Items.ECHO_SHARD).pattern("SSS").pattern("SCS").pattern("SSS").criterion("has_echo_shard", VanillaRecipeProvider.conditionsFromItem(Items.ECHO_SHARD)).offerTo(exporter);
+        ShapedRecipeJsonBuilder.create(RecipeCategory.REDSTONE, Items.CALIBRATED_SCULK_SENSOR).input(Character.valueOf('#'), Items.AMETHYST_SHARD).input(Character.valueOf('X'), Items.SCULK_SENSOR).pattern(" # ").pattern("#X#").criterion("has_amethyst_shard", VanillaRecipeProvider.conditionsFromItem(Items.AMETHYST_SHARD)).offerTo(exporter);
         VanillaRecipeProvider.offerCompactingRecipe(exporter, RecipeCategory.MISC, Items.MUSIC_DISC_5, Items.DISC_FRAGMENT_5);
         ComplexRecipeJsonBuilder.create(RecipeSerializer.ARMOR_DYE).offerTo(exporter, "armor_dye");
         ComplexRecipeJsonBuilder.create(RecipeSerializer.BANNER_DUPLICATE).offerTo(exporter, "banner_duplicate");
@@ -867,15 +874,65 @@ extends RecipeProvider {
         VanillaRecipeProvider.offerStonecuttingRecipe(exporter, RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_TILES, 2);
         VanillaRecipeProvider.offerStonecuttingRecipe(exporter, RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.DEEPSLATE_TILES);
         VanillaRecipeProvider.offerStonecuttingRecipe(exporter, RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_TILE_WALL, Blocks.DEEPSLATE_TILES);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_CHESTPLATE, RecipeCategory.COMBAT, Items.NETHERITE_CHESTPLATE);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_LEGGINGS, RecipeCategory.COMBAT, Items.NETHERITE_LEGGINGS);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_HELMET, RecipeCategory.COMBAT, Items.NETHERITE_HELMET);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_BOOTS, RecipeCategory.COMBAT, Items.NETHERITE_BOOTS);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_SWORD, RecipeCategory.COMBAT, Items.NETHERITE_SWORD);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_AXE, RecipeCategory.TOOLS, Items.NETHERITE_AXE);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_PICKAXE, RecipeCategory.TOOLS, Items.NETHERITE_PICKAXE);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_HOE, RecipeCategory.TOOLS, Items.NETHERITE_HOE);
-        VanillaRecipeProvider.offerLegacyNetheriteUpgradeRecipe(exporter, Items.DIAMOND_SHOVEL, RecipeCategory.TOOLS, Items.NETHERITE_SHOVEL);
+        VanillaRecipeProvider.getTrimSmithingTemplateMap().forEach((template, recipeId) -> VanillaRecipeProvider.offerSmithingTrimRecipe(exporter, template, recipeId));
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_CHESTPLATE, RecipeCategory.COMBAT, Items.NETHERITE_CHESTPLATE);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_LEGGINGS, RecipeCategory.COMBAT, Items.NETHERITE_LEGGINGS);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_HELMET, RecipeCategory.COMBAT, Items.NETHERITE_HELMET);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_BOOTS, RecipeCategory.COMBAT, Items.NETHERITE_BOOTS);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_SWORD, RecipeCategory.COMBAT, Items.NETHERITE_SWORD);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_AXE, RecipeCategory.TOOLS, Items.NETHERITE_AXE);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_PICKAXE, RecipeCategory.TOOLS, Items.NETHERITE_PICKAXE);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_HOE, RecipeCategory.TOOLS, Items.NETHERITE_HOE);
+        VanillaRecipeProvider.offerNetheriteUpgradeRecipe(exporter, Items.DIAMOND_SHOVEL, RecipeCategory.TOOLS, Items.NETHERITE_SHOVEL);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE, Items.NETHERRACK);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, Items.COBBLESTONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.SANDSTONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, Items.COBBLESTONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE, Items.MOSSY_COBBLESTONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE, Items.COBBLED_DEEPSLATE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.END_STONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.VEX_ARMOR_TRIM_SMITHING_TEMPLATE, Items.COBBLESTONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.PRISMARINE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE, Items.BLACKSTONE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE, Items.NETHERRACK);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.PURPUR_BLOCK);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.COBBLED_DEEPSLATE);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.TERRACOTTA);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.TERRACOTTA);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.TERRACOTTA);
+        VanillaRecipeProvider.offerSmithingTemplateCopyingRecipe(exporter, (ItemConvertible)Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, Items.TERRACOTTA);
+        VanillaRecipeProvider.offerCompactingRecipe(exporter, RecipeCategory.BUILDING_BLOCKS, Blocks.BAMBOO_BLOCK, Items.BAMBOO);
+        VanillaRecipeProvider.offerPlanksRecipe(exporter, Blocks.BAMBOO_PLANKS, ItemTags.BAMBOO_BLOCKS, 2);
+        VanillaRecipeProvider.offerMosaicRecipe(exporter, RecipeCategory.DECORATIONS, Blocks.BAMBOO_MOSAIC, Blocks.BAMBOO_SLAB);
+        VanillaRecipeProvider.offerBoatRecipe(exporter, Items.BAMBOO_RAFT, Blocks.BAMBOO_PLANKS);
+        VanillaRecipeProvider.offerChestBoatRecipe(exporter, Items.BAMBOO_CHEST_RAFT, Items.BAMBOO_RAFT);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.OAK_HANGING_SIGN, Blocks.STRIPPED_OAK_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.SPRUCE_HANGING_SIGN, Blocks.STRIPPED_SPRUCE_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.BIRCH_HANGING_SIGN, Blocks.STRIPPED_BIRCH_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.JUNGLE_HANGING_SIGN, Blocks.STRIPPED_JUNGLE_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.ACACIA_HANGING_SIGN, Blocks.STRIPPED_ACACIA_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.CHERRY_HANGING_SIGN, Blocks.STRIPPED_CHERRY_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.DARK_OAK_HANGING_SIGN, Blocks.STRIPPED_DARK_OAK_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.MANGROVE_HANGING_SIGN, Blocks.STRIPPED_MANGROVE_LOG);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.BAMBOO_HANGING_SIGN, Items.STRIPPED_BAMBOO_BLOCK);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.CRIMSON_HANGING_SIGN, Blocks.STRIPPED_CRIMSON_STEM);
+        VanillaRecipeProvider.offerHangingSignRecipe(exporter, Items.WARPED_HANGING_SIGN, Blocks.STRIPPED_WARPED_STEM);
+        ShapedRecipeJsonBuilder.create(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_BOOKSHELF).input(Character.valueOf('#'), ItemTags.PLANKS).input(Character.valueOf('X'), ItemTags.WOODEN_SLABS).pattern("###").pattern("XXX").pattern("###").criterion("has_book", VanillaRecipeProvider.conditionsFromItem(Items.BOOK)).offerTo(exporter);
+        VanillaRecipeProvider.offerSingleOutputShapelessRecipe(exporter, Items.ORANGE_DYE, Blocks.TORCHFLOWER, "orange_dye");
+        VanillaRecipeProvider.offerShapelessRecipe(exporter, Items.CYAN_DYE, Blocks.PITCHER_PLANT, "cyan_dye", 2);
+        VanillaRecipeProvider.offerPlanksRecipe2(exporter, Blocks.CHERRY_PLANKS, ItemTags.CHERRY_LOGS, 4);
+        VanillaRecipeProvider.offerBarkBlockRecipe(exporter, Blocks.CHERRY_WOOD, Blocks.CHERRY_LOG);
+        VanillaRecipeProvider.offerBarkBlockRecipe(exporter, Blocks.STRIPPED_CHERRY_WOOD, Blocks.STRIPPED_CHERRY_LOG);
+        VanillaRecipeProvider.offerBoatRecipe(exporter, Items.CHERRY_BOAT, Blocks.CHERRY_PLANKS);
+        VanillaRecipeProvider.offerChestBoatRecipe(exporter, Items.CHERRY_CHEST_BOAT, Items.CHERRY_BOAT);
+        VanillaRecipeProvider.offerShapelessRecipe(exporter, Items.PINK_DYE, Items.PINK_PETALS, "pink_dye", 1);
+        ShapedRecipeJsonBuilder.create(RecipeCategory.TOOLS, Items.BRUSH).input(Character.valueOf('X'), Items.FEATHER).input(Character.valueOf('#'), Items.COPPER_INGOT).input(Character.valueOf('I'), Items.STICK).pattern("X").pattern("#").pattern("I").criterion("has_copper_ingot", VanillaRecipeProvider.conditionsFromItem(Items.COPPER_INGOT)).offerTo(exporter);
+        ShapedRecipeJsonBuilder.create(RecipeCategory.DECORATIONS, Items.DECORATED_POT).input(Character.valueOf('#'), Items.BRICK).pattern(" # ").pattern("# #").pattern(" # ").criterion("has_brick", VanillaRecipeProvider.conditionsFromTag(ItemTags.DECORATED_POT_INGREDIENTS)).offerTo(exporter, "decorated_pot_simple");
+        ComplexRecipeJsonBuilder.create(RecipeSerializer.CRAFTING_DECORATED_POT).offerTo(exporter, "decorated_pot");
+    }
+
+    public static Map<Item, Identifier> getTrimSmithingTemplateMap() {
+        return Stream.of(Items.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE, Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, Items.VEX_ARMOR_TRIM_SMITHING_TEMPLATE, Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE, Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE, Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE, Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE, Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE).collect(Collectors.toMap(Function.identity(), item -> new Identifier(VanillaRecipeProvider.getItemPath(item) + "_smithing_trim")));
     }
 }
 

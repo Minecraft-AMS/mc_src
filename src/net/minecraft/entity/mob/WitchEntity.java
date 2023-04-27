@@ -110,7 +110,7 @@ implements RangedAttackMob {
 
     @Override
     public void tickMovement() {
-        if (!this.world.isClient && this.isAlive()) {
+        if (!this.getWorld().isClient && this.isAlive()) {
             this.raidGoal.decreaseCooldown();
             if (this.raidGoal.getCooldown() <= 0) {
                 this.attackPlayerGoal.setEnabled(true);
@@ -146,7 +146,7 @@ implements RangedAttackMob {
                     this.drinkTimeLeft = this.getMainHandStack().getMaxUseTime();
                     this.setDrinking(true);
                     if (!this.isSilent()) {
-                        this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_WITCH_DRINK, this.getSoundCategory(), 1.0f, 0.8f + this.random.nextFloat() * 0.4f);
+                        this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_WITCH_DRINK, this.getSoundCategory(), 1.0f, 0.8f + this.random.nextFloat() * 0.4f);
                     }
                     EntityAttributeInstance entityAttributeInstance = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
                     entityAttributeInstance.removeModifier(DRINKING_SPEED_PENALTY_MODIFIER);
@@ -154,7 +154,7 @@ implements RangedAttackMob {
                 }
             }
             if (this.random.nextFloat() < 7.5E-4f) {
-                this.world.sendEntityStatus(this, (byte)15);
+                this.getWorld().sendEntityStatus(this, (byte)15);
             }
         }
         super.tickMovement();
@@ -169,7 +169,7 @@ implements RangedAttackMob {
     public void handleStatus(byte status) {
         if (status == 15) {
             for (int i = 0; i < this.random.nextInt(35) + 10; ++i) {
-                this.world.addParticle(ParticleTypes.WITCH, this.getX() + this.random.nextGaussian() * (double)0.13f, this.getBoundingBox().maxY + 0.5 + this.random.nextGaussian() * (double)0.13f, this.getZ() + this.random.nextGaussian() * (double)0.13f, 0.0, 0.0, 0.0);
+                this.getWorld().addParticle(ParticleTypes.WITCH, this.getX() + this.random.nextGaussian() * (double)0.13f, this.getBoundingBox().maxY + 0.5 + this.random.nextGaussian() * (double)0.13f, this.getZ() + this.random.nextGaussian() * (double)0.13f, 0.0, 0.0, 0.0);
             }
         } else {
             super.handleStatus(status);
@@ -209,14 +209,14 @@ implements RangedAttackMob {
         } else if (g <= 3.0 && !target.hasStatusEffect(StatusEffects.WEAKNESS) && this.random.nextFloat() < 0.25f) {
             potion = Potions.WEAKNESS;
         }
-        PotionEntity potionEntity = new PotionEntity(this.world, this);
+        PotionEntity potionEntity = new PotionEntity(this.getWorld(), this);
         potionEntity.setItem(PotionUtil.setPotion(new ItemStack(Items.SPLASH_POTION), potion));
         potionEntity.setPitch(potionEntity.getPitch() - -20.0f);
         potionEntity.setVelocity(d, e + g * 0.2, f, 0.75f, 8.0f);
         if (!this.isSilent()) {
-            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_WITCH_THROW, this.getSoundCategory(), 1.0f, 0.8f + this.random.nextFloat() * 0.4f);
+            this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_WITCH_THROW, this.getSoundCategory(), 1.0f, 0.8f + this.random.nextFloat() * 0.4f);
         }
-        this.world.spawnEntity(potionEntity);
+        this.getWorld().spawnEntity(potionEntity);
     }
 
     @Override

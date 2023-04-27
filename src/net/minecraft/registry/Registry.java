@@ -123,12 +123,12 @@ IndexedIterable<T> {
         return entry;
     }
 
-    public static <T> RegistryEntry.Reference<T> method_47984(Registry<T> registry, RegistryKey<T> registryKey, T object) {
-        return ((MutableRegistry)registry).add(registryKey, object, Lifecycle.stable());
+    public static <T> RegistryEntry.Reference<T> registerReference(Registry<T> registry, RegistryKey<T> key, T entry) {
+        return ((MutableRegistry)registry).add(key, entry, Lifecycle.stable());
     }
 
-    public static <T> RegistryEntry.Reference<T> registerReference(Registry<T> registry, Identifier identifier, T object) {
-        return Registry.method_47984(registry, RegistryKey.of(registry.getKey(), identifier), object);
+    public static <T> RegistryEntry.Reference<T> registerReference(Registry<T> registry, Identifier id, T entry) {
+        return Registry.registerReference(registry, RegistryKey.of(registry.getKey(), id), entry);
     }
 
     public static <V, T extends V> T register(Registry<V> registry, int rawId, String id, T entry) {

@@ -62,7 +62,7 @@ extends Structure {
                 if (world.isAir(mutable) || !blockBox.contains(mutable) || !pieces.contains(mutable)) continue;
                 for (int m = j - 1; m > i; --m) {
                     mutable.setY(m);
-                    if (!world.isAir(mutable) && !world.getBlockState(mutable).getMaterial().isLiquid()) continue block1;
+                    if (!world.isAir(mutable) && !world.getBlockState(mutable).isLiquid()) continue block1;
                     world.setBlockState(mutable, Blocks.COBBLESTONE.getDefaultState(), 2);
                 }
             }

@@ -98,7 +98,7 @@ extends FishEntity {
 
     @Override
     public void tick() {
-        if (!this.world.isClient && this.isAlive() && this.canMoveVoluntarily()) {
+        if (!this.getWorld().isClient && this.isAlive() && this.canMoveVoluntarily()) {
             if (this.inflateTicks > 0) {
                 if (this.getPuffState() == 0) {
                     this.playSound(SoundEvents.ENTITY_PUFFER_FISH_BLOW_UP, this.getSoundVolume(), this.getSoundPitch());
@@ -126,7 +126,7 @@ extends FishEntity {
     public void tickMovement() {
         super.tickMovement();
         if (this.isAlive() && this.getPuffState() > 0) {
-            List<MobEntity> list = this.world.getEntitiesByClass(MobEntity.class, this.getBoundingBox().expand(0.3), entity -> BLOW_UP_TARGET_PREDICATE.test(this, (LivingEntity)entity));
+            List<MobEntity> list = this.getWorld().getEntitiesByClass(MobEntity.class, this.getBoundingBox().expand(0.3), entity -> BLOW_UP_TARGET_PREDICATE.test(this, (LivingEntity)entity));
             for (MobEntity mobEntity : list) {
                 if (!mobEntity.isAlive()) continue;
                 this.sting(mobEntity);
@@ -200,7 +200,7 @@ extends FishEntity {
 
         @Override
         public boolean canStart() {
-            List<LivingEntity> list = this.pufferfish.world.getEntitiesByClass(LivingEntity.class, this.pufferfish.getBoundingBox().expand(2.0), livingEntity -> BLOW_UP_TARGET_PREDICATE.test(this.pufferfish, (LivingEntity)livingEntity));
+            List<LivingEntity> list = this.pufferfish.getWorld().getEntitiesByClass(LivingEntity.class, this.pufferfish.getBoundingBox().expand(2.0), livingEntity -> BLOW_UP_TARGET_PREDICATE.test(this.pufferfish, (LivingEntity)livingEntity));
             return !list.isEmpty();
         }
 

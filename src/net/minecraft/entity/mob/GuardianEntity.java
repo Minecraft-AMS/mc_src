@@ -145,11 +145,11 @@ extends HostileEntity {
         if (!this.hasBeamTarget()) {
             return null;
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             if (this.cachedBeamTarget != null) {
                 return this.cachedBeamTarget;
             }
-            Entity entity = this.world.getEntityById(this.dataTracker.get(BEAM_TARGET_ID));
+            Entity entity = this.getWorld().getEntityById(this.dataTracker.get(BEAM_TARGET_ID));
             if (entity instanceof LivingEntity) {
                 this.cachedBeamTarget = (LivingEntity)entity;
                 return this.cachedBeamTarget;
@@ -209,16 +209,16 @@ extends HostileEntity {
     @Override
     public void tickMovement() {
         if (this.isAlive()) {
-            if (this.world.isClient) {
+            if (this.getWorld().isClient) {
                 Vec3d vec3d;
                 this.prevTailAngle = this.tailAngle;
                 if (!this.isTouchingWater()) {
                     this.spikesExtensionRate = 2.0f;
                     vec3d = this.getVelocity();
                     if (vec3d.y > 0.0 && this.flopping && !this.isSilent()) {
-                        this.world.playSound(this.getX(), this.getY(), this.getZ(), this.getFlopSound(), this.getSoundCategory(), 1.0f, 1.0f, false);
+                        this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), this.getFlopSound(), this.getSoundCategory(), 1.0f, 1.0f, false);
                     }
-                    this.flopping = vec3d.y < 0.0 && this.world.isTopSolid(this.getBlockPos().down(), this);
+                    this.flopping = vec3d.y < 0.0 && this.getWorld().isTopSolid(this.getBlockPos().down(), this);
                 } else {
                     this.spikesExtensionRate = this.areSpikesRetracted() ? (this.spikesExtensionRate < 0.5f ? 4.0f : (this.spikesExtensionRate += (0.5f - this.spikesExtensionRate) * 0.1f)) : (this.spikesExtensionRate += (0.125f - this.spikesExtensionRate) * 0.2f);
                 }
@@ -228,7 +228,7 @@ extends HostileEntity {
                 if (this.areSpikesRetracted() && this.isTouchingWater()) {
                     vec3d = this.getRotationVec(0.0f);
                     for (int i = 0; i < 2; ++i) {
-                        this.world.addParticle(ParticleTypes.BUBBLE, this.getParticleX(0.5) - vec3d.x * 1.5, this.getRandomBodyY() - vec3d.y * 1.5, this.getParticleZ(0.5) - vec3d.z * 1.5, 0.0, 0.0, 0.0);
+                        this.getWorld().addParticle(ParticleTypes.BUBBLE, this.getParticleX(0.5) - vec3d.x * 1.5, this.getRandomBodyY() - vec3d.y * 1.5, this.getParticleZ(0.5) - vec3d.z * 1.5, 0.0, 0.0, 0.0);
                     }
                 }
                 if (this.hasBeamTarget()) {
@@ -249,17 +249,17 @@ extends HostileEntity {
                         g /= h;
                         double j = this.random.nextDouble();
                         while (j < h) {
-                            this.world.addParticle(ParticleTypes.BUBBLE, this.getX() + e * (j += 1.8 - d + this.random.nextDouble() * (1.7 - d)), this.getEyeY() + f * j, this.getZ() + g * j, 0.0, 0.0, 0.0);
+                            this.getWorld().addParticle(ParticleTypes.BUBBLE, this.getX() + e * (j += 1.8 - d + this.random.nextDouble() * (1.7 - d)), this.getEyeY() + f * j, this.getZ() + g * j, 0.0, 0.0, 0.0);
                         }
                     }
                 }
             }
             if (this.isInsideWaterOrBubbleColumn()) {
                 this.setAir(300);
-            } else if (this.onGround) {
+            } else if (this.isOnGround()) {
                 this.setVelocity(this.getVelocity().add((this.random.nextFloat() * 2.0f - 1.0f) * 0.4f, 0.5, (this.random.nextFloat() * 2.0f - 1.0f) * 0.4f));
                 this.setYaw(this.random.nextFloat() * 360.0f);
-                this.onGround = false;
+                this.setOnGround(false);
                 this.velocityDirty = true;
             }
             if (this.hasBeamTarget()) {
@@ -301,7 +301,7 @@ extends HostileEntity {
     @Override
     public boolean damage(DamageSource source, float amount) {
         Entity entity;
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return false;
         }
         if (!this.areSpikesRetracted() && !source.isIn(DamageTypeTags.AVOIDS_GUARDIAN_THORNS) && !source.isOf(DamageTypes.THORNS) && (entity = source.getSource()) instanceof LivingEntity) {
@@ -444,11 +444,11 @@ extends HostileEntity {
             if (this.beamTicks == 0) {
                 this.guardian.setBeamTarget(livingEntity.getId());
                 if (!this.guardian.isSilent()) {
-                    this.guardian.world.sendEntityStatus(this.guardian, (byte)21);
+                    this.guardian.getWorld().sendEntityStatus(this.guardian, (byte)21);
                 }
             } else if (this.beamTicks >= this.guardian.getWarmupTime()) {
                 float f = 1.0f;
-                if (this.guardian.world.getDifficulty() == Difficulty.HARD) {
+                if (this.guardian.getWorld().getDifficulty() == Difficulty.HARD) {
                     f += 2.0f;
                 }
                 if (this.elder) {

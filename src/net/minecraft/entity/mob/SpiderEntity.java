@@ -92,7 +92,7 @@ extends HostileEntity {
     @Override
     public void tick() {
         super.tick();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.setClimbingWall(this.horizontalCollision);
         }
     }
@@ -162,7 +162,7 @@ extends HostileEntity {
         SkeletonEntity skeletonEntity;
         entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         Random random = world.getRandom();
-        if (random.nextInt(100) == 0 && (skeletonEntity = EntityType.SKELETON.create(this.world)) != null) {
+        if (random.nextInt(100) == 0 && (skeletonEntity = EntityType.SKELETON.create(this.getWorld())) != null) {
             skeletonEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), 0.0f);
             skeletonEntity.initialize(world, difficulty, spawnReason, null, null);
             skeletonEntity.startRiding(this);

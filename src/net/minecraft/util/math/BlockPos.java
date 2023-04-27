@@ -5,7 +5,9 @@
  *  com.google.common.collect.AbstractIterator
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
+ *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
  *  org.apache.commons.lang3.Validate
+ *  org.apache.commons.lang3.tuple.Pair
  *  org.jetbrains.annotations.Unmodifiable
  *  org.slf4j.Logger
  */
@@ -14,7 +16,11 @@ package net.minecraft.util.math;
 import com.google.common.collect.AbstractIterator;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import java.util.ArrayDeque;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -31,6 +37,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 
@@ -259,6 +266,11 @@ extends Vec3i {
         return BlockPos.iterateRandomly(random, count, around.getX() - range, around.getY() - range, around.getZ() - range, around.getX() + range, around.getY() + range, around.getZ() + range);
     }
 
+    @Deprecated
+    public static Stream<BlockPos> streamSouthEastSquare(BlockPos pos) {
+        return Stream.of(pos, pos.south(), pos.east(), pos.south().east());
+    }
+
     public static Iterable<BlockPos> iterateRandomly(final Random random, final int count, final int minX, final int minY, final int minZ, int maxX, int maxY, int maxZ) {
         final int i = maxX - minX + 1;
         final int j = maxY - minY + 1;
@@ -437,6 +449,26 @@ extends Vec3i {
                 return this.computeNext();
             }
         };
+    }
+
+    public static int iterateRecursively(BlockPos pos, int maxDepth, int maxIterations, BiConsumer<BlockPos, Consumer<BlockPos>> nextQueuer, Predicate<BlockPos> callback) {
+        ArrayDeque<Pair> queue = new ArrayDeque<Pair>();
+        LongOpenHashSet longSet = new LongOpenHashSet();
+        queue.add(Pair.of((Object)pos, (Object)0));
+        int i = 0;
+        while (!queue.isEmpty()) {
+            Pair pair = (Pair)queue.poll();
+            BlockPos blockPos = (BlockPos)pair.getLeft();
+            int j = (Integer)pair.getRight();
+            long l = blockPos.asLong();
+            if (!longSet.add(l) || !callback.test(blockPos)) continue;
+            if (++i >= maxIterations) {
+                return i;
+            }
+            if (j >= maxDepth) continue;
+            nextQueuer.accept(blockPos, queuedPos -> queue.add(Pair.of((Object)queuedPos, (Object)(j + 1))));
+        }
+        return i;
     }
 
     @Override

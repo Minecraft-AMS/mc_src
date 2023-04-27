@@ -63,7 +63,7 @@ extends IllagerEntity {
     }
 
     public boolean isSpellcasting() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return this.dataTracker.get(SPELL) > 0;
         }
         return this.spellTicks > 0;
@@ -75,7 +75,7 @@ extends IllagerEntity {
     }
 
     protected Spell getSpell() {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             return this.spell;
         }
         return Spell.byId(this.dataTracker.get(SPELL).byteValue());
@@ -92,7 +92,7 @@ extends IllagerEntity {
     @Override
     public void tick() {
         super.tick();
-        if (this.world.isClient && this.isSpellcasting()) {
+        if (this.getWorld().isClient && this.isSpellcasting()) {
             Spell spell = this.getSpell();
             double d = spell.particleVelocity[0];
             double e = spell.particleVelocity[1];
@@ -100,8 +100,8 @@ extends IllagerEntity {
             float g = this.bodyYaw * ((float)Math.PI / 180) + MathHelper.cos((float)this.age * 0.6662f) * 0.25f;
             float h = MathHelper.cos(g);
             float i = MathHelper.sin(g);
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() + (double)h * 0.6, this.getY() + 1.8, this.getZ() + (double)i * 0.6, d, e, f);
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() - (double)h * 0.6, this.getY() + 1.8, this.getZ() - (double)i * 0.6, d, e, f);
+            this.getWorld().addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() + (double)h * 0.6, this.getY() + 1.8, this.getZ() + (double)i * 0.6, d, e, f);
+            this.getWorld().addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() - (double)h * 0.6, this.getY() + 1.8, this.getZ() - (double)i * 0.6, d, e, f);
         }
     }
 

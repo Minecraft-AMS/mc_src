@@ -135,14 +135,14 @@ extends AbstractDecorationEntity {
         if (this.fixed) {
             return true;
         }
-        if (!this.world.isSpaceEmpty(this)) {
+        if (!this.getWorld().isSpaceEmpty(this)) {
             return false;
         }
-        BlockState blockState = this.world.getBlockState(this.attachmentPos.offset(this.facing.getOpposite()));
-        if (!(blockState.getMaterial().isSolid() || this.facing.getAxis().isHorizontal() && AbstractRedstoneGateBlock.isRedstoneGate(blockState))) {
+        BlockState blockState = this.getWorld().getBlockState(this.attachmentPos.offset(this.facing.getOpposite()));
+        if (!(blockState.isSolid() || this.facing.getAxis().isHorizontal() && AbstractRedstoneGateBlock.isRedstoneGate(blockState))) {
             return false;
         }
-        return this.world.getOtherEntities(this, this.getBoundingBox(), PREDICATE).isEmpty();
+        return this.getWorld().getOtherEntities(this, this.getBoundingBox(), PREDICATE).isEmpty();
     }
 
     @Override
@@ -182,7 +182,7 @@ extends AbstractDecorationEntity {
             return false;
         }
         if (!source.isIn(DamageTypeTags.IS_EXPLOSION) && !this.getHeldItemStack().isEmpty()) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 this.dropHeldStack(source.getAttacker(), false);
                 this.emitGameEvent(GameEvent.BLOCK_CHANGE, source.getAttacker());
                 this.playSound(this.getRemoveItemSound(), 1.0f, 1.0f);
@@ -238,7 +238,7 @@ extends AbstractDecorationEntity {
         }
         ItemStack itemStack = this.getHeldItemStack();
         this.setHeldItemStack(ItemStack.EMPTY);
-        if (!this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+        if (!this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
             if (entity == null) {
                 this.removeFromFrame(itemStack);
             }
@@ -265,7 +265,7 @@ extends AbstractDecorationEntity {
 
     private void removeFromFrame(ItemStack itemStack) {
         this.getMapId().ifPresent(i -> {
-            MapState mapState = FilledMapItem.getMapState(i, this.world);
+            MapState mapState = FilledMapItem.getMapState(i, this.getWorld());
             if (mapState != null) {
                 mapState.removeFrame(this.attachmentPos, this.getId());
                 mapState.setDirty(true);
@@ -297,8 +297,7 @@ extends AbstractDecorationEntity {
 
     public void setHeldItemStack(ItemStack value, boolean update) {
         if (!value.isEmpty()) {
-            value = value.copy();
-            value.setCount(1);
+            value = value.copyWithCount(1);
         }
         this.setAsStackHolder(value);
         this.getDataTracker().set(ITEM_STACK, value);
@@ -306,7 +305,7 @@ extends AbstractDecorationEntity {
             this.playSound(this.getAddItemSound(), 1.0f, 1.0f);
         }
         if (update && this.attachmentPos != null) {
-            this.world.updateComparators(this.attachmentPos, Blocks.AIR);
+            this.getWorld().updateComparators(this.attachmentPos, Blocks.AIR);
         }
     }
 
@@ -359,7 +358,7 @@ extends AbstractDecorationEntity {
     private void setRotation(int value, boolean updateComparators) {
         this.getDataTracker().set(ROTATION, value % 8);
         if (updateComparators && this.attachmentPos != null) {
-            this.world.updateComparators(this.attachmentPos, Blocks.AIR);
+            this.getWorld().updateComparators(this.attachmentPos, Blocks.AIR);
         }
     }
 
@@ -409,13 +408,13 @@ extends AbstractDecorationEntity {
         if (this.fixed) {
             return ActionResult.PASS;
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return bl || bl2 ? ActionResult.SUCCESS : ActionResult.PASS;
         }
         if (!bl) {
             if (bl2 && !this.isRemoved()) {
                 MapState mapState;
-                if (itemStack.isOf(Items.FILLED_MAP) && (mapState = FilledMapItem.getMapState(itemStack, this.world)) != null && mapState.iconCountNotLessThan(256)) {
+                if (itemStack.isOf(Items.FILLED_MAP) && (mapState = FilledMapItem.getMapState(itemStack, this.getWorld())) != null && mapState.iconCountNotLessThan(256)) {
                     return ActionResult.FAIL;
                 }
                 this.setHeldItemStack(itemStack);

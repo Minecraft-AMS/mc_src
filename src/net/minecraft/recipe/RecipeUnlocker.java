@@ -7,7 +7,9 @@
 package net.minecraft.recipe;
 
 import java.util.Collections;
+import java.util.List;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.GameRules;
@@ -20,11 +22,14 @@ public interface RecipeUnlocker {
     @Nullable
     public Recipe<?> getLastRecipe();
 
-    default public void unlockLastRecipe(PlayerEntity player) {
+    default public void unlockLastRecipe(PlayerEntity player, List<ItemStack> ingredients) {
         Recipe<?> recipe = this.getLastRecipe();
-        if (recipe != null && !recipe.isIgnoredInRecipeBook()) {
-            player.unlockRecipes(Collections.singleton(recipe));
-            this.setLastRecipe(null);
+        if (recipe != null) {
+            player.unlockCraftedRecipe(recipe, ingredients);
+            if (!recipe.isIgnoredInRecipeBook()) {
+                player.unlockRecipes(Collections.singleton(recipe));
+                this.setLastRecipe(null);
+            }
         }
     }
 

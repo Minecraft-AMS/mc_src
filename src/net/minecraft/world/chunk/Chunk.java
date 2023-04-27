@@ -27,13 +27,15 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.class_8528;
 import net.minecraft.entity.Entity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.nbt.NbtCompound;
@@ -45,6 +47,7 @@ import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.HeightLimitView;
@@ -61,6 +64,7 @@ import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.light.LightSourceView;
 import net.minecraft.world.event.listener.GameEventDispatcher;
 import net.minecraft.world.gen.chunk.BlendingData;
 import net.minecraft.world.gen.chunk.ChunkNoiseSampler;
@@ -73,7 +77,9 @@ import org.slf4j.Logger;
 public abstract class Chunk
 implements BlockView,
 BiomeAccess.Storage,
+LightSourceView,
 StructureHolder {
+    public static final int MISSING_SECTION = -1;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final LongSet EMPTY_STRUCTURE_REFERENCES = new LongOpenHashSet();
     protected final ShortList[] postProcessingLists;
@@ -90,6 +96,7 @@ StructureHolder {
     @Nullable
     protected BlendingData blendingData;
     protected final Map<Heightmap.Type, Heightmap> heightmaps = Maps.newEnumMap(Heightmap.Type.class);
+    protected class_8528 field_44708;
     private final Map<Structure, StructureStart> structureStarts = Maps.newHashMap();
     private final Map<Structure, LongSet> structureReferences = Maps.newHashMap();
     protected final Map<BlockPos, NbtCompound> blockEntityNbts = Maps.newHashMap();
@@ -97,7 +104,7 @@ StructureHolder {
     protected final HeightLimitView heightLimitView;
     protected final ChunkSection[] sectionArray;
 
-    public Chunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome, long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
+    public Chunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biomeRegistry, long inhabitedTime, @Nullable ChunkSection[] chunkSections, @Nullable BlendingData blendingData) {
         this.pos = pos;
         this.upgradeData = upgradeData;
         this.heightLimitView = heightLimitView;
@@ -105,20 +112,21 @@ StructureHolder {
         this.inhabitedTime = inhabitedTime;
         this.postProcessingLists = new ShortList[heightLimitView.countVerticalSections()];
         this.blendingData = blendingData;
-        if (sectionArrayInitializer != null) {
-            if (this.sectionArray.length == sectionArrayInitializer.length) {
-                System.arraycopy(sectionArrayInitializer, 0, this.sectionArray, 0, this.sectionArray.length);
+        this.field_44708 = new class_8528(heightLimitView);
+        if (chunkSections != null) {
+            if (this.sectionArray.length == chunkSections.length) {
+                System.arraycopy(chunkSections, 0, this.sectionArray, 0, this.sectionArray.length);
             } else {
-                LOGGER.warn("Could not set level chunk sections, array length is {} instead of {}", (Object)sectionArrayInitializer.length, (Object)this.sectionArray.length);
+                LOGGER.warn("Could not set level chunk sections, array length is {} instead of {}", (Object)chunkSections.length, (Object)this.sectionArray.length);
             }
         }
-        Chunk.fillSectionArray(heightLimitView, biome, this.sectionArray);
+        Chunk.fillSectionArray(biomeRegistry, this.sectionArray);
     }
 
-    private static void fillSectionArray(HeightLimitView world, Registry<Biome> biome, ChunkSection[] sectionArray) {
+    private static void fillSectionArray(Registry<Biome> biomeRegistry, ChunkSection[] sectionArray) {
         for (int i = 0; i < sectionArray.length; ++i) {
             if (sectionArray[i] != null) continue;
-            sectionArray[i] = new ChunkSection(world.sectionIndexToCoord(i), biome);
+            sectionArray[i] = new ChunkSection(biomeRegistry);
         }
     }
 
@@ -133,20 +141,20 @@ StructureHolder {
 
     public abstract void addEntity(Entity var1);
 
-    @Nullable
-    public ChunkSection getHighestNonEmptySection() {
+    public int getHighestNonEmptySection() {
         ChunkSection[] chunkSections = this.getSectionArray();
         for (int i = chunkSections.length - 1; i >= 0; --i) {
             ChunkSection chunkSection = chunkSections[i];
             if (chunkSection.isEmpty()) continue;
-            return chunkSection;
+            return i;
         }
-        return null;
+        return -1;
     }
 
+    @Deprecated(forRemoval=true)
     public int getHighestNonEmptySectionYOffset() {
-        ChunkSection chunkSection = this.getHighestNonEmptySection();
-        return chunkSection == null ? this.getBottomY() : chunkSection.getYOffset();
+        int i = this.getHighestNonEmptySection();
+        return i == -1 ? this.getBottomY() : ChunkSectionPos.getBlockCoord(this.sectionIndexToCoord(i));
     }
 
     public Set<BlockPos> getBlockEntityPositions() {
@@ -264,6 +272,16 @@ StructureHolder {
 
     public abstract ChunkStatus getStatus();
 
+    public ChunkStatus method_51526() {
+        ChunkStatus chunkStatus = this.getStatus();
+        BelowZeroRetrogen belowZeroRetrogen = this.getBelowZeroRetrogen();
+        if (belowZeroRetrogen != null) {
+            ChunkStatus chunkStatus2 = belowZeroRetrogen.getTargetStatus();
+            return chunkStatus2.isAtLeast(chunkStatus) ? chunkStatus2 : chunkStatus;
+        }
+        return chunkStatus;
+    }
+
     public abstract void removeBlockEntity(BlockPos var1);
 
     public void markBlockForPostProcessing(BlockPos pos) {
@@ -290,7 +308,28 @@ StructureHolder {
     @Nullable
     public abstract NbtCompound getPackedBlockEntityNbt(BlockPos var1);
 
-    public abstract Stream<BlockPos> getLightSourcesStream();
+    @Override
+    public final void forEachLightSource(BiConsumer<BlockPos, BlockState> callback) {
+        this.forEachBlockMatchingPredicate(blockState -> blockState.getLuminance() != 0, callback);
+    }
+
+    public void forEachBlockMatchingPredicate(Predicate<BlockState> predicate, BiConsumer<BlockPos, BlockState> biConsumer) {
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        for (int i = this.getBottomSectionCoord(); i < this.getTopSectionCoord(); ++i) {
+            ChunkSection chunkSection = this.getSection(this.sectionCoordToIndex(i));
+            if (!chunkSection.hasAny(predicate)) continue;
+            BlockPos blockPos = ChunkSectionPos.from(this.pos, i).getMinPos();
+            for (int j = 0; j < 16; ++j) {
+                for (int k = 0; k < 16; ++k) {
+                    for (int l = 0; l < 16; ++l) {
+                        BlockState blockState = chunkSection.getBlockState(l, j, k);
+                        if (!predicate.test(blockState)) continue;
+                        biConsumer.accept(mutable.set(blockPos, l, j, k), blockState);
+                    }
+                }
+            }
+        }
+    }
 
     public abstract BasicTickScheduler<Block> getBlockTickScheduler();
 
@@ -392,7 +431,8 @@ StructureHolder {
         HeightLimitView heightLimitView = this.getHeightLimitView();
         for (int k = heightLimitView.getBottomSectionCoord(); k < heightLimitView.getTopSectionCoord(); ++k) {
             ChunkSection chunkSection = this.getSection(this.sectionCoordToIndex(k));
-            chunkSection.populateBiomes(biomeSupplier, sampler, i, j);
+            int l = BiomeCoords.fromChunk(k);
+            chunkSection.populateBiomes(biomeSupplier, sampler, i, l, j);
         }
     }
 
@@ -411,6 +451,15 @@ StructureHolder {
 
     public HeightLimitView getHeightLimitView() {
         return this;
+    }
+
+    public void method_51522() {
+        this.field_44708.method_51540(this);
+    }
+
+    @Override
+    public class_8528 getLightSourcesStream() {
+        return this.field_44708;
     }
 
     public record TickSchedulers(SerializableTickScheduler<Block> blocks, SerializableTickScheduler<Fluid> fluids) {

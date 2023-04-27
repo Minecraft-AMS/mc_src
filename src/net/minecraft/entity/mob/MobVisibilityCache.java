@@ -34,9 +34,9 @@ public class MobVisibilityCache {
         if (this.invisibleEntities.contains(i)) {
             return false;
         }
-        this.owner.world.getProfiler().push("hasLineOfSight");
+        this.owner.getWorld().getProfiler().push("hasLineOfSight");
         boolean bl = this.owner.canSee(entity);
-        this.owner.world.getProfiler().pop();
+        this.owner.getWorld().getProfiler().pop();
         if (bl) {
             this.visibleEntities.add(i);
         } else {

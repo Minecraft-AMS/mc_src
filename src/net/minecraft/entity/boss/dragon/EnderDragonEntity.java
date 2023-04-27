@@ -130,8 +130,8 @@ implements Monster {
 
     @Override
     public void addFlapEffects() {
-        if (this.world.isClient && !this.isSilent()) {
-            this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, this.getSoundCategory(), 5.0f, 0.8f + this.random.nextFloat() * 0.3f, false);
+        if (this.getWorld().isClient && !this.isSilent()) {
+            this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, this.getSoundCategory(), 5.0f, 0.8f + this.random.nextFloat() * 0.3f, false);
         }
     }
 
@@ -166,10 +166,10 @@ implements Monster {
         float p;
         float o;
         this.addAirTravelEffects();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             this.setHealth(this.getHealth());
             if (!this.isSilent() && !this.phaseManager.getCurrent().isSittingOrHovering() && --this.ticksUntilNextGrowl < 0) {
-                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, this.getSoundCategory(), 2.5f, 0.8f + this.random.nextFloat() * 0.3f, false);
+                this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, this.getSoundCategory(), 2.5f, 0.8f + this.random.nextFloat() * 0.3f, false);
                 this.ticksUntilNextGrowl = 200 + this.random.nextInt(200);
             }
         }
@@ -178,7 +178,7 @@ implements Monster {
             float f = (this.random.nextFloat() - 0.5f) * 8.0f;
             float g = (this.random.nextFloat() - 0.5f) * 4.0f;
             float h = (this.random.nextFloat() - 0.5f) * 8.0f;
-            this.world.addParticle(ParticleTypes.EXPLOSION, this.getX() + (double)f, this.getY() + 2.0 + (double)g, this.getZ() + (double)h, 0.0, 0.0, 0.0);
+            this.getWorld().addParticle(ParticleTypes.EXPLOSION, this.getX() + (double)f, this.getY() + 2.0 + (double)g, this.getZ() + (double)h, 0.0, 0.0, 0.0);
             return;
         }
         this.tickWithEndCrystals();
@@ -201,7 +201,7 @@ implements Monster {
         }
         this.segmentCircularBuffer[this.latestSegment][0] = this.getYaw();
         this.segmentCircularBuffer[this.latestSegment][1] = this.getY();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             if (this.bodyTrackingIncrements > 0) {
                 double d = this.getX() + (this.serverX - this.getX()) / (double)this.bodyTrackingIncrements;
                 e = this.getY() + (this.serverY - this.getY()) / (double)this.bodyTrackingIncrements;
@@ -270,11 +270,11 @@ implements Monster {
         this.movePart(this.body, x * 0.5f, 0.0, -y * 0.5f);
         this.movePart(this.rightWing, y * 4.5f, 2.0, x * 4.5f);
         this.movePart(this.leftWing, y * -4.5f, 2.0, x * -4.5f);
-        if (!this.world.isClient && this.hurtTime == 0) {
-            this.launchLivingEntities(this.world.getOtherEntities(this, this.rightWing.getBoundingBox().expand(4.0, 2.0, 4.0).offset(0.0, -2.0, 0.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
-            this.launchLivingEntities(this.world.getOtherEntities(this, this.leftWing.getBoundingBox().expand(4.0, 2.0, 4.0).offset(0.0, -2.0, 0.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
-            this.damageLivingEntities(this.world.getOtherEntities(this, this.head.getBoundingBox().expand(1.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
-            this.damageLivingEntities(this.world.getOtherEntities(this, this.neck.getBoundingBox().expand(1.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
+        if (!this.getWorld().isClient && this.hurtTime == 0) {
+            this.launchLivingEntities(this.getWorld().getOtherEntities(this, this.rightWing.getBoundingBox().expand(4.0, 2.0, 4.0).offset(0.0, -2.0, 0.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
+            this.launchLivingEntities(this.getWorld().getOtherEntities(this, this.leftWing.getBoundingBox().expand(4.0, 2.0, 4.0).offset(0.0, -2.0, 0.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
+            this.damageLivingEntities(this.getWorld().getOtherEntities(this, this.head.getBoundingBox().expand(1.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
+            this.damageLivingEntities(this.getWorld().getOtherEntities(this, this.neck.getBoundingBox().expand(1.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
         }
         float z = MathHelper.sin(this.getYaw() * ((float)Math.PI / 180) - this.yawAcceleration * 0.01f);
         float aa = MathHelper.cos(this.getYaw() * ((float)Math.PI / 180) - this.yawAcceleration * 0.01f);
@@ -301,7 +301,7 @@ implements Monster {
             float ae = (float)(ac + 1) * 2.0f;
             this.movePart(enderDragonPart, -(x * 1.5f + o * ae) * u, es[1] - ds[1] - (double)((ae + 1.5f) * v) + 1.5, (y * 1.5f + p * ae) * u);
         }
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.slowedDownByBlock = this.destroyBlocks(this.head.getBoundingBox()) | this.destroyBlocks(this.neck.getBoundingBox()) | this.destroyBlocks(this.body.getBoundingBox());
             if (this.fight != null) {
                 this.fight.updateFight(this);
@@ -339,7 +339,7 @@ implements Monster {
             }
         }
         if (this.random.nextInt(10) == 0) {
-            List<EndCrystalEntity> list = this.world.getNonSpectatingEntities(EndCrystalEntity.class, this.getBoundingBox().expand(32.0));
+            List<EndCrystalEntity> list = this.getWorld().getNonSpectatingEntities(EndCrystalEntity.class, this.getBoundingBox().expand(32.0));
             EndCrystalEntity endCrystalEntity = null;
             double d = Double.MAX_VALUE;
             for (EndCrystalEntity endCrystalEntity2 : list) {
@@ -392,19 +392,19 @@ implements Monster {
             for (int p = j; p <= m; ++p) {
                 for (int q = k; q <= n; ++q) {
                     BlockPos blockPos = new BlockPos(o, p, q);
-                    BlockState blockState = this.world.getBlockState(blockPos);
+                    BlockState blockState = this.getWorld().getBlockState(blockPos);
                     if (blockState.isAir() || blockState.isIn(BlockTags.DRAGON_TRANSPARENT)) continue;
-                    if (!this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) || blockState.isIn(BlockTags.DRAGON_IMMUNE)) {
+                    if (!this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) || blockState.isIn(BlockTags.DRAGON_IMMUNE)) {
                         bl = true;
                         continue;
                     }
-                    bl2 = this.world.removeBlock(blockPos, false) || bl2;
+                    bl2 = this.getWorld().removeBlock(blockPos, false) || bl2;
                 }
             }
         }
         if (bl2) {
             BlockPos blockPos2 = new BlockPos(i + this.random.nextInt(l - i + 1), j + this.random.nextInt(m - j + 1), k + this.random.nextInt(n - k + 1));
-            this.world.syncWorldEvent(2008, blockPos2, 0);
+            this.getWorld().syncWorldEvent(2008, blockPos2, 0);
         }
         return bl;
     }
@@ -440,7 +440,7 @@ implements Monster {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             return this.damagePart(this.body, source, amount);
         }
         return false;
@@ -470,25 +470,25 @@ implements Monster {
             float f = (this.random.nextFloat() - 0.5f) * 8.0f;
             float g = (this.random.nextFloat() - 0.5f) * 4.0f;
             float h = (this.random.nextFloat() - 0.5f) * 8.0f;
-            this.world.addParticle(ParticleTypes.EXPLOSION_EMITTER, this.getX() + (double)f, this.getY() + 2.0 + (double)g, this.getZ() + (double)h, 0.0, 0.0, 0.0);
+            this.getWorld().addParticle(ParticleTypes.EXPLOSION_EMITTER, this.getX() + (double)f, this.getY() + 2.0 + (double)g, this.getZ() + (double)h, 0.0, 0.0, 0.0);
         }
-        boolean bl = this.world.getGameRules().getBoolean(GameRules.DO_MOB_LOOT);
+        boolean bl = this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_LOOT);
         int i = 500;
         if (this.fight != null && !this.fight.hasPreviouslyKilled()) {
             i = 12000;
         }
-        if (this.world instanceof ServerWorld) {
+        if (this.getWorld() instanceof ServerWorld) {
             if (this.ticksSinceDeath > 150 && this.ticksSinceDeath % 5 == 0 && bl) {
-                ExperienceOrbEntity.spawn((ServerWorld)this.world, this.getPos(), MathHelper.floor((float)i * 0.08f));
+                ExperienceOrbEntity.spawn((ServerWorld)this.getWorld(), this.getPos(), MathHelper.floor((float)i * 0.08f));
             }
             if (this.ticksSinceDeath == 1 && !this.isSilent()) {
-                this.world.syncGlobalEvent(1028, this.getBlockPos(), 0);
+                this.getWorld().syncGlobalEvent(1028, this.getBlockPos(), 0);
             }
         }
         this.move(MovementType.SELF, new Vec3d(0.0, 0.1f, 0.0));
-        if (this.ticksSinceDeath == 200 && this.world instanceof ServerWorld) {
+        if (this.ticksSinceDeath == 200 && this.getWorld() instanceof ServerWorld) {
             if (bl) {
-                ExperienceOrbEntity.spawn((ServerWorld)this.world, this.getPos(), MathHelper.floor((float)i * 0.2f));
+                ExperienceOrbEntity.spawn((ServerWorld)this.getWorld(), this.getPos(), MathHelper.floor((float)i * 0.2f));
             }
             if (this.fight != null) {
                 this.fight.dragonKilled(this);
@@ -516,7 +516,7 @@ implements Monster {
                     l = MathHelper.floor(20.0f * MathHelper.cos(2.0f * ((float)(-Math.PI) + 0.7853982f * (float)(k -= 20))));
                     m = MathHelper.floor(20.0f * MathHelper.sin(2.0f * ((float)(-Math.PI) + 0.7853982f * (float)k)));
                 }
-                int n = Math.max(this.world.getSeaLevel() + 10, this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(l, 0, m)).getY() + j);
+                int n = Math.max(this.getWorld().getSeaLevel() + 10, this.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(l, 0, m)).getY() + j);
                 this.pathNodes[i] = new PathNode(l, n, m);
             }
             this.pathNodeConnections[0] = 6146;
@@ -702,7 +702,7 @@ implements Monster {
         Phase phase = this.phaseManager.getCurrent();
         PhaseType<? extends Phase> phaseType = phase.getType();
         if (phaseType == PhaseType.LANDING || phaseType == PhaseType.TAKEOFF) {
-            BlockPos blockPos = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
+            BlockPos blockPos = this.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
             double d = Math.max(Math.sqrt(blockPos.getSquaredDistance(this.getPos())) / 4.0, 1.0);
             e = (double)segmentOffset / d;
         } else {
@@ -716,7 +716,7 @@ implements Monster {
         Phase phase = this.phaseManager.getCurrent();
         PhaseType<? extends Phase> phaseType = phase.getType();
         if (phaseType == PhaseType.LANDING || phaseType == PhaseType.TAKEOFF) {
-            BlockPos blockPos = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
+            BlockPos blockPos = this.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
             float f = Math.max((float)Math.sqrt(blockPos.getSquaredDistance(this.getPos())) / 4.0f, 1.0f);
             float g = 6.0f / f;
             float h = this.getPitch();
@@ -737,7 +737,7 @@ implements Monster {
     }
 
     public void crystalDestroyed(EndCrystalEntity endCrystal, BlockPos pos, DamageSource source) {
-        PlayerEntity playerEntity = source.getAttacker() instanceof PlayerEntity ? (PlayerEntity)source.getAttacker() : this.world.getClosestPlayer(CLOSE_PLAYER_PREDICATE, pos.getX(), pos.getY(), pos.getZ());
+        PlayerEntity playerEntity = source.getAttacker() instanceof PlayerEntity ? (PlayerEntity)source.getAttacker() : this.getWorld().getClosestPlayer(CLOSE_PLAYER_PREDICATE, pos.getX(), pos.getY(), pos.getZ());
         if (endCrystal == this.connectedCrystal) {
             this.damagePart(this.head, this.getDamageSources().explosion(endCrystal, playerEntity), 10.0f);
         }
@@ -746,7 +746,7 @@ implements Monster {
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        if (PHASE_TYPE.equals(data) && this.world.isClient) {
+        if (PHASE_TYPE.equals(data) && this.getWorld().isClient) {
             this.phaseManager.setPhase(PhaseType.getFromId(this.getDataTracker().get(PHASE_TYPE)));
         }
         super.onTrackedDataSet(data);

@@ -27,6 +27,7 @@ public interface StructureSetKeys {
     public static final RegistryKey<StructureSet> END_CITIES = StructureSetKeys.of("end_cities");
     public static final RegistryKey<StructureSet> ANCIENT_CITIES = StructureSetKeys.of("ancient_cities");
     public static final RegistryKey<StructureSet> STRONGHOLDS = StructureSetKeys.of("strongholds");
+    public static final RegistryKey<StructureSet> TRAIL_RUINS = StructureSetKeys.of("trail_ruins");
 
     private static RegistryKey<StructureSet> of(String id) {
         return RegistryKey.of(RegistryKeys.STRUCTURE_SET, new Identifier(id));

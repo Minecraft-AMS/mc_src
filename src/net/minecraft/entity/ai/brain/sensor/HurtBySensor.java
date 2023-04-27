@@ -37,7 +37,7 @@ extends Sensor<LivingEntity> {
             brain.forget(MemoryModuleType.HURT_BY);
         }
         brain.getOptionalRegisteredMemory(MemoryModuleType.HURT_BY_ENTITY).ifPresent(livingEntity -> {
-            if (!livingEntity.isAlive() || livingEntity.world != world) {
+            if (!livingEntity.isAlive() || livingEntity.getWorld() != world) {
                 brain.forget(MemoryModuleType.HURT_BY_ENTITY);
             }
         });

@@ -671,28 +671,28 @@ public class MineshaftGenerator {
             }
             for (o = i; o <= l; ++o) {
                 for (p = k; p <= n; ++p) {
-                    if (world.getBlockState(mutable.set(o, j, p)).getMaterial().isLiquid()) {
+                    if (world.getBlockState(mutable.set(o, j, p)).isLiquid()) {
                         return true;
                     }
-                    if (!world.getBlockState(mutable.set(o, m, p)).getMaterial().isLiquid()) continue;
+                    if (!world.getBlockState(mutable.set(o, m, p)).isLiquid()) continue;
                     return true;
                 }
             }
             for (o = i; o <= l; ++o) {
                 for (p = j; p <= m; ++p) {
-                    if (world.getBlockState(mutable.set(o, p, k)).getMaterial().isLiquid()) {
+                    if (world.getBlockState(mutable.set(o, p, k)).isLiquid()) {
                         return true;
                     }
-                    if (!world.getBlockState(mutable.set(o, p, n)).getMaterial().isLiquid()) continue;
+                    if (!world.getBlockState(mutable.set(o, p, n)).isLiquid()) continue;
                     return true;
                 }
             }
             for (o = k; o <= n; ++o) {
                 for (p = j; p <= m; ++p) {
-                    if (world.getBlockState(mutable.set(i, p, o)).getMaterial().isLiquid()) {
+                    if (world.getBlockState(mutable.set(i, p, o)).isLiquid()) {
                         return true;
                     }
-                    if (!world.getBlockState(mutable.set(l, p, o)).getMaterial().isLiquid()) continue;
+                    if (!world.getBlockState(mutable.set(l, p, o)).isLiquid()) continue;
                     return true;
                 }
             }

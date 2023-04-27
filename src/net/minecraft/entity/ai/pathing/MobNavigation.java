@@ -59,9 +59,9 @@ extends EntityNavigation {
             }
             target = blockPos;
         }
-        if (this.world.getBlockState(target).getMaterial().isSolid()) {
+        if (this.world.getBlockState(target).isSolid()) {
             blockPos = target.up();
-            while (blockPos.getY() < this.world.getTopY() && this.world.getBlockState(blockPos).getMaterial().isSolid()) {
+            while (blockPos.getY() < this.world.getTopY() && this.world.getBlockState(blockPos).isSolid()) {
                 blockPos = blockPos.up();
             }
             return super.findPathTo(blockPos, distance);

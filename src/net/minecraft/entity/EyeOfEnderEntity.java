@@ -16,7 +16,6 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -41,9 +40,9 @@ implements FlyingItemEntity {
         this.setPosition(x, y, z);
     }
 
-    public void setItem(ItemStack stack2) {
-        if (!stack2.isOf(Items.ENDER_EYE) || stack2.hasNbt()) {
-            this.getDataTracker().set(ITEM, Util.make(stack2.copy(), stack -> stack.setCount(1)));
+    public void setItem(ItemStack stack) {
+        if (!stack.isOf(Items.ENDER_EYE) || stack.hasNbt()) {
+            this.getDataTracker().set(ITEM, stack.copyWithCount(1));
         }
     }
 
@@ -113,7 +112,7 @@ implements FlyingItemEntity {
         double g = vec3d.horizontalLength();
         this.setPitch(ProjectileEntity.updateRotation(this.prevPitch, (float)(MathHelper.atan2(vec3d.y, g) * 57.2957763671875)));
         this.setYaw(ProjectileEntity.updateRotation(this.prevYaw, (float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875)));
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             double h = this.targetX - d;
             double i = this.targetZ - f;
             float j = (float)Math.sqrt(h * h + i * i);
@@ -131,21 +130,21 @@ implements FlyingItemEntity {
         float o = 0.25f;
         if (this.isTouchingWater()) {
             for (int p = 0; p < 4; ++p) {
-                this.world.addParticle(ParticleTypes.BUBBLE, d - vec3d.x * 0.25, e - vec3d.y * 0.25, f - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
+                this.getWorld().addParticle(ParticleTypes.BUBBLE, d - vec3d.x * 0.25, e - vec3d.y * 0.25, f - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
             }
         } else {
-            this.world.addParticle(ParticleTypes.PORTAL, d - vec3d.x * 0.25 + this.random.nextDouble() * 0.6 - 0.3, e - vec3d.y * 0.25 - 0.5, f - vec3d.z * 0.25 + this.random.nextDouble() * 0.6 - 0.3, vec3d.x, vec3d.y, vec3d.z);
+            this.getWorld().addParticle(ParticleTypes.PORTAL, d - vec3d.x * 0.25 + this.random.nextDouble() * 0.6 - 0.3, e - vec3d.y * 0.25 - 0.5, f - vec3d.z * 0.25 + this.random.nextDouble() * 0.6 - 0.3, vec3d.x, vec3d.y, vec3d.z);
         }
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.setPosition(d, e, f);
             ++this.lifespan;
-            if (this.lifespan > 80 && !this.world.isClient) {
+            if (this.lifespan > 80 && !this.getWorld().isClient) {
                 this.playSound(SoundEvents.ENTITY_ENDER_EYE_DEATH, 1.0f, 1.0f);
                 this.discard();
                 if (this.dropsItem) {
-                    this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), this.getStack()));
+                    this.getWorld().spawnEntity(new ItemEntity(this.getWorld(), this.getX(), this.getY(), this.getZ(), this.getStack()));
                 } else {
-                    this.world.syncWorldEvent(2003, this.getBlockPos(), 0);
+                    this.getWorld().syncWorldEvent(2003, this.getBlockPos(), 0);
                 }
             }
         } else {

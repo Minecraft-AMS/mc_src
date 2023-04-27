@@ -85,9 +85,7 @@ extends SpecialCraftingRecipe {
                 continue;
             }
             if (!(itemStack.getItem() instanceof WrittenBookItem)) continue;
-            ItemStack itemStack2 = itemStack.copy();
-            itemStack2.setCount(1);
-            defaultedList.set(i, itemStack2);
+            defaultedList.set(i, itemStack.copyWithCount(1));
             break;
         }
         return defaultedList;

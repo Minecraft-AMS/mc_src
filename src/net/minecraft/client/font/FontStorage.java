@@ -33,8 +33,10 @@ import net.minecraft.client.font.BuiltinEmptyGlyph;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.Glyph;
 import net.minecraft.client.font.GlyphAtlasTexture;
+import net.minecraft.client.font.GlyphContainer;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
+import net.minecraft.client.font.TextRenderLayerSet;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -50,8 +52,8 @@ implements AutoCloseable {
     private GlyphRenderer blankGlyphRenderer;
     private GlyphRenderer whiteRectangleGlyphRenderer;
     private final List<Font> fonts = Lists.newArrayList();
-    private final Int2ObjectMap<GlyphRenderer> glyphRendererCache = new Int2ObjectOpenHashMap();
-    private final Int2ObjectMap<GlyphPair> glyphCache = new Int2ObjectOpenHashMap();
+    private final GlyphContainer<GlyphRenderer> glyphRendererCache = new GlyphContainer(GlyphRenderer[]::new, rowCount -> new GlyphRenderer[rowCount][]);
+    private final GlyphContainer<GlyphPair> glyphCache = new GlyphContainer(GlyphPair[]::new, rowCount -> new GlyphPair[rowCount][]);
     private final Int2ObjectMap<IntList> charactersByWidth = new Int2ObjectOpenHashMap();
     private final List<GlyphAtlasTexture> glyphAtlases = Lists.newArrayList();
 
@@ -133,7 +135,7 @@ implements AutoCloseable {
     }
 
     public Glyph getGlyph(int codePoint, boolean validateAdvance) {
-        return ((GlyphPair)this.glyphCache.computeIfAbsent(codePoint, this::findGlyph)).getGlyph(validateAdvance);
+        return this.glyphCache.getOrInsert(codePoint, this::findGlyph).getGlyph(validateAdvance);
     }
 
     private GlyphRenderer findGlyphRenderer(int codePoint) {
@@ -146,7 +148,7 @@ implements AutoCloseable {
     }
 
     public GlyphRenderer getGlyphRenderer(int codePoint) {
-        return (GlyphRenderer)this.glyphRendererCache.computeIfAbsent(codePoint, this::findGlyphRenderer);
+        return this.glyphRendererCache.getOrInsert(codePoint, this::findGlyphRenderer);
     }
 
     private GlyphRenderer getGlyphRenderer(RenderableGlyph c) {
@@ -155,9 +157,12 @@ implements AutoCloseable {
             if (glyphRenderer == null) continue;
             return glyphRenderer;
         }
-        GlyphAtlasTexture glyphAtlasTexture2 = new GlyphAtlasTexture(this.id.withPath(string -> string + "/" + this.glyphAtlases.size()), c.hasColor());
+        Identifier identifier = this.id.withSuffixedPath("/" + this.glyphAtlases.size());
+        boolean bl = c.hasColor();
+        TextRenderLayerSet textRenderLayerSet = bl ? TextRenderLayerSet.of(identifier) : TextRenderLayerSet.ofIntensity(identifier);
+        GlyphAtlasTexture glyphAtlasTexture2 = new GlyphAtlasTexture(textRenderLayerSet, bl);
         this.glyphAtlases.add(glyphAtlasTexture2);
-        this.textureManager.registerTexture(glyphAtlasTexture2.getId(), glyphAtlasTexture2);
+        this.textureManager.registerTexture(identifier, glyphAtlasTexture2);
         GlyphRenderer glyphRenderer2 = glyphAtlasTexture2.getGlyphRenderer(c);
         return glyphRenderer2 == null ? this.blankGlyphRenderer : glyphRenderer2;
     }

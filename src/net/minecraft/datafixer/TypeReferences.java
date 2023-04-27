@@ -35,6 +35,7 @@ public class TypeReferences {
     public static final DSL.TypeReference TEAM = () -> "team";
     public static final DSL.TypeReference RECIPE = () -> "recipe";
     public static final DSL.TypeReference BIOME = () -> "biome";
+    public static final DSL.TypeReference MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST = () -> "multi_noise_biome_source_parameter_list";
     public static final DSL.TypeReference WORLD_GEN_SETTINGS = () -> "world_gen_settings";
 }
 

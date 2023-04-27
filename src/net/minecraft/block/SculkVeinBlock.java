@@ -9,12 +9,10 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LichenGrower;
-import net.minecraft.block.Material;
 import net.minecraft.block.MultifaceGrowthBlock;
 import net.minecraft.block.SculkSpreadable;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.SculkSpreadManager;
-import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
@@ -162,11 +160,6 @@ Waterloggable {
         return super.getFluidState(state);
     }
 
-    @Override
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return PistonBehavior.DESTROY;
-    }
-
     class SculkVeinGrowChecker
     extends LichenGrower.LichenGrowChecker {
         private final LichenGrower.GrowType[] growTypes;
@@ -190,8 +183,7 @@ Waterloggable {
             if (!fluidState.isEmpty() && !fluidState.isOf(Fluids.WATER)) {
                 return false;
             }
-            Material material = state.getMaterial();
-            if (material == Material.FIRE) {
+            if (state.isIn(BlockTags.FIRE)) {
                 return false;
             }
             return state.isReplaceable() || super.canGrow(world, pos, growPos, direction, state);

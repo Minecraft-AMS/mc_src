@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
  *  com.google.gson.Gson
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParseException
@@ -11,7 +10,6 @@
  */
 package net.minecraft.resource;
 
-import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
@@ -43,16 +41,21 @@ extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
 
     @Override
     protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, Profiler profiler) {
-        HashMap map = Maps.newHashMap();
-        ResourceFinder resourceFinder = ResourceFinder.json(this.dataType);
-        for (Map.Entry<Identifier, Resource> entry : resourceFinder.findResources(resourceManager).entrySet()) {
+        HashMap<Identifier, JsonElement> map = new HashMap<Identifier, JsonElement>();
+        JsonDataLoader.load(resourceManager, this.dataType, this.gson, map);
+        return map;
+    }
+
+    public static void load(ResourceManager manager, String dataType, Gson gson, Map<Identifier, JsonElement> results) {
+        ResourceFinder resourceFinder = ResourceFinder.json(dataType);
+        for (Map.Entry<Identifier, Resource> entry : resourceFinder.findResources(manager).entrySet()) {
             Identifier identifier = entry.getKey();
             Identifier identifier2 = resourceFinder.toResourceId(identifier);
             try {
                 BufferedReader reader = entry.getValue().getReader();
                 try {
-                    JsonElement jsonElement = JsonHelper.deserialize(this.gson, (Reader)reader, JsonElement.class);
-                    JsonElement jsonElement2 = map.put(identifier2, jsonElement);
+                    JsonElement jsonElement = JsonHelper.deserialize(gson, (Reader)reader, JsonElement.class);
+                    JsonElement jsonElement2 = results.put(identifier2, jsonElement);
                     if (jsonElement2 == null) continue;
                     throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
                 }
@@ -65,7 +68,6 @@ extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
                 LOGGER.error("Couldn't parse data file {} from {}", new Object[]{identifier2, identifier, exception});
             }
         }
-        return map;
     }
 
     @Override

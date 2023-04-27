@@ -32,7 +32,7 @@ implements DebugRenderer.Renderer {
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         FluidState fluidState;
         BlockPos blockPos = this.client.player.getBlockPos();
-        World worldView = this.client.player.world;
+        World worldView = this.client.player.getWorld();
         for (BlockPos blockPos2 : BlockPos.iterate(blockPos.add(-10, -10, -10), blockPos.add(10, 10, 10))) {
             fluidState = worldView.getFluidState(blockPos2);
             if (!fluidState.isIn(FluidTags.WATER)) continue;

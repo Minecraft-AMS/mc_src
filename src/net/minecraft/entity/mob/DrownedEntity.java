@@ -85,7 +85,7 @@ implements RangedAttackMob {
         this.goalSelector.add(2, new TridentAttackGoal(this, 1.0, 40, 10.0f));
         this.goalSelector.add(2, new DrownedAttackGoal(this, 1.0, false));
         this.goalSelector.add(5, new LeaveWaterGoal(this, 1.0));
-        this.goalSelector.add(6, new TargetAboveWaterGoal(this, 1.0, this.world.getSeaLevel()));
+        this.goalSelector.add(6, new TargetAboveWaterGoal(this, 1.0, this.getWorld().getSeaLevel()));
         this.goalSelector.add(7, new WanderAroundGoal(this, 1.0));
         this.targetSelector.add(1, new RevengeGoal(this, DrownedEntity.class).setGroupRevenge(ZombifiedPiglinEntity.class));
         this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::canDrownedAttackTarget));
@@ -207,7 +207,7 @@ implements RangedAttackMob {
 
     public boolean canDrownedAttackTarget(@Nullable LivingEntity target) {
         if (target != null) {
-            return !this.world.isDay() || target.isTouchingWater();
+            return !this.getWorld().isDay() || target.isTouchingWater();
         }
         return false;
     }
@@ -238,7 +238,7 @@ implements RangedAttackMob {
 
     @Override
     public void updateSwimming() {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             if (this.canMoveVoluntarily() && this.isTouchingWater() && this.isTargetingUnderwater()) {
                 this.navigation = this.waterNavigation;
                 this.setSwimming(true);
@@ -263,14 +263,14 @@ implements RangedAttackMob {
 
     @Override
     public void attack(LivingEntity target, float pullProgress) {
-        TridentEntity tridentEntity = new TridentEntity(this.world, (LivingEntity)this, new ItemStack(Items.TRIDENT));
+        TridentEntity tridentEntity = new TridentEntity(this.getWorld(), (LivingEntity)this, new ItemStack(Items.TRIDENT));
         double d = target.getX() - this.getX();
         double e = target.getBodyY(0.3333333333333333) - tridentEntity.getY();
         double f = target.getZ() - this.getZ();
         double g = Math.sqrt(d * d + f * f);
-        tridentEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
+        tridentEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.getWorld().getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_DROWNED_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-        this.world.spawnEntity(tridentEntity);
+        this.getWorld().spawnEntity(tridentEntity);
     }
 
     public void setTargetingUnderwater(boolean targetingUnderwater) {
@@ -310,7 +310,7 @@ implements RangedAttackMob {
                 this.drowned.setMovementSpeed(j);
                 this.drowned.setVelocity(this.drowned.getVelocity().add((double)j * d * 0.005, (double)j * e * 0.1, (double)j * f * 0.005));
             } else {
-                if (!this.drowned.onGround) {
+                if (!this.drowned.isOnGround()) {
                     this.drowned.setVelocity(this.drowned.getVelocity().add(0.0, -0.008, 0.0));
                 }
                 super.tick();
@@ -330,7 +330,7 @@ implements RangedAttackMob {
         public WanderAroundOnSurfaceGoal(PathAwareEntity mob, double speed) {
             this.mob = mob;
             this.speed = speed;
-            this.world = mob.world;
+            this.world = mob.getWorld();
             this.setControls(EnumSet.of(Goal.Control.MOVE));
         }
 
@@ -435,7 +435,7 @@ implements RangedAttackMob {
 
         @Override
         public boolean canStart() {
-            return super.canStart() && !this.drowned.world.isDay() && this.drowned.isTouchingWater() && this.drowned.getY() >= (double)(this.drowned.world.getSeaLevel() - 3);
+            return super.canStart() && !this.drowned.getWorld().isDay() && this.drowned.isTouchingWater() && this.drowned.getY() >= (double)(this.drowned.getWorld().getSeaLevel() - 3);
         }
 
         @Override
@@ -480,7 +480,7 @@ implements RangedAttackMob {
 
         @Override
         public boolean canStart() {
-            return !this.drowned.world.isDay() && this.drowned.isTouchingWater() && this.drowned.getY() < (double)(this.minY - 2);
+            return !this.drowned.getWorld().isDay() && this.drowned.isTouchingWater() && this.drowned.getY() < (double)(this.minY - 2);
         }
 
         @Override

@@ -424,7 +424,8 @@ implements DedicatedServer {
 
     @Override
     public boolean shouldEnforceSecureProfile() {
-        return this.getProperties().enforceSecureProfile && this.getProperties().onlineMode;
+        ServerPropertiesHandler serverPropertiesHandler = this.getProperties();
+        return serverPropertiesHandler.enforceSecureProfile && serverPropertiesHandler.onlineMode && this.apiServices.serviceSignatureVerifier() != null;
     }
 
     protected boolean convertData() {

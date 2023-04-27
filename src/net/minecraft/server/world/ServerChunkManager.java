@@ -60,6 +60,7 @@ import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.ChunkStatusChangeListener;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.light.LightSourceView;
 import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
@@ -242,7 +243,8 @@ extends ChunkManager {
     }
 
     @Override
-    public BlockView getChunk(int chunkX, int chunkZ) {
+    @Nullable
+    public LightSourceView getChunk(int chunkX, int chunkZ) {
         long l = ChunkPos.toLong(chunkX, chunkZ);
         ChunkHolder chunkHolder = this.getChunkHolder(l);
         if (chunkHolder == null) {
@@ -253,9 +255,9 @@ extends ChunkManager {
             ChunkStatus chunkStatus;
             Optional optional;
             if ((optional = chunkHolder.getFutureFor(chunkStatus = CHUNK_STATUSES.get(i)).getNow(ChunkHolder.UNLOADED_CHUNK).left()).isPresent()) {
-                return (BlockView)optional.get();
+                return (LightSourceView)optional.get();
             }
-            if (chunkStatus == ChunkStatus.LIGHT.getPrevious()) break;
+            if (chunkStatus == ChunkStatus.INITIALIZE_LIGHT.getPrevious()) break;
             --i;
         }
         return null;

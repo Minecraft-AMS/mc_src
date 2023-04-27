@@ -174,7 +174,6 @@ public class VertexFormat {
     @Environment(value=EnvType.CLIENT)
     public static final class IndexType
     extends Enum<IndexType> {
-        public static final /* enum */ IndexType BYTE = new IndexType(5121, 1);
         public static final /* enum */ IndexType SHORT = new IndexType(5123, 2);
         public static final /* enum */ IndexType INT = new IndexType(5125, 4);
         public final int glType;
@@ -198,14 +197,11 @@ public class VertexFormat {
             if ((indexCount & 0xFFFF0000) != 0) {
                 return INT;
             }
-            if ((indexCount & 0xFF00) != 0) {
-                return SHORT;
-            }
-            return BYTE;
+            return SHORT;
         }
 
         private static /* synthetic */ IndexType[] method_36816() {
-            return new IndexType[]{BYTE, SHORT, INT};
+            return new IndexType[]{SHORT, INT};
         }
 
         static {

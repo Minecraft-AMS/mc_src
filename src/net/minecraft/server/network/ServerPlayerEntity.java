@@ -379,7 +379,7 @@ extends PlayerEntity {
             nbt.put("RootVehicle", nbtCompound2);
         }
         nbt.put("recipeBook", this.recipeBook.toNbt());
-        nbt.putString("Dimension", this.world.getRegistryKey().getValue().toString());
+        nbt.putString("Dimension", this.getWorld().getRegistryKey().getValue().toString());
         if (this.spawnPointPosition != null) {
             nbt.putInt("SpawnX", this.spawnPointPosition.getX());
             nbt.putInt("SpawnY", this.spawnPointPosition.getY());
@@ -455,14 +455,14 @@ extends PlayerEntity {
             --this.timeUntilRegen;
         }
         this.currentScreenHandler.sendContentUpdates();
-        if (!this.world.isClient && !this.currentScreenHandler.canUse(this)) {
+        if (!this.getWorld().isClient && !this.currentScreenHandler.canUse(this)) {
             this.closeHandledScreen();
             this.currentScreenHandler = this.playerScreenHandler;
         }
         if ((entity = this.getCameraEntity()) != this) {
             if (entity.isAlive()) {
                 this.updatePositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch());
-                this.getWorld().getChunkManager().updatePosition(this);
+                this.getServerWorld().getChunkManager().updatePosition(this);
                 if (this.shouldDismount()) {
                     this.setCameraEntity(this);
                 }
@@ -487,7 +487,7 @@ extends PlayerEntity {
             for (int i = 0; i < this.getInventory().size(); ++i) {
                 Packet<?> packet;
                 ItemStack itemStack = this.getInventory().getStack(i);
-                if (!itemStack.getItem().isNetworkSynced() || (packet = ((NetworkSyncedItem)itemStack.getItem()).createSyncPacket(itemStack, this.world, this)) == null) continue;
+                if (!itemStack.getItem().isNetworkSynced() || (packet = ((NetworkSyncedItem)itemStack.getItem()).createSyncPacket(itemStack, this.getWorld(), this)) == null) continue;
                 this.networkHandler.sendPacket(packet);
             }
             if (this.getHealth() != this.syncedHealth || this.syncedFoodLevel != this.hungerManager.getFoodLevel() || this.hungerManager.getSaturationLevel() == 0.0f != this.syncedSaturationIsZero) {
@@ -571,7 +571,7 @@ extends PlayerEntity {
     @Override
     public void onDeath(DamageSource damageSource) {
         this.emitGameEvent(GameEvent.ENTITY_DIE);
-        boolean bl = this.world.getGameRules().getBoolean(GameRules.SHOW_DEATH_MESSAGES);
+        boolean bl = this.getWorld().getGameRules().getBoolean(GameRules.SHOW_DEATH_MESSAGES);
         if (bl) {
             Text text = this.getDamageTracker().getDeathMessage();
             this.networkHandler.sendPacket(new DeathMessageS2CPacket(this.getDamageTracker(), text), PacketCallbacks.of(() -> {
@@ -593,7 +593,7 @@ extends PlayerEntity {
             this.networkHandler.sendPacket(new DeathMessageS2CPacket(this.getDamageTracker(), ScreenTexts.EMPTY));
         }
         this.dropShoulderEntities();
-        if (this.world.getGameRules().getBoolean(GameRules.FORGIVE_DEAD_PLAYERS)) {
+        if (this.getWorld().getGameRules().getBoolean(GameRules.FORGIVE_DEAD_PLAYERS)) {
             this.forgiveMobAnger();
         }
         if (!this.isSpectator()) {
@@ -606,7 +606,7 @@ extends PlayerEntity {
             livingEntity.updateKilledAdvancementCriterion(this, this.scoreAmount, damageSource);
             this.onKilledBy(livingEntity);
         }
-        this.world.sendEntityStatus(this, (byte)3);
+        this.getWorld().sendEntityStatus(this, (byte)3);
         this.incrementStat(Stats.DEATHS);
         this.resetStat(Stats.CUSTOM.getOrCreateStat(Stats.TIME_SINCE_DEATH));
         this.resetStat(Stats.CUSTOM.getOrCreateStat(Stats.TIME_SINCE_REST));
@@ -614,12 +614,12 @@ extends PlayerEntity {
         this.setFrozenTicks(0);
         this.setOnFire(false);
         this.getDamageTracker().update();
-        this.setLastDeathPos(Optional.of(GlobalPos.create(this.world.getRegistryKey(), this.getBlockPos())));
+        this.setLastDeathPos(Optional.of(GlobalPos.create(this.getWorld().getRegistryKey(), this.getBlockPos())));
     }
 
     private void forgiveMobAnger() {
         Box box = new Box(this.getBlockPos()).expand(32.0, 10.0, 32.0);
-        this.world.getEntitiesByClass(MobEntity.class, box, EntityPredicates.EXCEPT_SPECTATOR).stream().filter(entity -> entity instanceof Angerable).forEach(entity -> ((Angerable)((Object)entity)).forgive(this));
+        this.getWorld().getEntitiesByClass(MobEntity.class, box, EntityPredicates.EXCEPT_SPECTATOR).stream().filter(entity -> entity instanceof Angerable).forEach(entity -> ((Angerable)((Object)entity)).forgive(this));
     }
 
     @Override
@@ -691,7 +691,7 @@ extends PlayerEntity {
     @Nullable
     protected TeleportTarget getTeleportTarget(ServerWorld destination) {
         TeleportTarget teleportTarget = super.getTeleportTarget(destination);
-        if (teleportTarget != null && this.world.getRegistryKey() == World.OVERWORLD && destination.getRegistryKey() == World.END) {
+        if (teleportTarget != null && this.getWorld().getRegistryKey() == World.OVERWORLD && destination.getRegistryKey() == World.END) {
             Vec3d vec3d = teleportTarget.position.add(0.0, -1.0, 0.0);
             return new TeleportTarget(vec3d, Vec3d.ZERO, 90.0f, 0.0f);
         }
@@ -702,11 +702,11 @@ extends PlayerEntity {
     @Nullable
     public Entity moveToWorld(ServerWorld destination) {
         this.inTeleportationState = true;
-        ServerWorld serverWorld = this.getWorld();
+        ServerWorld serverWorld = this.getServerWorld();
         RegistryKey<World> registryKey = serverWorld.getRegistryKey();
         if (registryKey == World.END && destination.getRegistryKey() == World.OVERWORLD) {
             this.detach();
-            this.getWorld().removePlayer(this, Entity.RemovalReason.CHANGED_DIMENSION);
+            this.getServerWorld().removePlayer(this, Entity.RemovalReason.CHANGED_DIMENSION);
             if (!this.notInAnyWorld) {
                 this.notInAnyWorld = true;
                 this.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.GAME_WON, this.seenCredits ? 0.0f : 1.0f));
@@ -731,7 +731,7 @@ extends PlayerEntity {
             }
             serverWorld.getProfiler().pop();
             serverWorld.getProfiler().push("placing");
-            this.setWorld(destination);
+            this.setServerWorld(destination);
             this.networkHandler.requestTeleport(teleportTarget.position.x, teleportTarget.position.y, teleportTarget.position.z, teleportTarget.yaw, teleportTarget.pitch);
             this.networkHandler.syncWithPlayerPosition();
             destination.onPlayerChangeDimension(this);
@@ -769,7 +769,7 @@ extends PlayerEntity {
         if (optional.isPresent()) {
             return optional;
         }
-        Direction.Axis axis = this.world.getBlockState(this.lastNetherPortalPosition).getOrEmpty(NetherPortalBlock.AXIS).orElse(Direction.Axis.X);
+        Direction.Axis axis = this.getWorld().getBlockState(this.lastNetherPortalPosition).getOrEmpty(NetherPortalBlock.AXIS).orElse(Direction.Axis.X);
         Optional<BlockLocating.Rectangle> optional2 = destWorld.getPortalForcer().createPortal(destPos, axis);
         if (!optional2.isPresent()) {
             LOGGER.error("Unable to create a portal, likely target out of worldborder");
@@ -779,7 +779,7 @@ extends PlayerEntity {
 
     private void worldChanged(ServerWorld origin) {
         RegistryKey<World> registryKey = origin.getRegistryKey();
-        RegistryKey<World> registryKey2 = this.world.getRegistryKey();
+        RegistryKey<World> registryKey2 = this.getWorld().getRegistryKey();
         Criteria.CHANGED_DIMENSION.trigger(this, registryKey, registryKey2);
         if (registryKey == World.NETHER && registryKey2 == World.OVERWORLD && this.enteredNetherPos != null) {
             Criteria.NETHER_TRAVEL.trigger(this, this.enteredNetherPos);
@@ -808,11 +808,11 @@ extends PlayerEntity {
 
     @Override
     public Either<PlayerEntity.SleepFailureReason, Unit> trySleep(BlockPos pos) {
-        Direction direction = this.world.getBlockState(pos).get(HorizontalFacingBlock.FACING);
+        Direction direction = this.getWorld().getBlockState(pos).get(HorizontalFacingBlock.FACING);
         if (this.isSleeping() || !this.isAlive()) {
             return Either.left((Object)((Object)PlayerEntity.SleepFailureReason.OTHER_PROBLEM));
         }
-        if (!this.world.getDimension().natural()) {
+        if (!this.getWorld().getDimension().natural()) {
             return Either.left((Object)((Object)PlayerEntity.SleepFailureReason.NOT_POSSIBLE_HERE));
         }
         if (!this.isBedTooFarAway(pos, direction)) {
@@ -821,15 +821,15 @@ extends PlayerEntity {
         if (this.isBedObstructed(pos, direction)) {
             return Either.left((Object)((Object)PlayerEntity.SleepFailureReason.OBSTRUCTED));
         }
-        this.setSpawnPoint(this.world.getRegistryKey(), pos, this.getYaw(), false, true);
-        if (this.world.isDay()) {
+        this.setSpawnPoint(this.getWorld().getRegistryKey(), pos, this.getYaw(), false, true);
+        if (this.getWorld().isDay()) {
             return Either.left((Object)((Object)PlayerEntity.SleepFailureReason.NOT_POSSIBLE_NOW));
         }
         if (!this.isCreative()) {
             double d = 8.0;
             double e = 5.0;
             Vec3d vec3d = Vec3d.ofBottomCenter(pos);
-            List<HostileEntity> list = this.world.getEntitiesByClass(HostileEntity.class, new Box(vec3d.getX() - 8.0, vec3d.getY() - 5.0, vec3d.getZ() - 8.0, vec3d.getX() + 8.0, vec3d.getY() + 5.0, vec3d.getZ() + 8.0), entity -> entity.isAngryAt(this));
+            List<HostileEntity> list = this.getWorld().getEntitiesByClass(HostileEntity.class, new Box(vec3d.getX() - 8.0, vec3d.getY() - 5.0, vec3d.getZ() - 8.0, vec3d.getX() + 8.0, vec3d.getY() + 5.0, vec3d.getZ() + 8.0), entity -> entity.isAngryAt(this));
             if (!list.isEmpty()) {
                 return Either.left((Object)((Object)PlayerEntity.SleepFailureReason.NOT_SAFE));
             }
@@ -838,10 +838,10 @@ extends PlayerEntity {
             this.incrementStat(Stats.SLEEP_IN_BED);
             Criteria.SLEPT_IN_BED.trigger(this);
         });
-        if (!this.getWorld().isSleepingEnabled()) {
+        if (!this.getServerWorld().isSleepingEnabled()) {
             this.sendMessage(Text.translatable("sleep.not_possible"), true);
         }
-        ((ServerWorld)this.world).updateSleepingPlayers();
+        ((ServerWorld)this.getWorld()).updateSleepingPlayers();
         return either;
     }
 
@@ -868,7 +868,7 @@ extends PlayerEntity {
     @Override
     public void wakeUp(boolean skipSleepTimer, boolean updateSleepingPlayers) {
         if (this.isSleeping()) {
-            this.getWorld().getChunkManager().sendToNearbyPlayers(this, new EntityAnimationS2CPacket(this, 2));
+            this.getServerWorld().getChunkManager().sendToNearbyPlayers(this, new EntityAnimationS2CPacket(this, 2));
         }
         super.wakeUp(skipSleepTimer, updateSleepingPlayers);
         if (this.networkHandler != null) {
@@ -903,14 +903,13 @@ extends PlayerEntity {
             return;
         }
         BlockPos blockPos = this.getLandingPos();
-        super.fall(heightDifference, onGround, this.world.getBlockState(blockPos), blockPos);
+        super.fall(heightDifference, onGround, this.getWorld().getBlockState(blockPos), blockPos);
     }
 
     @Override
-    public void openEditSignScreen(SignBlockEntity sign) {
-        sign.setEditor(this.getUuid());
-        this.networkHandler.sendPacket(new BlockUpdateS2CPacket(this.world, sign.getPos()));
-        this.networkHandler.sendPacket(new SignEditorOpenS2CPacket(sign.getPos()));
+    public void openEditSignScreen(SignBlockEntity sign, boolean front) {
+        this.networkHandler.sendPacket(new BlockUpdateS2CPacket(this.getWorld(), sign.getPos()));
+        this.networkHandler.sendPacket(new SignEditorOpenS2CPacket(sign.getPos(), front));
     }
 
     private void incrementScreenHandlerSyncId() {
@@ -1014,6 +1013,11 @@ extends PlayerEntity {
     }
 
     @Override
+    public void unlockCraftedRecipe(Recipe<?> recipe, List<ItemStack> ingredients) {
+        Criteria.RECIPE_CRAFTED.trigger(this, recipe.getId(), ingredients);
+    }
+
+    @Override
     public void unlockRecipes(Identifier[] ids) {
         ArrayList list = Lists.newArrayList();
         for (Identifier identifier : ids) {
@@ -1089,7 +1093,7 @@ extends PlayerEntity {
             this.experienceProgress = oldPlayer.experienceProgress;
             this.setScore(oldPlayer.getScore());
             this.lastNetherPortalPosition = oldPlayer.lastNetherPortalPosition;
-        } else if (this.world.getGameRules().getBoolean(GameRules.KEEP_INVENTORY) || oldPlayer.isSpectator()) {
+        } else if (this.getWorld().getGameRules().getBoolean(GameRules.KEEP_INVENTORY) || oldPlayer.isSpectator()) {
             this.getInventory().clone(oldPlayer.getInventory());
             this.experienceLevel = oldPlayer.experienceLevel;
             this.totalExperience = oldPlayer.totalExperience;
@@ -1156,7 +1160,7 @@ extends PlayerEntity {
         if (this.isSleeping()) {
             this.wakeUp(true, true);
         }
-        if (world == this.world) {
+        if (world == this.getWorld()) {
             this.networkHandler.requestTeleport(destX, destY, destZ, yaw, pitch, flags);
         } else {
             this.teleport(world, destX, destY, destZ, yaw, pitch);
@@ -1173,12 +1177,12 @@ extends PlayerEntity {
 
     @Override
     public void addCritParticles(Entity target) {
-        this.getWorld().getChunkManager().sendToNearbyPlayers(this, new EntityAnimationS2CPacket(target, 4));
+        this.getServerWorld().getChunkManager().sendToNearbyPlayers(this, new EntityAnimationS2CPacket(target, 4));
     }
 
     @Override
     public void addEnchantedHitParticles(Entity target) {
-        this.getWorld().getChunkManager().sendToNearbyPlayers(this, new EntityAnimationS2CPacket(target, 5));
+        this.getServerWorld().getChunkManager().sendToNearbyPlayers(this, new EntityAnimationS2CPacket(target, 5));
     }
 
     @Override
@@ -1190,9 +1194,8 @@ extends PlayerEntity {
         this.updatePotionVisibility();
     }
 
-    @Override
-    public ServerWorld getWorld() {
-        return (ServerWorld)this.world;
+    public ServerWorld getServerWorld() {
+        return (ServerWorld)this.getWorld();
     }
 
     public boolean changeGameMode(GameMode gameMode) {
@@ -1333,7 +1336,7 @@ extends PlayerEntity {
                 this.teleport(serverWorld, this.cameraEntity.getX(), this.cameraEntity.getY(), this.cameraEntity.getZ(), Set.of(), this.getYaw(), this.getPitch());
             }
             if (entity != null) {
-                this.getWorld().getChunkManager().updatePosition(this);
+                this.getServerWorld().getChunkManager().updatePosition(this);
             }
             this.networkHandler.sendPacket(new SetCameraEntityS2CPacket(this.cameraEntity));
             this.networkHandler.syncWithPlayerPosition();
@@ -1386,10 +1389,10 @@ extends PlayerEntity {
     public void teleport(ServerWorld targetWorld, double x, double y, double z, float yaw, float pitch) {
         this.setCameraEntity(this);
         this.stopRiding();
-        if (targetWorld == this.world) {
+        if (targetWorld == this.getWorld()) {
             this.networkHandler.requestTeleport(x, y, z, yaw, pitch);
         } else {
-            ServerWorld serverWorld = this.getWorld();
+            ServerWorld serverWorld = this.getServerWorld();
             WorldProperties worldProperties = targetWorld.getLevelProperties();
             this.networkHandler.sendPacket(new PlayerRespawnS2CPacket(targetWorld.getDimensionKey(), targetWorld.getRegistryKey(), BiomeAccess.hashSeed(targetWorld.getSeed()), this.interactionManager.getGameMode(), this.interactionManager.getPreviousGameMode(), targetWorld.isDebugWorld(), targetWorld.isFlat(), 3, this.getLastDeathPos()));
             this.networkHandler.sendPacket(new DifficultyS2CPacket(worldProperties.getDifficulty(), worldProperties.isDifficultyLocked()));
@@ -1397,7 +1400,7 @@ extends PlayerEntity {
             serverWorld.removePlayer(this, Entity.RemovalReason.CHANGED_DIMENSION);
             this.unsetRemoved();
             this.refreshPositionAndAngles(x, y, z, yaw, pitch);
-            this.setWorld(targetWorld);
+            this.setServerWorld(targetWorld);
             targetWorld.onPlayerTeleport(this);
             this.worldChanged(serverWorld);
             this.networkHandler.requestTeleport(x, y, z, yaw, pitch);
@@ -1476,7 +1479,7 @@ extends PlayerEntity {
         if (itemEntity == null) {
             return null;
         }
-        this.world.spawnEntity(itemEntity);
+        this.getWorld().spawnEntity(itemEntity);
         ItemStack itemStack = itemEntity.getStack();
         if (retainOwnership) {
             if (!itemStack.isEmpty()) {
@@ -1491,8 +1494,8 @@ extends PlayerEntity {
         return this.textStream;
     }
 
-    public void setWorld(ServerWorld world) {
-        this.world = world;
+    public void setServerWorld(ServerWorld world) {
+        this.setWorld(world);
         this.interactionManager.setWorld(world);
     }
 
@@ -1575,6 +1578,9 @@ extends PlayerEntity {
 
     @Nullable
     public PublicPlayerSession getSession() {
+        if (this.session != null && this.session.isKeyExpired()) {
+            return null;
+        }
         return this.session;
     }
 
@@ -1585,8 +1591,13 @@ extends PlayerEntity {
     }
 
     @Override
-    public /* synthetic */ World getWorld() {
-        return this.getWorld();
+    public boolean startRiding(Entity entity, boolean force) {
+        if (super.startRiding(entity, force)) {
+            entity.updatePassengerPosition(this);
+            this.networkHandler.requestTeleport(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
+            return true;
+        }
+        return false;
     }
 }
 

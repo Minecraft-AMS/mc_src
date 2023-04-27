@@ -69,7 +69,7 @@ implements FlyingItemEntity {
     @Override
     protected void onBlockHit(BlockHitResult blockHitResult) {
         super.onBlockHit(blockHitResult);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         ItemStack itemStack = this.getStack();
@@ -92,7 +92,7 @@ implements FlyingItemEntity {
     protected void onCollision(HitResult hitResult) {
         boolean bl;
         super.onCollision(hitResult);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         ItemStack itemStack = this.getStack();
@@ -109,13 +109,13 @@ implements FlyingItemEntity {
             }
         }
         int i = potion.hasInstantEffect() ? 2007 : 2002;
-        this.world.syncWorldEvent(i, this.getBlockPos(), PotionUtil.getColor(itemStack));
+        this.getWorld().syncWorldEvent(i, this.getBlockPos(), PotionUtil.getColor(itemStack));
         this.discard();
     }
 
     private void applyWater() {
         Box box = this.getBoundingBox().expand(4.0, 2.0, 4.0);
-        List<LivingEntity> list = this.world.getEntitiesByClass(LivingEntity.class, box, AFFECTED_BY_WATER);
+        List<LivingEntity> list = this.getWorld().getEntitiesByClass(LivingEntity.class, box, AFFECTED_BY_WATER);
         for (LivingEntity livingEntity : list) {
             double d = this.squaredDistanceTo(livingEntity);
             if (!(d < 16.0)) continue;
@@ -125,7 +125,7 @@ implements FlyingItemEntity {
             if (!livingEntity.isOnFire() || !livingEntity.isAlive()) continue;
             livingEntity.extinguishWithSound();
         }
-        List<AxolotlEntity> list2 = this.world.getNonSpectatingEntities(AxolotlEntity.class, box);
+        List<AxolotlEntity> list2 = this.getWorld().getNonSpectatingEntities(AxolotlEntity.class, box);
         for (AxolotlEntity axolotlEntity : list2) {
             axolotlEntity.hydrateFromPotion();
         }
@@ -133,7 +133,7 @@ implements FlyingItemEntity {
 
     private void applySplashPotion(List<StatusEffectInstance> statusEffects, @Nullable Entity entity) {
         Box box = this.getBoundingBox().expand(4.0, 2.0, 4.0);
-        List<LivingEntity> list = this.world.getNonSpectatingEntities(LivingEntity.class, box);
+        List<LivingEntity> list = this.getWorld().getNonSpectatingEntities(LivingEntity.class, box);
         if (!list.isEmpty()) {
             Entity entity2 = this.getEffectCause();
             for (LivingEntity livingEntity : list) {
@@ -156,7 +156,7 @@ implements FlyingItemEntity {
     }
 
     private void applyLingeringPotion(ItemStack stack, Potion potion) {
-        AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.world, this.getX(), this.getY(), this.getZ());
+        AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.getWorld(), this.getX(), this.getY(), this.getZ());
         Entity entity = this.getOwner();
         if (entity instanceof LivingEntity) {
             areaEffectCloudEntity.setOwner((LivingEntity)entity);
@@ -173,7 +173,7 @@ implements FlyingItemEntity {
         if (nbtCompound != null && nbtCompound.contains("CustomPotionColor", 99)) {
             areaEffectCloudEntity.setColor(nbtCompound.getInt("CustomPotionColor"));
         }
-        this.world.spawnEntity(areaEffectCloudEntity);
+        this.getWorld().spawnEntity(areaEffectCloudEntity);
     }
 
     private boolean isLingering() {
@@ -181,15 +181,15 @@ implements FlyingItemEntity {
     }
 
     private void extinguishFire(BlockPos pos) {
-        BlockState blockState = this.world.getBlockState(pos);
+        BlockState blockState = this.getWorld().getBlockState(pos);
         if (blockState.isIn(BlockTags.FIRE)) {
-            this.world.removeBlock(pos, false);
+            this.getWorld().removeBlock(pos, false);
         } else if (AbstractCandleBlock.isLitCandle(blockState)) {
-            AbstractCandleBlock.extinguish(null, blockState, this.world, pos);
+            AbstractCandleBlock.extinguish(null, blockState, this.getWorld(), pos);
         } else if (CampfireBlock.isLitCampfire(blockState)) {
-            this.world.syncWorldEvent(null, 1009, pos, 0);
-            CampfireBlock.extinguish(this.getOwner(), this.world, pos, blockState);
-            this.world.setBlockState(pos, (BlockState)blockState.with(CampfireBlock.LIT, false));
+            this.getWorld().syncWorldEvent(null, 1009, pos, 0);
+            CampfireBlock.extinguish(this.getOwner(), this.getWorld(), pos, blockState);
+            this.getWorld().setBlockState(pos, (BlockState)blockState.with(CampfireBlock.LIT, false));
         }
     }
 }

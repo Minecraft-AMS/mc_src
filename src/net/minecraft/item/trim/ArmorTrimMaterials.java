@@ -33,9 +33,6 @@ public class ArmorTrimMaterials {
     public static final RegistryKey<ArmorTrimMaterial> AMETHYST = ArmorTrimMaterials.of("amethyst");
 
     public static void bootstrap(Registerable<ArmorTrimMaterial> registry) {
-    }
-
-    public static void oneTwentyBootstrap(Registerable<ArmorTrimMaterial> registry) {
         ArmorTrimMaterials.register(registry, QUARTZ, Items.QUARTZ, Style.EMPTY.withColor(14931140), 0.1f);
         ArmorTrimMaterials.register(registry, IRON, Items.IRON_INGOT, Style.EMPTY.withColor(0xECECEC), 0.2f, Map.of(ArmorMaterials.IRON, "iron_darker"));
         ArmorTrimMaterials.register(registry, NETHERITE, Items.NETHERITE_INGOT, Style.EMPTY.withColor(6445145), 0.3f, Map.of(ArmorMaterials.NETHERITE, "netherite_darker"));

@@ -136,7 +136,7 @@ implements RecipeGridAligner<Integer> {
         if (i == -1) {
             return;
         }
-        ItemStack itemStack = this.inventory.getStack(i).copy();
+        ItemStack itemStack = this.inventory.getStack(i);
         if (itemStack.isEmpty()) {
             return;
         }
@@ -145,9 +145,8 @@ implements RecipeGridAligner<Integer> {
         } else {
             this.inventory.removeStack(i);
         }
-        itemStack.setCount(1);
         if (slot.getStack().isEmpty()) {
-            slot.setStackNoCallbacks(itemStack);
+            slot.setStackNoCallbacks(itemStack.copyWithCount(1));
         } else {
             slot.getStack().increment(1);
         }

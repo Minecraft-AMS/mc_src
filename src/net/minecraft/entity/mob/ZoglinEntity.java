@@ -149,7 +149,7 @@ Hoglin {
             return false;
         }
         this.movementCooldownTicks = 10;
-        this.world.sendEntityStatus(this, (byte)4);
+        this.getWorld().sendEntityStatus(this, (byte)4);
         this.playSound(SoundEvents.ENTITY_ZOGLIN_ATTACK, 1.0f, this.getSoundPitch());
         return Hoglin.tryAttack(this, (LivingEntity)target);
     }
@@ -174,7 +174,7 @@ Hoglin {
     @Override
     public boolean damage(DamageSource source, float amount) {
         boolean bl = super.damage(source, amount);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return false;
         }
         if (!bl || !(source.getAttacker() instanceof LivingEntity)) {
@@ -208,16 +208,16 @@ Hoglin {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("zoglinBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().push("zoglinBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
         this.tickBrain();
     }
 
     @Override
     public void setBaby(boolean baby) {
         this.getDataTracker().set(BABY, baby);
-        if (!this.world.isClient && baby) {
+        if (!this.getWorld().isClient && baby) {
             this.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE).setBaseValue(0.5);
         }
     }
@@ -252,7 +252,7 @@ Hoglin {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return null;
         }
         if (this.brain.hasMemoryModule(MemoryModuleType.ATTACK_TARGET)) {

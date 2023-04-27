@@ -36,9 +36,9 @@ extends ExplosiveProjectileEntity {
         if (hitResult.getType() == HitResult.Type.ENTITY && this.isOwner(((EntityHitResult)hitResult).getEntity())) {
             return;
         }
-        if (!this.world.isClient) {
-            List<LivingEntity> list = this.world.getNonSpectatingEntities(LivingEntity.class, this.getBoundingBox().expand(4.0, 2.0, 4.0));
-            AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.world, this.getX(), this.getY(), this.getZ());
+        if (!this.getWorld().isClient) {
+            List<LivingEntity> list = this.getWorld().getNonSpectatingEntities(LivingEntity.class, this.getBoundingBox().expand(4.0, 2.0, 4.0));
+            AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.getWorld(), this.getX(), this.getY(), this.getZ());
             Entity entity = this.getOwner();
             if (entity instanceof LivingEntity) {
                 areaEffectCloudEntity.setOwner((LivingEntity)entity);
@@ -56,8 +56,8 @@ extends ExplosiveProjectileEntity {
                     break;
                 }
             }
-            this.world.syncWorldEvent(2006, this.getBlockPos(), this.isSilent() ? -1 : 1);
-            this.world.spawnEntity(areaEffectCloudEntity);
+            this.getWorld().syncWorldEvent(2006, this.getBlockPos(), this.isSilent() ? -1 : 1);
+            this.getWorld().spawnEntity(areaEffectCloudEntity);
             this.discard();
         }
     }

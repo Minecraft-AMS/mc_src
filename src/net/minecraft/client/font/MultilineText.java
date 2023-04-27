@@ -14,8 +14,7 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
@@ -25,27 +24,27 @@ public interface MultilineText {
     public static final MultilineText EMPTY = new MultilineText(){
 
         @Override
-        public int drawCenterWithShadow(MatrixStack matrices, int x, int y) {
+        public int drawCenterWithShadow(DrawContext context, int x, int y) {
             return y;
         }
 
         @Override
-        public int drawCenterWithShadow(MatrixStack matrices, int x, int y, int lineHeight, int color) {
+        public int drawCenterWithShadow(DrawContext context, int x, int y, int lineHeight, int color) {
             return y;
         }
 
         @Override
-        public int drawWithShadow(MatrixStack matrices, int x, int y, int lineHeight, int color) {
+        public int drawWithShadow(DrawContext context, int x, int y, int lineHeight, int color) {
             return y;
         }
 
         @Override
-        public int draw(MatrixStack matrices, int x, int y, int lineHeight, int color) {
+        public int draw(DrawContext context, int x, int y, int lineHeight, int color) {
             return y;
         }
 
         @Override
-        public void fillBackground(MatrixStack matrices, int centerX, int centerY, int lineHeight, int padding, int color) {
+        public void fillBackground(DrawContext context, int centerX, int centerY, int lineHeight, int padding, int color) {
         }
 
         @Override
@@ -86,45 +85,45 @@ public interface MultilineText {
             }
 
             @Override
-            public int drawCenterWithShadow(MatrixStack matrices, int x, int y) {
-                return this.drawCenterWithShadow(matrices, x, y, textRenderer.fontHeight, 0xFFFFFF);
+            public int drawCenterWithShadow(DrawContext context, int x, int y) {
+                return this.drawCenterWithShadow(context, x, y, textRenderer.fontHeight, 0xFFFFFF);
             }
 
             @Override
-            public int drawCenterWithShadow(MatrixStack matrices, int x, int y, int lineHeight, int color) {
+            public int drawCenterWithShadow(DrawContext context, int x, int y, int lineHeight, int color) {
                 int i = y;
                 for (Line line : lines) {
-                    textRenderer.drawWithShadow(matrices, line.text, (float)(x - line.width / 2), (float)i, color);
+                    context.drawTextWithShadow(textRenderer, line.text, x - line.width / 2, i, color);
                     i += lineHeight;
                 }
                 return i;
             }
 
             @Override
-            public int drawWithShadow(MatrixStack matrices, int x, int y, int lineHeight, int color) {
+            public int drawWithShadow(DrawContext context, int x, int y, int lineHeight, int color) {
                 int i = y;
                 for (Line line : lines) {
-                    textRenderer.drawWithShadow(matrices, line.text, (float)x, (float)i, color);
+                    context.drawTextWithShadow(textRenderer, line.text, x, i, color);
                     i += lineHeight;
                 }
                 return i;
             }
 
             @Override
-            public int draw(MatrixStack matrices, int x, int y, int lineHeight, int color) {
+            public int draw(DrawContext context, int x, int y, int lineHeight, int color) {
                 int i = y;
                 for (Line line : lines) {
-                    textRenderer.draw(matrices, line.text, (float)x, (float)i, color);
+                    context.drawText(textRenderer, line.text, x, i, color, false);
                     i += lineHeight;
                 }
                 return i;
             }
 
             @Override
-            public void fillBackground(MatrixStack matrices, int centerX, int centerY, int lineHeight, int padding, int color) {
+            public void fillBackground(DrawContext context, int centerX, int centerY, int lineHeight, int padding, int color) {
                 int i = lines.stream().mapToInt(line -> line.width).max().orElse(0);
                 if (i > 0) {
-                    DrawableHelper.fill(matrices, centerX - i / 2 - padding, centerY - padding, centerX + i / 2 + padding, centerY + lines.size() * lineHeight + padding, color);
+                    context.fill(centerX - i / 2 - padding, centerY - padding, centerX + i / 2 + padding, centerY + lines.size() * lineHeight + padding, color);
                 }
             }
 
@@ -140,15 +139,15 @@ public interface MultilineText {
         };
     }
 
-    public int drawCenterWithShadow(MatrixStack var1, int var2, int var3);
+    public int drawCenterWithShadow(DrawContext var1, int var2, int var3);
 
-    public int drawCenterWithShadow(MatrixStack var1, int var2, int var3, int var4, int var5);
+    public int drawCenterWithShadow(DrawContext var1, int var2, int var3, int var4, int var5);
 
-    public int drawWithShadow(MatrixStack var1, int var2, int var3, int var4, int var5);
+    public int drawWithShadow(DrawContext var1, int var2, int var3, int var4, int var5);
 
-    public int draw(MatrixStack var1, int var2, int var3, int var4, int var5);
+    public int draw(DrawContext var1, int var2, int var3, int var4, int var5);
 
-    public void fillBackground(MatrixStack var1, int var2, int var3, int var4, int var5, int var6);
+    public void fillBackground(DrawContext var1, int var2, int var3, int var4, int var5, int var6);
 
     public int count();
 

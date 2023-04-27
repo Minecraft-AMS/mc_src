@@ -35,10 +35,13 @@ public interface SaveProperties {
 
     public Set<String> getServerBrands();
 
+    public Set<String> getRemovedFeatures();
+
     public void addServerBrand(String var1, boolean var2);
 
     default public void populateCrashReport(CrashReportSection section) {
         section.add("Known server brands", () -> String.join((CharSequence)", ", this.getServerBrands()));
+        section.add("Removed feature flags", () -> String.join((CharSequence)", ", this.getRemovedFeatures()));
         section.add("Level was modded", () -> Boolean.toString(this.isModded()));
         section.add("Level storage version", () -> {
             int i = this.getVersion();

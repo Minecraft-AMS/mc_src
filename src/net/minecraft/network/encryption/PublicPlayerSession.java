@@ -30,6 +30,10 @@ public record PublicPlayerSession(UUID sessionId, PlayerPublicKey publicKeyData)
         return new Serialized(this.sessionId, this.publicKeyData.data());
     }
 
+    public boolean isKeyExpired() {
+        return this.publicKeyData.data().isExpired();
+    }
+
     @Override
     public final String toString() {
         return ObjectMethods.bootstrap("toString", new MethodHandle[]{PublicPlayerSession.class, "sessionId;profilePublicKey", "sessionId", "publicKeyData"}, this);

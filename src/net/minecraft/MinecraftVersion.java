@@ -40,12 +40,12 @@ implements GameVersion {
 
     private MinecraftVersion() {
         this.id = UUID.randomUUID().toString().replaceAll("-", "");
-        this.name = "1.19.4";
-        this.stable = true;
-        this.saveVersion = new SaveVersion(3337, "main");
+        this.name = "23w17a";
+        this.stable = false;
+        this.saveVersion = new SaveVersion(3452, "main");
         this.protocolVersion = SharedConstants.getProtocolVersion();
-        this.resourcePackVersion = 13;
-        this.dataPackVersion = 12;
+        this.resourcePackVersion = 15;
+        this.dataPackVersion = 14;
         this.buildTime = new Date();
     }
 

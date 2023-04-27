@@ -7,15 +7,13 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.Identifier;
@@ -44,7 +42,7 @@ public class CyclingSlotIcon {
         }
     }
 
-    public void render(ScreenHandler screenHandler, MatrixStack matrices, float delta, int x, int y) {
+    public void render(ScreenHandler screenHandler, DrawContext context, float delta, int x, int y) {
         float f;
         Slot slot = screenHandler.getSlot(this.slotId);
         if (this.textures.isEmpty() || slot.hasStack()) {
@@ -54,15 +52,14 @@ public class CyclingSlotIcon {
         float f2 = f = bl ? this.computeAlpha(delta) : 1.0f;
         if (f < 1.0f) {
             int i = Math.floorMod(this.currentIndex - 1, this.textures.size());
-            this.drawIcon(slot, this.textures.get(i), 1.0f - f, matrices, x, y);
+            this.drawIcon(slot, this.textures.get(i), 1.0f - f, context, x, y);
         }
-        this.drawIcon(slot, this.textures.get(this.currentIndex), f, matrices, x, y);
+        this.drawIcon(slot, this.textures.get(this.currentIndex), f, context, x, y);
     }
 
-    private void drawIcon(Slot slot, Identifier texture, float alpha, MatrixStack matrices, int x, int y) {
+    private void drawIcon(Slot slot, Identifier texture, float alpha, DrawContext context, int x, int y) {
         Sprite sprite = MinecraftClient.getInstance().getSpriteAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE).apply(texture);
-        RenderSystem.setShaderTexture(0, sprite.getAtlasId());
-        DrawableHelper.drawSprite(matrices, x + slot.x, y + slot.y, 0, 16, 16, sprite, 1.0f, 1.0f, 1.0f, alpha);
+        context.drawSprite(x + slot.x, y + slot.y, 0, 16, 16, sprite, 1.0f, 1.0f, 1.0f, alpha);
     }
 
     private float computeAlpha(float delta) {

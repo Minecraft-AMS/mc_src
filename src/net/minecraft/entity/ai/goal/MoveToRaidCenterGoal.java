@@ -35,12 +35,12 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        return ((MobEntity)this.actor).getTarget() == null && !((Entity)this.actor).hasPassengers() && ((RaiderEntity)this.actor).hasActiveRaid() && !((RaiderEntity)this.actor).getRaid().isFinished() && !((ServerWorld)((RaiderEntity)this.actor).world).isNearOccupiedPointOfInterest(((Entity)this.actor).getBlockPos());
+        return ((MobEntity)this.actor).getTarget() == null && !((Entity)this.actor).hasPassengers() && ((RaiderEntity)this.actor).hasActiveRaid() && !((RaiderEntity)this.actor).getRaid().isFinished() && !((ServerWorld)((Entity)this.actor).getWorld()).isNearOccupiedPointOfInterest(((Entity)this.actor).getBlockPos());
     }
 
     @Override
     public boolean shouldContinue() {
-        return ((RaiderEntity)this.actor).hasActiveRaid() && !((RaiderEntity)this.actor).getRaid().isFinished() && ((RaiderEntity)this.actor).world instanceof ServerWorld && !((ServerWorld)((RaiderEntity)this.actor).world).isNearOccupiedPointOfInterest(((Entity)this.actor).getBlockPos());
+        return ((RaiderEntity)this.actor).hasActiveRaid() && !((RaiderEntity)this.actor).getRaid().isFinished() && ((Entity)this.actor).getWorld() instanceof ServerWorld && !((ServerWorld)((Entity)this.actor).getWorld()).isNearOccupiedPointOfInterest(((Entity)this.actor).getBlockPos());
     }
 
     @Override
@@ -61,7 +61,7 @@ extends Goal {
     private void includeFreeRaiders(Raid raid) {
         if (raid.isActive()) {
             HashSet set = Sets.newHashSet();
-            List<RaiderEntity> list = ((RaiderEntity)this.actor).world.getEntitiesByClass(RaiderEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0), raider -> !raider.hasActiveRaid() && RaidManager.isValidRaiderFor(raider, raid));
+            List<RaiderEntity> list = ((Entity)this.actor).getWorld().getEntitiesByClass(RaiderEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0), raider -> !raider.hasActiveRaid() && RaidManager.isValidRaiderFor(raider, raid));
             set.addAll(list);
             for (RaiderEntity raiderEntity : set) {
                 raid.addRaider(raid.getGroupsSpawned(), raiderEntity, null, true);

@@ -70,8 +70,8 @@ extends IllagerEntity {
         super.initGoals();
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(1, new BreakDoorGoal(this));
-        this.goalSelector.add(2, new IllagerEntity.LongDoorInteractGoal(this, this));
-        this.goalSelector.add(3, new RaiderEntity.PatrolApproachGoal(this, 10.0f));
+        this.goalSelector.add(2, new IllagerEntity.LongDoorInteractGoal(this));
+        this.goalSelector.add(3, new RaiderEntity.PatrolApproachGoal(this, this, 10.0f));
         this.goalSelector.add(4, new AttackGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
         this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
@@ -86,7 +86,7 @@ extends IllagerEntity {
     @Override
     protected void mobTick() {
         if (!this.isAiDisabled() && NavigationConditions.hasMobNavigation(this)) {
-            boolean bl = ((ServerWorld)this.world).hasRaidAt(this.getBlockPos());
+            boolean bl = ((ServerWorld)this.getWorld()).hasRaidAt(this.getBlockPos());
             ((MobNavigation)this.getNavigation()).setCanPathThroughDoors(bl);
         }
         super.mobTick();

@@ -103,7 +103,7 @@ implements VariantHolder<RabbitType> {
     @Override
     protected void initGoals() {
         this.goalSelector.add(1, new SwimGoal(this));
-        this.goalSelector.add(1, new PowderSnowJumpGoal(this, this.world));
+        this.goalSelector.add(1, new PowderSnowJumpGoal(this, this.getWorld()));
         this.goalSelector.add(1, new EscapeDangerGoal(this, 2.2));
         this.goalSelector.add(2, new AnimalMateGoal(this, 0.8));
         this.goalSelector.add(3, new TemptGoal(this, 1.0, Ingredient.ofItems(Items.CARROT, Items.GOLDEN_CARROT, Blocks.DANDELION), false));
@@ -141,8 +141,8 @@ implements VariantHolder<RabbitType> {
         if (d > 0.0 && (e = this.getVelocity().horizontalLengthSquared()) < 0.01) {
             this.updateVelocity(0.1f, new Vec3d(0.0, 0.0, 1.0));
         }
-        if (!this.world.isClient) {
-            this.world.sendEntityStatus(this, (byte)1);
+        if (!this.getWorld().isClient) {
+            this.getWorld().sendEntityStatus(this, (byte)1);
         }
     }
 
@@ -189,7 +189,7 @@ implements VariantHolder<RabbitType> {
                 this.moreCarrotTicks = 0;
             }
         }
-        if (this.onGround) {
+        if (this.isOnGround()) {
             RabbitJumpControl rabbitJumpControl;
             LivingEntity livingEntity;
             if (!this.lastOnGround) {
@@ -216,7 +216,7 @@ implements VariantHolder<RabbitType> {
                 this.enableJump();
             }
         }
-        this.lastOnGround = this.onGround;
+        this.lastOnGround = this.isOnGround();
     }
 
     @Override
@@ -468,7 +468,7 @@ implements VariantHolder<RabbitType> {
 
         @Override
         public void tick() {
-            if (this.rabbit.onGround && !this.rabbit.jumping && !((RabbitJumpControl)this.rabbit.jumpControl).isActive()) {
+            if (this.rabbit.isOnGround() && !this.rabbit.jumping && !((RabbitJumpControl)this.rabbit.jumpControl).isActive()) {
                 this.rabbit.setSpeed(0.0);
             } else if (this.isMoving()) {
                 this.rabbit.setSpeed(this.rabbitSpeed);
@@ -533,7 +533,7 @@ implements VariantHolder<RabbitType> {
         @Override
         public boolean canStart() {
             if (this.cooldown <= 0) {
-                if (!this.rabbit.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+                if (!this.rabbit.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                     return false;
                 }
                 this.hasTarget = false;
@@ -552,7 +552,7 @@ implements VariantHolder<RabbitType> {
             super.tick();
             this.rabbit.getLookControl().lookAt((double)this.targetPos.getX() + 0.5, this.targetPos.getY() + 1, (double)this.targetPos.getZ() + 0.5, 10.0f, this.rabbit.getMaxLookPitchChange());
             if (this.hasReached()) {
-                World world = this.rabbit.world;
+                World world = this.rabbit.getWorld();
                 BlockPos blockPos = this.targetPos.up();
                 BlockState blockState = world.getBlockState(blockPos);
                 Block block = blockState.getBlock();

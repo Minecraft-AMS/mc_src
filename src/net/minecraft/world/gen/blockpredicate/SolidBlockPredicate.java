@@ -16,6 +16,7 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.gen.blockpredicate.BlockPredicateType;
 import net.minecraft.world.gen.blockpredicate.OffsetPredicate;
 
+@Deprecated
 public class SolidBlockPredicate
 extends OffsetPredicate {
     public static final Codec<SolidBlockPredicate> CODEC = RecordCodecBuilder.create(instance -> SolidBlockPredicate.registerOffsetField(instance).apply((Applicative)instance, SolidBlockPredicate::new));
@@ -26,7 +27,7 @@ extends OffsetPredicate {
 
     @Override
     protected boolean test(BlockState state) {
-        return state.getMaterial().isSolid();
+        return state.isSolid();
     }
 
     @Override

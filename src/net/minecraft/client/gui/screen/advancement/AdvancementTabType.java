@@ -9,9 +9,8 @@ package net.minecraft.client.gui.screen.advancement;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.advancement.AdvancementsScreen;
 import net.minecraft.item.ItemStack;
 
 @Environment(value=EnvType.CLIENT)
@@ -48,7 +47,7 @@ extends Enum<AdvancementTabType> {
         return this.tabCount;
     }
 
-    public void drawBackground(MatrixStack matrices, int x, int y, boolean selected, int index) {
+    public void drawBackground(DrawContext context, int x, int y, boolean selected, int index) {
         int i = this.u;
         if (index > 0) {
             i += this.width;
@@ -57,10 +56,10 @@ extends Enum<AdvancementTabType> {
             i += this.width;
         }
         int j = selected ? this.v + this.height : this.v;
-        DrawableHelper.drawTexture(matrices, x + this.getTabX(index), y + this.getTabY(index), i, j, this.width, this.height);
+        context.drawTexture(AdvancementsScreen.TABS_TEXTURE, x + this.getTabX(index), y + this.getTabY(index), i, j, this.width, this.height);
     }
 
-    public void drawIcon(MatrixStack matrices, int x, int y, int index, ItemRenderer itemRenderer, ItemStack icon) {
+    public void drawIcon(DrawContext context, int x, int y, int index, ItemStack stack) {
         int i = x + this.getTabX(index);
         int j = y + this.getTabY(index);
         switch (this) {
@@ -84,7 +83,7 @@ extends Enum<AdvancementTabType> {
                 j += 5;
             }
         }
-        itemRenderer.renderInGui(matrices, icon, i, j);
+        context.drawItemWithoutEntity(stack, i, j);
     }
 
     public int getTabX(int index) {

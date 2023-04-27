@@ -96,7 +96,7 @@ extends Entity {
 
     @Override
     public void tick() {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.attemptTickInVoid();
             if (this.obstructionCheckCounter++ == 100) {
                 this.obstructionCheckCounter = 0;
@@ -109,7 +109,7 @@ extends Entity {
     }
 
     public boolean canStayAttached() {
-        if (!this.world.isSpaceEmpty(this)) {
+        if (!this.getWorld().isSpaceEmpty(this)) {
             return false;
         }
         int i = Math.max(1, this.getWidthPixels() / 16);
@@ -122,12 +122,12 @@ extends Entity {
                 int m = (i - 1) / -2;
                 int n = (j - 1) / -2;
                 mutable.set(blockPos).move(direction, k + m).move(Direction.UP, l + n);
-                BlockState blockState = this.world.getBlockState(mutable);
-                if (blockState.getMaterial().isSolid() || AbstractRedstoneGateBlock.isRedstoneGate(blockState)) continue;
+                BlockState blockState = this.getWorld().getBlockState(mutable);
+                if (blockState.isSolid() || AbstractRedstoneGateBlock.isRedstoneGate(blockState)) continue;
                 return false;
             }
         }
-        return this.world.getOtherEntities(this, this.getBoundingBox(), PREDICATE).isEmpty();
+        return this.getWorld().getOtherEntities(this, this.getBoundingBox(), PREDICATE).isEmpty();
     }
 
     @Override
@@ -139,7 +139,7 @@ extends Entity {
     public boolean handleAttack(Entity attacker) {
         if (attacker instanceof PlayerEntity) {
             PlayerEntity playerEntity = (PlayerEntity)attacker;
-            if (!this.world.canPlayerModifyAt(playerEntity, this.attachmentPos)) {
+            if (!this.getWorld().canPlayerModifyAt(playerEntity, this.attachmentPos)) {
                 return true;
             }
             return this.damage(this.getDamageSources().playerAttack(playerEntity), 0.0f);
@@ -157,7 +157,7 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (!this.isRemoved() && !this.world.isClient) {
+        if (!this.isRemoved() && !this.getWorld().isClient) {
             this.kill();
             this.scheduleVelocityUpdate();
             this.onBreak(source.getAttacker());
@@ -167,7 +167,7 @@ extends Entity {
 
     @Override
     public void move(MovementType movementType, Vec3d movement) {
-        if (!this.world.isClient && !this.isRemoved() && movement.lengthSquared() > 0.0) {
+        if (!this.getWorld().isClient && !this.isRemoved() && movement.lengthSquared() > 0.0) {
             this.kill();
             this.onBreak(null);
         }
@@ -175,7 +175,7 @@ extends Entity {
 
     @Override
     public void addVelocity(double deltaX, double deltaY, double deltaZ) {
-        if (!this.world.isClient && !this.isRemoved() && deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ > 0.0) {
+        if (!this.getWorld().isClient && !this.isRemoved() && deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ > 0.0) {
             this.kill();
             this.onBreak(null);
         }
@@ -209,9 +209,9 @@ extends Entity {
 
     @Override
     public ItemEntity dropStack(ItemStack stack, float yOffset) {
-        ItemEntity itemEntity = new ItemEntity(this.world, this.getX() + (double)((float)this.facing.getOffsetX() * 0.15f), this.getY() + (double)yOffset, this.getZ() + (double)((float)this.facing.getOffsetZ() * 0.15f), stack);
+        ItemEntity itemEntity = new ItemEntity(this.getWorld(), this.getX() + (double)((float)this.facing.getOffsetX() * 0.15f), this.getY() + (double)yOffset, this.getZ() + (double)((float)this.facing.getOffsetZ() * 0.15f), stack);
         itemEntity.setToDefaultPickupDelay();
-        this.world.spawnEntity(itemEntity);
+        this.getWorld().spawnEntity(itemEntity);
         return itemEntity;
     }
 

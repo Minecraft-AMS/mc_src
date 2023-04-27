@@ -11,9 +11,9 @@ package net.minecraft.client.gui.screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.MultilineText;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.CheckboxWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
@@ -61,16 +61,16 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        this.drawTitle(matrices);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        this.drawTitle(context);
         int i = this.width / 2 - this.messageText.getMaxWidth() / 2;
-        this.messageText.drawWithShadow(matrices, i, 70, this.getLineHeight(), 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+        this.messageText.drawWithShadow(context, i, 70, this.getLineHeight(), 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
     }
 
-    protected void drawTitle(MatrixStack matrices) {
-        WarningScreen.drawTextWithShadow(matrices, this.textRenderer, this.title, 25, 30, 0xFFFFFF);
+    protected void drawTitle(DrawContext context) {
+        context.drawTextWithShadow(this.textRenderer, this.title, 25, 30, 0xFFFFFF);
     }
 
     protected int getLineHeight() {

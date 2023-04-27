@@ -61,7 +61,7 @@ implements LootCondition {
         if (entity == null) {
             return false;
         }
-        Scoreboard scoreboard = entity.world.getScoreboard();
+        Scoreboard scoreboard = entity.getWorld().getScoreboard();
         for (Map.Entry<String, BoundedIntUnaryOperator> entry : this.scores.entrySet()) {
             if (this.entityScoreIsInRange(lootContext, entity, scoreboard, entry.getKey(), entry.getValue())) continue;
             return false;

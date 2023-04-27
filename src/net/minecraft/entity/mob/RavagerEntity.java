@@ -150,16 +150,16 @@ extends RaiderEntity {
             double e = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).getBaseValue();
             this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(MathHelper.lerp(0.1, e, d));
         }
-        if (this.horizontalCollision && this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+        if (this.horizontalCollision && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
             boolean bl = false;
             Box box = this.getBoundingBox().expand(0.2);
             for (BlockPos blockPos : BlockPos.iterate(MathHelper.floor(box.minX), MathHelper.floor(box.minY), MathHelper.floor(box.minZ), MathHelper.floor(box.maxX), MathHelper.floor(box.maxY), MathHelper.floor(box.maxZ))) {
-                BlockState blockState = this.world.getBlockState(blockPos);
+                BlockState blockState = this.getWorld().getBlockState(blockPos);
                 Block block = blockState.getBlock();
                 if (!(block instanceof LeavesBlock)) continue;
-                bl = this.world.breakBlock(blockPos, true, this) || bl;
+                bl = this.getWorld().breakBlock(blockPos, true, this) || bl;
             }
-            if (!bl && this.onGround) {
+            if (!bl && this.isOnGround()) {
                 this.jump();
             }
         }
@@ -187,7 +187,7 @@ extends RaiderEntity {
             double d = this.getX() - (double)this.getWidth() * Math.sin(this.bodyYaw * ((float)Math.PI / 180)) + (this.random.nextDouble() * 0.6 - 0.3);
             double e = this.getY() + (double)this.getHeight() - 0.3;
             double f = this.getZ() + (double)this.getWidth() * Math.cos(this.bodyYaw * ((float)Math.PI / 180)) + (this.random.nextDouble() * 0.6 - 0.3);
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, d, e, f, 0.4980392156862745, 0.5137254901960784, 0.5725490196078431);
+            this.getWorld().addParticle(ParticleTypes.ENTITY_EFFECT, d, e, f, 0.4980392156862745, 0.5137254901960784, 0.5725490196078431);
         }
     }
 
@@ -210,7 +210,7 @@ extends RaiderEntity {
             if (this.random.nextDouble() < 0.5) {
                 this.stunTick = 40;
                 this.playSound(SoundEvents.ENTITY_RAVAGER_STUNNED, 1.0f, 1.0f);
-                this.world.sendEntityStatus(this, (byte)39);
+                this.getWorld().sendEntityStatus(this, (byte)39);
                 target.pushAwayFrom(this);
             } else {
                 this.knockBack(target);
@@ -225,7 +225,7 @@ extends RaiderEntity {
     private void roar() {
         if (this.isAlive()) {
             void var3_5;
-            List<Entity> list = this.world.getEntitiesByClass(LivingEntity.class, this.getBoundingBox().expand(4.0), IS_NOT_RAVAGER);
+            List<Entity> list = this.getWorld().getEntitiesByClass(LivingEntity.class, this.getBoundingBox().expand(4.0), IS_NOT_RAVAGER);
             for (LivingEntity livingEntity : list) {
                 if (!(livingEntity instanceof IllagerEntity)) {
                     livingEntity.damage(this.getDamageSources().mobAttack(this), 6.0f);
@@ -238,7 +238,7 @@ extends RaiderEntity {
                 double d = this.random.nextGaussian() * 0.2;
                 double e = this.random.nextGaussian() * 0.2;
                 double f = this.random.nextGaussian() * 0.2;
-                this.world.addParticle(ParticleTypes.POOF, vec3d.x, vec3d.y, vec3d.z, d, e, f);
+                this.getWorld().addParticle(ParticleTypes.POOF, vec3d.x, vec3d.y, vec3d.z, d, e, f);
                 ++var3_5;
             }
             this.emitGameEvent(GameEvent.ENTITY_ROAR);
@@ -278,7 +278,7 @@ extends RaiderEntity {
     @Override
     public boolean tryAttack(Entity target) {
         this.attackTick = 10;
-        this.world.sendEntityStatus(this, (byte)4);
+        this.getWorld().sendEntityStatus(this, (byte)4);
         this.playSound(SoundEvents.ENTITY_RAVAGER_ATTACK, 1.0f, 1.0f);
         return super.tryAttack(target);
     }

@@ -79,13 +79,13 @@ VehicleInventory {
     @Override
     public void dropItems(DamageSource source) {
         super.dropItems(source);
-        this.onBroken(source, this.world, this);
+        this.onBroken(source, this.getWorld(), this);
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (!this.world.isClient && reason.shouldDestroy()) {
-            ItemScatterer.spawn(this.world, this, (Inventory)this);
+        if (!this.getWorld().isClient && reason.shouldDestroy()) {
+            ItemScatterer.spawn(this.getWorld(), this, (Inventory)this);
         }
         super.remove(reason);
     }
@@ -106,7 +106,7 @@ VehicleInventory {
     @Override
     public void openInventory(PlayerEntity player) {
         player.openHandledScreen(this);
-        if (!player.world.isClient) {
+        if (!player.getWorld().isClient) {
             this.emitGameEvent(GameEvent.CONTAINER_OPEN, player);
             PiglinBrain.onGuardedBlockInteracted(player, true);
         }
@@ -218,7 +218,7 @@ VehicleInventory {
 
     @Override
     public void onClose(PlayerEntity player) {
-        this.world.emitGameEvent(GameEvent.CONTAINER_CLOSE, this.getPos(), GameEvent.Emitter.of(player));
+        this.getWorld().emitGameEvent(GameEvent.CONTAINER_CLOSE, this.getPos(), GameEvent.Emitter.of(player));
     }
 }
 

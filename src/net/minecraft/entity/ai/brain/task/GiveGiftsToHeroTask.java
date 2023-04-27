@@ -126,8 +126,8 @@ extends MultiTickTask<VillagerEntity> {
         }
         VillagerProfession villagerProfession = villager.getVillagerData().getProfession();
         if (GIFTS.containsKey(villagerProfession)) {
-            LootTable lootTable = villager.world.getServer().getLootManager().getTable(GIFTS.get(villagerProfession));
-            LootContext.Builder builder = new LootContext.Builder((ServerWorld)villager.world).parameter(LootContextParameters.ORIGIN, villager.getPos()).parameter(LootContextParameters.THIS_ENTITY, villager).random(villager.getRandom());
+            LootTable lootTable = villager.getWorld().getServer().getLootManager().getLootTable(GIFTS.get(villagerProfession));
+            LootContext.Builder builder = new LootContext.Builder((ServerWorld)villager.getWorld()).parameter(LootContextParameters.ORIGIN, villager.getPos()).parameter(LootContextParameters.THIS_ENTITY, villager).random(villager.getRandom());
             return lootTable.generateLoot(builder.build(LootContextTypes.GIFT));
         }
         return ImmutableList.of((Object)new ItemStack(Items.WHEAT_SEEDS));

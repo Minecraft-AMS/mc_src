@@ -79,7 +79,7 @@ extends Block {
         if (blockState.isOf(this)) {
             return true;
         }
-        if (blockState.isIn(BlockTags.DIRT) || blockState.isOf(Blocks.SAND) || blockState.isOf(Blocks.RED_SAND)) {
+        if (blockState.isIn(BlockTags.DIRT) || blockState.isIn(BlockTags.SAND)) {
             BlockPos blockPos = pos.down();
             for (Direction direction : Direction.Type.HORIZONTAL) {
                 BlockState blockState2 = world.getBlockState(blockPos.offset(direction));

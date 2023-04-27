@@ -46,7 +46,7 @@ extends AbstractSittingPhase {
                 double h = e + this.dragon.getRandom().nextGaussian() / 2.0;
                 double j = f + this.dragon.getRandom().nextGaussian() / 2.0;
                 for (int k = 0; k < 6; ++k) {
-                    this.dragon.world.addParticle(ParticleTypes.DRAGON_BREATH, g, h, j, -vec3d.x * (double)0.08f * (double)k, -vec3d.y * (double)0.6f, -vec3d.z * (double)0.08f * (double)k);
+                    this.dragon.getWorld().addParticle(ParticleTypes.DRAGON_BREATH, g, h, j, -vec3d.x * (double)0.08f * (double)k, -vec3d.y * (double)0.6f, -vec3d.z * (double)0.08f * (double)k);
                 }
                 vec3d.rotateY(0.19634955f);
             }
@@ -70,7 +70,7 @@ extends AbstractSittingPhase {
             double e = this.dragon.head.getZ() + vec3d.z * 5.0 / 2.0;
             double h = g = this.dragon.head.getBodyY(0.5);
             BlockPos.Mutable mutable = new BlockPos.Mutable(d, h, e);
-            while (this.dragon.world.isAir(mutable)) {
+            while (this.dragon.getWorld().isAir(mutable)) {
                 if ((h -= 1.0) < 0.0) {
                     h = g;
                     break;
@@ -78,13 +78,13 @@ extends AbstractSittingPhase {
                 mutable.set(d, h, e);
             }
             h = MathHelper.floor(h) + 1;
-            this.dragonBreathEntity = new AreaEffectCloudEntity(this.dragon.world, d, h, e);
+            this.dragonBreathEntity = new AreaEffectCloudEntity(this.dragon.getWorld(), d, h, e);
             this.dragonBreathEntity.setOwner(this.dragon);
             this.dragonBreathEntity.setRadius(5.0f);
             this.dragonBreathEntity.setDuration(200);
             this.dragonBreathEntity.setParticleType(ParticleTypes.DRAGON_BREATH);
             this.dragonBreathEntity.addEffect(new StatusEffectInstance(StatusEffects.INSTANT_DAMAGE));
-            this.dragon.world.spawnEntity(this.dragonBreathEntity);
+            this.dragon.getWorld().spawnEntity(this.dragonBreathEntity);
         }
     }
 

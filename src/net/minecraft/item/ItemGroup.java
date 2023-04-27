@@ -3,7 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.fabric.api.itemgroup.v1.IdentifiableItemGroup
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
@@ -16,17 +15,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.fabricmc.fabric.api.itemgroup.v1.IdentifiableItemGroup;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemStackSet;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
-public class ItemGroup
-implements IdentifiableItemGroup {
+public class ItemGroup {
     private final Text displayName;
     String texture = "items.png";
     boolean scrollbar = true;
@@ -106,6 +105,7 @@ implements IdentifiableItemGroup {
 
     public void updateEntries(DisplayContext displayContext) {
         EntriesImpl entriesImpl = new EntriesImpl(this, displayContext.enabledFeatures);
+        RegistryKey<ItemGroup> registryKey = Registries.ITEM_GROUP.getKey(this).orElseThrow(() -> new IllegalStateException("Unregistered creative tab: " + this));
         this.entryCollector.accept(displayContext, entriesImpl);
         this.displayStacks = entriesImpl.parentTabStacks;
         this.searchTabStacks = entriesImpl.searchTabStacks;

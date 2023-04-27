@@ -16,6 +16,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -311,8 +313,9 @@ public class StructureTemplate {
         });
     }
 
-    public static List<StructureBlockInfo> process(WorldAccess world, BlockPos pos, BlockPos pivot, StructurePlacementData placementData, List<StructureBlockInfo> infos) {
-        ArrayList list = Lists.newArrayList();
+    public static List<StructureBlockInfo> process(ServerWorldAccess world, BlockPos pos, BlockPos pivot, StructurePlacementData placementData, List<StructureBlockInfo> infos) {
+        ArrayList<StructureBlockInfo> list = new ArrayList<StructureBlockInfo>();
+        List<StructureBlockInfo> list2 = new ArrayList<StructureBlockInfo>();
         for (StructureBlockInfo structureBlockInfo : infos) {
             BlockPos blockPos = StructureTemplate.transform(placementData, structureBlockInfo.pos).add(pos);
             StructureBlockInfo structureBlockInfo2 = new StructureBlockInfo(blockPos, structureBlockInfo.state, structureBlockInfo.nbt != null ? structureBlockInfo.nbt.copy() : null);
@@ -321,12 +324,13 @@ public class StructureTemplate {
                 structureBlockInfo2 = iterator.next().process(world, pos, pivot, structureBlockInfo, structureBlockInfo2, placementData);
             }
             if (structureBlockInfo2 == null) continue;
-            list.add(structureBlockInfo2);
+            list2.add(structureBlockInfo2);
+            list.add(structureBlockInfo);
         }
         for (StructureProcessor structureProcessor : placementData.getProcessors()) {
-            structureProcessor.reprocess(world, pos, pivot, placementData, list);
+            list2 = structureProcessor.reprocess(world, pos, pivot, list, list2, placementData);
         }
-        return list;
+        return list2;
     }
 
     private void spawnEntities(ServerWorldAccess world, BlockPos pos, BlockMirror mirror, BlockRotation rotation, BlockPos pivot, @Nullable BlockBox area, boolean initializeMobs) {
@@ -612,10 +616,12 @@ public class StructureTemplate {
         return nbtList;
     }
 
-    public static class StructureBlockInfo {
-        public final BlockPos pos;
-        public final BlockState state;
-        public final NbtCompound nbt;
+    public static final class StructureBlockInfo
+    extends Record {
+        final BlockPos pos;
+        final BlockState state;
+        @Nullable
+        final NbtCompound nbt;
 
         public StructureBlockInfo(BlockPos pos, BlockState state, @Nullable NbtCompound nbt) {
             this.pos = pos;
@@ -623,8 +629,32 @@ public class StructureTemplate {
             this.nbt = nbt;
         }
 
+        @Override
         public String toString() {
             return String.format(Locale.ROOT, "<StructureBlockInfo | %s | %s | %s>", this.pos, this.state, this.nbt);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{StructureBlockInfo.class, "pos;state;nbt", "pos", "state", "nbt"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{StructureBlockInfo.class, "pos;state;nbt", "pos", "state", "nbt"}, this, object);
+        }
+
+        public BlockPos pos() {
+            return this.pos;
+        }
+
+        public BlockState state() {
+            return this.state;
+        }
+
+        @Nullable
+        public NbtCompound nbt() {
+            return this.nbt;
         }
     }
 

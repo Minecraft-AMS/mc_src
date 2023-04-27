@@ -223,7 +223,7 @@ ReadableContainer<T> {
                     BiMapPalette<Object> palette = new BiMapPalette<Object>(idList, j, (id, value) -> 0, list);
                     PackedIntegerArray packedIntegerArray = new PackedIntegerArray(j, i, ls);
                     int[] is = new int[i];
-                    packedIntegerArray.method_39892(is);
+                    packedIntegerArray.writePaletteIndices(is);
                     PalettedContainer.applyEach(is, id -> idList.getRawId(palette.get(id)));
                     paletteStorage = new PackedIntegerArray(dataProvider.bits(), i, is);
                 } else {
@@ -248,7 +248,7 @@ ReadableContainer<T> {
             BiMapPalette<T> biMapPalette = new BiMapPalette<T>(idList, this.data.storage.getElementBits(), this.dummyListener);
             int i = paletteProvider.getContainerSize();
             int[] is = new int[i];
-            this.data.storage.method_39892(is);
+            this.data.storage.writePaletteIndices(is);
             PalettedContainer.applyEach(is, id -> biMapPalette.index(this.data.palette.get(id)));
             int j = paletteProvider.getBits(idList, biMapPalette.getSize());
             if (j != 0) {

@@ -48,17 +48,17 @@ extends ThrownItemEntity {
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
         for (int i = 0; i < 32; ++i) {
-            this.world.addParticle(ParticleTypes.PORTAL, this.getX(), this.getY() + this.random.nextDouble() * 2.0, this.getZ(), this.random.nextGaussian(), 0.0, this.random.nextGaussian());
+            this.getWorld().addParticle(ParticleTypes.PORTAL, this.getX(), this.getY() + this.random.nextDouble() * 2.0, this.getZ(), this.random.nextGaussian(), 0.0, this.random.nextGaussian());
         }
-        if (!this.world.isClient && !this.isRemoved()) {
+        if (!this.getWorld().isClient && !this.isRemoved()) {
             Entity entity = this.getOwner();
             if (entity instanceof ServerPlayerEntity) {
                 ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
-                if (serverPlayerEntity.networkHandler.isConnectionOpen() && serverPlayerEntity.world == this.world && !serverPlayerEntity.isSleeping()) {
+                if (serverPlayerEntity.networkHandler.isConnectionOpen() && serverPlayerEntity.getWorld() == this.getWorld() && !serverPlayerEntity.isSleeping()) {
                     EndermiteEntity endermiteEntity;
-                    if (this.random.nextFloat() < 0.05f && this.world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && (endermiteEntity = EntityType.ENDERMITE.create(this.world)) != null) {
+                    if (this.random.nextFloat() < 0.05f && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && (endermiteEntity = EntityType.ENDERMITE.create(this.getWorld())) != null) {
                         endermiteEntity.refreshPositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch());
-                        this.world.spawnEntity(endermiteEntity);
+                        this.getWorld().spawnEntity(endermiteEntity);
                     }
                     if (entity.hasVehicle()) {
                         serverPlayerEntity.requestTeleportAndDismount(this.getX(), this.getY(), this.getZ());
@@ -90,7 +90,7 @@ extends ThrownItemEntity {
     @Nullable
     public Entity moveToWorld(ServerWorld destination) {
         Entity entity = this.getOwner();
-        if (entity != null && entity.world.getRegistryKey() != destination.getRegistryKey()) {
+        if (entity != null && entity.getWorld().getRegistryKey() != destination.getRegistryKey()) {
             this.setOwner(null);
         }
         return super.moveToWorld(destination);

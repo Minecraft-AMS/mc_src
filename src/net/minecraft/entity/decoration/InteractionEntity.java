@@ -142,7 +142,7 @@ Targeter {
     public boolean handleAttack(Entity attacker) {
         if (attacker instanceof PlayerEntity) {
             PlayerEntity playerEntity = (PlayerEntity)attacker;
-            this.attack = new Interaction(playerEntity.getUuid(), this.world.getTime());
+            this.attack = new Interaction(playerEntity.getUuid(), this.getWorld().getTime());
             if (playerEntity instanceof ServerPlayerEntity) {
                 ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)playerEntity;
                 Criteria.PLAYER_HURT_ENTITY.trigger(serverPlayerEntity, this, playerEntity.getDamageSources().generic(), 1.0f, 1.0f, false);
@@ -154,10 +154,10 @@ Targeter {
 
     @Override
     public ActionResult interact(PlayerEntity player, Hand hand) {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return this.shouldRespond() ? ActionResult.SUCCESS : ActionResult.CONSUME;
         }
-        this.interaction = new Interaction(player.getUuid(), this.world.getTime());
+        this.interaction = new Interaction(player.getUuid(), this.getWorld().getTime());
         return ActionResult.CONSUME;
     }
 
@@ -169,7 +169,7 @@ Targeter {
     @Nullable
     public LivingEntity getLastAttacker() {
         if (this.attack != null) {
-            return this.world.getPlayerByUuid(this.attack.player());
+            return this.getWorld().getPlayerByUuid(this.attack.player());
         }
         return null;
     }
@@ -178,7 +178,7 @@ Targeter {
     @Nullable
     public LivingEntity getTarget() {
         if (this.interaction != null) {
-            return this.world.getPlayerByUuid(this.interaction.player());
+            return this.getWorld().getPlayerByUuid(this.interaction.player());
         }
         return null;
     }

@@ -16,6 +16,7 @@ import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.MultilineTextWidget;
@@ -27,7 +28,6 @@ import net.minecraft.client.realms.gui.screen.RealmsGenericErrorScreen;
 import net.minecraft.client.realms.gui.screen.RealmsLongConfirmationScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -51,7 +51,7 @@ extends RealmsScreen {
     private static final Text DAY_TEXT = Text.translatable("mco.configure.world.subscription.day");
     private static final Text DAYS_TEXT = Text.translatable("mco.configure.world.subscription.days");
     private static final Text UNKNOWN_TEXT = Text.translatable("mco.configure.world.subscription.unknown");
-    private static final Text field_43152 = Text.translatable("mco.configure.world.subscription.recurring.info");
+    private static final Text RECURRING_INFO_TEXT = Text.translatable("mco.configure.world.subscription.recurring.info");
     private final Screen parent;
     final RealmsServer serverData;
     final Screen mainScreen;
@@ -83,7 +83,7 @@ extends RealmsScreen {
                 this.client.setScreen(new RealmsLongConfirmationScreen(this::onDeletionConfirmed, RealmsLongConfirmationScreen.Type.WARNING, text, text2, true));
             }).dimensions(this.width / 2 - 100, RealmsSubscriptionInfoScreen.row(10), 200, 20).build());
         } else {
-            this.addDrawableChild(new MultilineTextWidget(this.width / 2 - 100, RealmsSubscriptionInfoScreen.row(8), field_43152, this.textRenderer).setTextColor(0xA0A0A0).setMaxWidth(200));
+            this.addDrawableChild(new MultilineTextWidget(this.width / 2 - 100, RealmsSubscriptionInfoScreen.row(8), RECURRING_INFO_TEXT, this.textRenderer).setTextColor(0xA0A0A0).setMaxWidth(200));
         }
     }
 
@@ -142,19 +142,19 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
         int i = this.width / 2 - 100;
-        RealmsSubscriptionInfoScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, SUBSCRIPTION_TITLE, this.width / 2, 17, 0xFFFFFF);
-        this.textRenderer.draw(matrices, SUBSCRIPTION_START_LABEL_TEXT, (float)i, (float)RealmsSubscriptionInfoScreen.row(0), 0xA0A0A0);
-        this.textRenderer.draw(matrices, this.startDate, (float)i, (float)RealmsSubscriptionInfoScreen.row(1), 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, SUBSCRIPTION_TITLE, this.width / 2, 17, 0xFFFFFF);
+        context.drawText(this.textRenderer, SUBSCRIPTION_START_LABEL_TEXT, i, RealmsSubscriptionInfoScreen.row(0), 0xA0A0A0, false);
+        context.drawText(this.textRenderer, this.startDate, i, RealmsSubscriptionInfoScreen.row(1), 0xFFFFFF, false);
         if (this.type == Subscription.SubscriptionType.NORMAL) {
-            this.textRenderer.draw(matrices, TIME_LEFT_LABEL_TEXT, (float)i, (float)RealmsSubscriptionInfoScreen.row(3), 0xA0A0A0);
+            context.drawText(this.textRenderer, TIME_LEFT_LABEL_TEXT, i, RealmsSubscriptionInfoScreen.row(3), 0xA0A0A0, false);
         } else if (this.type == Subscription.SubscriptionType.RECURRING) {
-            this.textRenderer.draw(matrices, DAYS_LEFT_LABEL_TEXT, (float)i, (float)RealmsSubscriptionInfoScreen.row(3), 0xA0A0A0);
+            context.drawText(this.textRenderer, DAYS_LEFT_LABEL_TEXT, i, RealmsSubscriptionInfoScreen.row(3), 0xA0A0A0, false);
         }
-        this.textRenderer.draw(matrices, this.daysLeft, (float)i, (float)RealmsSubscriptionInfoScreen.row(4), 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+        context.drawText(this.textRenderer, this.daysLeft, i, RealmsSubscriptionInfoScreen.row(4), 0xFFFFFF, false);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     private Text daysLeftPresentation(int daysLeft) {

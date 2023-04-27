@@ -40,7 +40,7 @@ public class StatusEffects {
     public static final StatusEffect HUNGER = StatusEffects.register(17, "hunger", new StatusEffect(StatusEffectCategory.HARMFUL, 5797459));
     public static final StatusEffect WEAKNESS = StatusEffects.register(18, "weakness", new DamageModifierStatusEffect(StatusEffectCategory.HARMFUL, 0x484D48, -4.0).addAttributeModifier(EntityAttributes.GENERIC_ATTACK_DAMAGE, "22653B89-116E-49DC-9B6B-9971489B5BE5", 0.0, EntityAttributeModifier.Operation.ADDITION));
     public static final StatusEffect POISON = StatusEffects.register(19, "poison", new StatusEffect(StatusEffectCategory.HARMFUL, 8889187));
-    public static final StatusEffect WITHER = StatusEffects.register(20, "wither", new StatusEffect(StatusEffectCategory.HARMFUL, 3484199));
+    public static final StatusEffect WITHER = StatusEffects.register(20, "wither", new StatusEffect(StatusEffectCategory.HARMFUL, 7561558));
     public static final StatusEffect HEALTH_BOOST = StatusEffects.register(21, "health_boost", new HealthBoostStatusEffect(StatusEffectCategory.BENEFICIAL, 16284963).addAttributeModifier(EntityAttributes.GENERIC_MAX_HEALTH, "5D6F0BA2-1186-46AC-B896-C61C5CEE99CC", 4.0, EntityAttributeModifier.Operation.ADDITION));
     public static final StatusEffect ABSORPTION = StatusEffects.register(22, "absorption", new AbsorptionStatusEffect(StatusEffectCategory.BENEFICIAL, 0x2552A5));
     public static final StatusEffect SATURATION = StatusEffects.register(23, "saturation", new InstantStatusEffect(StatusEffectCategory.BENEFICIAL, 16262179));
@@ -48,7 +48,7 @@ public class StatusEffects {
     public static final StatusEffect LEVITATION = StatusEffects.register(25, "levitation", new StatusEffect(StatusEffectCategory.HARMFUL, 0xCEFFFF));
     public static final StatusEffect LUCK = StatusEffects.register(26, "luck", new StatusEffect(StatusEffectCategory.BENEFICIAL, 5882118).addAttributeModifier(EntityAttributes.GENERIC_LUCK, "03C3C89D-7037-4B42-869F-B146BCB64D2E", 1.0, EntityAttributeModifier.Operation.ADDITION));
     public static final StatusEffect UNLUCK = StatusEffects.register(27, "unluck", new StatusEffect(StatusEffectCategory.HARMFUL, 12624973).addAttributeModifier(EntityAttributes.GENERIC_LUCK, "CC5AF142-2BD2-4215-B636-2605AED11727", -1.0, EntityAttributeModifier.Operation.ADDITION));
-    public static final StatusEffect SLOW_FALLING = StatusEffects.register(28, "slow_falling", new StatusEffect(StatusEffectCategory.BENEFICIAL, 16773073));
+    public static final StatusEffect SLOW_FALLING = StatusEffects.register(28, "slow_falling", new StatusEffect(StatusEffectCategory.BENEFICIAL, 15978425));
     public static final StatusEffect CONDUIT_POWER = StatusEffects.register(29, "conduit_power", new StatusEffect(StatusEffectCategory.BENEFICIAL, 1950417));
     public static final StatusEffect DOLPHINS_GRACE = StatusEffects.register(30, "dolphins_grace", new StatusEffect(StatusEffectCategory.BENEFICIAL, 8954814));
     public static final StatusEffect BAD_OMEN = StatusEffects.register(31, "bad_omen", new StatusEffect(StatusEffectCategory.NEUTRAL, 745784){
@@ -62,7 +62,7 @@ public class StatusEffects {
         public void applyUpdateEffect(LivingEntity entity, int amplifier) {
             if (entity instanceof ServerPlayerEntity && !entity.isSpectator()) {
                 ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
-                ServerWorld serverWorld = serverPlayerEntity.getWorld();
+                ServerWorld serverWorld = serverPlayerEntity.getServerWorld();
                 if (serverWorld.getDifficulty() == Difficulty.PEACEFUL) {
                     return;
                 }

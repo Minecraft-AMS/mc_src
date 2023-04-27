@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
@@ -39,7 +39,6 @@ import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.gui.widget.GridWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
@@ -85,11 +84,11 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.field_24297 = null;
-        this.ruleListWidget.render(matrices, mouseX, mouseY, delta);
-        EditGameRulesScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+        this.ruleListWidget.render(context, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     private void updateDoneButton() {
@@ -153,8 +152,8 @@ extends Screen {
         }
 
         @Override
-        public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            super.render(matrices, mouseX, mouseY, delta);
+        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+            super.render(context, mouseX, mouseY, delta);
             AbstractRuleWidget abstractRuleWidget = (AbstractRuleWidget)this.getHoveredEntry();
             if (abstractRuleWidget != null && abstractRuleWidget.description != null) {
                 EditGameRulesScreen.this.setTooltip(abstractRuleWidget.description);
@@ -184,11 +183,11 @@ extends Screen {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            this.drawName(matrices, y, x);
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            this.drawName(context, y, x);
             this.valueWidget.setX(x + entryWidth - 44);
             this.valueWidget.setY(y);
-            this.valueWidget.render(matrices, mouseX, mouseY, tickDelta);
+            this.valueWidget.render(context, mouseX, mouseY, tickDelta);
         }
     }
 
@@ -204,11 +203,11 @@ extends Screen {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            this.drawName(matrices, y, x);
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            this.drawName(context, y, x);
             this.toggleButton.setX(x + entryWidth - 45);
             this.toggleButton.setY(y);
-            this.toggleButton.render(matrices, mouseX, mouseY, tickDelta);
+            this.toggleButton.render(context, mouseX, mouseY, tickDelta);
         }
     }
 
@@ -234,12 +233,12 @@ extends Screen {
             return this.children;
         }
 
-        protected void drawName(MatrixStack matrices, int x, int y) {
+        protected void drawName(DrawContext context, int x, int y) {
             if (this.name.size() == 1) {
-                ((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer.draw(matrices, this.name.get(0), (float)y, (float)(x + 5), 0xFFFFFF);
+                context.drawText(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name.get(0), y, x + 5, 0xFFFFFF, false);
             } else if (this.name.size() >= 2) {
-                ((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer.draw(matrices, this.name.get(0), (float)y, (float)x, 0xFFFFFF);
-                ((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer.draw(matrices, this.name.get(1), (float)y, (float)(x + 10), 0xFFFFFF);
+                context.drawText(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name.get(0), y, x, 0xFFFFFF, false);
+                context.drawText(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name.get(1), y, x + 10, 0xFFFFFF, false);
             }
         }
     }
@@ -261,8 +260,8 @@ extends Screen {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            DrawableHelper.drawCenteredTextWithShadow(matrices, ((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name, x + entryWidth / 2, y + 5, 0xFFFFFF);
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            context.drawCenteredTextWithShadow(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, this.name, x + entryWidth / 2, y + 5, 0xFFFFFF);
         }
 
         @Override

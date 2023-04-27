@@ -93,12 +93,12 @@ extends PatrolEntity {
 
     @Override
     public void tickMovement() {
-        if (this.world instanceof ServerWorld && this.isAlive()) {
+        if (this.getWorld() instanceof ServerWorld && this.isAlive()) {
             Raid raid = this.getRaid();
             if (this.canJoinRaid()) {
                 if (raid == null) {
                     Raid raid2;
-                    if (this.world.getTime() % 20L == 0L && (raid2 = ((ServerWorld)this.world).getRaidAt(this.getBlockPos())) != null && RaidManager.isValidRaiderFor(this, raid2)) {
+                    if (this.getWorld().getTime() % 20L == 0L && (raid2 = ((ServerWorld)this.getWorld()).getRaidAt(this.getBlockPos())) != null && RaidManager.isValidRaiderFor(this, raid2)) {
                         raid2.addRaider(raid2.getGroupsSpawned(), this, null, true);
                     }
                 } else {
@@ -119,7 +119,7 @@ extends PatrolEntity {
 
     @Override
     public void onDeath(DamageSource damageSource) {
-        if (this.world instanceof ServerWorld) {
+        if (this.getWorld() instanceof ServerWorld) {
             Entity entity = damageSource.getAttacker();
             Raid raid = this.getRaid();
             if (raid != null) {
@@ -131,7 +131,7 @@ extends PatrolEntity {
                 }
                 raid.removeFromWave(this, false);
             }
-            if (this.isPatrolLeader() && raid == null && ((ServerWorld)this.world).getRaidAt(this.getBlockPos()) == null) {
+            if (this.isPatrolLeader() && raid == null && ((ServerWorld)this.getWorld()).getRaidAt(this.getBlockPos()) == null) {
                 ItemStack itemStack = this.getEquippedStack(EquipmentSlot.HEAD);
                 PlayerEntity playerEntity = null;
                 Entity entity2 = entity;
@@ -155,7 +155,7 @@ extends PatrolEntity {
                     }
                     i = MathHelper.clamp(i, 0, 4);
                     StatusEffectInstance statusEffectInstance2 = new StatusEffectInstance(StatusEffects.BAD_OMEN, 120000, i, false, false, true);
-                    if (!this.world.getGameRules().getBoolean(GameRules.DISABLE_RAIDS)) {
+                    if (!this.getWorld().getGameRules().getBoolean(GameRules.DISABLE_RAIDS)) {
                         playerEntity.addStatusEffect(statusEffectInstance2);
                     }
                 }
@@ -214,8 +214,8 @@ extends PatrolEntity {
         this.wave = nbt.getInt("Wave");
         this.ableToJoinRaid = nbt.getBoolean("CanJoinRaid");
         if (nbt.contains("RaidId", 3)) {
-            if (this.world instanceof ServerWorld) {
-                this.raid = ((ServerWorld)this.world).getRaidManager().getRaid(nbt.getInt("RaidId"));
+            if (this.getWorld() instanceof ServerWorld) {
+                this.raid = ((ServerWorld)this.getWorld()).getRaidManager().getRaid(nbt.getInt("RaidId"));
             }
             if (this.raid != null) {
                 this.raid.addToWave(this.wave, this, false);
@@ -306,7 +306,7 @@ extends PatrolEntity {
                 return false;
             }
             RaiderEntity raiderEntity = raid.getCaptain(((RaiderEntity)this.actor).getWave());
-            if (!(raiderEntity != null && raiderEntity.isAlive() || (list = ((RaiderEntity)this.actor).world.getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0, 8.0, 16.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty())) {
+            if (!(raiderEntity != null && raiderEntity.isAlive() || (list = ((Entity)this.actor).getWorld().getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0, 8.0, 16.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty())) {
                 return ((MobEntity)this.actor).getNavigation().startMovingTo(list.get(0), 1.15f);
             }
             return false;
@@ -315,7 +315,7 @@ extends PatrolEntity {
         @Override
         public void tick() {
             List<ItemEntity> list;
-            if (((MobEntity)this.actor).getNavigation().getTargetPos().isWithinDistance(((Entity)this.actor).getPos(), 1.414) && !(list = ((RaiderEntity)this.actor).world.getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(4.0, 4.0, 4.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty()) {
+            if (((MobEntity)this.actor).getNavigation().getTargetPos().isWithinDistance(((Entity)this.actor).getPos(), 1.414) && !(list = ((Entity)this.actor).getWorld().getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(4.0, 4.0, 4.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty()) {
                 ((RaiderEntity)this.actor).loot(list.get(0));
             }
         }
@@ -348,7 +348,7 @@ extends PatrolEntity {
         }
 
         private boolean tryFindHome() {
-            ServerWorld serverWorld = (ServerWorld)this.raider.world;
+            ServerWorld serverWorld = (ServerWorld)this.raider.getWorld();
             BlockPos blockPos = this.raider.getBlockPos();
             Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.HOME), this::canLootHome, PointOfInterestStorage.OccupationStatus.ANY, blockPos, 48, this.raider.random);
             if (!optional.isPresent()) {
@@ -473,7 +473,7 @@ extends PatrolEntity {
         public void start() {
             super.start();
             this.raider.getNavigation().stop();
-            List<RaiderEntity> list = this.raider.world.getTargets(RaiderEntity.class, this.closeRaiderPredicate, this.raider, this.raider.getBoundingBox().expand(8.0, 8.0, 8.0));
+            List<RaiderEntity> list = this.raider.getWorld().getTargets(RaiderEntity.class, this.closeRaiderPredicate, this.raider, this.raider.getBoundingBox().expand(8.0, 8.0, 8.0));
             for (RaiderEntity raiderEntity : list) {
                 raiderEntity.setTarget(this.raider.getTarget());
             }
@@ -484,7 +484,7 @@ extends PatrolEntity {
             super.stop();
             LivingEntity livingEntity = this.raider.getTarget();
             if (livingEntity != null) {
-                List<RaiderEntity> list = this.raider.world.getTargets(RaiderEntity.class, this.closeRaiderPredicate, this.raider, this.raider.getBoundingBox().expand(8.0, 8.0, 8.0));
+                List<RaiderEntity> list = this.raider.getWorld().getTargets(RaiderEntity.class, this.closeRaiderPredicate, this.raider, this.raider.getBoundingBox().expand(8.0, 8.0, 8.0));
                 for (RaiderEntity raiderEntity : list) {
                     raiderEntity.setTarget(livingEntity);
                     raiderEntity.setAttacking(true);

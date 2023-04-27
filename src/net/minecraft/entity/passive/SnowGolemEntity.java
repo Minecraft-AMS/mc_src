@@ -101,29 +101,29 @@ RangedAttackMob {
     @Override
     public void tickMovement() {
         super.tickMovement();
-        if (!this.world.isClient) {
-            if (this.world.getBiome(this.getBlockPos()).isIn(BiomeTags.SNOW_GOLEM_MELTS)) {
+        if (!this.getWorld().isClient) {
+            if (this.getWorld().getBiome(this.getBlockPos()).isIn(BiomeTags.SNOW_GOLEM_MELTS)) {
                 this.damage(this.getDamageSources().onFire(), 1.0f);
             }
-            if (!this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (!this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return;
             }
             BlockState blockState = Blocks.SNOW.getDefaultState();
             for (int i = 0; i < 4; ++i) {
-                int l;
-                int k;
                 int j = MathHelper.floor(this.getX() + (double)((float)(i % 2 * 2 - 1) * 0.25f));
-                BlockPos blockPos = new BlockPos(j, k = MathHelper.floor(this.getY()), l = MathHelper.floor(this.getZ() + (double)((float)(i / 2 % 2 * 2 - 1) * 0.25f)));
-                if (!this.world.getBlockState(blockPos).isAir() || !blockState.canPlaceAt(this.world, blockPos)) continue;
-                this.world.setBlockState(blockPos, blockState);
-                this.world.emitGameEvent(GameEvent.BLOCK_PLACE, blockPos, GameEvent.Emitter.of(this, blockState));
+                int k = MathHelper.floor(this.getY());
+                int l = MathHelper.floor(this.getZ() + (double)((float)(i / 2 % 2 * 2 - 1) * 0.25f));
+                BlockPos blockPos = new BlockPos(j, k, l);
+                if (!this.getWorld().getBlockState(blockPos).isAir() || !blockState.canPlaceAt(this.getWorld(), blockPos)) continue;
+                this.getWorld().setBlockState(blockPos, blockState);
+                this.getWorld().emitGameEvent(GameEvent.BLOCK_PLACE, blockPos, GameEvent.Emitter.of(this, blockState));
             }
         }
     }
 
     @Override
     public void attack(LivingEntity target, float pullProgress) {
-        SnowballEntity snowballEntity = new SnowballEntity(this.world, this);
+        SnowballEntity snowballEntity = new SnowballEntity(this.getWorld(), this);
         double d = target.getEyeY() - (double)1.1f;
         double e = target.getX() - this.getX();
         double f = d - snowballEntity.getY();
@@ -131,7 +131,7 @@ RangedAttackMob {
         double h = Math.sqrt(e * e + g * g) * (double)0.2f;
         snowballEntity.setVelocity(e, f + h, g, 1.6f, 12.0f);
         this.playSound(SoundEvents.ENTITY_SNOW_GOLEM_SHOOT, 1.0f, 0.4f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-        this.world.spawnEntity(snowballEntity);
+        this.getWorld().spawnEntity(snowballEntity);
     }
 
     @Override
@@ -145,18 +145,18 @@ RangedAttackMob {
         if (itemStack.isOf(Items.SHEARS) && this.isShearable()) {
             this.sheared(SoundCategory.PLAYERS);
             this.emitGameEvent(GameEvent.SHEAR, player2);
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         return ActionResult.PASS;
     }
 
     @Override
     public void sheared(SoundCategory shearedSoundCategory) {
-        this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_SNOW_GOLEM_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
-        if (!this.world.isClient()) {
+        this.getWorld().playSoundFromEntity(null, this, SoundEvents.ENTITY_SNOW_GOLEM_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
+        if (!this.getWorld().isClient()) {
             this.setHasPumpkin(false);
             this.dropStack(new ItemStack(Items.CARVED_PUMPKIN), 1.7f);
         }

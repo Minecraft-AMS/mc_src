@@ -11,7 +11,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FluidDrainable;
 import net.minecraft.block.FluidFillable;
-import net.minecraft.block.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FlowableFluid;
@@ -116,7 +115,6 @@ implements FluidModificationItem {
         }
         BlockState blockState = world.getBlockState(pos);
         Block block = blockState.getBlock();
-        Material material = blockState.getMaterial();
         boolean bl = blockState.canBucketPlace(this.fluid);
         boolean bl3 = bl2 = blockState.isAir() || bl || block instanceof FluidFillable && ((FluidFillable)((Object)block)).canFillWithFluid(world, pos, blockState, this.fluid);
         if (!bl2) {
@@ -137,7 +135,7 @@ implements FluidModificationItem {
             this.playEmptyingSound(player, world, pos);
             return true;
         }
-        if (!world.isClient && bl && !material.isLiquid()) {
+        if (!world.isClient && bl && !blockState.isLiquid()) {
             world.breakBlock(pos, true);
         }
         if (world.setBlockState(pos, this.fluid.getDefaultState().getBlockState(), 11) || blockState.getFluidState().isStill()) {

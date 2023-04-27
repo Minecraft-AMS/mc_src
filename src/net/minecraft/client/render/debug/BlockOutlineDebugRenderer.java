@@ -37,7 +37,7 @@ implements DebugRenderer.Renderer {
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-        World blockView = this.client.player.world;
+        World blockView = this.client.player.getWorld();
         BlockPos blockPos = BlockPos.ofFloored(cameraX, cameraY, cameraZ);
         for (BlockPos blockPos2 : BlockPos.iterate(blockPos.add(-6, -6, -6), blockPos.add(6, 6, 6))) {
             BlockState blockState = blockView.getBlockState(blockPos2);

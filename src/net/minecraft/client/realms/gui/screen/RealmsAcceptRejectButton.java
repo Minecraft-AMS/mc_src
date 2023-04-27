@@ -10,9 +10,9 @@ package net.minecraft.client.realms.gui.screen;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.realms.RealmsObjectSelectionList;
-import net.minecraft.client.util.math.MatrixStack;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class RealmsAcceptRejectButton {
@@ -28,14 +28,14 @@ public abstract class RealmsAcceptRejectButton {
         this.y = y;
     }
 
-    public void render(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
+    public void render(DrawContext context, int x, int y, int mouseX, int mouseY) {
         int i = x + this.x;
         int j = y + this.y;
         boolean bl = mouseX >= i && mouseX <= i + this.width && mouseY >= j && mouseY <= j + this.height;
-        this.render(matrices, i, j, bl);
+        this.render(context, i, j, bl);
     }
 
-    protected abstract void render(MatrixStack var1, int var2, int var3, boolean var4);
+    protected abstract void render(DrawContext var1, int var2, int var3, boolean var4);
 
     public int getRight() {
         return this.x + this.width;
@@ -47,10 +47,10 @@ public abstract class RealmsAcceptRejectButton {
 
     public abstract void handleClick(int var1);
 
-    public static void render(MatrixStack matrices, List<RealmsAcceptRejectButton> buttons, RealmsObjectSelectionList<?> selectionList, int x, int y, int mouseX, int mouseY) {
+    public static void render(DrawContext context, List<RealmsAcceptRejectButton> buttons, RealmsObjectSelectionList<?> selectionList, int x, int y, int mouseX, int mouseY) {
         for (RealmsAcceptRejectButton realmsAcceptRejectButton : buttons) {
             if (selectionList.getRowWidth() <= realmsAcceptRejectButton.getRight()) continue;
-            realmsAcceptRejectButton.render(matrices, x, y, mouseX, mouseY);
+            realmsAcceptRejectButton.render(context, x, y, mouseX, mouseY);
         }
     }
 

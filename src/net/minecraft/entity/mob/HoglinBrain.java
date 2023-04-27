@@ -133,7 +133,7 @@ public class HoglinBrain {
     private static void avoid(HoglinEntity hoglin, LivingEntity target) {
         hoglin.getBrain().forget(MemoryModuleType.ATTACK_TARGET);
         hoglin.getBrain().forget(MemoryModuleType.WALK_TARGET);
-        hoglin.getBrain().remember(MemoryModuleType.AVOID_TARGET, target, AVOID_MEMORY_DURATION.get(hoglin.world.random));
+        hoglin.getBrain().remember(MemoryModuleType.AVOID_TARGET, target, AVOID_MEMORY_DURATION.get(hoglin.getWorld().random));
     }
 
     private static Optional<? extends LivingEntity> getNearestVisibleTargetablePlayer(HoglinEntity hoglin) {

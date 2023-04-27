@@ -12,13 +12,13 @@ import com.mojang.datafixers.util.Pair;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.MultilineText;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.exception.RealmsServiceException;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 
@@ -75,11 +75,11 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        RealmsGenericErrorScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, (Text)this.errorMessages.getFirst(), this.width / 2, 80, 0xFFFFFF);
-        this.description.drawCenterWithShadow(matrices, this.width / 2, 100, this.client.textRenderer.fontHeight, 0xFF0000);
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.drawCenteredTextWithShadow(this.textRenderer, (Text)this.errorMessages.getFirst(), this.width / 2, 80, 0xFFFFFF);
+        this.description.drawCenterWithShadow(context, this.width / 2, 100, this.client.textRenderer.fontHeight, 0xFF0000);
+        super.render(context, mouseX, mouseY, delta);
     }
 }
 

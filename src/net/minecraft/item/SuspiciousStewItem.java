@@ -51,7 +51,7 @@ extends Item {
             NbtList nbtList = nbtCompound.getList(EFFECTS_KEY, 10);
             for (int i = 0; i < nbtList.size(); ++i) {
                 NbtCompound nbtCompound2 = nbtList.getCompound(i);
-                int j = nbtCompound2.contains(EFFECT_DURATION_KEY, 3) ? nbtCompound2.getInt(EFFECT_DURATION_KEY) : 160;
+                int j = nbtCompound2.contains(EFFECT_DURATION_KEY, 99) ? nbtCompound2.getInt(EFFECT_DURATION_KEY) : 160;
                 StatusEffect statusEffect = StatusEffect.byRawId(nbtCompound2.getInt(EFFECT_ID_KEY));
                 if (statusEffect == null) continue;
                 effectConsumer.accept(new StatusEffectInstance(statusEffect, j));

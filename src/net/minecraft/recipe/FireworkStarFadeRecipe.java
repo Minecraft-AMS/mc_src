@@ -64,8 +64,7 @@ extends SpecialCraftingRecipe {
                 continue;
             }
             if (!INPUT_STAR.test(itemStack2)) continue;
-            itemStack = itemStack2.copy();
-            itemStack.setCount(1);
+            itemStack = itemStack2.copyWithCount(1);
         }
         if (itemStack == null || list.isEmpty()) {
             return ItemStack.EMPTY;

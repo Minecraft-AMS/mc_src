@@ -20,7 +20,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.MultilineText;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.client.gui.navigation.NavigationDirection;
@@ -28,12 +28,12 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.EntryListWidget;
+import net.minecraft.client.input.KeyCodes;
 import net.minecraft.client.network.message.MessageTrustStatus;
 import net.minecraft.client.report.AbuseReportContext;
 import net.minecraft.client.report.ChatAbuseReport;
 import net.minecraft.client.report.MessagesListAdder;
 import net.minecraft.client.report.log.ReceivedMessage;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
@@ -105,17 +105,17 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        this.selectionList.render(matrices, mouseX, mouseY, delta);
-        ChatSelectionScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 16, 0xFFFFFF);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        this.selectionList.render(context, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 16, 0xFFFFFF);
         AbuseReportLimits abuseReportLimits = this.reporter.getSender().getLimits();
         int i = this.report.getSelections().size();
         int j = abuseReportLimits.maxReportedMessageCount();
         MutableText text = Text.translatable("gui.chatSelection.selected", i, j);
-        ChatSelectionScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, text, this.width / 2, 16 + this.textRenderer.fontHeight * 3 / 2, 0xA0A0A0);
-        this.contextMessage.drawCenterWithShadow(matrices, this.width / 2, this.selectionList.getContextMessageY());
-        super.render(matrices, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, text, this.width / 2, 16 + this.textRenderer.fontHeight * 3 / 2, 0xA0A0A0);
+        this.contextMessage.drawCenterWithShadow(context, this.width / 2, this.selectionList.getContextMessageY());
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
@@ -191,14 +191,14 @@ extends Screen {
         }
 
         @Override
-        protected void renderEntry(MatrixStack matrices, int mouseX, int mouseY, float delta, int index, int x, int y, int entryWidth, int entryHeight) {
+        protected void renderEntry(DrawContext context, int mouseX, int mouseY, float delta, int index, int x, int y, int entryWidth, int entryHeight) {
             Entry entry = (Entry)this.getEntry(index);
             if (this.shouldHighlight(entry)) {
                 boolean bl = this.getSelectedOrNull() == entry;
                 int i = this.isFocused() && bl ? -1 : -8355712;
-                this.drawSelectionHighlight(matrices, y, entryWidth, entryHeight, i, -16777216);
+                this.drawSelectionHighlight(context, y, entryWidth, entryHeight, i, -16777216);
             }
-            entry.render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, this.getHoveredEntry() == entry, delta);
+            entry.render(context, index, y, x, entryWidth, entryHeight, mouseX, mouseY, this.getHoveredEntry() == entry, delta);
         }
 
         private boolean shouldHighlight(Entry entry) {
@@ -283,36 +283,35 @@ extends Screen {
             }
 
             @Override
-            public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
                 if (this.isSelected() && this.fromReportedPlayer) {
-                    this.drawCheckmark(matrices, y, x, entryHeight);
+                    this.drawCheckmark(context, y, x, entryHeight);
                 }
                 int i = x + this.getIndent();
                 int j = y + 1 + (entryHeight - ((ChatSelectionScreen)ChatSelectionScreen.this).textRenderer.fontHeight) / 2;
-                DrawableHelper.drawTextWithShadow(matrices, ChatSelectionScreen.this.textRenderer, Language.getInstance().reorder(this.truncatedContent), i, j, this.fromReportedPlayer ? -1 : -1593835521);
+                context.drawTextWithShadow(ChatSelectionScreen.this.textRenderer, Language.getInstance().reorder(this.truncatedContent), i, j, this.fromReportedPlayer ? -1 : -1593835521);
                 if (this.fullContent != null && hovered) {
                     ChatSelectionScreen.this.setTooltip(this.fullContent);
                 }
                 int k = ChatSelectionScreen.this.textRenderer.getWidth(this.truncatedContent);
-                this.renderIndicator(matrices, i + k + 4, y, entryHeight, mouseX, mouseY);
+                this.renderIndicator(context, i + k + 4, y, entryHeight, mouseX, mouseY);
             }
 
-            private void renderIndicator(MatrixStack matrices, int x, int y, int entryHeight, int mouseX, int mouseY) {
+            private void renderIndicator(DrawContext context, int x, int y, int entryHeight, int mouseX, int mouseY) {
                 if (this.indicatorIcon != null) {
                     int i = y + (entryHeight - this.indicatorIcon.height) / 2;
-                    this.indicatorIcon.draw(matrices, x, i);
+                    this.indicatorIcon.draw(context, x, i);
                     if (this.originalContent != null && mouseX >= x && mouseX <= x + this.indicatorIcon.width && mouseY >= i && mouseY <= i + this.indicatorIcon.height) {
                         ChatSelectionScreen.this.setTooltip(this.originalContent);
                     }
                 }
             }
 
-            private void drawCheckmark(MatrixStack matrices, int y, int x, int entryHeight) {
+            private void drawCheckmark(DrawContext context, int y, int x, int entryHeight) {
                 int i = x;
                 int j = y + (entryHeight - 8) / 2;
-                RenderSystem.setShaderTexture(0, CHECKMARK);
                 RenderSystem.enableBlend();
-                DrawableHelper.drawTexture(matrices, i, j, 0.0f, 0.0f, 9, 8, 9, 8);
+                context.drawTexture(CHECKMARK, i, j, 0.0f, 0.0f, 9, 8, 9, 8);
                 RenderSystem.disableBlend();
             }
 
@@ -341,7 +340,7 @@ extends Screen {
 
             @Override
             public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-                if (keyCode == 257 || keyCode == 32 || keyCode == 335) {
+                if (KeyCodes.isToggle(keyCode)) {
                     return this.toggle();
                 }
                 return false;
@@ -387,17 +386,12 @@ extends Screen {
             }
 
             @Override
-            public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
                 int i = x - 12 - 4;
                 int j = y + (entryHeight - 12) / 2;
-                this.drawSkin(matrices, i, j, this.skinTextureId);
+                PlayerSkinDrawer.draw(context, this.skinTextureId, i, j, 12);
                 int k = y + 1 + (entryHeight - ((ChatSelectionScreen)ChatSelectionScreen.this).textRenderer.fontHeight) / 2;
-                DrawableHelper.drawTextWithShadow(matrices, ChatSelectionScreen.this.textRenderer, this.headingText, x, k, this.fromReportedPlayer ? -1 : -1593835521);
-            }
-
-            private void drawSkin(MatrixStack matrices, int x, int y, Identifier skinTextureId) {
-                RenderSystem.setShaderTexture(0, skinTextureId);
-                PlayerSkinDrawer.draw(matrices, x, y, 12);
+                context.drawTextWithShadow(ChatSelectionScreen.this.textRenderer, this.headingText, x, k, this.fromReportedPlayer ? -1 : -1593835521);
             }
         }
 
@@ -433,7 +427,7 @@ extends Screen {
         public class SeparatorEntry
         extends Entry {
             @Override
-            public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             }
         }
 
@@ -448,13 +442,13 @@ extends Screen {
             }
 
             @Override
-            public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
                 int i = y + entryHeight / 2;
                 int j = x + entryWidth - 8;
                 int k = ChatSelectionScreen.this.textRenderer.getWidth(this.text);
                 int l = (x + j - k) / 2;
                 int m = i - ((ChatSelectionScreen)ChatSelectionScreen.this).textRenderer.fontHeight / 2;
-                DrawableHelper.drawTextWithShadow(matrices, ChatSelectionScreen.this.textRenderer, this.text, l, m, -6250336);
+                context.drawTextWithShadow(ChatSelectionScreen.this.textRenderer, this.text, l, m, -6250336);
             }
 
             @Override

@@ -58,7 +58,7 @@ extends ZombieEntity {
     public boolean tryAttack(Entity target) {
         boolean bl = super.tryAttack(target);
         if (bl && this.getMainHandStack().isEmpty() && target instanceof LivingEntity) {
-            float f = this.world.getLocalDifficulty(this.getBlockPos()).getLocalDifficulty();
+            float f = this.getWorld().getLocalDifficulty(this.getBlockPos()).getLocalDifficulty();
             ((LivingEntity)target).addStatusEffect(new StatusEffectInstance(StatusEffects.HUNGER, 140 * (int)f), this);
         }
         return bl;
@@ -73,7 +73,7 @@ extends ZombieEntity {
     protected void convertInWater() {
         this.convertTo(EntityType.ZOMBIE);
         if (!this.isSilent()) {
-            this.world.syncWorldEvent(null, 1041, this.getBlockPos(), 0);
+            this.getWorld().syncWorldEvent(null, 1041, this.getBlockPos(), 0);
         }
     }
 

@@ -212,9 +212,10 @@ public class Keyboard {
                 return true;
             }
             case 83: {
-                Path path = TextureUtil.getDebugTexturePath(this.client.runDirectory.toPath()).toAbsolutePath();
-                this.client.getTextureManager().dumpDynamicTextures(path);
-                MutableText text = Text.literal(path.toString()).formatted(Formatting.UNDERLINE).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, path.toFile().toString())));
+                Path path = this.client.runDirectory.toPath().toAbsolutePath();
+                Path path2 = TextureUtil.getDebugTexturePath(path);
+                this.client.getTextureManager().dumpDynamicTextures(path2);
+                MutableText text = Text.literal(path.relativize(path2).toString()).formatted(Formatting.UNDERLINE).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, path2.toFile().toString())));
                 this.debugLog("debug.dump_dynamic_textures", text);
                 return true;
             }
@@ -238,7 +239,7 @@ public class Keyboard {
                     return false;
                 }
                 this.debugLog("debug.copy_location.message", new Object[0]);
-                this.setClipboard(String.format(Locale.ROOT, "/execute in %s run tp @s %.2f %.2f %.2f %.2f %.2f", this.client.player.world.getRegistryKey().getValue(), this.client.player.getX(), this.client.player.getY(), this.client.player.getZ(), Float.valueOf(this.client.player.getYaw()), Float.valueOf(this.client.player.getPitch())));
+                this.setClipboard(String.format(Locale.ROOT, "/execute in %s run tp @s %.2f %.2f %.2f %.2f %.2f", this.client.player.getWorld().getRegistryKey().getValue(), this.client.player.getX(), this.client.player.getY(), this.client.player.getZ(), Float.valueOf(this.client.player.getYaw()), Float.valueOf(this.client.player.getPitch())));
                 return true;
             }
         }
@@ -253,7 +254,7 @@ public class Keyboard {
         switch (hitResult.getType()) {
             case BLOCK: {
                 BlockPos blockPos = ((BlockHitResult)hitResult).getBlockPos();
-                BlockState blockState = this.client.player.world.getBlockState(blockPos);
+                BlockState blockState = this.client.player.getWorld().getBlockState(blockPos);
                 if (hasQueryPermission) {
                     if (queryServer) {
                         this.client.player.networkHandler.getDataQueryHandler().queryBlockNbt(blockPos, nbt -> {
@@ -262,7 +263,7 @@ public class Keyboard {
                         });
                         break;
                     }
-                    BlockEntity blockEntity = this.client.player.world.getBlockEntity(blockPos);
+                    BlockEntity blockEntity = this.client.player.getWorld().getBlockEntity(blockPos);
                     NbtCompound nbtCompound = blockEntity != null ? blockEntity.createNbt() : null;
                     this.copyBlock(blockState, blockPos, nbtCompound);
                     this.debugLog("debug.inspect.client.block", new Object[0]);
@@ -390,7 +391,7 @@ public class Keyboard {
                 return;
             }
         }
-        if (this.client.currentScreen == null || this.client.currentScreen.passEvents) {
+        if (this.client.currentScreen == null) {
             InputUtil.Key key2 = InputUtil.fromKeyCode(key, scancode);
             if (action == 0) {
                 KeyBinding.setKeyPressed(key2, false);
@@ -408,16 +409,14 @@ public class Keyboard {
                     this.client.gameRenderer.togglePostProcessorEnabled();
                 }
                 bl2 = false;
-                if (this.client.currentScreen == null) {
-                    if (key == 256) {
-                        boolean bl3 = InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 292);
-                        this.client.openPauseMenu(bl3);
-                    }
-                    bl2 = InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 292) && this.processF3(key);
-                    this.switchF3State |= bl2;
-                    if (key == 290) {
-                        boolean bl = this.client.options.hudHidden = !this.client.options.hudHidden;
-                    }
+                if (key == 256) {
+                    boolean bl3 = InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 292);
+                    this.client.openPauseMenu(bl3);
+                }
+                bl2 = InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 292) && this.processF3(key);
+                this.switchF3State |= bl2;
+                if (key == 290) {
+                    boolean bl = this.client.options.hudHidden = !this.client.options.hudHidden;
                 }
                 if (bl2) {
                     KeyBinding.setKeyPressed(key2, false);

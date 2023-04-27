@@ -117,11 +117,11 @@ public class Explosion {
         for (double k = 0.0; k <= 1.0; k += d) {
             for (double l = 0.0; l <= 1.0; l += e) {
                 for (double m = 0.0; m <= 1.0; m += f) {
-                    double p;
-                    double o;
                     double n = MathHelper.lerp(k, box.minX, box.maxX);
-                    Vec3d vec3d = new Vec3d(n + g, o = MathHelper.lerp(l, box.minY, box.maxY), (p = MathHelper.lerp(m, box.minZ, box.maxZ)) + h);
-                    if (entity.world.raycast(new RaycastContext(vec3d, source, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity)).getType() == HitResult.Type.MISS) {
+                    double o = MathHelper.lerp(l, box.minY, box.maxY);
+                    double p = MathHelper.lerp(m, box.minZ, box.maxZ);
+                    Vec3d vec3d = new Vec3d(n + g, o, p + h);
+                    if (entity.getWorld().raycast(new RaycastContext(vec3d, source, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity)).getType() == HitResult.Type.MISS) {
                         ++i;
                     }
                     ++j;

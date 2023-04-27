@@ -74,10 +74,10 @@ extends Entity {
         } else if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.03, 0.0));
         }
-        if (this.world.getFluidState(this.getBlockPos()).isIn(FluidTags.LAVA)) {
+        if (this.getWorld().getFluidState(this.getBlockPos()).isIn(FluidTags.LAVA)) {
             this.setVelocity((this.random.nextFloat() - this.random.nextFloat()) * 0.2f, 0.2f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
         }
-        if (!this.world.isSpaceEmpty(this.getBoundingBox())) {
+        if (!this.getWorld().isSpaceEmpty(this.getBoundingBox())) {
             this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().minY + this.getBoundingBox().maxY) / 2.0, this.getZ());
         }
         if (this.age % 20 == 1) {
@@ -92,11 +92,11 @@ extends Entity {
         }
         this.move(MovementType.SELF, this.getVelocity());
         float f = 0.98f;
-        if (this.onGround) {
-            f = this.world.getBlockState(BlockPos.ofFloored(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
+        if (this.isOnGround()) {
+            f = this.getWorld().getBlockState(BlockPos.ofFloored(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
         }
         this.setVelocity(this.getVelocity().multiply(f, 0.98, f));
-        if (this.onGround) {
+        if (this.isOnGround()) {
             this.setVelocity(this.getVelocity().multiply(1.0, -0.9, 1.0));
         }
         ++this.orbAge;
@@ -107,10 +107,10 @@ extends Entity {
 
     private void expensiveUpdate() {
         if (this.target == null || this.target.squaredDistanceTo(this) > 64.0) {
-            this.target = this.world.getClosestPlayer(this, 8.0);
+            this.target = this.getWorld().getClosestPlayer(this, 8.0);
         }
-        if (this.world instanceof ServerWorld) {
-            List<ExperienceOrbEntity> list = this.world.getEntitiesByType(TypeFilter.instanceOf(ExperienceOrbEntity.class), this.getBoundingBox().expand(0.5), this::isMergeable);
+        if (this.getWorld() instanceof ServerWorld) {
+            List<ExperienceOrbEntity> list = this.getWorld().getEntitiesByType(TypeFilter.instanceOf(ExperienceOrbEntity.class), this.getBoundingBox().expand(0.5), this::isMergeable);
             for (ExperienceOrbEntity experienceOrbEntity : list) {
                 this.merge(experienceOrbEntity);
             }
@@ -167,7 +167,7 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return true;
         }
         this.scheduleVelocityUpdate();
@@ -196,7 +196,7 @@ extends Entity {
 
     @Override
     public void onPlayerCollision(PlayerEntity player) {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         if (player.experiencePickUpDelay == 0) {

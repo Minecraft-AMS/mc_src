@@ -132,8 +132,11 @@ public class Models {
     public static final Model TEMPLATE_CAULDRON_LEVEL2 = Models.block("template_cauldron_level2", TextureKey.CONTENT, TextureKey.INSIDE, TextureKey.PARTICLE, TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE);
     public static final Model TEMPLATE_CAULDRON_FULL = Models.block("template_cauldron_full", TextureKey.CONTENT, TextureKey.INSIDE, TextureKey.PARTICLE, TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE);
     public static final Model TEMPLATE_AZALEA = Models.block("template_azalea", TextureKey.TOP, TextureKey.SIDE);
-    public static final Model TEMPLATE_POTTED_AZALEA_BUSH = Models.block("template_potted_azalea_bush", TextureKey.TOP, TextureKey.SIDE);
+    public static final Model TEMPLATE_POTTED_AZALEA_BUSH = Models.block("template_potted_azalea_bush", TextureKey.PLANT, TextureKey.TOP, TextureKey.SIDE);
+    public static final Model TEMPLATE_POTTED_FLOWERING_AZALEA_BUSH = Models.block("template_potted_azalea_bush", TextureKey.PLANT, TextureKey.TOP, TextureKey.SIDE);
+    public static final Model SNIFFER_EGG = Models.block("sniffer_egg", TextureKey.TOP, TextureKey.BOTTOM, TextureKey.NORTH, TextureKey.SOUTH, TextureKey.EAST, TextureKey.WEST);
     public static final Model GENERATED = Models.item("generated", TextureKey.LAYER0);
+    public static final Model TEMPLATE_MUSIC_DISC = Models.item("template_music_disc", TextureKey.LAYER0);
     public static final Model HANDHELD = Models.item("handheld", TextureKey.LAYER0);
     public static final Model HANDHELD_ROD = Models.item("handheld_rod", TextureKey.LAYER0);
     public static final Model GENERATED_TWO_LAYERS = Models.item("generated", TextureKey.LAYER0, TextureKey.LAYER1);

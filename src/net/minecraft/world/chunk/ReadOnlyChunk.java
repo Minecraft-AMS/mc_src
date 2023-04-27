@@ -9,10 +9,12 @@ package net.minecraft.world.chunk;
 
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.class_8528;
 import net.minecraft.entity.Entity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
@@ -227,8 +229,8 @@ extends ProtoChunk {
     }
 
     @Override
-    public Stream<BlockPos> getLightSourcesStream() {
-        return this.wrapped.getLightSourcesStream();
+    public void forEachBlockMatchingPredicate(Predicate<BlockState> predicate, BiConsumer<BlockPos, BlockState> biConsumer) {
+        this.wrapped.forEachBlockMatchingPredicate(predicate, biConsumer);
     }
 
     @Override
@@ -298,6 +300,16 @@ extends ProtoChunk {
         if (this.field_34554) {
             this.wrapped.populateBiomes(biomeSupplier, sampler);
         }
+    }
+
+    @Override
+    public void method_51522() {
+        this.wrapped.method_51522();
+    }
+
+    @Override
+    public class_8528 getLightSourcesStream() {
+        return this.wrapped.getLightSourcesStream();
     }
 }
 

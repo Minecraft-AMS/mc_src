@@ -18,10 +18,10 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import java.util.Arrays;
 import java.util.Collection;
 import net.minecraft.advancement.Advancement;
+import net.minecraft.loot.LootDataType;
+import net.minecraft.loot.LootManager;
 import net.minecraft.loot.condition.LootCondition;
-import net.minecraft.loot.condition.LootConditionManager;
 import net.minecraft.loot.function.LootFunction;
-import net.minecraft.loot.function.LootFunctionManager;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -57,8 +57,8 @@ implements ArgumentType<Identifier> {
 
     public static LootCondition getPredicateArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
         Identifier identifier = IdentifierArgumentType.getIdentifier(context, argumentName);
-        LootConditionManager lootConditionManager = ((ServerCommandSource)context.getSource()).getServer().getPredicateManager();
-        LootCondition lootCondition = lootConditionManager.get(identifier);
+        LootManager lootManager = ((ServerCommandSource)context.getSource()).getServer().getLootManager();
+        LootCondition lootCondition = lootManager.getElement(LootDataType.PREDICATES, identifier);
         if (lootCondition == null) {
             throw UNKNOWN_PREDICATE_EXCEPTION.create((Object)identifier);
         }
@@ -67,8 +67,8 @@ implements ArgumentType<Identifier> {
 
     public static LootFunction getItemModifierArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
         Identifier identifier = IdentifierArgumentType.getIdentifier(context, argumentName);
-        LootFunctionManager lootFunctionManager = ((ServerCommandSource)context.getSource()).getServer().getItemModifierManager();
-        LootFunction lootFunction = lootFunctionManager.get(identifier);
+        LootManager lootManager = ((ServerCommandSource)context.getSource()).getServer().getLootManager();
+        LootFunction lootFunction = lootManager.getElement(LootDataType.ITEM_MODIFIERS, identifier);
         if (lootFunction == null) {
             throw UNKNOWN_ITEM_MODIFIER_EXCEPTION.create((Object)identifier);
         }

@@ -38,7 +38,7 @@ extends AbstractPhase {
             double h = e + random.nextGaussian() / 2.0;
             double j = f + random.nextGaussian() / 2.0;
             Vec3d vec3d2 = this.dragon.getVelocity();
-            this.dragon.world.addParticle(ParticleTypes.DRAGON_BREATH, g, h, j, -vec3d.x * (double)0.08f + vec3d2.x, -vec3d.y * (double)0.3f + vec3d2.y, -vec3d.z * (double)0.08f + vec3d2.z);
+            this.dragon.getWorld().addParticle(ParticleTypes.DRAGON_BREATH, g, h, j, -vec3d.x * (double)0.08f + vec3d2.x, -vec3d.y * (double)0.3f + vec3d2.y, -vec3d.z * (double)0.08f + vec3d2.z);
             vec3d.rotateY(0.19634955f);
         }
     }
@@ -46,7 +46,7 @@ extends AbstractPhase {
     @Override
     public void serverTick() {
         if (this.target == null) {
-            this.target = Vec3d.ofBottomCenter(this.dragon.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN));
+            this.target = Vec3d.ofBottomCenter(this.dragon.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN));
         }
         if (this.target.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ()) < 1.0) {
             this.dragon.getPhaseManager().create(PhaseType.SITTING_FLAMING).reset();

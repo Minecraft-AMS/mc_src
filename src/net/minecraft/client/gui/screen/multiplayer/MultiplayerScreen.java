@@ -14,6 +14,7 @@ import com.mojang.logging.LogUtils;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.AddServerScreen;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.ConnectScreen;
@@ -25,6 +26,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.EmptyWidget;
 import net.minecraft.client.gui.widget.GridWidget;
 import net.minecraft.client.gui.widget.SimplePositioningWidget;
+import net.minecraft.client.input.KeyCodes;
 import net.minecraft.client.network.LanServerInfo;
 import net.minecraft.client.network.LanServerQueryManager;
 import net.minecraft.client.network.MultiplayerServerListPinger;
@@ -32,7 +34,6 @@ import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.option.ServerList;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -223,7 +224,7 @@ extends Screen {
             return true;
         }
         if (this.serverListWidget.getSelectedOrNull() != null) {
-            if (keyCode == 257 || keyCode == 335) {
+            if (KeyCodes.isToggle(keyCode)) {
                 this.connect();
                 return true;
             }
@@ -233,14 +234,14 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.multiplayerScreenTooltip = null;
-        this.renderBackground(matrices);
-        this.serverListWidget.render(matrices, mouseX, mouseY, delta);
-        MultiplayerScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+        this.renderBackground(context);
+        this.serverListWidget.render(context, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
         if (this.multiplayerScreenTooltip != null) {
-            this.renderTooltip(matrices, this.multiplayerScreenTooltip, mouseX, mouseY);
+            context.drawTooltip(this.textRenderer, this.multiplayerScreenTooltip, mouseX, mouseY);
         }
     }
 
@@ -255,7 +256,7 @@ extends Screen {
     }
 
     private void connect(ServerInfo entry) {
-        ConnectScreen.connect(this, this.client, ServerAddress.parse(entry.address), entry);
+        ConnectScreen.connect(this, this.client, ServerAddress.parse(entry.address), entry, false);
     }
 
     public void select(MultiplayerServerListWidget.Entry entry) {

@@ -47,7 +47,7 @@ public final class EntityPredicates {
             if (!entity.isPushable()) {
                 return false;
             }
-            if (!(!entity2.world.isClient || entity instanceof PlayerEntity && ((PlayerEntity)entity).isMainPlayer())) {
+            if (!(!entity2.getWorld().isClient || entity instanceof PlayerEntity && ((PlayerEntity)entity).isMainPlayer())) {
                 return false;
             }
             AbstractTeam abstractTeam2 = entity.getScoreboardTeam();

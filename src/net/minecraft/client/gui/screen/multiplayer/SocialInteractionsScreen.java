@@ -8,7 +8,6 @@
  */
 package net.minecraft.client.gui.screen.multiplayer;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Set;
@@ -17,6 +16,7 @@ import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsPlayerListWidget;
@@ -26,7 +26,6 @@ import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.network.SocialInteractionsManager;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -189,41 +188,32 @@ extends Screen {
     }
 
     @Override
-    public void renderBackground(MatrixStack matrices) {
+    public void renderBackground(DrawContext context) {
         int i = this.getSearchBoxX() + 3;
-        super.renderBackground(matrices);
-        RenderSystem.setShaderTexture(0, SOCIAL_INTERACTIONS_TEXTURE);
-        SocialInteractionsScreen.drawNineSlicedTexture(matrices, i, 64, 236, this.getScreenHeight() + 16, 8, 236, 34, 1, 1);
-        SocialInteractionsScreen.drawTexture(matrices, i + 10, 76, 243, 1, 12, 12);
+        super.renderBackground(context);
+        context.drawNineSlicedTexture(SOCIAL_INTERACTIONS_TEXTURE, i, 64, 236, this.getScreenHeight() + 16, 8, 236, 34, 1, 1);
+        context.drawTexture(SOCIAL_INTERACTIONS_TEXTURE, i + 10, 76, 243, 1, 12, 12);
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.updateServerLabel(this.client);
-        this.renderBackground(matrices);
+        this.renderBackground(context);
         if (this.serverLabel != null) {
-            SocialInteractionsScreen.drawTextWithShadow(matrices, this.client.textRenderer, this.serverLabel, this.getSearchBoxX() + 8, 35, -1);
+            context.drawTextWithShadow(this.client.textRenderer, this.serverLabel, this.getSearchBoxX() + 8, 35, -1);
         }
         if (!this.playerList.isEmpty()) {
-            this.playerList.render(matrices, mouseX, mouseY, delta);
+            this.playerList.render(context, mouseX, mouseY, delta);
         } else if (!this.searchBox.getText().isEmpty()) {
-            SocialInteractionsScreen.drawCenteredTextWithShadow(matrices, this.client.textRenderer, EMPTY_SEARCH_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
+            context.drawCenteredTextWithShadow(this.client.textRenderer, EMPTY_SEARCH_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
         } else if (this.currentTab == Tab.HIDDEN) {
-            SocialInteractionsScreen.drawCenteredTextWithShadow(matrices, this.client.textRenderer, EMPTY_HIDDEN_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
+            context.drawCenteredTextWithShadow(this.client.textRenderer, EMPTY_HIDDEN_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
         } else if (this.currentTab == Tab.BLOCKED) {
-            SocialInteractionsScreen.drawCenteredTextWithShadow(matrices, this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
+            context.drawCenteredTextWithShadow(this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (72 + this.getPlayerListBottom()) / 2, -1);
         }
-        this.searchBox.render(matrices, mouseX, mouseY, delta);
+        this.searchBox.render(context, mouseX, mouseY, delta);
         this.blockingButton.visible = this.currentTab == Tab.BLOCKED;
-        super.render(matrices, mouseX, mouseY, delta);
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (this.searchBox.isFocused()) {
-            this.searchBox.mouseClicked(mouseX, mouseY, button);
-        }
-        return super.mouseClicked(mouseX, mouseY, button) || this.playerList.mouseClicked(mouseX, mouseY, button);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override

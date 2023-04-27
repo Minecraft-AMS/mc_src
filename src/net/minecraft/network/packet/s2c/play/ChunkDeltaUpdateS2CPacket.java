@@ -25,11 +25,9 @@ implements Packet<ClientPlayPacketListener> {
     private final ChunkSectionPos sectionPos;
     private final short[] positions;
     private final BlockState[] blockStates;
-    private final boolean noLightingUpdates;
 
-    public ChunkDeltaUpdateS2CPacket(ChunkSectionPos sectionPos, ShortSet positions, ChunkSection section, boolean noLightingUpdates) {
+    public ChunkDeltaUpdateS2CPacket(ChunkSectionPos sectionPos, ShortSet positions, ChunkSection section) {
         this.sectionPos = sectionPos;
-        this.noLightingUpdates = noLightingUpdates;
         int i = positions.size();
         this.positions = new short[i];
         this.blockStates = new BlockState[i];
@@ -45,7 +43,6 @@ implements Packet<ClientPlayPacketListener> {
 
     public ChunkDeltaUpdateS2CPacket(PacketByteBuf buf) {
         this.sectionPos = ChunkSectionPos.from(buf.readLong());
-        this.noLightingUpdates = buf.readBoolean();
         int i = buf.readVarInt();
         this.positions = new short[i];
         this.blockStates = new BlockState[i];
@@ -59,7 +56,6 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeLong(this.sectionPos.asLong());
-        buf.writeBoolean(this.noLightingUpdates);
         buf.writeVarInt(this.positions.length);
         for (int i = 0; i < this.positions.length; ++i) {
             buf.writeVarLong((long)Block.getRawIdFromState(this.blockStates[i]) << 12 | (long)this.positions[i]);
@@ -78,10 +74,6 @@ implements Packet<ClientPlayPacketListener> {
             mutable.set(this.sectionPos.unpackBlockX(s), this.sectionPos.unpackBlockY(s), this.sectionPos.unpackBlockZ(s));
             visitor.accept(mutable, this.blockStates[i]);
         }
-    }
-
-    public boolean shouldSkipLightingUpdates() {
-        return this.noLightingUpdates;
     }
 }
 

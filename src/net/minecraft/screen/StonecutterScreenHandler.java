@@ -64,7 +64,7 @@ extends ScreenHandler {
         super(ScreenHandlerType.STONECUTTER, syncId);
         int i;
         this.context = context;
-        this.world = playerInventory.player.world;
+        this.world = playerInventory.player.getWorld();
         this.inputSlot = this.addSlot(new Slot(this.input, 0, 20, 33));
         this.outputSlot = this.addSlot(new Slot(this.output, 1, 143, 33){
 
@@ -75,8 +75,8 @@ extends ScreenHandler {
 
             @Override
             public void onTakeItem(PlayerEntity player, ItemStack stack) {
-                stack.onCraft(player.world, player, stack.getCount());
-                StonecutterScreenHandler.this.output.unlockLastRecipe(player);
+                stack.onCraft(player.getWorld(), player, stack.getCount());
+                StonecutterScreenHandler.this.output.unlockLastRecipe(player, this.getInputStacks());
                 ItemStack itemStack = StonecutterScreenHandler.this.inputSlot.takeStack(1);
                 if (!itemStack.isEmpty()) {
                     StonecutterScreenHandler.this.populateResult();
@@ -89,6 +89,10 @@ extends ScreenHandler {
                     }
                 });
                 super.onTakeItem(player, stack);
+            }
+
+            private List<ItemStack> getInputStacks() {
+                return List.of(StonecutterScreenHandler.this.inputSlot.getStack());
             }
         });
         for (i = 0; i < 3; ++i) {
@@ -193,7 +197,7 @@ extends ScreenHandler {
             Item item = itemStack2.getItem();
             itemStack = itemStack2.copy();
             if (slot == 1) {
-                item.onCraft(itemStack2, player.world, player);
+                item.onCraft(itemStack2, player.getWorld(), player);
                 if (!this.insertItem(itemStack2, 2, 38, true)) {
                     return ItemStack.EMPTY;
                 }

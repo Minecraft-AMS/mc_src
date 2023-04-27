@@ -179,7 +179,7 @@ extends HostileEntity {
     @Override
     public void setBaby(boolean baby) {
         this.getDataTracker().set(BABY, baby);
-        if (this.world != null && !this.world.isClient) {
+        if (this.getWorld() != null && !this.getWorld().isClient) {
             EntityAttributeInstance entityAttributeInstance = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
             entityAttributeInstance.removeModifier(BABY_SPEED_BONUS);
             if (baby) {
@@ -202,7 +202,7 @@ extends HostileEntity {
 
     @Override
     public void tick() {
-        if (!this.world.isClient && this.isAlive() && !this.isAiDisabled()) {
+        if (!this.getWorld().isClient && this.isAlive() && !this.isAiDisabled()) {
             if (this.isConvertingInWater()) {
                 --this.ticksUntilWaterConversion;
                 if (this.ticksUntilWaterConversion < 0) {
@@ -255,14 +255,14 @@ extends HostileEntity {
     protected void convertInWater() {
         this.convertTo(EntityType.DROWNED);
         if (!this.isSilent()) {
-            this.world.syncWorldEvent(null, 1040, this.getBlockPos(), 0);
+            this.getWorld().syncWorldEvent(null, 1040, this.getBlockPos(), 0);
         }
     }
 
     protected void convertTo(EntityType<? extends ZombieEntity> entityType) {
         ZombieEntity zombieEntity = this.convertTo(entityType, true);
         if (zombieEntity != null) {
-            zombieEntity.applyAttributeModifiers(zombieEntity.world.getLocalDifficulty(zombieEntity.getBlockPos()).getClampedLocalDifficulty());
+            zombieEntity.applyAttributeModifiers(zombieEntity.getWorld().getLocalDifficulty(zombieEntity.getBlockPos()).getClampedLocalDifficulty());
             zombieEntity.setCanBreakDoors(zombieEntity.shouldBreakDoors() && this.canBreakDoors());
         }
     }
@@ -276,19 +276,19 @@ extends HostileEntity {
         if (!super.damage(source, amount)) {
             return false;
         }
-        if (!(this.world instanceof ServerWorld)) {
+        if (!(this.getWorld() instanceof ServerWorld)) {
             return false;
         }
-        ServerWorld serverWorld = (ServerWorld)this.world;
+        ServerWorld serverWorld = (ServerWorld)this.getWorld();
         LivingEntity livingEntity = this.getTarget();
         if (livingEntity == null && source.getAttacker() instanceof LivingEntity) {
             livingEntity = (LivingEntity)source.getAttacker();
         }
-        if (livingEntity != null && this.world.getDifficulty() == Difficulty.HARD && (double)this.random.nextFloat() < this.getAttributeValue(EntityAttributes.ZOMBIE_SPAWN_REINFORCEMENTS) && this.world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) {
+        if (livingEntity != null && this.getWorld().getDifficulty() == Difficulty.HARD && (double)this.random.nextFloat() < this.getAttributeValue(EntityAttributes.ZOMBIE_SPAWN_REINFORCEMENTS) && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) {
             int i = MathHelper.floor(this.getX());
             int j = MathHelper.floor(this.getY());
             int k = MathHelper.floor(this.getZ());
-            ZombieEntity zombieEntity = new ZombieEntity(this.world);
+            ZombieEntity zombieEntity = new ZombieEntity(this.getWorld());
             for (int l = 0; l < 50; ++l) {
                 int m = i + MathHelper.nextInt(this.random, 7, 40) * MathHelper.nextInt(this.random, -1, 1);
                 int n = j + MathHelper.nextInt(this.random, 7, 40) * MathHelper.nextInt(this.random, -1, 1);
@@ -296,11 +296,11 @@ extends HostileEntity {
                 BlockPos blockPos = new BlockPos(m, n, o);
                 EntityType<?> entityType = zombieEntity.getType();
                 SpawnRestriction.Location location = SpawnRestriction.getLocation(entityType);
-                if (!SpawnHelper.canSpawn(location, this.world, blockPos, entityType) || !SpawnRestriction.canSpawn(entityType, serverWorld, SpawnReason.REINFORCEMENT, blockPos, this.world.random)) continue;
+                if (!SpawnHelper.canSpawn(location, this.getWorld(), blockPos, entityType) || !SpawnRestriction.canSpawn(entityType, serverWorld, SpawnReason.REINFORCEMENT, blockPos, this.getWorld().random)) continue;
                 zombieEntity.setPosition(m, n, o);
-                if (this.world.isPlayerInRange(m, n, o, 7.0) || !this.world.doesNotIntersectEntities(zombieEntity) || !this.world.isSpaceEmpty(zombieEntity) || this.world.containsFluid(zombieEntity.getBoundingBox())) continue;
+                if (this.getWorld().isPlayerInRange(m, n, o, 7.0) || !this.getWorld().doesNotIntersectEntities(zombieEntity) || !this.getWorld().isSpaceEmpty(zombieEntity) || this.getWorld().containsFluid(zombieEntity.getBoundingBox())) continue;
                 zombieEntity.setTarget(livingEntity);
-                zombieEntity.initialize(serverWorld, this.world.getLocalDifficulty(zombieEntity.getBlockPos()), SpawnReason.REINFORCEMENT, null, null);
+                zombieEntity.initialize(serverWorld, this.getWorld().getLocalDifficulty(zombieEntity.getBlockPos()), SpawnReason.REINFORCEMENT, null, null);
                 serverWorld.spawnEntityAndPassengers(zombieEntity);
                 this.getAttributeInstance(EntityAttributes.ZOMBIE_SPAWN_REINFORCEMENTS).addPersistentModifier(new EntityAttributeModifier("Zombie reinforcement caller charge", -0.05f, EntityAttributeModifier.Operation.ADDITION));
                 zombieEntity.getAttributeInstance(EntityAttributes.ZOMBIE_SPAWN_REINFORCEMENTS).addPersistentModifier(new EntityAttributeModifier("Zombie reinforcement callee charge", -0.05f, EntityAttributeModifier.Operation.ADDITION));
@@ -314,7 +314,7 @@ extends HostileEntity {
     public boolean tryAttack(Entity target) {
         boolean bl = super.tryAttack(target);
         if (bl) {
-            float f = this.world.getLocalDifficulty(this.getBlockPos()).getLocalDifficulty();
+            float f = this.getWorld().getLocalDifficulty(this.getBlockPos()).getLocalDifficulty();
             if (this.getMainHandStack().isEmpty() && this.isOnFire() && this.random.nextFloat() < f * 0.3f) {
                 target.setOnFireFor(2 * (int)f);
             }
@@ -355,7 +355,7 @@ extends HostileEntity {
     protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         super.initEquipment(random, localDifficulty);
         float f = random.nextFloat();
-        float f2 = this.world.getDifficulty() == Difficulty.HARD ? 0.05f : 0.01f;
+        float f2 = this.getWorld().getDifficulty() == Difficulty.HARD ? 0.05f : 0.01f;
         if (f < f2) {
             int i = random.nextInt(3);
             if (i == 0) {
@@ -454,7 +454,7 @@ extends HostileEntity {
                             chickenEntity.setHasJockey(true);
                             this.startRiding(chickenEntity);
                         }
-                    } else if ((double)random.nextFloat() < 0.05 && (chickenEntity2 = EntityType.CHICKEN.create(this.world)) != null) {
+                    } else if ((double)random.nextFloat() < 0.05 && (chickenEntity2 = EntityType.CHICKEN.create(this.getWorld())) != null) {
                         chickenEntity2.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), 0.0f);
                         chickenEntity2.initialize(world, difficulty, SpawnReason.JOCKEY, null, null);
                         chickenEntity2.setHasJockey(true);

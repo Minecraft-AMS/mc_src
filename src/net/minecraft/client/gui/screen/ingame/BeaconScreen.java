@@ -10,20 +10,19 @@
 package net.minecraft.client.gui.screen.ingame;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
@@ -121,32 +120,31 @@ extends HandledScreen<BeaconScreenHandler> {
     }
 
     @Override
-    protected void drawForeground(MatrixStack matrices, int mouseX, int mouseY) {
-        BeaconScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, PRIMARY_POWER_TEXT, 62, 10, 0xE0E0E0);
-        BeaconScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, SECONDARY_POWER_TEXT, 169, 10, 0xE0E0E0);
+    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+        context.drawCenteredTextWithShadow(this.textRenderer, PRIMARY_POWER_TEXT, 62, 10, 0xE0E0E0);
+        context.drawCenteredTextWithShadow(this.textRenderer, SECONDARY_POWER_TEXT, 169, 10, 0xE0E0E0);
     }
 
     @Override
-    protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShaderTexture(0, TEXTURE);
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
         int i = (this.width - this.backgroundWidth) / 2;
         int j = (this.height - this.backgroundHeight) / 2;
-        BeaconScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, 100.0f);
-        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.NETHERITE_INGOT), i + 20, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.EMERALD), i + 41, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.DIAMOND), i + 41 + 22, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.GOLD_INGOT), i + 42 + 44, j + 109);
-        this.itemRenderer.renderInGuiWithOverrides(matrices, new ItemStack(Items.IRON_INGOT), i + 42 + 66, j + 109);
-        matrices.pop();
+        context.drawTexture(TEXTURE, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 100.0f);
+        context.drawItem(new ItemStack(Items.NETHERITE_INGOT), i + 20, j + 109);
+        context.drawItem(new ItemStack(Items.EMERALD), i + 41, j + 109);
+        context.drawItem(new ItemStack(Items.DIAMOND), i + 41 + 22, j + 109);
+        context.drawItem(new ItemStack(Items.GOLD_INGOT), i + 42 + 44, j + 109);
+        context.drawItem(new ItemStack(Items.IRON_INGOT), i + 42 + 66, j + 109);
+        context.getMatrices().pop();
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        super.render(matrices, mouseX, mouseY, delta);
-        this.drawMouseoverTooltip(matrices, mouseX, mouseY);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        super.render(context, mouseX, mouseY, delta);
+        this.drawMouseoverTooltip(context, mouseX, mouseY);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -229,9 +227,8 @@ extends HandledScreen<BeaconScreenHandler> {
         }
 
         @Override
-        protected void renderExtra(MatrixStack matrices) {
-            RenderSystem.setShaderTexture(0, this.sprite.getAtlasId());
-            EffectButtonWidget.drawSprite(matrices, this.getX() + 2, this.getY() + 2, 0, 18, 18, this.sprite);
+        protected void renderExtra(DrawContext context) {
+            context.drawSprite(this.getX() + 2, this.getY() + 2, 0, 18, 18, this.sprite);
         }
 
         @Override
@@ -283,8 +280,8 @@ extends HandledScreen<BeaconScreenHandler> {
         }
 
         @Override
-        protected void renderExtra(MatrixStack matrices) {
-            IconButtonWidget.drawTexture(matrices, this.getX() + 2, this.getY() + 2, this.u, this.v, 18, 18);
+        protected void renderExtra(DrawContext context) {
+            context.drawTexture(TEXTURE, this.getX() + 2, this.getY() + 2, this.u, this.v, 18, 18);
         }
     }
 
@@ -303,8 +300,7 @@ extends HandledScreen<BeaconScreenHandler> {
         }
 
         @Override
-        public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RenderSystem.setShaderTexture(0, TEXTURE);
+        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
             int i = 219;
             int j = 0;
             if (!this.active) {
@@ -314,11 +310,11 @@ extends HandledScreen<BeaconScreenHandler> {
             } else if (this.isSelected()) {
                 j += this.width * 3;
             }
-            BaseButtonWidget.drawTexture(matrices, this.getX(), this.getY(), j, 219, this.width, this.height);
-            this.renderExtra(matrices);
+            context.drawTexture(TEXTURE, this.getX(), this.getY(), j, 219, this.width, this.height);
+            this.renderExtra(context);
         }
 
-        protected abstract void renderExtra(MatrixStack var1);
+        protected abstract void renderExtra(DrawContext var1);
 
         public boolean isDisabled() {
             return this.disabled;

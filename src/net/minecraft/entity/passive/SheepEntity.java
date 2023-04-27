@@ -133,7 +133,7 @@ implements Shearable {
 
     @Override
     public void tickMovement() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             this.eatGrassTimer = Math.max(0, this.eatGrassTimer - 1);
         }
         super.tickMovement();
@@ -212,7 +212,7 @@ implements Shearable {
     public ActionResult interactMob(PlayerEntity player2, Hand hand) {
         ItemStack itemStack = player2.getStackInHand(hand);
         if (itemStack.isOf(Items.SHEARS)) {
-            if (!this.world.isClient && this.isShearable()) {
+            if (!this.getWorld().isClient && this.isShearable()) {
                 this.sheared(SoundCategory.PLAYERS);
                 this.emitGameEvent(GameEvent.SHEAR, player2);
                 itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
@@ -225,7 +225,7 @@ implements Shearable {
 
     @Override
     public void sheared(SoundCategory shearedSoundCategory) {
-        this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_SHEEP_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
+        this.getWorld().playSoundFromEntity(null, this, SoundEvents.ENTITY_SHEEP_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
         this.setSheared(true);
         int i = 1 + this.random.nextInt(3);
         for (int j = 0; j < i; ++j) {
@@ -346,7 +346,7 @@ implements Shearable {
         DyeColor dyeColor = ((SheepEntity)firstParent).getColor();
         DyeColor dyeColor2 = ((SheepEntity)secondParent).getColor();
         CraftingInventory craftingInventory = SheepEntity.createDyeMixingCraftingInventory(dyeColor, dyeColor2);
-        return this.world.getRecipeManager().getFirstMatch(RecipeType.CRAFTING, craftingInventory, this.world).map(recipe -> recipe.craft(craftingInventory, this.world.getRegistryManager())).map(ItemStack::getItem).filter(DyeItem.class::isInstance).map(DyeItem.class::cast).map(DyeItem::getColor).orElseGet(() -> this.world.random.nextBoolean() ? dyeColor : dyeColor2);
+        return this.getWorld().getRecipeManager().getFirstMatch(RecipeType.CRAFTING, craftingInventory, this.getWorld()).map(recipe -> recipe.craft(craftingInventory, this.getWorld().getRegistryManager())).map(ItemStack::getItem).filter(DyeItem.class::isInstance).map(DyeItem.class::cast).map(DyeItem::getColor).orElseGet(() -> this.getWorld().random.nextBoolean() ? dyeColor : dyeColor2);
     }
 
     private static CraftingInventory createDyeMixingCraftingInventory(DyeColor firstColor, DyeColor secondColor) {

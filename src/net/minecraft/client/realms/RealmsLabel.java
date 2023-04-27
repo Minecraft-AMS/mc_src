@@ -10,9 +10,8 @@ package net.minecraft.client.realms;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 
 @Environment(value=EnvType.CLIENT)
@@ -31,8 +30,8 @@ implements Drawable {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        DrawableHelper.drawCenteredTextWithShadow(matrices, MinecraftClient.getInstance().textRenderer, this.text, this.x, this.y, this.color);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        context.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, this.text, this.x, this.y, this.color);
     }
 
     public Text getText() {

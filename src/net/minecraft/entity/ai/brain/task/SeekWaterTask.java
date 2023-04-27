@@ -37,8 +37,8 @@ public class SeekWaterTask {
             Iterable<BlockPos> iterable = BlockPos.iterateOutwards(blockPos3, range, range, range);
             for (BlockPos blockPos4 : iterable) {
                 if (blockPos4.getX() == blockPos3.getX() && blockPos4.getZ() == blockPos3.getZ()) continue;
-                BlockState blockState = entity.world.getBlockState(blockPos4.up());
-                BlockState blockState2 = entity.world.getBlockState(blockPos4);
+                BlockState blockState = entity.getWorld().getBlockState(blockPos4.up());
+                BlockState blockState2 = entity.getWorld().getBlockState(blockPos4);
                 if (!blockState2.isOf(Blocks.WATER)) continue;
                 if (blockState.isAir()) {
                     blockPos = blockPos4.toImmutable();

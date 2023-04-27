@@ -13,7 +13,6 @@
 package net.minecraft.client.realms.gui.screen;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
@@ -24,7 +23,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -37,7 +36,6 @@ import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.util.RealmsTextureManager;
 import net.minecraft.client.realms.util.TextRenderingUtils;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -244,16 +242,16 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.tooltip = null;
         this.currentLink = null;
         this.hoverWarning = false;
-        this.renderBackground(matrices);
-        this.templateList.render(matrices, mouseX, mouseY, delta);
+        this.renderBackground(context);
+        this.templateList.render(context, mouseX, mouseY, delta);
         if (this.noTemplatesMessage != null) {
-            this.renderMessages(matrices, mouseX, mouseY, this.noTemplatesMessage);
+            this.renderMessages(context, mouseX, mouseY, this.noTemplatesMessage);
         }
-        RealmsSelectWorldTemplateScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 13, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 13, 0xFFFFFF);
         if (this.displayWarning) {
             int k;
             int i;
@@ -276,14 +274,14 @@ extends RealmsScreen {
                         k = 0x3366BB;
                     }
                 }
-                RealmsSelectWorldTemplateScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, text, this.width / 2, RealmsSelectWorldTemplateScreen.row(-1 + i), k);
+                context.drawCenteredTextWithShadow(this.textRenderer, text, this.width / 2, RealmsSelectWorldTemplateScreen.row(-1 + i), k);
             }
         }
-        super.render(matrices, mouseX, mouseY, delta);
-        this.renderMousehoverTooltip(matrices, this.tooltip, mouseX, mouseY);
+        super.render(context, mouseX, mouseY, delta);
+        this.renderMousehoverTooltip(context, this.tooltip, mouseX, mouseY);
     }
 
-    private void renderMessages(MatrixStack matrices, int x, int y, List<TextRenderingUtils.Line> messages) {
+    private void renderMessages(DrawContext context, int x, int y, List<TextRenderingUtils.Line> messages) {
         for (int i = 0; i < messages.size(); ++i) {
             TextRenderingUtils.Line line = messages.get(i);
             int j = RealmsSelectWorldTemplateScreen.row(4 + i);
@@ -291,7 +289,7 @@ extends RealmsScreen {
             int l = this.width / 2 - k / 2;
             for (TextRenderingUtils.LineSegment lineSegment : line.segments) {
                 int m = lineSegment.isLink() ? 0x3366BB : 0xFFFFFF;
-                int n = this.textRenderer.drawWithShadow(matrices, lineSegment.renderedText(), (float)l, (float)j, m);
+                int n = context.drawTextWithShadow(this.textRenderer, lineSegment.renderedText(), l, j, m);
                 if (lineSegment.isLink() && x > l && x < n && y > j - 3 && y < j + 8) {
                     this.tooltip = Text.literal(lineSegment.getLinkUrl());
                     this.currentLink = lineSegment.getLinkUrl();
@@ -301,15 +299,15 @@ extends RealmsScreen {
         }
     }
 
-    protected void renderMousehoverTooltip(MatrixStack matrices, @Nullable Text tooltip, int mouseX, int mouseY) {
+    protected void renderMousehoverTooltip(DrawContext context, @Nullable Text tooltip, int mouseX, int mouseY) {
         if (tooltip == null) {
             return;
         }
         int i = mouseX + 12;
         int j = mouseY - 12;
         int k = this.textRenderer.getWidth(tooltip);
-        RealmsSelectWorldTemplateScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
-        this.textRenderer.drawWithShadow(matrices, tooltip, (float)i, (float)j, 0xFFFFFF);
+        context.fillGradient(i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        context.drawTextWithShadow(this.textRenderer, tooltip, i, j, 0xFFFFFF);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -371,8 +369,8 @@ extends RealmsScreen {
         }
 
         @Override
-        public void renderBackground(MatrixStack matrices) {
-            RealmsSelectWorldTemplateScreen.this.renderBackground(matrices);
+        public void renderBackground(DrawContext context) {
+            RealmsSelectWorldTemplateScreen.this.renderBackground(context);
         }
 
         public boolean isEmpty() {
@@ -398,31 +396,29 @@ extends RealmsScreen {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            this.renderWorldTemplateItem(matrices, this.mTemplate, x, y, mouseX, mouseY);
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            this.renderWorldTemplateItem(context, this.mTemplate, x, y, mouseX, mouseY);
         }
 
-        private void renderWorldTemplateItem(MatrixStack matrices, WorldTemplate template, int x, int y, int mouseX, int mouseY) {
+        private void renderWorldTemplateItem(DrawContext context, WorldTemplate template, int x, int y, int mouseX, int mouseY) {
             int i = x + 45 + 20;
-            RealmsSelectWorldTemplateScreen.this.textRenderer.draw(matrices, template.name, (float)i, (float)(y + 2), 0xFFFFFF);
-            RealmsSelectWorldTemplateScreen.this.textRenderer.draw(matrices, template.author, (float)i, (float)(y + 15), 0x6C6C6C);
-            RealmsSelectWorldTemplateScreen.this.textRenderer.draw(matrices, template.version, (float)(i + 227 - RealmsSelectWorldTemplateScreen.this.textRenderer.getWidth(template.version)), (float)(y + 1), 0x6C6C6C);
+            context.drawText(RealmsSelectWorldTemplateScreen.this.textRenderer, template.name, i, y + 2, 0xFFFFFF, false);
+            context.drawText(RealmsSelectWorldTemplateScreen.this.textRenderer, template.author, i, y + 15, 0x6C6C6C, false);
+            context.drawText(RealmsSelectWorldTemplateScreen.this.textRenderer, template.version, i + 227 - RealmsSelectWorldTemplateScreen.this.textRenderer.getWidth(template.version), y + 1, 0x6C6C6C, false);
             if (!("".equals(template.link) && "".equals(template.trailer) && "".equals(template.recommendedPlayers))) {
-                this.drawIcons(matrices, i - 1, y + 25, mouseX, mouseY, template.link, template.trailer, template.recommendedPlayers);
+                this.drawIcons(context, i - 1, y + 25, mouseX, mouseY, template.link, template.trailer, template.recommendedPlayers);
             }
-            this.drawImage(matrices, x, y + 1, mouseX, mouseY, template);
+            this.drawImage(context, x, y + 1, mouseX, mouseY, template);
         }
 
-        private void drawImage(MatrixStack matrices, int x, int y, int mouseX, int mouseY, WorldTemplate template) {
-            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(template.id, template.image));
-            DrawableHelper.drawTexture(matrices, x + 1, y + 1, 0.0f, 0.0f, 38, 38, 38, 38);
-            RenderSystem.setShaderTexture(0, SLOT_FRAME);
-            DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 40, 40, 40, 40);
+        private void drawImage(DrawContext context, int x, int y, int mouseX, int mouseY, WorldTemplate template) {
+            context.drawTexture(RealmsTextureManager.getTextureId(template.id, template.image), x + 1, y + 1, 0.0f, 0.0f, 38, 38, 38, 38);
+            context.drawTexture(SLOT_FRAME, x, y, 0.0f, 0.0f, 40, 40, 40, 40);
         }
 
-        private void drawIcons(MatrixStack matrices, int x, int y, int mouseX, int mouseY, String link, String trailer, String recommendedPlayers) {
+        private void drawIcons(DrawContext context, int x, int y, int mouseX, int mouseY, String link, String trailer, String recommendedPlayers) {
             if (!"".equals(recommendedPlayers)) {
-                RealmsSelectWorldTemplateScreen.this.textRenderer.draw(matrices, recommendedPlayers, (float)x, (float)(y + 4), 0x4C4C4C);
+                context.drawText(RealmsSelectWorldTemplateScreen.this.textRenderer, recommendedPlayers, x, y + 4, 0x4C4C4C, false);
             }
             int i = "".equals(recommendedPlayers) ? 0 : RealmsSelectWorldTemplateScreen.this.textRenderer.getWidth(recommendedPlayers) + 2;
             boolean bl = false;
@@ -440,15 +436,13 @@ extends RealmsScreen {
                 }
             }
             if (!bl3) {
-                RenderSystem.setShaderTexture(0, LINK_ICONS);
                 float f = bl ? 15.0f : 0.0f;
-                DrawableHelper.drawTexture(matrices, x + i, y, f, 0.0f, 15, 15, 30, 15);
+                context.drawTexture(LINK_ICONS, x + i, y, f, 0.0f, 15, 15, 30, 15);
             }
             if (!"".equals(trailer)) {
-                RenderSystem.setShaderTexture(0, TRAILER_ICONS);
                 int j = x + i + (bl3 ? 0 : 17);
                 float g = bl2 ? 15.0f : 0.0f;
-                DrawableHelper.drawTexture(matrices, j, y, g, 0.0f, 15, 15, 30, 15);
+                context.drawTexture(TRAILER_ICONS, j, y, g, 0.0f, 15, 15, 30, 15);
             }
             if (bl) {
                 RealmsSelectWorldTemplateScreen.this.tooltip = INFO_TOOLTIP;

@@ -10,6 +10,7 @@ package net.minecraft.client.font;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.font.TextRenderLayerSet;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -17,9 +18,7 @@ import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class GlyphRenderer {
-    private final RenderLayer textLayer;
-    private final RenderLayer seeThroughTextLayer;
-    private final RenderLayer polygonOffsetTextLayer;
+    private final TextRenderLayerSet textRenderLayers;
     private final float minU;
     private final float maxU;
     private final float minV;
@@ -29,10 +28,8 @@ public class GlyphRenderer {
     private final float minY;
     private final float maxY;
 
-    public GlyphRenderer(RenderLayer textLayer, RenderLayer seeThroughTextLayer, RenderLayer polygonOffsetTextLayer, float minU, float maxU, float minV, float maxV, float minX, float maxX, float minY, float maxY) {
-        this.textLayer = textLayer;
-        this.seeThroughTextLayer = seeThroughTextLayer;
-        this.polygonOffsetTextLayer = polygonOffsetTextLayer;
+    public GlyphRenderer(TextRenderLayerSet textRenderLayers, float minU, float maxU, float minV, float maxV, float minX, float maxX, float minY, float maxY) {
+        this.textRenderLayers = textRenderLayers;
         this.minU = minU;
         this.maxU = maxU;
         this.minV = minV;
@@ -67,12 +64,7 @@ public class GlyphRenderer {
     }
 
     public RenderLayer getLayer(TextRenderer.TextLayerType layerType) {
-        return switch (layerType) {
-            default -> throw new IncompatibleClassChangeError();
-            case TextRenderer.TextLayerType.NORMAL -> this.textLayer;
-            case TextRenderer.TextLayerType.SEE_THROUGH -> this.seeThroughTextLayer;
-            case TextRenderer.TextLayerType.POLYGON_OFFSET -> this.polygonOffsetTextLayer;
-        };
+        return this.textRenderLayers.getRenderLayer(layerType);
     }
 
     @Environment(value=EnvType.CLIENT)

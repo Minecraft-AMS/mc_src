@@ -89,6 +89,7 @@ public abstract class FoliagePlacer {
     protected final void generateSquareWithHangingLeaves(TestableWorld world, BlockPlacer placer, Random random, TreeFeatureConfig config, BlockPos centerPos, int radius, int y, boolean giantTrunk, float hangingLeavesChance, float hangingLeavesExtensionChance) {
         this.generateSquare(world, placer, random, config, centerPos, radius, y, giantTrunk);
         int i = giantTrunk ? 1 : 0;
+        BlockPos blockPos = centerPos.down();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (Direction direction : Direction.Type.HORIZONTAL) {
             Direction direction2 = direction.rotateYClockwise();
@@ -97,13 +98,24 @@ public abstract class FoliagePlacer {
             for (int k = -radius; k < radius + i; ++k) {
                 boolean bl = placer.hasPlacedBlock(mutable.move(Direction.UP));
                 mutable.move(Direction.DOWN);
-                if (bl && !(random.nextFloat() > hangingLeavesChance) && FoliagePlacer.placeFoliageBlock(world, placer, random, config, mutable) && !(random.nextFloat() > hangingLeavesExtensionChance)) {
-                    FoliagePlacer.placeFoliageBlock(world, placer, random, config, mutable.move(Direction.DOWN));
+                if (bl && FoliagePlacer.placeFoliageBlock(world, placer, random, config, hangingLeavesChance, blockPos, mutable)) {
+                    mutable.move(Direction.DOWN);
+                    FoliagePlacer.placeFoliageBlock(world, placer, random, config, hangingLeavesExtensionChance, blockPos, mutable);
                     mutable.move(Direction.UP);
                 }
                 mutable.move(direction);
             }
         }
+    }
+
+    private static boolean placeFoliageBlock(TestableWorld world, BlockPlacer placer, Random random, TreeFeatureConfig config, float chance, BlockPos origin, BlockPos.Mutable pos) {
+        if (pos.getManhattanDistance(origin) >= 7) {
+            return false;
+        }
+        if (random.nextFloat() > chance) {
+            return false;
+        }
+        return FoliagePlacer.placeFoliageBlock(world, placer, random, config, pos);
     }
 
     protected static boolean placeFoliageBlock(TestableWorld world, BlockPlacer placer, Random random, TreeFeatureConfig config, BlockPos pos) {

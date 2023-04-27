@@ -26,7 +26,9 @@ import net.minecraft.client.render.entity.model.ModelWithHead;
 import net.minecraft.client.render.item.HeldItemRenderer;
 import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.LimbAnimator;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.ZombieVillagerEntity;
 import net.minecraft.entity.passive.VillagerEntity;
@@ -82,6 +84,7 @@ extends FeatureRenderer<T, M> {
         }
         ((ModelWithHead)this.getContextModel()).getHead().rotate(matrixStack);
         if (item instanceof BlockItem && ((BlockItem)item).getBlock() instanceof AbstractSkullBlock) {
+            LimbAnimator limbAnimator;
             NbtCompound nbtCompound;
             n = 1.1875f;
             matrixStack.scale(1.1875f, -1.1875f, -1.1875f);
@@ -96,7 +99,15 @@ extends FeatureRenderer<T, M> {
             SkullBlock.SkullType skullType = ((AbstractSkullBlock)((BlockItem)item).getBlock()).getSkullType();
             SkullBlockEntityModel skullBlockEntityModel = this.headModels.get(skullType);
             RenderLayer renderLayer = SkullBlockEntityRenderer.getRenderLayer(skullType, gameProfile);
-            SkullBlockEntityRenderer.renderSkull(null, 180.0f, f, matrixStack, vertexConsumerProvider, i, skullBlockEntityModel, renderLayer);
+            Entity entity = ((Entity)livingEntity).getVehicle();
+            if (entity instanceof LivingEntity) {
+                LivingEntity livingEntity2 = (LivingEntity)entity;
+                limbAnimator = livingEntity2.limbAnimator;
+            } else {
+                limbAnimator = ((LivingEntity)livingEntity).limbAnimator;
+            }
+            float o = limbAnimator.getPos(h);
+            SkullBlockEntityRenderer.renderSkull(null, 180.0f, o, matrixStack, vertexConsumerProvider, i, skullBlockEntityModel, renderLayer);
         } else if (!(item instanceof ArmorItem) || (armorItem = (ArmorItem)item).getSlotType() != EquipmentSlot.HEAD) {
             HeadFeatureRenderer.translate(matrixStack, bl);
             this.heldItemRenderer.renderItem((LivingEntity)livingEntity, itemStack, ModelTransformationMode.HEAD, false, matrixStack, vertexConsumerProvider, i);

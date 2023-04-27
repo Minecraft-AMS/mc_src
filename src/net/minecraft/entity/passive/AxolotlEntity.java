@@ -279,12 +279,12 @@ Bucketable {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("axolotlBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("axolotlActivityUpdate");
+        this.getWorld().getProfiler().push("axolotlBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("axolotlActivityUpdate");
         AxolotlBrain.updateActivities(this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
         if (!this.isAiDisabled()) {
             Optional<Integer> optional = this.getBrain().getOptionalRegisteredMemory(MemoryModuleType.PLAY_DEAD_TICKS);
             this.setPlayingDead(optional.isPresent() && optional.get() > 0);
@@ -313,7 +313,7 @@ Bucketable {
     @Override
     public boolean damage(DamageSource source, float amount) {
         float f = this.getHealth();
-        if (!(this.world.isClient || this.isAiDisabled() || this.world.random.nextInt(3) != 0 || !((float)this.world.random.nextInt(3) < amount) && !(f / this.getMaxHealth() < 0.5f) || !(amount < f) || !this.isTouchingWater() || source.getAttacker() == null && source.getSource() == null || this.isPlayingDead())) {
+        if (!(this.getWorld().isClient || this.isAiDisabled() || this.getWorld().random.nextInt(3) != 0 || !((float)this.getWorld().random.nextInt(3) < amount) && !(f / this.getMaxHealth() < 0.5f) || !(amount < f) || !this.isTouchingWater() || source.getAttacker() == null && source.getSource() == null || this.isPlayingDead())) {
             this.brain.remember(MemoryModuleType.PLAY_DEAD_TICKS, 200);
         }
         return super.damage(source, amount);
@@ -381,7 +381,7 @@ Bucketable {
     public static void appreciatePlayer(AxolotlEntity axolotl, LivingEntity entity) {
         Entity entity2;
         DamageSource damageSource;
-        World world = axolotl.world;
+        World world = axolotl.getWorld();
         if (entity.isDead() && (damageSource = entity.getRecentDamageSource()) != null && (entity2 = damageSource.getAttacker()) != null && entity2.getType() == EntityType.PLAYER) {
             PlayerEntity playerEntity = (PlayerEntity)entity2;
             List<PlayerEntity> list = world.getNonSpectatingEntities(PlayerEntity.class, axolotl.getBoundingBox().expand(20.0));

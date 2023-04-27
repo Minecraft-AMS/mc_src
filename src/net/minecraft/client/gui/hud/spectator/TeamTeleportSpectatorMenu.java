@@ -9,14 +9,13 @@
 package net.minecraft.client.gui.hud.spectator;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.hud.SpectatorHud;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenu;
@@ -24,7 +23,6 @@ import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommandGroup;
 import net.minecraft.client.gui.hud.spectator.TeleportSpectatorMenu;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
@@ -71,9 +69,8 @@ SpectatorMenuCommand {
     }
 
     @Override
-    public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
-        RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
-        DrawableHelper.drawTexture(matrices, 0, 0, 16.0f, 0.0f, 16, 16, 256, 256);
+    public void renderIcon(DrawContext context, float brightness, int alpha) {
+        context.drawTexture(SpectatorHud.SPECTATOR_TEXTURE, 0, 0, 16.0f, 0.0f, 16, 16, 256, 256);
     }
 
     @Override
@@ -120,18 +117,17 @@ SpectatorMenuCommand {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
+        public void renderIcon(DrawContext context, float brightness, int alpha) {
             Integer integer = this.team.getColor().getColorValue();
             if (integer != null) {
                 float f = (float)(integer >> 16 & 0xFF) / 255.0f;
                 float g = (float)(integer >> 8 & 0xFF) / 255.0f;
                 float h = (float)(integer & 0xFF) / 255.0f;
-                DrawableHelper.fill(matrices, 1, 1, 15, 15, MathHelper.packRgb(f * brightness, g * brightness, h * brightness) | alpha << 24);
+                context.fill(1, 1, 15, 15, MathHelper.packRgb(f * brightness, g * brightness, h * brightness) | alpha << 24);
             }
-            RenderSystem.setShaderTexture(0, this.skinId);
-            RenderSystem.setShaderColor(brightness, brightness, brightness, (float)alpha / 255.0f);
-            PlayerSkinDrawer.draw(matrices, 2, 2, 12);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            context.setShaderColor(brightness, brightness, brightness, (float)alpha / 255.0f);
+            PlayerSkinDrawer.draw(context, this.skinId, 2, 2, 12);
+            context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
 
         @Override

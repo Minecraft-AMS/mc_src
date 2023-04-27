@@ -11,10 +11,9 @@ package net.minecraft.client.toast;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.client.toast.ToastManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -44,21 +43,20 @@ implements Toast {
     }
 
     @Override
-    public Toast.Visibility draw(MatrixStack matrices, ToastManager manager, long startTime) {
-        RenderSystem.setShaderTexture(0, TEXTURE);
-        DrawableHelper.drawTexture(matrices, 0, 0, 0, 96, this.getWidth(), this.getHeight());
-        this.type.drawIcon(matrices, 6, 6);
+    public Toast.Visibility draw(DrawContext context, ToastManager manager, long startTime) {
+        context.drawTexture(TEXTURE, 0, 0, 0, 96, this.getWidth(), this.getHeight());
+        this.type.drawIcon(context, 6, 6);
         if (this.description == null) {
-            manager.getClient().textRenderer.draw(matrices, this.title, 30.0f, 12.0f, -11534256);
+            context.drawText(manager.getClient().textRenderer, this.title, 30, 12, -11534256, false);
         } else {
-            manager.getClient().textRenderer.draw(matrices, this.title, 30.0f, 7.0f, -11534256);
-            manager.getClient().textRenderer.draw(matrices, this.description, 30.0f, 18.0f, -16777216);
+            context.drawText(manager.getClient().textRenderer, this.title, 30, 7, -11534256, false);
+            context.drawText(manager.getClient().textRenderer, this.description, 30, 18, -16777216, false);
         }
         if (this.hasProgressBar) {
-            DrawableHelper.fill(matrices, 3, 28, 157, 29, -1);
+            context.fill(3, 28, 157, 29, -1);
             float f = MathHelper.clampedLerp(this.lastProgress, this.progress, (float)(startTime - this.lastTime) / 100.0f);
             int i = this.progress >= this.lastProgress ? -16755456 : -11206656;
-            DrawableHelper.fill(matrices, 3, 28, (int)(3.0f + 154.0f * f), 29, i);
+            context.fill(3, 28, (int)(3.0f + 154.0f * f), 29, i);
             this.lastProgress = f;
             this.lastTime = startTime;
         }
@@ -100,9 +98,9 @@ implements Toast {
             this.textureSlotY = textureSlotY;
         }
 
-        public void drawIcon(MatrixStack matrices, int x, int y) {
+        public void drawIcon(DrawContext context, int x, int y) {
             RenderSystem.enableBlend();
-            DrawableHelper.drawTexture(matrices, x, y, 176 + this.textureSlotX * 20, this.textureSlotY * 20, 20, 20);
+            context.drawTexture(Toast.TEXTURE, x, y, 176 + this.textureSlotX * 20, this.textureSlotY * 20, 20, 20);
         }
 
         private static /* synthetic */ Type[] method_36873() {

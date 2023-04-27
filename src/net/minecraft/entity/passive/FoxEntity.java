@@ -161,7 +161,7 @@ implements VariantHolder<Type> {
         this.followBabyTurtleGoal = new ActiveTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, false, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER);
         this.followFishGoal = new ActiveTargetGoal<FishEntity>(this, FishEntity.class, 20, false, false, entity -> entity instanceof SchoolingFishEntity);
         this.goalSelector.add(0, new FoxSwimGoal());
-        this.goalSelector.add(0, new PowderSnowJumpGoal(this, this.world));
+        this.goalSelector.add(0, new PowderSnowJumpGoal(this, this.getWorld()));
         this.goalSelector.add(1, new StopWanderingGoal());
         this.goalSelector.add(2, new EscapeWhenNotAggressiveGoal(2.2));
         this.goalSelector.add(3, new MateGoal(1.0));
@@ -191,20 +191,20 @@ implements VariantHolder<Type> {
 
     @Override
     public void tickMovement() {
-        if (!this.world.isClient && this.isAlive() && this.canMoveVoluntarily()) {
+        if (!this.getWorld().isClient && this.isAlive() && this.canMoveVoluntarily()) {
             LivingEntity livingEntity;
             ++this.eatingTime;
             ItemStack itemStack = this.getEquippedStack(EquipmentSlot.MAINHAND);
             if (this.canEat(itemStack)) {
                 if (this.eatingTime > 600) {
-                    ItemStack itemStack2 = itemStack.finishUsing(this.world, this);
+                    ItemStack itemStack2 = itemStack.finishUsing(this.getWorld(), this);
                     if (!itemStack2.isEmpty()) {
                         this.equipStack(EquipmentSlot.MAINHAND, itemStack2);
                     }
                     this.eatingTime = 0;
                 } else if (this.eatingTime > 560 && this.random.nextFloat() < 0.1f) {
                     this.playSound(this.getEatSound(itemStack), 1.0f, 1.0f);
-                    this.world.sendEntityStatus(this, (byte)45);
+                    this.getWorld().sendEntityStatus(this, (byte)45);
                 }
             }
             if ((livingEntity = this.getTarget()) == null || !livingEntity.isAlive()) {
@@ -229,7 +229,7 @@ implements VariantHolder<Type> {
     }
 
     private boolean canEat(ItemStack stack) {
-        return stack.getItem().isFood() && this.getTarget() == null && this.onGround && !this.isSleeping();
+        return stack.getItem().isFood() && this.getTarget() == null && this.isOnGround() && !this.isSleeping();
     }
 
     @Override
@@ -248,7 +248,7 @@ implements VariantHolder<Type> {
             if (!itemStack.isEmpty()) {
                 for (int i = 0; i < 8; ++i) {
                     Vec3d vec3d = new Vec3d(((double)this.random.nextFloat() - 0.5) * 0.1, Math.random() * 0.1 + 0.1, 0.0).rotateX(-this.getPitch() * ((float)Math.PI / 180)).rotateY(-this.getYaw() * ((float)Math.PI / 180));
-                    this.world.addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, itemStack), this.getX() + this.getRotationVector().x / 2.0, this.getY(), this.getZ() + this.getRotationVector().z / 2.0, vec3d.x, vec3d.y + 0.05, vec3d.z);
+                    this.getWorld().addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, itemStack), this.getX() + this.getRotationVector().x / 2.0, this.getY(), this.getZ() + this.getRotationVector().z / 2.0, vec3d.x, vec3d.y + 0.05, vec3d.z);
                 }
             }
         } else {
@@ -380,7 +380,7 @@ implements VariantHolder<Type> {
         this.setVariant(Type.byName(nbt.getString("Type")));
         this.setSitting(nbt.getBoolean("Sitting"));
         this.setCrouching(nbt.getBoolean("Crouching"));
-        if (this.world instanceof ServerWorld) {
+        if (this.getWorld() instanceof ServerWorld) {
             this.addTypeSpecificGoals();
         }
     }
@@ -447,19 +447,19 @@ implements VariantHolder<Type> {
     }
 
     private void spit(ItemStack stack) {
-        if (stack.isEmpty() || this.world.isClient) {
+        if (stack.isEmpty() || this.getWorld().isClient) {
             return;
         }
-        ItemEntity itemEntity = new ItemEntity(this.world, this.getX() + this.getRotationVector().x, this.getY() + 1.0, this.getZ() + this.getRotationVector().z, stack);
+        ItemEntity itemEntity = new ItemEntity(this.getWorld(), this.getX() + this.getRotationVector().x, this.getY() + 1.0, this.getZ() + this.getRotationVector().z, stack);
         itemEntity.setPickupDelay(40);
         itemEntity.setThrower(this.getUuid());
         this.playSound(SoundEvents.ENTITY_FOX_SPIT, 1.0f, 1.0f);
-        this.world.spawnEntity(itemEntity);
+        this.getWorld().spawnEntity(itemEntity);
     }
 
     private void dropItem(ItemStack stack) {
-        ItemEntity itemEntity = new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), stack);
-        this.world.spawnEntity(itemEntity);
+        ItemEntity itemEntity = new ItemEntity(this.getWorld(), this.getX(), this.getY(), this.getZ(), stack);
+        this.getWorld().spawnEntity(itemEntity);
     }
 
     @Override
@@ -485,16 +485,16 @@ implements VariantHolder<Type> {
         super.tick();
         if (this.canMoveVoluntarily()) {
             boolean bl = this.isTouchingWater();
-            if (bl || this.getTarget() != null || this.world.isThundering()) {
+            if (bl || this.getTarget() != null || this.getWorld().isThundering()) {
                 this.stopSleeping();
             }
             if (bl || this.isSleeping()) {
                 this.setSitting(false);
             }
-            if (this.isWalking() && this.world.random.nextFloat() < 0.2f) {
+            if (this.isWalking() && this.getWorld().random.nextFloat() < 0.2f) {
                 BlockPos blockPos = this.getBlockPos();
-                BlockState blockState = this.world.getBlockState(blockPos);
-                this.world.syncWorldEvent(2001, blockPos, Block.getRawIdFromState(blockState));
+                BlockState blockState = this.getWorld().getBlockState(blockPos);
+                this.getWorld().syncWorldEvent(2001, blockPos, Block.getRawIdFromState(blockState));
             }
         }
         this.lastHeadRollProgress = this.headRollProgress;
@@ -608,7 +608,7 @@ implements VariantHolder<Type> {
         if (this.isSleeping()) {
             return SoundEvents.ENTITY_FOX_SLEEP;
         }
-        if (!this.world.isDay() && this.random.nextFloat() < 0.1f && (list = this.world.getEntitiesByClass(PlayerEntity.class, this.getBoundingBox().expand(16.0, 16.0, 16.0), EntityPredicates.EXCEPT_SPECTATOR)).isEmpty()) {
+        if (!this.getWorld().isDay() && this.random.nextFloat() < 0.1f && (list = this.getWorld().getEntitiesByClass(PlayerEntity.class, this.getBoundingBox().expand(16.0, 16.0, 16.0), EntityPredicates.EXCEPT_SPECTATOR)).isEmpty()) {
             return SoundEvents.ENTITY_FOX_SCREECH;
         }
         return SoundEvents.ENTITY_FOX_AMBIENT;
@@ -649,7 +649,7 @@ implements VariantHolder<Type> {
             double g = f == 0.0 ? 0.0 : d * (double)((float)j / 6.0f);
             double h = f == 0.0 ? e * (double)((float)j / 6.0f) : g / f;
             for (int k = 1; k < 4; ++k) {
-                if (fox.world.getBlockState(BlockPos.ofFloored(fox.getX() + h, fox.getY() + (double)k, fox.getZ() + g)).isReplaceable()) continue;
+                if (fox.getWorld().getBlockState(BlockPos.ofFloored(fox.getX() + h, fox.getY() + (double)k, fox.getZ() + g)).isReplaceable()) continue;
                 return false;
             }
         }
@@ -900,7 +900,7 @@ implements VariantHolder<Type> {
                 return false;
             }
             double d = FoxEntity.this.getVelocity().y;
-            return !(d * d < (double)0.05f && Math.abs(FoxEntity.this.getPitch()) < 15.0f && FoxEntity.this.onGround || FoxEntity.this.isWalking());
+            return !(d * d < (double)0.05f && Math.abs(FoxEntity.this.getPitch()) < 15.0f && FoxEntity.this.isOnGround() || FoxEntity.this.isWalking());
         }
 
         @Override
@@ -949,7 +949,7 @@ implements VariantHolder<Type> {
             }
             if (livingEntity != null && FoxEntity.this.distanceTo(livingEntity) <= 2.0f) {
                 FoxEntity.this.tryAttack(livingEntity);
-            } else if (FoxEntity.this.getPitch() > 0.0f && FoxEntity.this.onGround && (float)FoxEntity.this.getVelocity().y != 0.0f && FoxEntity.this.world.getBlockState(FoxEntity.this.getBlockPos()).isOf(Blocks.SNOW)) {
+            } else if (FoxEntity.this.getPitch() > 0.0f && FoxEntity.this.isOnGround() && (float)FoxEntity.this.getVelocity().y != 0.0f && FoxEntity.this.getWorld().getBlockState(FoxEntity.this.getBlockPos()).isOf(Blocks.SNOW)) {
                 FoxEntity.this.setPitch(60.0f);
                 FoxEntity.this.setTarget(null);
                 FoxEntity.this.setWalking(true);
@@ -971,7 +971,7 @@ implements VariantHolder<Type> {
             if (FoxEntity.this.isSleeping() || this.mob.getTarget() != null) {
                 return false;
             }
-            if (FoxEntity.this.world.isThundering() && FoxEntity.this.world.isSkyVisible(this.mob.getBlockPos())) {
+            if (FoxEntity.this.getWorld().isThundering() && FoxEntity.this.getWorld().isSkyVisible(this.mob.getBlockPos())) {
                 return this.targetShadedPos();
             }
             if (this.timer > 0) {
@@ -980,7 +980,7 @@ implements VariantHolder<Type> {
             }
             this.timer = 100;
             BlockPos blockPos = this.mob.getBlockPos();
-            return FoxEntity.this.world.isDay() && FoxEntity.this.world.isSkyVisible(blockPos) && !((ServerWorld)FoxEntity.this.world).isNearOccupiedPointOfInterest(blockPos) && this.targetShadedPos();
+            return FoxEntity.this.getWorld().isDay() && FoxEntity.this.getWorld().isSkyVisible(blockPos) && !((ServerWorld)FoxEntity.this.getWorld()).isNearOccupiedPointOfInterest(blockPos) && this.targetShadedPos();
         }
 
         @Override
@@ -1046,7 +1046,7 @@ implements VariantHolder<Type> {
                 --this.timer;
                 return false;
             }
-            return FoxEntity.this.world.isDay() && this.isAtFavoredLocation() && !this.canCalmDown() && !FoxEntity.this.inPowderSnow;
+            return FoxEntity.this.getWorld().isDay() && this.isAtFavoredLocation() && !this.canCalmDown() && !FoxEntity.this.inPowderSnow;
         }
 
         @Override
@@ -1160,10 +1160,10 @@ implements VariantHolder<Type> {
         }
 
         protected void eatBerries() {
-            if (!FoxEntity.this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (!FoxEntity.this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return;
             }
-            BlockState blockState = FoxEntity.this.world.getBlockState(this.targetPos);
+            BlockState blockState = FoxEntity.this.getWorld().getBlockState(this.targetPos);
             if (blockState.isOf(Blocks.SWEET_BERRY_BUSH)) {
                 this.pickSweetBerries(blockState);
             } else if (CaveVines.hasBerries(blockState)) {
@@ -1172,23 +1172,23 @@ implements VariantHolder<Type> {
         }
 
         private void pickGlowBerries(BlockState state) {
-            CaveVines.pickBerries(FoxEntity.this, state, FoxEntity.this.world, this.targetPos);
+            CaveVines.pickBerries(FoxEntity.this, state, FoxEntity.this.getWorld(), this.targetPos);
         }
 
         private void pickSweetBerries(BlockState state) {
             int i = state.get(SweetBerryBushBlock.AGE);
             state.with(SweetBerryBushBlock.AGE, 1);
-            int j = 1 + FoxEntity.this.world.random.nextInt(2) + (i == 3 ? 1 : 0);
+            int j = 1 + FoxEntity.this.getWorld().random.nextInt(2) + (i == 3 ? 1 : 0);
             ItemStack itemStack = FoxEntity.this.getEquippedStack(EquipmentSlot.MAINHAND);
             if (itemStack.isEmpty()) {
                 FoxEntity.this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.SWEET_BERRIES));
                 --j;
             }
             if (j > 0) {
-                Block.dropStack(FoxEntity.this.world, this.targetPos, new ItemStack(Items.SWEET_BERRIES, j));
+                Block.dropStack(FoxEntity.this.getWorld(), this.targetPos, new ItemStack(Items.SWEET_BERRIES, j));
             }
             FoxEntity.this.playSound(SoundEvents.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1.0f, 1.0f);
-            FoxEntity.this.world.setBlockState(this.targetPos, (BlockState)state.with(SweetBerryBushBlock.AGE, 1), 2);
+            FoxEntity.this.getWorld().setBlockState(this.targetPos, (BlockState)state.with(SweetBerryBushBlock.AGE, 1), 2);
         }
 
         @Override
@@ -1224,13 +1224,13 @@ implements VariantHolder<Type> {
             if (FoxEntity.this.getRandom().nextInt(PickupItemGoal.toGoalTicks(10)) != 0) {
                 return false;
             }
-            List<ItemEntity> list = FoxEntity.this.world.getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
+            List<ItemEntity> list = FoxEntity.this.getWorld().getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
             return !list.isEmpty() && FoxEntity.this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty();
         }
 
         @Override
         public void tick() {
-            List<ItemEntity> list = FoxEntity.this.world.getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
+            List<ItemEntity> list = FoxEntity.this.getWorld().getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
             ItemStack itemStack = FoxEntity.this.getEquippedStack(EquipmentSlot.MAINHAND);
             if (itemStack.isEmpty() && !list.isEmpty()) {
                 FoxEntity.this.getNavigation().startMovingTo(list.get(0), 1.2f);
@@ -1239,7 +1239,7 @@ implements VariantHolder<Type> {
 
         @Override
         public void start() {
-            List<ItemEntity> list = FoxEntity.this.world.getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
+            List<ItemEntity> list = FoxEntity.this.getWorld().getEntitiesByClass(ItemEntity.class, FoxEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), PICKABLE_DROP_FILTER);
             if (!list.isEmpty()) {
                 FoxEntity.this.getNavigation().startMovingTo(list.get(0), 1.2f);
             }
@@ -1335,7 +1335,7 @@ implements VariantHolder<Type> {
             for (UUID uUID : FoxEntity.this.getTrustedUuids()) {
                 LivingEntity livingEntity;
                 Entity entity;
-                if (uUID == null || !(FoxEntity.this.world instanceof ServerWorld) || !((entity = ((ServerWorld)FoxEntity.this.world).getEntity(uUID)) instanceof LivingEntity)) continue;
+                if (uUID == null || !(FoxEntity.this.getWorld() instanceof ServerWorld) || !((entity = ((ServerWorld)FoxEntity.this.getWorld()).getEntity(uUID)) instanceof LivingEntity)) continue;
                 this.friend = livingEntity = (LivingEntity)entity;
                 this.offender = livingEntity.getAttacker();
                 int i = livingEntity.getLastAttackedTime();
@@ -1434,11 +1434,11 @@ implements VariantHolder<Type> {
 
         protected boolean isAtFavoredLocation() {
             BlockPos blockPos = BlockPos.ofFloored(FoxEntity.this.getX(), FoxEntity.this.getBoundingBox().maxY, FoxEntity.this.getZ());
-            return !FoxEntity.this.world.isSkyVisible(blockPos) && FoxEntity.this.getPathfindingFavor(blockPos) >= 0.0f;
+            return !FoxEntity.this.getWorld().isSkyVisible(blockPos) && FoxEntity.this.getPathfindingFavor(blockPos) >= 0.0f;
         }
 
         protected boolean canCalmDown() {
-            return !FoxEntity.this.world.getTargets(LivingEntity.class, this.WORRIABLE_ENTITY_PREDICATE, FoxEntity.this, FoxEntity.this.getBoundingBox().expand(12.0, 6.0, 12.0)).isEmpty();
+            return !FoxEntity.this.getWorld().getTargets(LivingEntity.class, this.WORRIABLE_ENTITY_PREDICATE, FoxEntity.this, FoxEntity.this.getBoundingBox().expand(12.0, 6.0, 12.0)).isEmpty();
         }
     }
 

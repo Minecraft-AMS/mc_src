@@ -451,14 +451,17 @@ implements StructureWorldAccess {
         }
         profiler.swap("tickBlocks");
         if (randomTickSpeed > 0) {
-            for (ChunkSection chunkSection : chunk.getSectionArray()) {
+            ChunkSection[] chunkSections = chunk.getSectionArray();
+            for (int m = 0; m < chunkSections.length; ++m) {
+                ChunkSection chunkSection = chunkSections[m];
                 if (!chunkSection.hasRandomTicks()) continue;
-                int m = chunkSection.getYOffset();
+                int k = chunk.sectionIndexToCoord(m);
+                int n = ChunkSectionPos.getBlockCoord(k);
                 for (l = 0; l < randomTickSpeed; ++l) {
                     FluidState fluidState;
-                    BlockPos blockPos3 = this.getRandomPosInChunk(i, m, j, 15);
+                    BlockPos blockPos3 = this.getRandomPosInChunk(i, n, j, 15);
                     profiler.push("randomTick");
-                    BlockState blockState4 = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - m, blockPos3.getZ() - j);
+                    BlockState blockState4 = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - n, blockPos3.getZ() - j);
                     if (blockState4.hasRandomTicks()) {
                         blockState4.randomTick(this, blockPos3, this.random);
                     }
@@ -798,7 +801,7 @@ implements StructureWorldAccess {
             double f;
             double e;
             double d;
-            if (serverPlayerEntity == null || serverPlayerEntity.world != this || serverPlayerEntity.getId() == entityId || !((d = (double)pos.getX() - serverPlayerEntity.getX()) * d + (e = (double)pos.getY() - serverPlayerEntity.getY()) * e + (f = (double)pos.getZ() - serverPlayerEntity.getZ()) * f < 1024.0)) continue;
+            if (serverPlayerEntity == null || serverPlayerEntity.getWorld() != this || serverPlayerEntity.getId() == entityId || !((d = (double)pos.getX() - serverPlayerEntity.getX()) * d + (e = (double)pos.getY() - serverPlayerEntity.getY()) * e + (f = (double)pos.getZ() - serverPlayerEntity.getZ()) * f < 1024.0)) continue;
             serverPlayerEntity.networkHandler.sendPacket(new BlockBreakingProgressS2CPacket(entityId, pos, progress));
         }
     }

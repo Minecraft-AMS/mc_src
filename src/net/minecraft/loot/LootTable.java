@@ -81,8 +81,7 @@ public class LootTable {
             } else {
                 ItemStack itemStack;
                 for (int i = stack.getCount(); i > 0; i -= itemStack.getCount()) {
-                    itemStack = stack.copy();
-                    itemStack.setCount(Math.min(stack.getMaxCount(), i));
+                    itemStack = stack.copyWithCount(Math.min(stack.getMaxCount(), i));
                     consumer.accept(itemStack);
                 }
             }
@@ -90,12 +89,13 @@ public class LootTable {
     }
 
     public void generateUnprocessedLoot(LootContext context, Consumer<ItemStack> lootConsumer) {
-        if (context.markActive(this)) {
+        LootContext.Entry<LootTable> entry = LootContext.table(this);
+        if (context.markActive(entry)) {
             Consumer<ItemStack> consumer = LootFunction.apply(this.combinedFunction, lootConsumer, context);
             for (LootPool lootPool : this.pools) {
                 lootPool.addGeneratedLoot(consumer, context);
             }
-            context.markInactive(this);
+            context.markInactive(entry);
         } else {
             LOGGER.warn("Detected infinite loop in loot tables");
         }

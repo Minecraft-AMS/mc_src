@@ -46,7 +46,7 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        List<MobEntity> list = this.mob.world.getEntitiesByClass(MobEntity.class, this.mob.getBoundingBox().expand(this.maxDistance), this.targetPredicate);
+        List<MobEntity> list = this.mob.getWorld().getEntitiesByClass(MobEntity.class, this.mob.getBoundingBox().expand(this.maxDistance), this.targetPredicate);
         if (!list.isEmpty()) {
             for (MobEntity mobEntity : list) {
                 if (mobEntity.isInvisible()) continue;

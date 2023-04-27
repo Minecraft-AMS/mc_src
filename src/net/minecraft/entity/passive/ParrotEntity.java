@@ -103,7 +103,7 @@ Flutterer {
         }
     };
     private static final Item COOKIE = Items.COOKIE;
-    private static final Set<Item> TAMING_INGREDIENTS = Sets.newHashSet((Object[])new Item[]{Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS});
+    private static final Set<Item> TAMING_INGREDIENTS = Sets.newHashSet((Object[])new Item[]{Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.PITCHER_POD});
     static final Map<EntityType<?>, SoundEvent> MOB_SOUNDS = Util.make(Maps.newHashMap(), map -> {
         map.put(EntityType.BLAZE, SoundEvents.ENTITY_PARROT_IMITATE_BLAZE);
         map.put(EntityType.CAVE_SPIDER, SoundEvents.ENTITY_PARROT_IMITATE_SPIDER);
@@ -205,12 +205,12 @@ Flutterer {
 
     @Override
     public void tickMovement() {
-        if (this.songSource == null || !this.songSource.isWithinDistance(this.getPos(), 3.46) || !this.world.getBlockState(this.songSource).isOf(Blocks.JUKEBOX)) {
+        if (this.songSource == null || !this.songSource.isWithinDistance(this.getPos(), 3.46) || !this.getWorld().getBlockState(this.songSource).isOf(Blocks.JUKEBOX)) {
             this.songPlaying = false;
             this.songSource = null;
         }
-        if (this.world.random.nextInt(400) == 0) {
-            ParrotEntity.imitateNearbyMob(this.world, this);
+        if (this.getWorld().random.nextInt(400) == 0) {
+            ParrotEntity.imitateNearbyMob(this.getWorld(), this);
         }
         super.tickMovement();
         this.flapWings();
@@ -229,14 +229,14 @@ Flutterer {
     private void flapWings() {
         this.prevFlapProgress = this.flapProgress;
         this.prevMaxWingDeviation = this.maxWingDeviation;
-        this.maxWingDeviation += (float)(this.onGround || this.hasVehicle() ? -1 : 4) * 0.3f;
+        this.maxWingDeviation += (float)(this.isOnGround() || this.hasVehicle() ? -1 : 4) * 0.3f;
         this.maxWingDeviation = MathHelper.clamp(this.maxWingDeviation, 0.0f, 1.0f);
-        if (!this.onGround && this.flapSpeed < 1.0f) {
+        if (!this.isOnGround() && this.flapSpeed < 1.0f) {
             this.flapSpeed = 1.0f;
         }
         this.flapSpeed *= 0.9f;
         Vec3d vec3d = this.getVelocity();
-        if (!this.onGround && vec3d.y < 0.0) {
+        if (!this.isOnGround() && vec3d.y < 0.0) {
             this.setVelocity(vec3d.multiply(1.0, 0.6, 1.0));
         }
         this.flapProgress += this.flapSpeed * 2.0f;
@@ -264,17 +264,17 @@ Flutterer {
                 itemStack.decrement(1);
             }
             if (!this.isSilent()) {
-                this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PARROT_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+                this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PARROT_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
             }
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 if (this.random.nextInt(10) == 0) {
                     this.setOwner(player);
-                    this.world.sendEntityStatus(this, (byte)7);
+                    this.getWorld().sendEntityStatus(this, (byte)7);
                 } else {
-                    this.world.sendEntityStatus(this, (byte)6);
+                    this.getWorld().sendEntityStatus(this, (byte)6);
                 }
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         if (itemStack.isOf(COOKIE)) {
             if (!player.getAbilities().creativeMode) {
@@ -284,13 +284,13 @@ Flutterer {
             if (player.isCreative() || !this.isInvulnerable()) {
                 this.damage(this.getDamageSources().playerAttack(player), Float.MAX_VALUE);
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         if (!this.isInAir() && this.isTamed() && this.isOwner(player)) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 this.setSitting(!this.isSitting());
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         return super.interactMob(player, hand);
     }
@@ -327,7 +327,7 @@ Flutterer {
     @Override
     @Nullable
     public SoundEvent getAmbientSound() {
-        return ParrotEntity.getRandomSound(this.world, this.world.random);
+        return ParrotEntity.getRandomSound(this.getWorld(), this.getWorld().random);
     }
 
     public static SoundEvent getRandomSound(World world, Random random) {
@@ -400,7 +400,7 @@ Flutterer {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.setSitting(false);
         }
         return super.damage(source, amount);
@@ -436,7 +436,7 @@ Flutterer {
 
     @Override
     public boolean isInAir() {
-        return !this.onGround;
+        return !this.isOnGround();
     }
 
     @Override
@@ -528,7 +528,7 @@ Flutterer {
             for (BlockPos blockPos2 : iterable) {
                 BlockState blockState;
                 boolean bl;
-                if (blockPos.equals(blockPos2) || !(bl = (blockState = this.mob.world.getBlockState(mutable2.set((Vec3i)blockPos2, Direction.DOWN))).getBlock() instanceof LeavesBlock || blockState.isIn(BlockTags.LOGS)) || !this.mob.world.isAir(blockPos2) || !this.mob.world.isAir(mutable.set((Vec3i)blockPos2, Direction.UP))) continue;
+                if (blockPos.equals(blockPos2) || !(bl = (blockState = this.mob.getWorld().getBlockState(mutable2.set((Vec3i)blockPos2, Direction.DOWN))).getBlock() instanceof LeavesBlock || blockState.isIn(BlockTags.LOGS)) || !this.mob.getWorld().isAir(blockPos2) || !this.mob.getWorld().isAir(mutable.set((Vec3i)blockPos2, Direction.UP))) continue;
                 return Vec3d.ofBottomCenter(blockPos2);
             }
             return null;

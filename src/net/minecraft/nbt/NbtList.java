@@ -64,7 +64,7 @@ extends AbstractNbtList<NbtElement> {
             /*
              * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
              * 
-             * org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [4[SWITCH], 8[CASE]], but top level block is 9[SWITCH]
+             * org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [8[CASE], 4[SWITCH]], but top level block is 9[SWITCH]
              *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.processEndingBlocks(Op04StructuredStatement.java:435)
              *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:484)
              *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
@@ -213,7 +213,7 @@ extends AbstractNbtList<NbtElement> {
 
     public long[] getLongArray(int index) {
         NbtElement nbtElement;
-        if (index >= 0 && index < this.value.size() && (nbtElement = this.value.get(index)).getType() == 11) {
+        if (index >= 0 && index < this.value.size() && (nbtElement = this.value.get(index)).getType() == 12) {
             return ((NbtLongArray)nbtElement).getLongArray();
         }
         return new long[0];

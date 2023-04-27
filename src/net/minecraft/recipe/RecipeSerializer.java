@@ -19,7 +19,6 @@ import net.minecraft.recipe.CuttingRecipe;
 import net.minecraft.recipe.FireworkRocketRecipe;
 import net.minecraft.recipe.FireworkStarFadeRecipe;
 import net.minecraft.recipe.FireworkStarRecipe;
-import net.minecraft.recipe.LegacySmithingRecipe;
 import net.minecraft.recipe.MapCloningRecipe;
 import net.minecraft.recipe.MapExtendingRecipe;
 import net.minecraft.recipe.Recipe;
@@ -61,7 +60,6 @@ public interface RecipeSerializer<T extends Recipe<?>> {
     public static final RecipeSerializer<SmokingRecipe> SMOKING = RecipeSerializer.register("smoking", new CookingRecipeSerializer<SmokingRecipe>(SmokingRecipe::new, 100));
     public static final RecipeSerializer<CampfireCookingRecipe> CAMPFIRE_COOKING = RecipeSerializer.register("campfire_cooking", new CookingRecipeSerializer<CampfireCookingRecipe>(CampfireCookingRecipe::new, 100));
     public static final RecipeSerializer<StonecuttingRecipe> STONECUTTING = RecipeSerializer.register("stonecutting", new CuttingRecipe.Serializer<StonecuttingRecipe>(StonecuttingRecipe::new));
-    public static final RecipeSerializer<LegacySmithingRecipe> SMITHING = RecipeSerializer.register("smithing", new LegacySmithingRecipe.Serializer());
     public static final RecipeSerializer<SmithingTransformRecipe> SMITHING_TRANSFORM = RecipeSerializer.register("smithing_transform", new SmithingTransformRecipe.Serializer());
     public static final RecipeSerializer<SmithingTrimRecipe> SMITHING_TRIM = RecipeSerializer.register("smithing_trim", new SmithingTrimRecipe.Serializer());
     public static final RecipeSerializer<CraftingDecoratedPotRecipe> CRAFTING_DECORATED_POT = RecipeSerializer.register("crafting_decorated_pot", new SpecialRecipeSerializer<CraftingDecoratedPotRecipe>(CraftingDecoratedPotRecipe::new));

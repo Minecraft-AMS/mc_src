@@ -25,7 +25,7 @@ extends Goal {
 
     public EatGrassGoal(MobEntity mob) {
         this.mob = mob;
-        this.world = mob.world;
+        this.world = mob.getWorld();
         this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK, Goal.Control.JUMP));
     }
 

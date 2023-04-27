@@ -9,11 +9,12 @@ package net.minecraft.world.chunk;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.LightType;
+import net.minecraft.world.chunk.light.LightSourceView;
 import org.jetbrains.annotations.Nullable;
 
 public interface ChunkProvider {
     @Nullable
-    public BlockView getChunk(int var1, int var2);
+    public LightSourceView getChunk(int var1, int var2);
 
     default public void onLightUpdate(LightType type, ChunkSectionPos pos) {
     }

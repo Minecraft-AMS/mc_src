@@ -57,7 +57,7 @@ extends AbstractMinecartEntity {
         super.tick();
         if (this.fuseTicks > 0) {
             --this.fuseTicks;
-            this.world.addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
+            this.getWorld().addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
         } else if (this.fuseTicks == 0) {
             this.explode(this.getVelocity().horizontalLengthSquared());
         }
@@ -100,12 +100,12 @@ extends AbstractMinecartEntity {
     }
 
     protected void explode(@Nullable DamageSource damageSource, double power) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             double d = Math.sqrt(power);
             if (d > 5.0) {
                 d = 5.0;
             }
-            this.world.createExplosion(this, damageSource, null, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * d), false, World.ExplosionSourceType.TNT);
+            this.getWorld().createExplosion(this, damageSource, null, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * d), false, World.ExplosionSourceType.TNT);
             this.discard();
         }
     }
@@ -137,10 +137,10 @@ extends AbstractMinecartEntity {
 
     public void prime() {
         this.fuseTicks = 80;
-        if (!this.world.isClient) {
-            this.world.sendEntityStatus(this, (byte)10);
+        if (!this.getWorld().isClient) {
+            this.getWorld().sendEntityStatus(this, (byte)10);
             if (!this.isSilent()) {
-                this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0f, 1.0f);
             }
         }
     }

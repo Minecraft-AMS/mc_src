@@ -24,24 +24,24 @@ import org.jetbrains.annotations.Nullable;
 
 public class SharedConstants {
     @Deprecated
-    public static final boolean IS_DEVELOPMENT_VERSION = false;
+    public static final boolean IS_DEVELOPMENT_VERSION = true;
     @Deprecated
-    public static final int WORLD_VERSION = 3337;
+    public static final int WORLD_VERSION = 3452;
     @Deprecated
     public static final String CURRENT_SERIES = "main";
     @Deprecated
-    public static final String VERSION_NAME = "1.19.4";
+    public static final String VERSION_NAME = "23w17a";
     @Deprecated
-    public static final int RELEASE_TARGET_PROTOCOL_VERSION = 762;
+    public static final int RELEASE_TARGET_PROTOCOL_VERSION = 763;
     @Deprecated
-    public static final int field_29736 = 126;
-    public static final int SNBT_TOO_OLD_THRESHOLD = 3318;
+    public static final int field_29736 = 132;
+    public static final int SNBT_TOO_OLD_THRESHOLD = 3437;
     private static final int field_29708 = 30;
-    public static final boolean CRASH_ON_UNCAUGHT_THREAD_EXCEPTION = false;
+    public static final boolean CRASH_ON_UNCAUGHT_THREAD_EXCEPTION = true;
     @Deprecated
-    public static final int RESOURCE_PACK_VERSION = 13;
+    public static final int RESOURCE_PACK_VERSION = 15;
     @Deprecated
-    public static final int DATA_PACK_VERSION = 12;
+    public static final int DATA_PACK_VERSION = 14;
     @Deprecated
     public static final int field_39963 = 1;
     public static final int field_39964 = 1;
@@ -64,6 +64,7 @@ public class SharedConstants {
     public static final boolean field_29755 = false;
     public static final boolean field_29756 = false;
     public static final boolean field_29676 = false;
+    public static final boolean field_44582 = false;
     public static final boolean field_29677 = false;
     public static final boolean field_29678 = false;
     public static final boolean field_29679 = false;
@@ -124,6 +125,7 @@ public class SharedConstants {
     public static final boolean field_39961 = false;
     public static final boolean field_41533 = false;
     public static final long field_22251 = Duration.ofMillis(300L).toNanos();
+    public static final boolean field_44583 = false;
     public static boolean useChoiceTypeRegistrations = true;
     public static boolean isDevelopment;
     public static Set<DSL.TypeReference> requiredDataFixTypes;
@@ -185,7 +187,7 @@ public class SharedConstants {
     }
 
     public static int getProtocolVersion() {
-        return 762;
+        return 0x40000084;
     }
 
     public static boolean isOutsideGenerationArea(ChunkPos pos) {

@@ -27,6 +27,10 @@ public interface BlockEntityProvider {
 
     @Nullable
     default public <T extends BlockEntity> GameEventListener getGameEventListener(ServerWorld world, T blockEntity) {
+        if (blockEntity instanceof GameEventListener.Holder) {
+            GameEventListener.Holder holder = (GameEventListener.Holder)((Object)blockEntity);
+            return holder.getEventListener();
+        }
         return null;
     }
 }

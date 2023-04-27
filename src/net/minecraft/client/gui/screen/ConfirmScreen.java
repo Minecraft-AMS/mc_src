@@ -15,9 +15,9 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.MultilineText;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
@@ -71,11 +71,11 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        ConfirmScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, this.getTitleY(), 0xFFFFFF);
-        this.messageSplit.drawCenterWithShadow(matrices, this.width / 2, this.getMessageY());
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, this.getTitleY(), 0xFFFFFF);
+        this.messageSplit.drawCenterWithShadow(context, this.width / 2, this.getMessageY());
+        super.render(context, mouseX, mouseY, delta);
     }
 
     private int getTitleY() {

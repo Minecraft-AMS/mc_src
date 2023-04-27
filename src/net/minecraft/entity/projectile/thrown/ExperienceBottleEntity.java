@@ -42,10 +42,10 @@ extends ThrownItemEntity {
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        if (this.world instanceof ServerWorld) {
-            this.world.syncWorldEvent(2002, this.getBlockPos(), PotionUtil.getColor(Potions.WATER));
-            int i = 3 + this.world.random.nextInt(5) + this.world.random.nextInt(5);
-            ExperienceOrbEntity.spawn((ServerWorld)this.world, this.getPos(), i);
+        if (this.getWorld() instanceof ServerWorld) {
+            this.getWorld().syncWorldEvent(2002, this.getBlockPos(), PotionUtil.getColor(Potions.WATER));
+            int i = 3 + this.getWorld().random.nextInt(5) + this.getWorld().random.nextInt(5);
+            ExperienceOrbEntity.spawn((ServerWorld)this.getWorld(), this.getPos(), i);
             this.discard();
         }
     }

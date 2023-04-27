@@ -180,6 +180,12 @@ implements Targeter {
         this.pathfindingPenalties.put(nodeType, Float.valueOf(penalty));
     }
 
+    public void onStartPathfinding() {
+    }
+
+    public void onFinishPathfinding() {
+    }
+
     protected BodyControl createBodyControl() {
         return new BodyControl(this);
     }
@@ -265,12 +271,12 @@ implements Targeter {
     @Override
     public void baseTick() {
         super.baseTick();
-        this.world.getProfiler().push("mobBaseTick");
+        this.getWorld().getProfiler().push("mobBaseTick");
         if (this.isAlive() && this.random.nextInt(1000) < this.ambientSoundChance++) {
             this.resetSoundDelay();
             this.playAmbientSound();
         }
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
     }
 
     @Override
@@ -302,16 +308,16 @@ implements Targeter {
     }
 
     public void playSpawnEffects() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             for (int i = 0; i < 20; ++i) {
                 double d = this.random.nextGaussian() * 0.02;
                 double e = this.random.nextGaussian() * 0.02;
                 double f = this.random.nextGaussian() * 0.02;
                 double g = 10.0;
-                this.world.addParticle(ParticleTypes.POOF, this.offsetX(1.0) - d * 10.0, this.getRandomBodyY() - e * 10.0, this.getParticleZ(1.0) - f * 10.0, d, e, f);
+                this.getWorld().addParticle(ParticleTypes.POOF, this.offsetX(1.0) - d * 10.0, this.getRandomBodyY() - e * 10.0, this.getParticleZ(1.0) - f * 10.0, d, e, f);
             }
         } else {
-            this.world.sendEntityStatus(this, (byte)20);
+            this.getWorld().sendEntityStatus(this, (byte)20);
         }
     }
 
@@ -327,7 +333,7 @@ implements Targeter {
     @Override
     public void tick() {
         super.tick();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.updateLeash();
             if (this.age % 5 == 0) {
                 this.updateGoalControls();
@@ -499,16 +505,16 @@ implements Targeter {
     @Override
     public void tickMovement() {
         super.tickMovement();
-        this.world.getProfiler().push("looting");
-        if (!this.world.isClient && this.canPickUpLoot() && this.isAlive() && !this.dead && this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+        this.getWorld().getProfiler().push("looting");
+        if (!this.getWorld().isClient && this.canPickUpLoot() && this.isAlive() && !this.dead && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
             Vec3i vec3i = this.getItemPickUpRangeExpander();
-            List<ItemEntity> list = this.world.getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand(vec3i.getX(), vec3i.getY(), vec3i.getZ()));
+            List<ItemEntity> list = this.getWorld().getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand(vec3i.getX(), vec3i.getY(), vec3i.getZ()));
             for (ItemEntity itemEntity : list) {
                 if (itemEntity.isRemoved() || itemEntity.getStack().isEmpty() || itemEntity.cannotPickup() || !this.canGather(itemEntity.getStack())) continue;
                 this.loot(itemEntity);
             }
         }
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
     }
 
     protected Vec3i getItemPickUpRangeExpander() {
@@ -535,7 +541,7 @@ implements Targeter {
         if (equipmentSlot.isArmorSlot() && !bl) {
             equipmentSlot = EquipmentSlot.MAINHAND;
             itemStack = this.getEquippedStack(equipmentSlot);
-            bl = this.prefersNewEquipment(stack, itemStack);
+            bl = itemStack.isEmpty();
         }
         if (bl && this.canPickupItem(stack)) {
             double d = this.getDropChance(equipmentSlot);
@@ -657,7 +663,7 @@ implements Targeter {
 
     @Override
     public void checkDespawn() {
-        if (this.world.getDifficulty() == Difficulty.PEACEFUL && this.isDisallowedInPeaceful()) {
+        if (this.getWorld().getDifficulty() == Difficulty.PEACEFUL && this.isDisallowedInPeaceful()) {
             this.discard();
             return;
         }
@@ -665,7 +671,7 @@ implements Targeter {
             this.despawnCounter = 0;
             return;
         }
-        PlayerEntity entity = this.world.getClosestPlayer(this, -1.0);
+        PlayerEntity entity = this.getWorld().getClosestPlayer(this, -1.0);
         if (entity != null) {
             int i;
             int j;
@@ -686,45 +692,45 @@ implements Targeter {
     @Override
     protected final void tickNewAi() {
         ++this.despawnCounter;
-        this.world.getProfiler().push("sensing");
+        this.getWorld().getProfiler().push("sensing");
         this.visibilityCache.clear();
-        this.world.getProfiler().pop();
-        int i = this.world.getServer().getTicks() + this.getId();
+        this.getWorld().getProfiler().pop();
+        int i = this.getWorld().getServer().getTicks() + this.getId();
         if (i % 2 == 0 || this.age <= 1) {
-            this.world.getProfiler().push("targetSelector");
+            this.getWorld().getProfiler().push("targetSelector");
             this.targetSelector.tick();
-            this.world.getProfiler().pop();
-            this.world.getProfiler().push("goalSelector");
+            this.getWorld().getProfiler().pop();
+            this.getWorld().getProfiler().push("goalSelector");
             this.goalSelector.tick();
-            this.world.getProfiler().pop();
+            this.getWorld().getProfiler().pop();
         } else {
-            this.world.getProfiler().push("targetSelector");
+            this.getWorld().getProfiler().push("targetSelector");
             this.targetSelector.tickGoals(false);
-            this.world.getProfiler().pop();
-            this.world.getProfiler().push("goalSelector");
+            this.getWorld().getProfiler().pop();
+            this.getWorld().getProfiler().push("goalSelector");
             this.goalSelector.tickGoals(false);
-            this.world.getProfiler().pop();
+            this.getWorld().getProfiler().pop();
         }
-        this.world.getProfiler().push("navigation");
+        this.getWorld().getProfiler().push("navigation");
         this.navigation.tick();
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("mob tick");
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("mob tick");
         this.mobTick();
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("controls");
-        this.world.getProfiler().push("move");
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("controls");
+        this.getWorld().getProfiler().push("move");
         this.moveControl.tick();
-        this.world.getProfiler().swap("look");
+        this.getWorld().getProfiler().swap("look");
         this.lookControl.tick();
-        this.world.getProfiler().swap("jump");
+        this.getWorld().getProfiler().swap("jump");
         this.jumpControl.tick();
-        this.world.getProfiler().pop();
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().pop();
         this.sendAiDebugData();
     }
 
     protected void sendAiDebugData() {
-        DebugInfoSender.sendGoalSelector(this.world, this, this.goalSelector);
+        DebugInfoSender.sendGoalSelector(this.getWorld(), this, this.goalSelector);
     }
 
     protected void mobTick() {
@@ -797,7 +803,7 @@ implements Targeter {
             return 3;
         }
         int i = (int)(this.getHealth() - this.getMaxHealth() * 0.33f);
-        if ((i -= (3 - this.world.getDifficulty().getId()) * 4) < 0) {
+        if ((i -= (3 - this.getWorld().getDifficulty().getId()) * 4) < 0) {
             i = 0;
         }
         return i + 3;
@@ -869,7 +875,7 @@ implements Targeter {
         if (random.nextFloat() < 0.15f * localDifficulty.getClampedLocalDifficulty()) {
             float f;
             int i = random.nextInt(2);
-            float f2 = f = this.world.getDifficulty() == Difficulty.HARD ? 0.1f : 0.25f;
+            float f2 = f = this.getWorld().getDifficulty() == Difficulty.HARD ? 0.1f : 0.25f;
             if (random.nextFloat() < 0.095f) {
                 ++i;
             }
@@ -1042,7 +1048,7 @@ implements Targeter {
         if (this.getHoldingEntity() == player) {
             this.detachLeash(true, !player.getAbilities().creativeMode);
             this.emitGameEvent(GameEvent.ENTITY_INTERACT, player);
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         ActionResult actionResult = this.interactWithItem(player, hand);
         if (actionResult.isAccepted()) {
@@ -1063,15 +1069,15 @@ implements Targeter {
         if (itemStack.isOf(Items.LEAD) && this.canBeLeashedBy(player)) {
             this.attachLeash(player, true);
             itemStack.decrement(1);
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         if (itemStack.isOf(Items.NAME_TAG) && (actionResult = itemStack.useOnEntity(player, this, hand)).isAccepted()) {
             return actionResult;
         }
         if (itemStack.getItem() instanceof SpawnEggItem) {
-            if (this.world instanceof ServerWorld) {
+            if (this.getWorld() instanceof ServerWorld) {
                 SpawnEggItem spawnEggItem = (SpawnEggItem)itemStack.getItem();
-                Optional<MobEntity> optional = spawnEggItem.spawnBaby(player, this, this.getType(), (ServerWorld)this.world, this.getPos(), itemStack);
+                Optional<MobEntity> optional = spawnEggItem.spawnBaby(player, this, this.getType(), (ServerWorld)this.getWorld(), this.getPos(), itemStack);
                 optional.ifPresent(entity -> this.onPlayerSpawnedChild(player, (MobEntity)entity));
                 return optional.isPresent() ? ActionResult.SUCCESS : ActionResult.PASS;
             }
@@ -1124,7 +1130,7 @@ implements Targeter {
         if (this.isRemoved()) {
             return null;
         }
-        MobEntity mobEntity = (MobEntity)entityType.create(this.world);
+        MobEntity mobEntity = (MobEntity)entityType.create(this.getWorld());
         if (mobEntity == null) {
             return null;
         }
@@ -1144,12 +1150,11 @@ implements Targeter {
             for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
                 ItemStack itemStack = this.getEquippedStack(equipmentSlot);
                 if (itemStack.isEmpty()) continue;
-                mobEntity.equipStack(equipmentSlot, itemStack.copy());
+                mobEntity.equipStack(equipmentSlot, itemStack.copyAndEmpty());
                 mobEntity.setEquipmentDropChance(equipmentSlot, this.getDropChance(equipmentSlot));
-                itemStack.setCount(0);
             }
         }
-        this.world.spawnEntity(mobEntity);
+        this.getWorld().spawnEntity(mobEntity);
         if (this.hasVehicle()) {
             Entity entity = this.getVehicle();
             this.stopRiding();
@@ -1175,11 +1180,11 @@ implements Targeter {
         if (this.holdingEntity != null) {
             this.holdingEntity = null;
             this.leashNbt = null;
-            if (!this.world.isClient && dropItem) {
+            if (!this.getWorld().isClient && dropItem) {
                 this.dropItem(Items.LEAD);
             }
-            if (!this.world.isClient && sendPacket && this.world instanceof ServerWorld) {
-                ((ServerWorld)this.world).getChunkManager().sendToOtherNearbyPlayers(this, new EntityAttachS2CPacket(this, null));
+            if (!this.getWorld().isClient && sendPacket && this.getWorld() instanceof ServerWorld) {
+                ((ServerWorld)this.getWorld()).getChunkManager().sendToOtherNearbyPlayers(this, new EntityAttachS2CPacket(this, null));
             }
         }
     }
@@ -1194,8 +1199,8 @@ implements Targeter {
 
     @Nullable
     public Entity getHoldingEntity() {
-        if (this.holdingEntity == null && this.holdingEntityId != 0 && this.world.isClient) {
-            this.holdingEntity = this.world.getEntityById(this.holdingEntityId);
+        if (this.holdingEntity == null && this.holdingEntityId != 0 && this.getWorld().isClient) {
+            this.holdingEntity = this.getWorld().getEntityById(this.holdingEntityId);
         }
         return this.holdingEntity;
     }
@@ -1203,8 +1208,8 @@ implements Targeter {
     public void attachLeash(Entity entity, boolean sendPacket) {
         this.holdingEntity = entity;
         this.leashNbt = null;
-        if (!this.world.isClient && sendPacket && this.world instanceof ServerWorld) {
-            ((ServerWorld)this.world).getChunkManager().sendToOtherNearbyPlayers(this, new EntityAttachS2CPacket(this, this.holdingEntity));
+        if (!this.getWorld().isClient && sendPacket && this.getWorld() instanceof ServerWorld) {
+            ((ServerWorld)this.getWorld()).getChunkManager().sendToOtherNearbyPlayers(this, new EntityAttachS2CPacket(this, this.holdingEntity));
         }
         if (this.hasVehicle()) {
             this.stopRiding();
@@ -1226,17 +1231,17 @@ implements Targeter {
     }
 
     private void readLeashNbt() {
-        if (this.leashNbt != null && this.world instanceof ServerWorld) {
+        if (this.leashNbt != null && this.getWorld() instanceof ServerWorld) {
             if (this.leashNbt.containsUuid("UUID")) {
                 UUID uUID = this.leashNbt.getUuid("UUID");
-                Entity entity = ((ServerWorld)this.world).getEntity(uUID);
+                Entity entity = ((ServerWorld)this.getWorld()).getEntity(uUID);
                 if (entity != null) {
                     this.attachLeash(entity, true);
                     return;
                 }
             } else if (this.leashNbt.contains("X", 99) && this.leashNbt.contains("Y", 99) && this.leashNbt.contains("Z", 99)) {
                 BlockPos blockPos = NbtHelper.toBlockPos(this.leashNbt);
-                this.attachLeash(LeashKnotEntity.getOrCreate(this.world, blockPos), true);
+                this.attachLeash(LeashKnotEntity.getOrCreate(this.getWorld(), blockPos), true);
                 return;
             }
             if (this.age > 100) {
@@ -1332,18 +1337,18 @@ implements Targeter {
             float f = 0.25f + (float)EnchantmentHelper.getEfficiency(this) * 0.05f;
             if (this.random.nextFloat() < f) {
                 player.getItemCooldownManager().set(Items.SHIELD, 100);
-                this.world.sendEntityStatus(player, (byte)30);
+                this.getWorld().sendEntityStatus(player, (byte)30);
             }
         }
     }
 
     protected boolean isAffectedByDaylight() {
-        if (this.world.isDay() && !this.world.isClient) {
+        if (this.getWorld().isDay() && !this.getWorld().isClient) {
             boolean bl;
             float f = this.getBrightnessAtEyes();
             BlockPos blockPos = BlockPos.ofFloored(this.getX(), this.getEyeY(), this.getZ());
             boolean bl2 = bl = this.isWet() || this.inPowderSnow || this.wasInPowderSnow;
-            if (f > 0.5f && this.random.nextFloat() * 30.0f < (f - 0.4f) * 2.0f && !bl && this.world.isSkyVisible(blockPos)) {
+            if (f > 0.5f && this.random.nextFloat() * 30.0f < (f - 0.4f) * 2.0f && !bl && this.getWorld().isSkyVisible(blockPos)) {
                 return true;
             }
         }
@@ -1372,7 +1377,11 @@ implements Targeter {
     protected void removeFromDimension() {
         super.removeFromDimension();
         this.detachLeash(true, false);
-        this.getItemsEquipped().forEach(stack -> stack.setCount(0));
+        this.getItemsEquipped().forEach(stack -> {
+            if (!stack.isEmpty()) {
+                stack.setCount(0);
+            }
+        });
     }
 
     @Override

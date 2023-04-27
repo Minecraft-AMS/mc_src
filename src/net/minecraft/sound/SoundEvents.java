@@ -49,6 +49,7 @@ public class SoundEvents {
     public static final SoundEvent BLOCK_AMETHYST_BLOCK_FALL = SoundEvents.register("block.amethyst_block.fall");
     public static final SoundEvent BLOCK_AMETHYST_BLOCK_HIT = SoundEvents.register("block.amethyst_block.hit");
     public static final SoundEvent BLOCK_AMETHYST_BLOCK_PLACE = SoundEvents.register("block.amethyst_block.place");
+    public static final SoundEvent BLOCK_AMETHYST_BLOCK_RESONATE = SoundEvents.register("block.amethyst_block.resonate");
     public static final SoundEvent BLOCK_AMETHYST_BLOCK_STEP = SoundEvents.register("block.amethyst_block.step");
     public static final SoundEvent BLOCK_AMETHYST_CLUSTER_BREAK = SoundEvents.register("block.amethyst_cluster.break");
     public static final SoundEvent BLOCK_AMETHYST_CLUSTER_FALL = SoundEvents.register("block.amethyst_cluster.fall");
@@ -181,8 +182,11 @@ public class SoundEvents {
     public static final SoundEvent ITEM_BOTTLE_FILL = SoundEvents.register("item.bottle.fill");
     public static final SoundEvent ITEM_BOTTLE_FILL_DRAGONBREATH = SoundEvents.register("item.bottle.fill_dragonbreath");
     public static final SoundEvent BLOCK_BREWING_STAND_BREW = SoundEvents.register("block.brewing_stand.brew");
-    public static final SoundEvent ITEM_BRUSH_BRUSHING = SoundEvents.register("item.brush.brushing");
-    public static final SoundEvent ITEM_BRUSH_BRUSH_SAND_COMPLETED = SoundEvents.register("item.brush.brush_sand_completed");
+    public static final SoundEvent ITEM_BRUSH_BRUSHING_GENERIC = SoundEvents.register("item.brush.brushing.generic");
+    public static final SoundEvent ITEM_BRUSH_BRUSHING_SAND = SoundEvents.register("item.brush.brushing.sand");
+    public static final SoundEvent ITEM_BRUSH_BRUSHING_GRAVEL = SoundEvents.register("item.brush.brushing.gravel");
+    public static final SoundEvent ITEM_BRUSH_BRUSHING_SAND_COMPLETE = SoundEvents.register("item.brush.brushing.sand.complete");
+    public static final SoundEvent ITEM_BRUSH_BRUSHING_GRAVEL_COMPLETE = SoundEvents.register("item.brush.brushing.gravel.complete");
     public static final SoundEvent BLOCK_BUBBLE_COLUMN_BUBBLE_POP = SoundEvents.register("block.bubble_column.bubble_pop");
     public static final SoundEvent BLOCK_BUBBLE_COLUMN_UPWARDS_AMBIENT = SoundEvents.register("block.bubble_column.upwards_ambient");
     public static final SoundEvent BLOCK_BUBBLE_COLUMN_UPWARDS_INSIDE = SoundEvents.register("block.bubble_column.upwards_inside");
@@ -493,6 +497,11 @@ public class SoundEvents {
     public static final SoundEvent BLOCK_SUSPICIOUS_SAND_PLACE = SoundEvents.register("block.suspicious_sand.place");
     public static final SoundEvent BLOCK_SUSPICIOUS_SAND_HIT = SoundEvents.register("block.suspicious_sand.hit");
     public static final SoundEvent BLOCK_SUSPICIOUS_SAND_FALL = SoundEvents.register("block.suspicious_sand.fall");
+    public static final SoundEvent BLOCK_SUSPICIOUS_GRAVEL_BREAK = SoundEvents.register("block.suspicious_gravel.break");
+    public static final SoundEvent BLOCK_SUSPICIOUS_GRAVEL_STEP = SoundEvents.register("block.suspicious_gravel.step");
+    public static final SoundEvent BLOCK_SUSPICIOUS_GRAVEL_PLACE = SoundEvents.register("block.suspicious_gravel.place");
+    public static final SoundEvent BLOCK_SUSPICIOUS_GRAVEL_HIT = SoundEvents.register("block.suspicious_gravel.hit");
+    public static final SoundEvent BLOCK_SUSPICIOUS_GRAVEL_FALL = SoundEvents.register("block.suspicious_gravel.fall");
     public static final SoundEvent BLOCK_FROGLIGHT_BREAK = SoundEvents.register("block.froglight.break");
     public static final SoundEvent BLOCK_FROGLIGHT_FALL = SoundEvents.register("block.froglight.fall");
     public static final SoundEvent BLOCK_FROGLIGHT_HIT = SoundEvents.register("block.froglight.hit");
@@ -801,6 +810,7 @@ public class SoundEvents {
     public static final SoundEvent MUSIC_DISC_WAIT = SoundEvents.register("music_disc.wait");
     public static final SoundEvent MUSIC_DISC_WARD = SoundEvents.register("music_disc.ward");
     public static final SoundEvent MUSIC_DISC_OTHERSIDE = SoundEvents.register("music_disc.otherside");
+    public static final SoundEvent MUSIC_DISC_RELIC = SoundEvents.register("music_disc.relic");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_DRAGON = SoundEvents.registerReference("music.dragon");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_END = SoundEvents.registerReference("music.end");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_GAME = SoundEvents.registerReference("music.game");
@@ -813,7 +823,7 @@ public class SoundEvents {
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_JAGGED_PEAKS = SoundEvents.registerReference("music.overworld.jagged_peaks");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_LUSH_CAVES = SoundEvents.registerReference("music.overworld.lush_caves");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_SWAMP = SoundEvents.registerReference("music.overworld.swamp");
-    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_JUNGLE_AND_FOREST = SoundEvents.registerReference("music.overworld.jungle_and_forest");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_FOREST = SoundEvents.registerReference("music.overworld.forest");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_OLD_GROWTH_TAIGA = SoundEvents.registerReference("music.overworld.old_growth_taiga");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_MEADOW = SoundEvents.registerReference("music.overworld.meadow");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_CHERRY_GROVE = SoundEvents.registerReference("music.overworld.cherry_grove");
@@ -823,6 +833,12 @@ public class SoundEvents {
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_NETHER_SOUL_SAND_VALLEY = SoundEvents.registerReference("music.nether.soul_sand_valley");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_STONY_PEAKS = SoundEvents.registerReference("music.overworld.stony_peaks");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_NETHER_WARPED_FOREST = SoundEvents.registerReference("music.nether.warped_forest");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_FLOWER_FOREST = SoundEvents.registerReference("music.overworld.flower_forest");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_DESERT = SoundEvents.registerReference("music.overworld.desert");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_BADLANDS = SoundEvents.registerReference("music.overworld.badlands");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_JUNGLE = SoundEvents.registerReference("music.overworld.jungle");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_SPARSE_JUNGLE = SoundEvents.registerReference("music.overworld.sparse_jungle");
+    public static final RegistryEntry.Reference<SoundEvent> MUSIC_OVERWORLD_BAMBOO_JUNGLE = SoundEvents.registerReference("music.overworld.bamboo_jungle");
     public static final RegistryEntry.Reference<SoundEvent> MUSIC_UNDER_WATER = SoundEvents.registerReference("music.under_water");
     public static final SoundEvent BLOCK_NETHER_BRICKS_BREAK = SoundEvents.register("block.nether_bricks.break");
     public static final SoundEvent BLOCK_NETHER_BRICKS_STEP = SoundEvents.register("block.nether_bricks.step");
@@ -1231,6 +1247,9 @@ public class SoundEvents {
     public static final SoundEvent ENTITY_SNIFFER_DIGGING = SoundEvents.register("entity.sniffer.digging");
     public static final SoundEvent ENTITY_SNIFFER_DIGGING_STOP = SoundEvents.register("entity.sniffer.digging_stop");
     public static final SoundEvent ENTITY_SNIFFER_HAPPY = SoundEvents.register("entity.sniffer.happy");
+    public static final SoundEvent BLOCK_SNIFFER_EGG_PLOP = SoundEvents.register("block.sniffer_egg.plop");
+    public static final SoundEvent BLOCK_SNIFFER_EGG_CRACK = SoundEvents.register("block.sniffer_egg.crack");
+    public static final SoundEvent BLOCK_SNIFFER_EGG_HATCH = SoundEvents.register("block.sniffer_egg.hatch");
     public static final SoundEvent ENTITY_SNOWBALL_THROW = SoundEvents.register("entity.snowball.throw");
     public static final SoundEvent BLOCK_SNOW_BREAK = SoundEvents.register("block.snow.break");
     public static final SoundEvent BLOCK_SNOW_FALL = SoundEvents.register("block.snow.fall");
@@ -1383,6 +1402,7 @@ public class SoundEvents {
     public static final SoundEvent ENTITY_WARDEN_SONIC_CHARGE = SoundEvents.register("entity.warden.sonic_charge");
     public static final SoundEvent ENTITY_WARDEN_STEP = SoundEvents.register("entity.warden.step");
     public static final SoundEvent ENTITY_WARDEN_TENDRIL_CLICKS = SoundEvents.register("entity.warden.tendril_clicks");
+    public static final SoundEvent BLOCK_SIGN_WAXED_INTERACT_FAIL = SoundEvents.register("block.sign.waxed_interact_fail");
     public static final SoundEvent BLOCK_WATER_AMBIENT = SoundEvents.register("block.water.ambient");
     public static final SoundEvent WEATHER_RAIN = SoundEvents.register("weather.rain");
     public static final SoundEvent WEATHER_RAIN_ABOVE = SoundEvents.register("weather.rain.above");

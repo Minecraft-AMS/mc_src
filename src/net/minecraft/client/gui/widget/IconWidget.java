@@ -7,13 +7,11 @@
  */
 package net.minecraft.client.gui.widget;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -36,11 +34,10 @@ extends ClickableWidget {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        RenderSystem.setShaderTexture(0, this.texture);
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         int i = this.getWidth();
         int j = this.getHeight();
-        DrawableHelper.drawTexture(matrices, this.getX(), this.getY(), 0.0f, 0.0f, i, j, i, j);
+        context.drawTexture(this.texture, this.getX(), this.getY(), 0.0f, 0.0f, i, j, i, j);
     }
 }
 

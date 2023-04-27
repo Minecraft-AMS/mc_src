@@ -167,7 +167,7 @@ implements AtlasSource {
         @Nullable
         public SpriteContents get() {
             try {
-                NativeImage nativeImage = this.baseImage.read().apply(this.palette.get());
+                NativeImage nativeImage = this.baseImage.read().applyToCopy(this.palette.get());
                 SpriteContents spriteContents = new SpriteContents(this.permutationLocation, new SpriteDimensions(nativeImage.getWidth(), nativeImage.getHeight()), nativeImage, AnimationResourceMetadata.EMPTY);
                 return spriteContents;
             }

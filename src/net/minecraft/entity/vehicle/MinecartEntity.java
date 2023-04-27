@@ -30,7 +30,7 @@ extends AbstractMinecartEntity {
         if (this.hasPassengers()) {
             return ActionResult.PASS;
         }
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             return player.startRiding(this) ? ActionResult.CONSUME : ActionResult.PASS;
         }
         return ActionResult.SUCCESS;

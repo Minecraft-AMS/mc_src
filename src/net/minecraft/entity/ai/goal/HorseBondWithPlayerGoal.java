@@ -68,7 +68,7 @@ extends Goal {
             }
             this.horse.removeAllPassengers();
             this.horse.playAngrySound();
-            this.horse.world.sendEntityStatus(this.horse, (byte)6);
+            this.horse.getWorld().sendEntityStatus(this.horse, (byte)6);
         }
     }
 }

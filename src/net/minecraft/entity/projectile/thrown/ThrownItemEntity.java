@@ -13,7 +13,6 @@ import net.minecraft.entity.projectile.thrown.ThrownEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.util.Util;
 import net.minecraft.world.World;
 
 public abstract class ThrownItemEntity
@@ -35,7 +34,7 @@ implements FlyingItemEntity {
 
     public void setItem(ItemStack item) {
         if (!item.isOf(this.getDefaultItem()) || item.hasNbt()) {
-            this.getDataTracker().set(ITEM, Util.make(item.copy(), stack -> stack.setCount(1)));
+            this.getDataTracker().set(ITEM, item.copyWithCount(1));
         }
     }
 

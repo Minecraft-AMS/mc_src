@@ -39,7 +39,7 @@ extends Goal {
         if (!this.isInDanger()) {
             return false;
         }
-        if (this.mob.isOnFire() && (blockPos = this.locateClosestWater(this.mob.world, this.mob, 5)) != null) {
+        if (this.mob.isOnFire() && (blockPos = this.locateClosestWater(this.mob.getWorld(), this.mob, 5)) != null) {
             this.targetX = blockPos.getX();
             this.targetY = blockPos.getY();
             this.targetZ = blockPos.getZ();

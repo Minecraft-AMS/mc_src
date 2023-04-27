@@ -61,7 +61,7 @@ public interface StructurePieceType {
     public static final StructurePieceType STRONGHOLD_CORRIDOR = StructurePieceType.register(StrongholdGenerator.Corridor::new, "SHS");
     public static final StructurePieceType STRONGHOLD_STAIRS = StructurePieceType.register(StrongholdGenerator.Stairs::new, "SHSSD");
     public static final StructurePieceType JUNGLE_TEMPLE = StructurePieceType.register(JungleTempleGenerator::new, "TeJP");
-    public static final StructurePieceType OCEAN_TEMPLE = StructurePieceType.register(OceanRuinGenerator.Piece::new, "ORP");
+    public static final StructurePieceType OCEAN_TEMPLE = StructurePieceType.register(OceanRuinGenerator.Piece::fromNbt, "ORP");
     public static final StructurePieceType IGLOO = StructurePieceType.register(IglooGenerator.Piece::new, "Iglu");
     public static final StructurePieceType RUINED_PORTAL = StructurePieceType.register(RuinedPortalStructurePiece::new, "RUPO");
     public static final StructurePieceType SWAMP_HUT = StructurePieceType.register(SwampHutGenerator::new, "TeSH");

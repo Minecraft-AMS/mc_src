@@ -192,6 +192,10 @@ extends Vec3i {
         return ChunkSectionPos.asLong(ChunkSectionPos.getSectionCoord(BlockPos.unpackLongX(blockPos)), ChunkSectionPos.getSectionCoord(BlockPos.unpackLongY(blockPos)), ChunkSectionPos.getSectionCoord(BlockPos.unpackLongZ(blockPos)));
     }
 
+    public static long withZeroY(int x, int z) {
+        return ChunkSectionPos.withZeroY(ChunkSectionPos.asLong(x, 0, z));
+    }
+
     public static long withZeroY(long pos) {
         return pos & 0xFFFFFFFFFFF00000L;
     }

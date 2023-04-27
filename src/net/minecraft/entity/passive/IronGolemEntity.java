@@ -119,10 +119,6 @@ implements Angerable {
 
     @Override
     public void tickMovement() {
-        int k;
-        int j;
-        int i;
-        BlockState blockState;
         super.tickMovement();
         if (this.attackTicksLeft > 0) {
             --this.attackTicksLeft;
@@ -130,11 +126,17 @@ implements Angerable {
         if (this.lookingAtVillagerTicksLeft > 0) {
             --this.lookingAtVillagerTicksLeft;
         }
-        if (this.getVelocity().horizontalLengthSquared() > 2.500000277905201E-7 && this.random.nextInt(5) == 0 && !(blockState = this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.getX()), j = MathHelper.floor(this.getY() - (double)0.2f), k = MathHelper.floor(this.getZ())))).isAir()) {
-            this.world.addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), this.getX() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), this.getY() + 0.1, this.getZ() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), 4.0 * ((double)this.random.nextFloat() - 0.5), 0.5, ((double)this.random.nextFloat() - 0.5) * 4.0);
+        if (this.getVelocity().horizontalLengthSquared() > 2.500000277905201E-7 && this.random.nextInt(5) == 0) {
+            int i = MathHelper.floor(this.getX());
+            int j = MathHelper.floor(this.getY() - (double)0.2f);
+            int k = MathHelper.floor(this.getZ());
+            BlockState blockState = this.getWorld().getBlockState(new BlockPos(i, j, k));
+            if (!blockState.isAir()) {
+                this.getWorld().addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), this.getX() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), this.getY() + 0.1, this.getZ() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), 4.0 * ((double)this.random.nextFloat() - 0.5), 0.5, ((double)this.random.nextFloat() - 0.5) * 4.0);
+            }
         }
-        if (!this.world.isClient) {
-            this.tickAngerLogic((ServerWorld)this.world, true);
+        if (!this.getWorld().isClient) {
+            this.tickAngerLogic((ServerWorld)this.getWorld(), true);
         }
     }
 
@@ -160,7 +162,7 @@ implements Angerable {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         this.setPlayerCreated(nbt.getBoolean("PlayerCreated"));
-        this.readAngerFromNbt(this.world, nbt);
+        this.readAngerFromNbt(this.getWorld(), nbt);
     }
 
     @Override
@@ -196,7 +198,7 @@ implements Angerable {
     @Override
     public boolean tryAttack(Entity target) {
         this.attackTicksLeft = 10;
-        this.world.sendEntityStatus(this, (byte)4);
+        this.getWorld().sendEntityStatus(this, (byte)4);
         float f = this.getAttackDamage();
         float g = (int)f > 0 ? f / 2.0f + (float)this.random.nextInt((int)f) : f;
         boolean bl = target.damage(this.getDamageSources().mobAttack(this), g);
@@ -252,10 +254,10 @@ implements Angerable {
     public void setLookingAtVillager(boolean lookingAtVillager) {
         if (lookingAtVillager) {
             this.lookingAtVillagerTicksLeft = 400;
-            this.world.sendEntityStatus(this, (byte)11);
+            this.getWorld().sendEntityStatus(this, (byte)11);
         } else {
             this.lookingAtVillagerTicksLeft = 0;
-            this.world.sendEntityStatus(this, (byte)34);
+            this.getWorld().sendEntityStatus(this, (byte)34);
         }
     }
 
@@ -285,7 +287,7 @@ implements Angerable {
         if (!player.getAbilities().creativeMode) {
             itemStack.decrement(1);
         }
-        return ActionResult.success(this.world.isClient);
+        return ActionResult.success(this.getWorld().isClient);
     }
 
     @Override

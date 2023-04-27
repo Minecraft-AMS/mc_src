@@ -30,6 +30,7 @@ import net.minecraft.client.render.debug.GameEventDebugRenderer;
 import net.minecraft.client.render.debug.GameTestDebugRenderer;
 import net.minecraft.client.render.debug.GoalSelectorDebugRenderer;
 import net.minecraft.client.render.debug.HeightmapDebugRenderer;
+import net.minecraft.client.render.debug.LightDebugRenderer;
 import net.minecraft.client.render.debug.NeighborUpdateDebugRenderer;
 import net.minecraft.client.render.debug.PathfindingDebugRenderer;
 import net.minecraft.client.render.debug.RaidCenterDebugRenderer;
@@ -46,6 +47,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.LightType;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionfc;
@@ -70,6 +72,7 @@ public class DebugRenderer {
     public final GoalSelectorDebugRenderer goalSelectorDebugRenderer;
     public final GameTestDebugRenderer gameTestDebugRenderer;
     public final GameEventDebugRenderer gameEventDebugRenderer;
+    public final LightDebugRenderer lightDebugRenderer;
     private boolean showChunkBorder;
 
     public DebugRenderer(MinecraftClient client) {
@@ -90,6 +93,7 @@ public class DebugRenderer {
         this.goalSelectorDebugRenderer = new GoalSelectorDebugRenderer(client);
         this.gameTestDebugRenderer = new GameTestDebugRenderer();
         this.gameEventDebugRenderer = new GameEventDebugRenderer(client);
+        this.lightDebugRenderer = new LightDebugRenderer(client, LightType.SKY);
     }
 
     public void reset() {
@@ -111,6 +115,7 @@ public class DebugRenderer {
         this.goalSelectorDebugRenderer.clear();
         this.gameTestDebugRenderer.clear();
         this.gameEventDebugRenderer.clear();
+        this.lightDebugRenderer.clear();
     }
 
     public boolean toggleShowChunkBorder() {

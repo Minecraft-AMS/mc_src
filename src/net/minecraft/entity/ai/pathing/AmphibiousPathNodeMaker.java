@@ -75,7 +75,7 @@ extends LandPathNodeMaker {
         }
         for (int k = 0; k < i; ++k) {
             PathNode pathNode3 = successors[k];
-            if (pathNode3.type != PathNodeType.WATER || !this.penalizeDeepWater || pathNode3.y >= this.entity.world.getSeaLevel() - 10) continue;
+            if (pathNode3.type != PathNodeType.WATER || !this.penalizeDeepWater || pathNode3.y >= this.entity.getWorld().getSeaLevel() - 10) continue;
             pathNode3.penalty += 1.0f;
         }
         return i;

@@ -29,6 +29,7 @@ extends Enum<PathNodeType> {
     public static final /* enum */ PathNodeType LEAVES = new PathNodeType(-1.0f);
     public static final /* enum */ PathNodeType STICKY_HONEY = new PathNodeType(8.0f);
     public static final /* enum */ PathNodeType COCOA = new PathNodeType(0.0f);
+    public static final /* enum */ PathNodeType DAMAGE_CAUTIOUS = new PathNodeType(0.0f);
     private final float defaultPenalty;
     private static final /* synthetic */ PathNodeType[] field_24;
 
@@ -49,7 +50,7 @@ extends Enum<PathNodeType> {
     }
 
     private static /* synthetic */ PathNodeType[] method_36788() {
-        return new PathNodeType[]{BLOCKED, OPEN, WALKABLE, WALKABLE_DOOR, TRAPDOOR, POWDER_SNOW, DANGER_POWDER_SNOW, FENCE, LAVA, WATER, WATER_BORDER, RAIL, UNPASSABLE_RAIL, DANGER_FIRE, DAMAGE_FIRE, DANGER_OTHER, DAMAGE_OTHER, DOOR_OPEN, DOOR_WOOD_CLOSED, DOOR_IRON_CLOSED, BREACH, LEAVES, STICKY_HONEY, COCOA};
+        return new PathNodeType[]{BLOCKED, OPEN, WALKABLE, WALKABLE_DOOR, TRAPDOOR, POWDER_SNOW, DANGER_POWDER_SNOW, FENCE, LAVA, WATER, WATER_BORDER, RAIL, UNPASSABLE_RAIL, DANGER_FIRE, DAMAGE_FIRE, DANGER_OTHER, DAMAGE_OTHER, DOOR_OPEN, DOOR_WOOD_CLOSED, DOOR_IRON_CLOSED, BREACH, LEAVES, STICKY_HONEY, COCOA, DAMAGE_CAUTIOUS};
     }
 
     static {

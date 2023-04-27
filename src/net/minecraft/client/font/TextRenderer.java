@@ -29,10 +29,8 @@ import net.minecraft.client.font.FontStorage;
 import net.minecraft.client.font.Glyph;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.TextHandler;
-import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.CharacterVisitor;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
@@ -71,34 +69,6 @@ public class TextRenderer {
         return this.fontStorageAccessor.apply(id);
     }
 
-    public int drawWithShadow(MatrixStack matrices, String text, float x, float y, int color) {
-        return this.draw(text, x, y, color, matrices.peek().getPositionMatrix(), true, this.isRightToLeft());
-    }
-
-    public int drawWithShadow(MatrixStack matrices, String text, float x, float y, int color, boolean rightToLeft) {
-        return this.draw(text, x, y, color, matrices.peek().getPositionMatrix(), true, rightToLeft);
-    }
-
-    public int draw(MatrixStack matrices, String text, float x, float y, int color) {
-        return this.draw(text, x, y, color, matrices.peek().getPositionMatrix(), false, this.isRightToLeft());
-    }
-
-    public int drawWithShadow(MatrixStack matrices, OrderedText text, float x, float y, int color) {
-        return this.draw(text, x, y, color, matrices.peek().getPositionMatrix(), true);
-    }
-
-    public int drawWithShadow(MatrixStack matrices, Text text, float x, float y, int color) {
-        return this.draw(text.asOrderedText(), x, y, color, matrices.peek().getPositionMatrix(), true);
-    }
-
-    public int draw(MatrixStack matrices, OrderedText text, float x, float y, int color) {
-        return this.draw(text, x, y, color, matrices.peek().getPositionMatrix(), false);
-    }
-
-    public int draw(MatrixStack matrices, Text text, float x, float y, int color) {
-        return this.draw(text.asOrderedText(), x, y, color, matrices.peek().getPositionMatrix(), false);
-    }
-
     public String mirror(String text) {
         try {
             Bidi bidi = new Bidi(new ArabicShaping(8).shape(text), 127);
@@ -108,23 +78,6 @@ public class TextRenderer {
         catch (ArabicShapingException arabicShapingException) {
             return text;
         }
-    }
-
-    private int draw(String text, float x, float y, int color, Matrix4f matrix, boolean shadow, boolean mirror) {
-        if (text == null) {
-            return 0;
-        }
-        VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-        int i = this.draw(text, x, y, color, shadow, matrix, immediate, TextLayerType.NORMAL, 0, 0xF000F0, mirror);
-        immediate.draw();
-        return i;
-    }
-
-    private int draw(OrderedText text, float x, float y, int color, Matrix4f matrix, boolean shadow) {
-        VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-        int i = this.draw(text, x, y, color, shadow, matrix, (VertexConsumerProvider)immediate, TextLayerType.NORMAL, 0, 0xF000F0);
-        immediate.draw();
-        return i;
     }
 
     public int draw(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumers, TextLayerType layerType, int backgroundColor, int light) {
@@ -241,14 +194,6 @@ public class TextRenderer {
 
     public StringVisitable trimToWidth(StringVisitable text, int width) {
         return this.handler.trimToWidth(text, width, Style.EMPTY);
-    }
-
-    public void drawTrimmed(MatrixStack matrices, StringVisitable text, int x, int y, int maxWidth, int color) {
-        Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-        for (OrderedText orderedText : this.wrapLines(text, maxWidth)) {
-            this.draw(orderedText, x, y, color, matrix4f, false);
-            y += 9;
-        }
     }
 
     public int getWrappedLinesHeight(String text, int maxWidth) {

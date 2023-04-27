@@ -88,7 +88,7 @@ extends FlowableFluid {
                     world.setBlockState(blockPos, AbstractFireBlock.getState(world, blockPos));
                     return;
                 }
-                if (!blockState.getMaterial().blocksMovement()) continue;
+                if (!blockState.blocksMovement()) continue;
                 return;
             }
         } else {
@@ -115,7 +115,7 @@ extends FlowableFluid {
         if (pos.getY() >= world.getBottomY() && pos.getY() < world.getTopY() && !world.isChunkLoaded(pos)) {
             return false;
         }
-        return world.getBlockState(pos).getMaterial().isBurnable();
+        return world.getBlockState(pos).isBurnable();
     }
 
     @Override

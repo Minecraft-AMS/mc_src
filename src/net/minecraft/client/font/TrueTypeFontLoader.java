@@ -6,10 +6,10 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
+ *  com.mojang.datafixers.util.Either
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.stb.STBTTFontinfo
  *  org.lwjgl.stb.STBTruetype
  *  org.lwjgl.system.MemoryUtil
@@ -22,6 +22,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +35,6 @@ import net.minecraft.client.font.TrueTypeFont;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.stb.STBTTFontinfo;
 import org.lwjgl.stb.STBTruetype;
 import org.lwjgl.system.MemoryUtil;
@@ -87,13 +87,16 @@ implements FontLoader {
     }
 
     @Override
-    @Nullable
-    public Font load(ResourceManager manager) {
+    public Either<FontLoader.Loadable, FontLoader.Reference> build() {
+        return Either.left(this::load);
+    }
+
+    private Font load(ResourceManager resourceManager) throws IOException {
         TrueTypeFont trueTypeFont;
         block10: {
             STBTTFontinfo sTBTTFontinfo = null;
             ByteBuffer byteBuffer = null;
-            InputStream inputStream = manager.open(this.filename.withPrefixedPath("font/"));
+            InputStream inputStream = resourceManager.open(this.filename.withPrefixedPath("font/"));
             try {
                 LOGGER.debug("Loading font {}", (Object)this.filename);
                 sTBTTFontinfo = STBTTFontinfo.malloc();
@@ -119,12 +122,11 @@ implements FontLoader {
                     throw throwable;
                 }
                 catch (Exception exception) {
-                    LOGGER.error("Couldn't load truetype font {}", (Object)this.filename, (Object)exception);
                     if (sTBTTFontinfo != null) {
                         sTBTTFontinfo.free();
                     }
                     MemoryUtil.memFree(byteBuffer);
-                    return null;
+                    throw exception;
                 }
             }
             inputStream.close();

@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BinaryOperator;
+import java.util.function.IntConsumer;
 import java.util.stream.Stream;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.EntityAnchorArgumentType;
@@ -77,12 +78,13 @@ implements CommandSource {
     private final Vec2f rotation;
     private final SignedCommandArguments signedArguments;
     private final FutureQueue messageChainTaskQueue;
+    private final IntConsumer returnValueConsumer;
 
     public ServerCommandSource(CommandOutput output, Vec3d pos, Vec2f rot, ServerWorld world, int level, String name, Text displayName, MinecraftServer server, @Nullable Entity entity) {
-        this(output, pos, rot, world, level, name, displayName, server, entity, false, (ResultConsumer<ServerCommandSource>)((ResultConsumer)(context, success, result) -> {}), EntityAnchorArgumentType.EntityAnchor.FEET, SignedCommandArguments.EMPTY, FutureQueue.immediate(server));
+        this(output, pos, rot, world, level, name, displayName, server, entity, false, (ResultConsumer<ServerCommandSource>)((ResultConsumer)(context, success, result) -> {}), EntityAnchorArgumentType.EntityAnchor.FEET, SignedCommandArguments.EMPTY, FutureQueue.immediate(server), i -> {});
     }
 
-    protected ServerCommandSource(CommandOutput output, Vec3d pos, Vec2f rot, ServerWorld world, int level, String name, Text displayName, MinecraftServer server, @Nullable Entity entity, boolean silent, @Nullable ResultConsumer<ServerCommandSource> consumer, EntityAnchorArgumentType.EntityAnchor entityAnchor, SignedCommandArguments signedArguments, FutureQueue messageChainTaskQueue) {
+    protected ServerCommandSource(CommandOutput output, Vec3d pos, Vec2f rot, ServerWorld world, int level, String name, Text displayName, MinecraftServer server, @Nullable Entity entity, boolean silent, @Nullable ResultConsumer<ServerCommandSource> consumer, EntityAnchorArgumentType.EntityAnchor entityAnchor, SignedCommandArguments signedArguments, FutureQueue messageChainTaskQueue, IntConsumer returnValueConsumer) {
         this.output = output;
         this.position = pos;
         this.world = world;
@@ -97,41 +99,42 @@ implements CommandSource {
         this.rotation = rot;
         this.signedArguments = signedArguments;
         this.messageChainTaskQueue = messageChainTaskQueue;
+        this.returnValueConsumer = returnValueConsumer;
     }
 
     public ServerCommandSource withOutput(CommandOutput output) {
         if (this.output == output) {
             return this;
         }
-        return new ServerCommandSource(output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withEntity(Entity entity) {
         if (this.entity == entity) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, entity.getName().getString(), entity.getDisplayName(), this.server, entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, entity.getName().getString(), entity.getDisplayName(), this.server, entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withPosition(Vec3d position) {
         if (this.position.equals(position)) {
             return this;
         }
-        return new ServerCommandSource(this.output, position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withRotation(Vec2f rotation) {
         if (this.rotation.equals(rotation)) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withConsumer(ResultConsumer<ServerCommandSource> consumer) {
         if (Objects.equals(this.resultConsumer, consumer)) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, consumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, consumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource mergeConsumers(ResultConsumer<ServerCommandSource> consumer, BinaryOperator<ResultConsumer<ServerCommandSource>> merger) {
@@ -143,28 +146,28 @@ implements CommandSource {
         if (this.silent || this.output.cannotBeSilenced()) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, true, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, true, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withLevel(int level) {
         if (level == this.level) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withMaxLevel(int level) {
         if (level <= this.level) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withEntityAnchor(EntityAnchorArgumentType.EntityAnchor anchor) {
         if (anchor == this.entityAnchor) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, anchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, anchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withWorld(ServerWorld world) {
@@ -173,7 +176,7 @@ implements CommandSource {
         }
         double d = DimensionType.getCoordinateScaleFactor(this.world.getDimension(), world.getDimension());
         Vec3d vec3d = new Vec3d(this.position.x * d, this.position.y, this.position.z * d);
-        return new ServerCommandSource(this.output, vec3d, this.rotation, world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, vec3d, this.rotation, world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withLookingAt(Entity entity, EntityAnchorArgumentType.EntityAnchor anchor) {
@@ -195,14 +198,21 @@ implements CommandSource {
         if (signedArguments == this.signedArguments) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, signedArguments, this.messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, signedArguments, this.messageChainTaskQueue, this.returnValueConsumer);
     }
 
     public ServerCommandSource withMessageChainTaskQueue(FutureQueue messageChainTaskQueue) {
         if (messageChainTaskQueue == this.messageChainTaskQueue) {
             return this;
         }
-        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, messageChainTaskQueue);
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, messageChainTaskQueue, this.returnValueConsumer);
+    }
+
+    public ServerCommandSource withReturnValueConsumer(IntConsumer returnValueConsumer) {
+        if (returnValueConsumer == this.returnValueConsumer) {
+            return this;
+        }
+        return new ServerCommandSource(this.output, this.position, this.rotation, this.world, this.level, this.name, this.displayName, this.server, this.entity, this.silent, this.resultConsumer, this.entityAnchor, this.signedArguments, this.messageChainTaskQueue, returnValueConsumer);
     }
 
     public Text getDisplayName() {
@@ -276,6 +286,10 @@ implements CommandSource {
 
     public FutureQueue getMessageChainTaskQueue() {
         return this.messageChainTaskQueue;
+    }
+
+    public IntConsumer getReturnValueConsumer() {
+        return this.returnValueConsumer;
     }
 
     public boolean shouldFilterText(ServerPlayerEntity recipient) {

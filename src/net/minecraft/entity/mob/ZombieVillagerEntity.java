@@ -130,11 +130,11 @@ implements VillagerDataContainer {
 
     @Override
     public void tick() {
-        if (!this.world.isClient && this.isAlive() && this.isConverting()) {
+        if (!this.getWorld().isClient && this.isAlive() && this.isConverting()) {
             int i = this.getConversionRate();
             this.conversionTimer -= i;
             if (this.conversionTimer <= 0) {
-                this.finishConversion((ServerWorld)this.world);
+                this.finishConversion((ServerWorld)this.getWorld());
             }
         }
         super.tick();
@@ -148,7 +148,7 @@ implements VillagerDataContainer {
                 if (!player.getAbilities().creativeMode) {
                     itemStack.decrement(1);
                 }
-                if (!this.world.isClient) {
+                if (!this.getWorld().isClient) {
                     this.setConverting(player.getUuid(), this.random.nextInt(2401) + 3600);
                 }
                 return ActionResult.SUCCESS;
@@ -177,15 +177,15 @@ implements VillagerDataContainer {
         this.conversionTimer = delay;
         this.getDataTracker().set(CONVERTING, true);
         this.removeStatusEffect(StatusEffects.WEAKNESS);
-        this.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, delay, Math.min(this.world.getDifficulty().getId() - 1, 0)));
-        this.world.sendEntityStatus(this, (byte)16);
+        this.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, delay, Math.min(this.getWorld().getDifficulty().getId() - 1, 0)));
+        this.getWorld().sendEntityStatus(this, (byte)16);
     }
 
     @Override
     public void handleStatus(byte status) {
         if (status == 16) {
             if (!this.isSilent()) {
-                this.world.playSound(this.getX(), this.getEyeY(), this.getZ(), SoundEvents.ENTITY_ZOMBIE_VILLAGER_CURE, this.getSoundCategory(), 1.0f + this.random.nextFloat(), this.random.nextFloat() * 0.7f + 0.3f, false);
+                this.getWorld().playSound(this.getX(), this.getEyeY(), this.getZ(), SoundEvents.ENTITY_ZOMBIE_VILLAGER_CURE, this.getSoundCategory(), 1.0f + this.random.nextFloat(), this.random.nextFloat() * 0.7f + 0.3f, false);
             }
             return;
         }
@@ -234,7 +234,7 @@ implements VillagerDataContainer {
             for (int k = (int)this.getX() - 4; k < (int)this.getX() + 4 && j < 14; ++k) {
                 for (int l = (int)this.getY() - 4; l < (int)this.getY() + 4 && j < 14; ++l) {
                     for (int m = (int)this.getZ() - 4; m < (int)this.getZ() + 4 && j < 14; ++m) {
-                        BlockState blockState = this.world.getBlockState(mutable.set(k, l, m));
+                        BlockState blockState = this.getWorld().getBlockState(mutable.set(k, l, m));
                         if (!blockState.isOf(Blocks.IRON_BARS) && !(blockState.getBlock() instanceof BedBlock)) continue;
                         if (this.random.nextFloat() < 0.3f) {
                             ++i;

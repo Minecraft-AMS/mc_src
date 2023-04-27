@@ -94,6 +94,9 @@ RecipeInputProvider {
     }
 
     public ItemStack addStack(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
         ItemStack itemStack = stack.copy();
         this.addToExistingSlot(itemStack);
         if (itemStack.isEmpty()) {
@@ -184,8 +187,7 @@ RecipeInputProvider {
         for (int i = 0; i < this.size; ++i) {
             ItemStack itemStack = this.getStack(i);
             if (!itemStack.isEmpty()) continue;
-            this.setStack(i, stack.copy());
-            stack.setCount(0);
+            this.setStack(i, stack.copyAndEmpty());
             return;
         }
     }

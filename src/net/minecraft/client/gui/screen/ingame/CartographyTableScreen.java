@@ -8,13 +8,10 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.ItemStack;
@@ -37,20 +34,19 @@ extends HandledScreen<CartographyTableScreenHandler> {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        super.render(matrices, mouseX, mouseY, delta);
-        this.drawMouseoverTooltip(matrices, mouseX, mouseY);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
+        this.drawMouseoverTooltip(context, mouseX, mouseY);
     }
 
     @Override
-    protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
         MapState mapState;
         Integer integer;
-        this.renderBackground(matrices);
-        RenderSystem.setShaderTexture(0, TEXTURE);
+        this.renderBackground(context);
         int i = this.x;
         int j = this.y;
-        CartographyTableScreen.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
+        context.drawTexture(TEXTURE, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
         ItemStack itemStack = ((CartographyTableScreenHandler)this.handler).getSlot(1).getStack();
         boolean bl = itemStack.isOf(Items.MAP);
         boolean bl2 = itemStack.isOf(Items.PAPER);
@@ -64,59 +60,56 @@ extends HandledScreen<CartographyTableScreenHandler> {
                 if (mapState.locked) {
                     bl4 = true;
                     if (bl2 || bl3) {
-                        CartographyTableScreen.drawTexture(matrices, i + 35, j + 31, this.backgroundWidth + 50, 132, 28, 21);
+                        context.drawTexture(TEXTURE, i + 35, j + 31, this.backgroundWidth + 50, 132, 28, 21);
                     }
                 }
                 if (bl2 && mapState.scale >= 4) {
                     bl4 = true;
-                    CartographyTableScreen.drawTexture(matrices, i + 35, j + 31, this.backgroundWidth + 50, 132, 28, 21);
+                    context.drawTexture(TEXTURE, i + 35, j + 31, this.backgroundWidth + 50, 132, 28, 21);
                 }
             }
         } else {
             integer = null;
             mapState = null;
         }
-        this.drawMap(matrices, integer, mapState, bl, bl2, bl3, bl4);
+        this.drawMap(context, integer, mapState, bl, bl2, bl3, bl4);
     }
 
-    private void drawMap(MatrixStack matrices, @Nullable Integer mapId, @Nullable MapState mapState, boolean cloneMode, boolean expandMode, boolean lockMode, boolean cannotExpand) {
+    private void drawMap(DrawContext context, @Nullable Integer mapId, @Nullable MapState mapState, boolean cloneMode, boolean expandMode, boolean lockMode, boolean cannotExpand) {
         int i = this.x;
         int j = this.y;
         if (expandMode && !cannotExpand) {
-            CartographyTableScreen.drawTexture(matrices, i + 67, j + 13, this.backgroundWidth, 66, 66, 66);
-            this.drawMap(matrices, mapId, mapState, i + 85, j + 31, 0.226f);
+            context.drawTexture(TEXTURE, i + 67, j + 13, this.backgroundWidth, 66, 66, 66);
+            this.drawMap(context, mapId, mapState, i + 85, j + 31, 0.226f);
         } else if (cloneMode) {
-            CartographyTableScreen.drawTexture(matrices, i + 67 + 16, j + 13, this.backgroundWidth, 132, 50, 66);
-            this.drawMap(matrices, mapId, mapState, i + 86, j + 16, 0.34f);
-            RenderSystem.setShaderTexture(0, TEXTURE);
-            matrices.push();
-            matrices.translate(0.0f, 0.0f, 1.0f);
-            CartographyTableScreen.drawTexture(matrices, i + 67, j + 13 + 16, this.backgroundWidth, 132, 50, 66);
-            this.drawMap(matrices, mapId, mapState, i + 70, j + 32, 0.34f);
-            matrices.pop();
+            context.drawTexture(TEXTURE, i + 67 + 16, j + 13, this.backgroundWidth, 132, 50, 66);
+            this.drawMap(context, mapId, mapState, i + 86, j + 16, 0.34f);
+            context.getMatrices().push();
+            context.getMatrices().translate(0.0f, 0.0f, 1.0f);
+            context.drawTexture(TEXTURE, i + 67, j + 13 + 16, this.backgroundWidth, 132, 50, 66);
+            this.drawMap(context, mapId, mapState, i + 70, j + 32, 0.34f);
+            context.getMatrices().pop();
         } else if (lockMode) {
-            CartographyTableScreen.drawTexture(matrices, i + 67, j + 13, this.backgroundWidth, 0, 66, 66);
-            this.drawMap(matrices, mapId, mapState, i + 71, j + 17, 0.45f);
-            RenderSystem.setShaderTexture(0, TEXTURE);
-            matrices.push();
-            matrices.translate(0.0f, 0.0f, 1.0f);
-            CartographyTableScreen.drawTexture(matrices, i + 66, j + 12, 0, this.backgroundHeight, 66, 66);
-            matrices.pop();
+            context.drawTexture(TEXTURE, i + 67, j + 13, this.backgroundWidth, 0, 66, 66);
+            this.drawMap(context, mapId, mapState, i + 71, j + 17, 0.45f);
+            context.getMatrices().push();
+            context.getMatrices().translate(0.0f, 0.0f, 1.0f);
+            context.drawTexture(TEXTURE, i + 66, j + 12, 0, this.backgroundHeight, 66, 66);
+            context.getMatrices().pop();
         } else {
-            CartographyTableScreen.drawTexture(matrices, i + 67, j + 13, this.backgroundWidth, 0, 66, 66);
-            this.drawMap(matrices, mapId, mapState, i + 71, j + 17, 0.45f);
+            context.drawTexture(TEXTURE, i + 67, j + 13, this.backgroundWidth, 0, 66, 66);
+            this.drawMap(context, mapId, mapState, i + 71, j + 17, 0.45f);
         }
     }
 
-    private void drawMap(MatrixStack matrices, @Nullable Integer mapId, @Nullable MapState mapState, int x, int y, float scale) {
+    private void drawMap(DrawContext context, @Nullable Integer mapId, @Nullable MapState mapState, int x, int y, float scale) {
         if (mapId != null && mapState != null) {
-            matrices.push();
-            matrices.translate(x, y, 1.0f);
-            matrices.scale(scale, scale, 1.0f);
-            VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-            this.client.gameRenderer.getMapRenderer().draw(matrices, immediate, mapId, mapState, true, 0xF000F0);
-            immediate.draw();
-            matrices.pop();
+            context.getMatrices().push();
+            context.getMatrices().translate(x, y, 1.0f);
+            context.getMatrices().scale(scale, scale, 1.0f);
+            this.client.gameRenderer.getMapRenderer().draw(context.getMatrices(), context.getVertexConsumers(), mapId, mapState, true, 0xF000F0);
+            context.draw();
+            context.getMatrices().pop();
         }
     }
 }

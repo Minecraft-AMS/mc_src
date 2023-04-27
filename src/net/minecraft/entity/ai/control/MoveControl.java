@@ -96,8 +96,8 @@ implements Control {
             this.entity.setYaw(this.wrapDegrees(this.entity.getYaw(), n, 90.0f));
             this.entity.setMovementSpeed((float)(this.speed * this.entity.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED)));
             BlockPos blockPos = this.entity.getBlockPos();
-            BlockState blockState = this.entity.world.getBlockState(blockPos);
-            VoxelShape voxelShape = blockState.getCollisionShape(this.entity.world, blockPos);
+            BlockState blockState = this.entity.getWorld().getBlockState(blockPos);
+            VoxelShape voxelShape = blockState.getCollisionShape(this.entity.getWorld(), blockPos);
             if (o > (double)this.entity.getStepHeight() && d * d + e * e < (double)Math.max(1.0f, this.entity.getWidth()) || !voxelShape.isEmpty() && this.entity.getY() < voxelShape.getMax(Direction.Axis.Y) + (double)blockPos.getY() && !blockState.isIn(BlockTags.DOORS) && !blockState.isIn(BlockTags.FENCES)) {
                 this.entity.getJumpControl().setActive();
                 this.state = State.JUMPING;
@@ -115,7 +115,7 @@ implements Control {
     private boolean isPosWalkable(float x, float z) {
         PathNodeMaker pathNodeMaker;
         EntityNavigation entityNavigation = this.entity.getNavigation();
-        return entityNavigation == null || (pathNodeMaker = entityNavigation.getNodeMaker()) == null || pathNodeMaker.getDefaultNodeType(this.entity.world, MathHelper.floor(this.entity.getX() + (double)x), this.entity.getBlockY(), MathHelper.floor(this.entity.getZ() + (double)z)) == PathNodeType.WALKABLE;
+        return entityNavigation == null || (pathNodeMaker = entityNavigation.getNodeMaker()) == null || pathNodeMaker.getDefaultNodeType(this.entity.getWorld(), MathHelper.floor(this.entity.getX() + (double)x), this.entity.getBlockY(), MathHelper.floor(this.entity.getZ() + (double)z)) == PathNodeType.WALKABLE;
     }
 
     protected float wrapDegrees(float from, float to, float max) {

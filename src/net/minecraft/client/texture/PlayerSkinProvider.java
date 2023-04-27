@@ -12,7 +12,7 @@
  *  com.google.common.collect.Multimap
  *  com.google.common.hash.Hashing
  *  com.mojang.authlib.GameProfile
- *  com.mojang.authlib.minecraft.InsecureTextureException
+ *  com.mojang.authlib.minecraft.InsecurePublicKeyException
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture$Type
  *  com.mojang.authlib.minecraft.MinecraftSessionService
@@ -33,7 +33,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.minecraft.InsecureTextureException;
+import com.mojang.authlib.minecraft.InsecurePublicKeyException;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.authlib.properties.Property;
@@ -125,7 +125,7 @@ public class PlayerSkinProvider {
             try {
                 map.putAll(this.sessionService.getTextures(profile, requireSecure));
             }
-            catch (InsecureTextureException insecureTextureException) {
+            catch (InsecurePublicKeyException insecurePublicKeyException) {
                 // empty catch block
             }
             if (map.isEmpty()) {
@@ -138,7 +138,7 @@ public class PlayerSkinProvider {
                     try {
                         map.putAll(this.sessionService.getTextures(profile, requireSecure));
                     }
-                    catch (InsecureTextureException insecureTextureException) {
+                    catch (InsecurePublicKeyException insecurePublicKeyException) {
                         // empty catch block
                     }
                 }

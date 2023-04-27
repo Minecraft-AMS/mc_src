@@ -12,12 +12,11 @@
 package net.minecraft.client.realms.gui.screen;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -42,7 +41,6 @@ import net.minecraft.client.realms.task.CloseServerTask;
 import net.minecraft.client.realms.task.OpenServerTask;
 import net.minecraft.client.realms.task.SwitchMinigameTask;
 import net.minecraft.client.realms.task.SwitchSlotTask;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -187,28 +185,28 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.tooltip = null;
-        this.renderBackground(matrices);
-        RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, WORLDS_TITLE, this.width / 2, RealmsConfigureWorldScreen.row(4), 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+        this.renderBackground(context);
+        context.drawCenteredTextWithShadow(this.textRenderer, WORLDS_TITLE, this.width / 2, RealmsConfigureWorldScreen.row(4), 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
         if (this.server == null) {
-            RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+            context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
             return;
         }
         String string = this.server.getName();
         int i = this.textRenderer.getWidth(string);
         int j = this.server.state == RealmsServer.State.CLOSED ? 0xA0A0A0 : 0x7FFF7F;
         int k = this.textRenderer.getWidth(this.title);
-        RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
-        RealmsConfigureWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, string, this.width / 2, 24, j);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, string, this.width / 2, 24, j);
         int l = Math.min(this.buttonCenter(2, 3) + 80 - 11, this.width / 2 + i / 2 + k / 2 + 10);
-        this.drawServerStatus(matrices, l, 7, mouseX, mouseY);
+        this.drawServerStatus(context, l, 7, mouseX, mouseY);
         if (this.isMinigame()) {
-            this.textRenderer.draw(matrices, CURRENT_MINIGAME_TEXT.copy().append(this.server.getMinigameName()), (float)(this.left_x + 80 + 20 + 10), (float)RealmsConfigureWorldScreen.row(13), 0xFFFFFF);
+            context.drawText(this.textRenderer, CURRENT_MINIGAME_TEXT.copy().append(this.server.getMinigameName()), this.left_x + 80 + 20 + 10, RealmsConfigureWorldScreen.row(13), 0xFFFFFF, false);
         }
         if (this.tooltip != null) {
-            this.renderMousehoverTooltip(matrices, this.tooltip, mouseX, mouseY);
+            this.renderMousehoverTooltip(context, this.tooltip, mouseX, mouseY);
         }
     }
 
@@ -306,62 +304,58 @@ extends RealmsScreen {
         }, RealmsLongConfirmationScreen.Type.INFO, text, text2, true));
     }
 
-    protected void renderMousehoverTooltip(MatrixStack matrices, @Nullable Text text, int mouseX, int mouseY) {
+    protected void renderMousehoverTooltip(DrawContext context, @Nullable Text text, int mouseX, int mouseY) {
         int i = mouseX + 12;
         int j = mouseY - 12;
         int k = this.textRenderer.getWidth(text);
         if (i + k + 3 > this.right_x) {
             i = i - k - 20;
         }
-        RealmsConfigureWorldScreen.fillGradient(matrices, i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
-        this.textRenderer.drawWithShadow(matrices, text, (float)i, (float)j, 0xFFFFFF);
+        context.fillGradient(i - 3, j - 3, i + k + 3, j + 8 + 3, -1073741824, -1073741824);
+        context.drawTextWithShadow(this.textRenderer, text, i, j, 0xFFFFFF);
     }
 
-    private void drawServerStatus(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
+    private void drawServerStatus(DrawContext context, int x, int y, int mouseX, int mouseY) {
         if (this.server.expired) {
-            this.drawExpired(matrices, x, y, mouseX, mouseY);
+            this.drawExpired(context, x, y, mouseX, mouseY);
         } else if (this.server.state == RealmsServer.State.CLOSED) {
-            this.drawClosed(matrices, x, y, mouseX, mouseY);
+            this.drawClosed(context, x, y, mouseX, mouseY);
         } else if (this.server.state == RealmsServer.State.OPEN) {
             if (this.server.daysLeft < 7) {
-                this.drawExpiring(matrices, x, y, mouseX, mouseY, this.server.daysLeft);
+                this.drawExpiring(context, x, y, mouseX, mouseY, this.server.daysLeft);
             } else {
-                this.drawOpen(matrices, x, y, mouseX, mouseY);
+                this.drawOpen(context, x, y, mouseX, mouseY);
             }
         }
     }
 
-    private void drawExpired(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
-        RenderSystem.setShaderTexture(0, EXPIRED_ICON);
-        DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
+    private void drawExpired(DrawContext context, int x, int y, int mouseX, int mouseY) {
+        context.drawTexture(EXPIRED_ICON, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = EXPIRED_TEXT;
         }
     }
 
-    private void drawExpiring(MatrixStack matrices, int x, int y, int mouseX, int mouseY, int remainingDays) {
-        RenderSystem.setShaderTexture(0, EXPIRES_SOON_ICON);
+    private void drawExpiring(DrawContext context, int x, int y, int mouseX, int mouseY, int remainingDays) {
         if (this.animTick % 20 < 10) {
-            DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 20, 28);
+            context.drawTexture(EXPIRES_SOON_ICON, x, y, 0.0f, 0.0f, 10, 28, 20, 28);
         } else {
-            DrawableHelper.drawTexture(matrices, x, y, 10.0f, 0.0f, 10, 28, 20, 28);
+            context.drawTexture(EXPIRES_SOON_ICON, x, y, 10.0f, 0.0f, 10, 28, 20, 28);
         }
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = remainingDays <= 0 ? EXPIRES_SOON_TEXT : (remainingDays == 1 ? EXPIRES_IN_A_DAY_TEXT : Text.translatable("mco.selectServer.expires.days", remainingDays));
         }
     }
 
-    private void drawOpen(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
-        RenderSystem.setShaderTexture(0, ON_ICON);
-        DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
+    private void drawOpen(DrawContext context, int x, int y, int mouseX, int mouseY) {
+        context.drawTexture(ON_ICON, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = OPEN_TEXT;
         }
     }
 
-    private void drawClosed(MatrixStack matrices, int x, int y, int mouseX, int mouseY) {
-        RenderSystem.setShaderTexture(0, OFF_ICON);
-        DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
+    private void drawClosed(DrawContext context, int x, int y, int mouseX, int mouseY) {
+        context.drawTexture(OFF_ICON, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
             this.tooltip = CLOSED_TEXT;
         }

@@ -7,10 +7,10 @@
 package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.Material;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -64,14 +64,17 @@ extends Feature<HugeFungusFeatureConfig> {
         return true;
     }
 
-    private static boolean isReplaceable(WorldAccess world, BlockPos pos, boolean replacePlants) {
-        return world.testBlockState(pos, state -> {
-            Material material = state.getMaterial();
-            return state.isReplaceable() || replacePlants && material == Material.PLANT;
-        });
+    private static boolean isReplaceable(StructureWorldAccess world, BlockPos pos, HugeFungusFeatureConfig config, boolean checkConfig) {
+        if (world.testBlockState(pos, AbstractBlock.AbstractBlockState::isReplaceable)) {
+            return true;
+        }
+        if (checkConfig) {
+            return config.replaceableBlocks.test(world, pos);
+        }
+        return false;
     }
 
-    private void generateStem(WorldAccess world, Random random, HugeFungusFeatureConfig config, BlockPos pos, int stemHeight, boolean thickStem) {
+    private void generateStem(StructureWorldAccess world, Random random, HugeFungusFeatureConfig config, BlockPos pos, int stemHeight, boolean thickStem) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         BlockState blockState = config.stemState;
         int i = thickStem ? 1 : 0;
@@ -80,7 +83,7 @@ extends Feature<HugeFungusFeatureConfig> {
                 boolean bl = thickStem && MathHelper.abs(j) == i && MathHelper.abs(k) == i;
                 for (int l = 0; l < stemHeight; ++l) {
                     mutable.set(pos, j, l, k);
-                    if (!HugeFungusFeature.isReplaceable(world, mutable, true)) continue;
+                    if (!HugeFungusFeature.isReplaceable(world, mutable, config, true)) continue;
                     if (config.planted) {
                         if (!world.getBlockState((BlockPos)mutable.down()).isAir()) {
                             world.breakBlock(mutable, true);
@@ -99,7 +102,7 @@ extends Feature<HugeFungusFeatureConfig> {
         }
     }
 
-    private void generateHat(WorldAccess world, Random random, HugeFungusFeatureConfig config, BlockPos pos, int hatHeight, boolean thickStem) {
+    private void generateHat(StructureWorldAccess world, Random random, HugeFungusFeatureConfig config, BlockPos pos, int hatHeight, boolean thickStem) {
         int j;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         boolean bl = config.hatState.isOf(Blocks.NETHER_WART_BLOCK);
@@ -121,7 +124,7 @@ extends Feature<HugeFungusFeatureConfig> {
                     boolean bl5 = bl2 && bl3;
                     boolean bl6 = k < j + 3;
                     mutable.set(pos, m, k, n2);
-                    if (!HugeFungusFeature.isReplaceable(world, mutable, false)) continue;
+                    if (!HugeFungusFeature.isReplaceable(world, mutable, config, false)) continue;
                     if (config.planted && !world.getBlockState((BlockPos)mutable.down()).isAir()) {
                         world.breakBlock(mutable, true);
                     }

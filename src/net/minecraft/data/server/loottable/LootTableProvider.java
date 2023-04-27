@@ -7,6 +7,7 @@
  *  com.google.common.collect.Sets
  *  com.google.common.collect.Sets$SetView
  *  com.mojang.logging.LogUtils
+ *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.data.server.loottable;
@@ -27,12 +28,15 @@ import net.minecraft.data.DataOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.DataWriter;
 import net.minecraft.data.server.loottable.LootTableGenerator;
-import net.minecraft.loot.LootManager;
+import net.minecraft.loot.LootDataKey;
+import net.minecraft.loot.LootDataLookup;
+import net.minecraft.loot.LootDataType;
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class LootTableProvider
@@ -50,18 +54,28 @@ implements DataProvider {
 
     @Override
     public CompletableFuture<?> run(DataWriter writer) {
-        HashMap map = Maps.newHashMap();
+        final HashMap map = Maps.newHashMap();
         this.lootTypeGenerators.forEach(lootTypeGenerator -> lootTypeGenerator.provider().get().accept((id, builder) -> {
             if (map.put(id, builder.type(lootTypeGenerator.paramSet).build()) != null) {
                 throw new IllegalStateException("Duplicate loot table " + id);
             }
         }));
-        LootTableReporter lootTableReporter = new LootTableReporter(LootContextTypes.GENERIC, id -> null, map::get);
+        LootTableReporter lootTableReporter = new LootTableReporter(LootContextTypes.GENERIC, new LootDataLookup(){
+
+            @Override
+            @Nullable
+            public <T> T getElement(LootDataKey<T> lootDataKey) {
+                if (lootDataKey.type() == LootDataType.LOOT_TABLES) {
+                    return (T)map.get(lootDataKey.id());
+                }
+                return null;
+            }
+        });
         Sets.SetView set = Sets.difference(this.lootTableIds, map.keySet());
         for (Identifier identifier : set) {
             lootTableReporter.report("Missing built-in table: " + identifier);
         }
-        map.forEach((id, table) -> LootManager.validate(lootTableReporter, id, table));
+        map.forEach((id, table) -> table.validate(lootTableReporter.withContextType(table.getType()).makeChild("{" + id + "}", new LootDataKey<LootTable>(LootDataType.LOOT_TABLES, (Identifier)id))));
         Multimap<String, String> multimap = lootTableReporter.getMessages();
         if (!multimap.isEmpty()) {
             multimap.forEach((name, message) -> LOGGER.warn("Found validation problem in {}: {}", name, message));
@@ -71,7 +85,7 @@ implements DataProvider {
             Identifier identifier = (Identifier)entry.getKey();
             LootTable lootTable = (LootTable)entry.getValue();
             Path path = this.pathResolver.resolveJson(identifier);
-            return DataProvider.writeToPath(writer, LootManager.toJson(lootTable), path);
+            return DataProvider.writeToPath(writer, LootDataType.LOOT_TABLES.getGson().toJsonTree((Object)lootTable), path);
         }).toArray(CompletableFuture[]::new));
     }
 

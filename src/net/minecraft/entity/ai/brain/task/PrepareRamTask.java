@@ -142,7 +142,7 @@ extends MultiTickTask<E> {
     }
 
     private boolean canReach(PathAwareEntity entity, BlockPos target) {
-        return entity.getNavigation().isValidPosition(target) && entity.getPathfindingPenalty(LandPathNodeMaker.getLandNodeType(entity.world, target.mutableCopy())) == 0.0f;
+        return entity.getNavigation().isValidPosition(target) && entity.getPathfindingPenalty(LandPathNodeMaker.getLandNodeType(entity.getWorld(), target.mutableCopy())) == 0.0f;
     }
 
     private void findRam(PathAwareEntity entity, LivingEntity target) {

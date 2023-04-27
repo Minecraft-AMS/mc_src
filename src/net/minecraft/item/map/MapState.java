@@ -176,8 +176,8 @@ extends PersistentState {
                 this.removeIcon(string);
                 continue;
             }
-            if (stack.isInFrame() || playerUpdateTracker2.player.world.getRegistryKey() != this.dimension || !this.showIcons) continue;
-            this.addIcon(MapIcon.Type.PLAYER, playerUpdateTracker2.player.world, string, playerUpdateTracker2.player.getX(), playerUpdateTracker2.player.getZ(), playerUpdateTracker2.player.getYaw(), null);
+            if (stack.isInFrame() || playerUpdateTracker2.player.getWorld().getRegistryKey() != this.dimension || !this.showIcons) continue;
+            this.addIcon(MapIcon.Type.PLAYER, playerUpdateTracker2.player.getWorld(), string, playerUpdateTracker2.player.getX(), playerUpdateTracker2.player.getZ(), playerUpdateTracker2.player.getYaw(), null);
         }
         if (stack.isInFrame() && this.showIcons) {
             ItemFrameEntity itemFrameEntity = stack.getFrame();
@@ -187,7 +187,7 @@ extends PersistentState {
                 this.removeIcon("frame-" + mapFrameMarker.getEntityId());
             }
             MapFrameMarker mapFrameMarker2 = new MapFrameMarker(blockPos, itemFrameEntity.getHorizontalFacing().getHorizontal() * 90, itemFrameEntity.getId());
-            this.addIcon(MapIcon.Type.FRAME, player.world, "frame-" + itemFrameEntity.getId(), blockPos.getX(), blockPos.getZ(), itemFrameEntity.getHorizontalFacing().getHorizontal() * 90, null);
+            this.addIcon(MapIcon.Type.FRAME, player.getWorld(), "frame-" + itemFrameEntity.getId(), blockPos.getX(), blockPos.getZ(), itemFrameEntity.getHorizontalFacing().getHorizontal() * 90, null);
             this.frames.put(mapFrameMarker2.getKey(), mapFrameMarker2);
         }
         if ((nbtCompound = stack.getNbt()) != null && nbtCompound.contains("Decorations", 9)) {
@@ -195,7 +195,7 @@ extends PersistentState {
             for (int j = 0; j < nbtList.size(); ++j) {
                 NbtCompound nbtCompound2 = nbtList.getCompound(j);
                 if (this.icons.containsKey(nbtCompound2.getString("id"))) continue;
-                this.addIcon(MapIcon.Type.byId(nbtCompound2.getByte("type")), player.world, nbtCompound2.getString("id"), nbtCompound2.getDouble("x"), nbtCompound2.getDouble("z"), nbtCompound2.getDouble("rot"), null);
+                this.addIcon(MapIcon.Type.byId(nbtCompound2.getByte("type")), player.getWorld(), nbtCompound2.getString("id"), nbtCompound2.getDouble("x"), nbtCompound2.getDouble("z"), nbtCompound2.getDouble("rot"), null);
             }
         }
     }

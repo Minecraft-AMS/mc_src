@@ -63,8 +63,8 @@ public class InGameOverlayRenderer {
             double e = player.getEyeY() + (double)(((float)((i >> 1) % 2) - 0.5f) * 0.1f);
             double f = player.getZ() + (double)(((float)((i >> 2) % 2) - 0.5f) * player.getWidth() * 0.8f);
             mutable.set(d, e, f);
-            BlockState blockState = player.world.getBlockState(mutable);
-            if (blockState.getRenderType() == BlockRenderType.INVISIBLE || !blockState.shouldBlockVision(player.world, mutable)) continue;
+            BlockState blockState = player.getWorld().getBlockState(mutable);
+            if (blockState.getRenderType() == BlockRenderType.INVISIBLE || !blockState.shouldBlockVision(player.getWorld(), mutable)) continue;
             return blockState;
         }
         return null;
@@ -98,7 +98,7 @@ public class InGameOverlayRenderer {
         RenderSystem.setShaderTexture(0, UNDERWATER_TEXTURE);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         BlockPos blockPos = BlockPos.ofFloored(client.player.getX(), client.player.getEyeY(), client.player.getZ());
-        float f = LightmapTextureManager.getBrightness(client.player.world.getDimension(), client.player.world.getLightLevel(blockPos));
+        float f = LightmapTextureManager.getBrightness(client.player.getWorld().getDimension(), client.player.getWorld().getLightLevel(blockPos));
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(f, f, f, 0.1f);
         float g = 4.0f;

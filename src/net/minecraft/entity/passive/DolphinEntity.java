@@ -256,21 +256,21 @@ extends WaterCreatureEntity {
             if (this.getMoistness() <= 0) {
                 this.damage(this.getDamageSources().dryOut(), 1.0f);
             }
-            if (this.onGround) {
+            if (this.isOnGround()) {
                 this.setVelocity(this.getVelocity().add((this.random.nextFloat() * 2.0f - 1.0f) * 0.2f, 0.5, (this.random.nextFloat() * 2.0f - 1.0f) * 0.2f));
                 this.setYaw(this.random.nextFloat() * 360.0f);
-                this.onGround = false;
+                this.setOnGround(false);
                 this.velocityDirty = true;
             }
         }
-        if (this.world.isClient && this.isTouchingWater() && this.getVelocity().lengthSquared() > 0.03) {
+        if (this.getWorld().isClient && this.isTouchingWater() && this.getVelocity().lengthSquared() > 0.03) {
             Vec3d vec3d = this.getRotationVec(0.0f);
             float f = MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)) * 0.3f;
             float g = MathHelper.sin(this.getYaw() * ((float)Math.PI / 180)) * 0.3f;
             float h = 1.2f - this.random.nextFloat() * 0.7f;
             for (int i = 0; i < 2; ++i) {
-                this.world.addParticle(ParticleTypes.DOLPHIN, this.getX() - vec3d.x * (double)h + (double)f, this.getY() - vec3d.y, this.getZ() - vec3d.z * (double)h + (double)g, 0.0, 0.0, 0.0);
-                this.world.addParticle(ParticleTypes.DOLPHIN, this.getX() - vec3d.x * (double)h - (double)f, this.getY() - vec3d.y, this.getZ() - vec3d.z * (double)h - (double)g, 0.0, 0.0, 0.0);
+                this.getWorld().addParticle(ParticleTypes.DOLPHIN, this.getX() - vec3d.x * (double)h + (double)f, this.getY() - vec3d.y, this.getZ() - vec3d.z * (double)h + (double)g, 0.0, 0.0, 0.0);
+                this.getWorld().addParticle(ParticleTypes.DOLPHIN, this.getX() - vec3d.x * (double)h - (double)f, this.getY() - vec3d.y, this.getZ() - vec3d.z * (double)h - (double)g, 0.0, 0.0, 0.0);
             }
         }
     }
@@ -289,7 +289,7 @@ extends WaterCreatureEntity {
             double d = this.random.nextGaussian() * 0.01;
             double e = this.random.nextGaussian() * 0.01;
             double f = this.random.nextGaussian() * 0.01;
-            this.world.addParticle(parameters, this.getParticleX(1.0), this.getRandomBodyY() + 0.2, this.getParticleZ(1.0), d, e, f);
+            this.getWorld().addParticle(parameters, this.getParticleX(1.0), this.getRandomBodyY() + 0.2, this.getParticleZ(1.0), d, e, f);
         }
     }
 
@@ -297,14 +297,14 @@ extends WaterCreatureEntity {
     protected ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (!itemStack.isEmpty() && itemStack.isIn(ItemTags.FISHES)) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 this.playSound(SoundEvents.ENTITY_DOLPHIN_EAT, 1.0f, 1.0f);
             }
             this.setHasFish(true);
             if (!player.getAbilities().creativeMode) {
                 itemStack.decrement(1);
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         return super.interactMob(player, hand);
     }
@@ -391,10 +391,10 @@ extends WaterCreatureEntity {
 
         @Override
         public void start() {
-            if (!(this.dolphin.world instanceof ServerWorld)) {
+            if (!(this.dolphin.getWorld() instanceof ServerWorld)) {
                 return;
             }
-            ServerWorld serverWorld = (ServerWorld)this.dolphin.world;
+            ServerWorld serverWorld = (ServerWorld)this.dolphin.getWorld();
             this.noPathToStructure = false;
             this.dolphin.getNavigation().stop();
             BlockPos blockPos = this.dolphin.getBlockPos();
@@ -417,7 +417,7 @@ extends WaterCreatureEntity {
 
         @Override
         public void tick() {
-            World world = this.dolphin.world;
+            World world = this.dolphin.getWorld();
             if (this.dolphin.isNearTarget() || this.dolphin.getNavigation().isIdle()) {
                 BlockPos blockPos;
                 Vec3d vec3d = Vec3d.ofCenter(this.dolphin.getTreasurePos());
@@ -456,7 +456,7 @@ extends WaterCreatureEntity {
 
         @Override
         public boolean canStart() {
-            this.closestPlayer = this.dolphin.world.getClosestPlayer(CLOSE_PLAYER_PREDICATE, this.dolphin);
+            this.closestPlayer = this.dolphin.getWorld().getClosestPlayer(CLOSE_PLAYER_PREDICATE, this.dolphin);
             if (this.closestPlayer == null) {
                 return false;
             }
@@ -487,7 +487,7 @@ extends WaterCreatureEntity {
             } else {
                 this.dolphin.getNavigation().startMovingTo(this.closestPlayer, this.speed);
             }
-            if (this.closestPlayer.isSwimming() && this.closestPlayer.world.random.nextInt(6) == 0) {
+            if (this.closestPlayer.isSwimming() && this.closestPlayer.getWorld().random.nextInt(6) == 0) {
                 this.closestPlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.DOLPHINS_GRACE, 100), this.dolphin);
             }
         }
@@ -505,13 +505,13 @@ extends WaterCreatureEntity {
             if (this.nextPlayingTime > DolphinEntity.this.age) {
                 return false;
             }
-            List<ItemEntity> list = DolphinEntity.this.world.getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
+            List<ItemEntity> list = DolphinEntity.this.getWorld().getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
             return !list.isEmpty() || !DolphinEntity.this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty();
         }
 
         @Override
         public void start() {
-            List<ItemEntity> list = DolphinEntity.this.world.getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
+            List<ItemEntity> list = DolphinEntity.this.getWorld().getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
             if (!list.isEmpty()) {
                 DolphinEntity.this.getNavigation().startMovingTo(list.get(0), 1.2f);
                 DolphinEntity.this.playSound(SoundEvents.ENTITY_DOLPHIN_PLAY, 1.0f, 1.0f);
@@ -531,7 +531,7 @@ extends WaterCreatureEntity {
 
         @Override
         public void tick() {
-            List<ItemEntity> list = DolphinEntity.this.world.getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
+            List<ItemEntity> list = DolphinEntity.this.getWorld().getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
             ItemStack itemStack = DolphinEntity.this.getEquippedStack(EquipmentSlot.MAINHAND);
             if (!itemStack.isEmpty()) {
                 this.spitOutItem(itemStack);
@@ -546,14 +546,14 @@ extends WaterCreatureEntity {
                 return;
             }
             double d = DolphinEntity.this.getEyeY() - (double)0.3f;
-            ItemEntity itemEntity = new ItemEntity(DolphinEntity.this.world, DolphinEntity.this.getX(), d, DolphinEntity.this.getZ(), stack);
+            ItemEntity itemEntity = new ItemEntity(DolphinEntity.this.getWorld(), DolphinEntity.this.getX(), d, DolphinEntity.this.getZ(), stack);
             itemEntity.setPickupDelay(40);
             itemEntity.setThrower(DolphinEntity.this.getUuid());
             float f = 0.3f;
             float g = DolphinEntity.this.random.nextFloat() * ((float)Math.PI * 2);
             float h = 0.02f * DolphinEntity.this.random.nextFloat();
             itemEntity.setVelocity(0.3f * -MathHelper.sin(DolphinEntity.this.getYaw() * ((float)Math.PI / 180)) * MathHelper.cos(DolphinEntity.this.getPitch() * ((float)Math.PI / 180)) + MathHelper.cos(g) * h, 0.3f * MathHelper.sin(DolphinEntity.this.getPitch() * ((float)Math.PI / 180)) * 1.5f, 0.3f * MathHelper.cos(DolphinEntity.this.getYaw() * ((float)Math.PI / 180)) * MathHelper.cos(DolphinEntity.this.getPitch() * ((float)Math.PI / 180)) + MathHelper.sin(g) * h);
-            DolphinEntity.this.world.spawnEntity(itemEntity);
+            DolphinEntity.this.getWorld().spawnEntity(itemEntity);
         }
     }
 }

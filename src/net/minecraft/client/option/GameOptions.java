@@ -374,7 +374,7 @@ public class GameOptions {
         case 110 -> GameOptions.getGenericValueText(optionText, Text.translatable("options.fov.max"));
         default -> GameOptions.getGenericValueText(optionText, value);
     }, new SimpleOption.ValidatingIntSliderCallbacks(30, 110), Codec.DOUBLE.xmap(value -> (int)(value * 40.0 + 70.0), value -> ((double)value.intValue() - 70.0) / 40.0), 70, value -> MinecraftClient.getInstance().worldRenderer.scheduleTerrainUpdate());
-    private static final MutableText TELEMETRY_TOOLTIP = Text.translatable("options.telemetry.button.tooltip", Text.translatable("options.telemetry.state.minimal"), Text.translatable("options.telemetry.state.all"));
+    private static final Text TELEMETRY_TOOLTIP = Text.translatable("options.telemetry.button.tooltip", Text.translatable("options.telemetry.state.minimal"), Text.translatable("options.telemetry.state.all"));
     private final SimpleOption<Boolean> telemetryOptInExtra = SimpleOption.ofBoolean("options.telemetry.button", SimpleOption.constantTooltip(TELEMETRY_TOOLTIP), (optionText, value) -> {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         if (!minecraftClient.isTelemetryEnabledByApi()) {
@@ -440,6 +440,7 @@ public class GameOptions {
         }
         return GameOptions.getGenericValueText(optionText, i);
     }, SimpleOption.DoubleSliderCallbacks.INSTANCE, 0.5, value -> {});
+    public static final int field_43405 = 0;
     private static final int MAX_SERIALIZABLE_GUI_SCALE = 0x7FFFFFFE;
     private final SimpleOption<Integer> guiScale = new SimpleOption<Integer>("options.guiScale", SimpleOption.emptyTooltip(), (optionText, value) -> value == 0 ? Text.translatable("options.guiScale.auto") : Text.literal(Integer.toString(value)), new SimpleOption.MaxSuppliableIntCallbacks(0, () -> {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();

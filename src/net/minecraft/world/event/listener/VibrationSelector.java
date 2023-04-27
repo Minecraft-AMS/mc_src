@@ -15,8 +15,8 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
+import net.minecraft.world.event.Vibrations;
 import net.minecraft.world.event.listener.Vibration;
-import net.minecraft.world.event.listener.VibrationListener;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class VibrationSelector {
@@ -53,7 +53,7 @@ public class VibrationSelector {
         if (vibration.distance() > vibration2.distance()) {
             return false;
         }
-        return VibrationListener.getFrequency(vibration.gameEvent()) > VibrationListener.getFrequency(vibration2.gameEvent());
+        return Vibrations.getFrequency(vibration.gameEvent()) > Vibrations.getFrequency(vibration2.gameEvent());
     }
 
     public Optional<Vibration> getVibrationToTick(long currentTick) {

@@ -98,7 +98,7 @@ Saddleable {
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        if (BOOST_TIME.equals(data) && this.world.isClient) {
+        if (BOOST_TIME.equals(data) && this.getWorld().isClient) {
             this.saddledComponent.boost();
         }
         super.onTrackedDataSet(data);
@@ -147,10 +147,10 @@ Saddleable {
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         boolean bl = this.isBreedingItem(player.getStackInHand(hand));
         if (!bl && this.isSaddled() && !this.hasPassengers() && !player.shouldCancelInteraction()) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 player.startRiding(this);
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         ActionResult actionResult = super.interactMob(player, hand);
         if (!actionResult.isAccepted()) {
@@ -185,7 +185,7 @@ Saddleable {
     public void saddle(@Nullable SoundCategory sound) {
         this.saddledComponent.setSaddled(true);
         if (sound != null) {
-            this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_PIG_SADDLE, sound, 0.5f, 1.0f);
+            this.getWorld().playSoundFromEntity(null, this, SoundEvents.ENTITY_PIG_SADDLE, sound, 0.5f, 1.0f);
         }
     }
 
@@ -201,10 +201,11 @@ Saddleable {
         for (EntityPose entityPose : passenger.getPoses()) {
             Box box = passenger.getBoundingBox(entityPose);
             for (int[] js : is) {
-                Vec3d vec3d;
                 mutable.set(blockPos.getX() + js[0], blockPos.getY(), blockPos.getZ() + js[1]);
-                double d = this.world.getDismountHeight(mutable);
-                if (!Dismounting.canDismountInBlock(d) || !Dismounting.canPlaceEntityAt(this.world, passenger, box.offset(vec3d = Vec3d.ofCenter(mutable, d)))) continue;
+                double d = this.getWorld().getDismountHeight(mutable);
+                if (!Dismounting.canDismountInBlock(d)) continue;
+                Vec3d vec3d = Vec3d.ofCenter(mutable, d);
+                if (!Dismounting.canPlaceEntityAt(this.getWorld(), passenger, box.offset(vec3d))) continue;
                 passenger.setPose(entityPose);
                 return vec3d;
             }
@@ -237,21 +238,21 @@ Saddleable {
     }
 
     @Override
-    protected void tickControlled(LivingEntity controllingPassenger, Vec3d movementInput) {
-        super.tickControlled(controllingPassenger, movementInput);
-        this.setRotation(controllingPassenger.getYaw(), controllingPassenger.getPitch() * 0.5f);
+    protected void tickControlled(PlayerEntity controllingPlayer, Vec3d movementInput) {
+        super.tickControlled(controllingPlayer, movementInput);
+        this.setRotation(controllingPlayer.getYaw(), controllingPlayer.getPitch() * 0.5f);
         this.bodyYaw = this.headYaw = this.getYaw();
         this.prevYaw = this.headYaw;
         this.saddledComponent.tickBoost();
     }
 
     @Override
-    protected Vec3d getControlledMovementInput(LivingEntity controllingPassenger, Vec3d movementInput) {
+    protected Vec3d getControlledMovementInput(PlayerEntity controllingPlayer, Vec3d movementInput) {
         return new Vec3d(0.0, 0.0, 1.0);
     }
 
     @Override
-    protected float getSaddledSpeed(LivingEntity controllingPassenger) {
+    protected float getSaddledSpeed(PlayerEntity controllingPlayer) {
         return (float)(this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) * 0.225 * (double)this.saddledComponent.getMovementSpeedMultiplier());
     }
 

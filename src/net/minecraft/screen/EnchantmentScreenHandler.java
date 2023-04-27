@@ -109,8 +109,8 @@ extends ScreenHandler {
                 this.context.run((world, pos) -> {
                     int j;
                     int i = 0;
-                    for (BlockPos blockPos : EnchantingTableBlock.BOOKSHELF_OFFSETS) {
-                        if (!EnchantingTableBlock.canAccessBookshelf(world, pos, blockPos)) continue;
+                    for (BlockPos blockPos : EnchantingTableBlock.POWER_PROVIDER_OFFSETS) {
+                        if (!EnchantingTableBlock.canAccessPowerProvider(world, pos, blockPos)) continue;
                         ++i;
                     }
                     this.random.setSeed(this.seed.get());
@@ -242,8 +242,7 @@ extends ScreenHandler {
                     return ItemStack.EMPTY;
                 }
             } else if (!((Slot)this.slots.get(0)).hasStack() && ((Slot)this.slots.get(0)).canInsert(itemStack2)) {
-                ItemStack itemStack3 = itemStack2.copy();
-                itemStack3.setCount(1);
+                ItemStack itemStack3 = itemStack2.copyWithCount(1);
                 itemStack2.decrement(1);
                 ((Slot)this.slots.get(0)).setStack(itemStack3);
             } else {

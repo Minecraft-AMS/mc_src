@@ -27,7 +27,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.BossBarHud;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.DebugHud;
@@ -43,7 +43,6 @@ import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.texture.StatusEffectSpriteManager;
 import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
@@ -85,13 +84,13 @@ import net.minecraft.world.border.WorldBorder;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
-public class InGameHud
-extends DrawableHelper {
+public class InGameHud {
     private static final Identifier VIGNETTE_TEXTURE = new Identifier("textures/misc/vignette.png");
     private static final Identifier WIDGETS_TEXTURE = new Identifier("textures/gui/widgets.png");
     private static final Identifier PUMPKIN_BLUR = new Identifier("textures/misc/pumpkinblur.png");
     private static final Identifier SPYGLASS_SCOPE = new Identifier("textures/misc/spyglass_scope.png");
     private static final Identifier POWDER_SNOW_OUTLINE = new Identifier("textures/misc/powder_snow_outline.png");
+    private static final Identifier ICONS = new Identifier("textures/gui/icons.png");
     private static final Text DEMO_EXPIRED_MESSAGE = Text.translatable("demo.demoExpired");
     private static final Text SAVING_LEVEL_TEXT = Text.translatable("menu.savingLevel");
     private static final int WHITE = 0xFFFFFF;
@@ -157,7 +156,7 @@ extends DrawableHelper {
         this.titleFadeOutTicks = 20;
     }
 
-    public void render(MatrixStack matrices, float tickDelta) {
+    public void render(DrawContext context, float tickDelta) {
         int k;
         float g;
         Window window = this.client.getWindow();
@@ -166,7 +165,7 @@ extends DrawableHelper {
         TextRenderer textRenderer = this.getTextRenderer();
         RenderSystem.enableBlend();
         if (MinecraftClient.isFancyGraphicsOrBetter()) {
-            this.renderVignetteOverlay(matrices, this.client.getCameraEntity());
+            this.renderVignetteOverlay(context, this.client.getCameraEntity());
         } else {
             RenderSystem.enableDepthTest();
         }
@@ -174,50 +173,48 @@ extends DrawableHelper {
         this.spyglassScale = MathHelper.lerp(0.5f * f, this.spyglassScale, 1.125f);
         if (this.client.options.getPerspective().isFirstPerson()) {
             if (this.client.player.isUsingSpyglass()) {
-                this.renderSpyglassOverlay(matrices, this.spyglassScale);
+                this.renderSpyglassOverlay(context, this.spyglassScale);
             } else {
                 this.spyglassScale = 0.5f;
                 ItemStack itemStack = this.client.player.getInventory().getArmorStack(3);
                 if (itemStack.isOf(Blocks.CARVED_PUMPKIN.asItem())) {
-                    this.renderOverlay(matrices, PUMPKIN_BLUR, 1.0f);
+                    this.renderOverlay(context, PUMPKIN_BLUR, 1.0f);
                 }
             }
         }
         if (this.client.player.getFrozenTicks() > 0) {
-            this.renderOverlay(matrices, POWDER_SNOW_OUTLINE, this.client.player.getFreezingScale());
+            this.renderOverlay(context, POWDER_SNOW_OUTLINE, this.client.player.getFreezingScale());
         }
         if ((g = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength)) > 0.0f && !this.client.player.hasStatusEffect(StatusEffects.NAUSEA)) {
-            this.renderPortalOverlay(matrices, g);
+            this.renderPortalOverlay(context, g);
         }
         if (this.client.interactionManager.getCurrentGameMode() == GameMode.SPECTATOR) {
-            this.spectatorHud.renderSpectatorMenu(matrices);
+            this.spectatorHud.renderSpectatorMenu(context);
         } else if (!this.client.options.hudHidden) {
-            this.renderHotbar(tickDelta, matrices);
+            this.renderHotbar(tickDelta, context);
         }
         if (!this.client.options.hudHidden) {
-            RenderSystem.setShaderTexture(0, GUI_ICONS_TEXTURE);
             RenderSystem.enableBlend();
-            this.renderCrosshair(matrices);
+            this.renderCrosshair(context);
             this.client.getProfiler().push("bossHealth");
-            this.bossBarHud.render(matrices);
+            this.bossBarHud.render(context);
             this.client.getProfiler().pop();
-            RenderSystem.setShaderTexture(0, GUI_ICONS_TEXTURE);
             if (this.client.interactionManager.hasStatusBars()) {
-                this.renderStatusBars(matrices);
+                this.renderStatusBars(context);
             }
-            this.renderMountHealth(matrices);
+            this.renderMountHealth(context);
             RenderSystem.disableBlend();
             int i = this.scaledWidth / 2 - 91;
             JumpingMount jumpingMount = this.client.player.getJumpingMount();
             if (jumpingMount != null) {
-                this.renderMountJumpBar(jumpingMount, matrices, i);
+                this.renderMountJumpBar(jumpingMount, context, i);
             } else if (this.client.interactionManager.hasExperienceBar()) {
-                this.renderExperienceBar(matrices, i);
+                this.renderExperienceBar(context, i);
             }
             if (this.client.interactionManager.getCurrentGameMode() != GameMode.SPECTATOR) {
-                this.renderHeldItemTooltip(matrices);
+                this.renderHeldItemTooltip(context);
             } else if (this.client.player.isSpectator()) {
-                this.spectatorHud.render(matrices);
+                this.spectatorHud.render(context);
             }
         }
         if (this.client.player.getSleepTimer() > 0) {
@@ -229,16 +226,16 @@ extends DrawableHelper {
                 j = 1.0f - (h - 100.0f) / 10.0f;
             }
             k = (int)(220.0f * j) << 24 | 0x101020;
-            InGameHud.fill(matrices, 0, 0, this.scaledWidth, this.scaledHeight, k);
+            context.fill(0, 0, this.scaledWidth, this.scaledHeight, k);
             RenderSystem.enableDepthTest();
             this.client.getProfiler().pop();
         }
         if (this.client.isDemo()) {
-            this.renderDemoTimer(matrices);
+            this.renderDemoTimer(context);
         }
-        this.renderStatusEffectOverlay(matrices);
+        this.renderStatusEffectOverlay(context);
         if (this.client.options.debugEnabled) {
-            this.debugHud.render(matrices);
+            this.debugHud.render(context);
         }
         if (!this.client.options.hudHidden) {
             ScoreboardObjective scoreboardObjective2;
@@ -252,17 +249,17 @@ extends DrawableHelper {
                     l = 255;
                 }
                 if (l > 8) {
-                    matrices.push();
-                    matrices.translate(this.scaledWidth / 2, this.scaledHeight - 68, 0.0f);
+                    context.getMatrices().push();
+                    context.getMatrices().translate(this.scaledWidth / 2, this.scaledHeight - 68, 0.0f);
                     k = 0xFFFFFF;
                     if (this.overlayTinted) {
                         k = MathHelper.hsvToRgb(h / 50.0f, 0.7f, 0.6f) & 0xFFFFFF;
                     }
                     m = l << 24 & 0xFF000000;
                     n = textRenderer.getWidth(this.overlayMessage);
-                    this.drawTextBackground(matrices, textRenderer, -4, n, 0xFFFFFF | m);
-                    textRenderer.drawWithShadow(matrices, this.overlayMessage, (float)(-n / 2), -4.0f, k | m);
-                    matrices.pop();
+                    this.drawTextBackground(context, textRenderer, -4, n, 0xFFFFFF | m);
+                    context.drawTextWithShadow(textRenderer, this.overlayMessage, -n / 2, -4, k | m);
+                    context.getMatrices().pop();
                 }
                 this.client.getProfiler().pop();
             }
@@ -278,30 +275,30 @@ extends DrawableHelper {
                     l = (int)(h * 255.0f / (float)this.titleFadeOutTicks);
                 }
                 if ((l = MathHelper.clamp(l, 0, 255)) > 8) {
-                    matrices.push();
-                    matrices.translate(this.scaledWidth / 2, this.scaledHeight / 2, 0.0f);
+                    context.getMatrices().push();
+                    context.getMatrices().translate(this.scaledWidth / 2, this.scaledHeight / 2, 0.0f);
                     RenderSystem.enableBlend();
-                    matrices.push();
-                    matrices.scale(4.0f, 4.0f, 4.0f);
+                    context.getMatrices().push();
+                    context.getMatrices().scale(4.0f, 4.0f, 4.0f);
                     int k2 = l << 24 & 0xFF000000;
                     m = textRenderer.getWidth(this.title);
-                    this.drawTextBackground(matrices, textRenderer, -10, m, 0xFFFFFF | k2);
-                    textRenderer.drawWithShadow(matrices, this.title, (float)(-m / 2), -10.0f, 0xFFFFFF | k2);
-                    matrices.pop();
+                    this.drawTextBackground(context, textRenderer, -10, m, 0xFFFFFF | k2);
+                    context.drawTextWithShadow(textRenderer, this.title, -m / 2, -10, 0xFFFFFF | k2);
+                    context.getMatrices().pop();
                     if (this.subtitle != null) {
-                        matrices.push();
-                        matrices.scale(2.0f, 2.0f, 2.0f);
+                        context.getMatrices().push();
+                        context.getMatrices().scale(2.0f, 2.0f, 2.0f);
                         n = textRenderer.getWidth(this.subtitle);
-                        this.drawTextBackground(matrices, textRenderer, 5, n, 0xFFFFFF | k2);
-                        textRenderer.drawWithShadow(matrices, this.subtitle, (float)(-n / 2), 5.0f, 0xFFFFFF | k2);
-                        matrices.pop();
+                        this.drawTextBackground(context, textRenderer, 5, n, 0xFFFFFF | k2);
+                        context.drawTextWithShadow(textRenderer, this.subtitle, -n / 2, 5, 0xFFFFFF | k2);
+                        context.getMatrices().pop();
                     }
                     RenderSystem.disableBlend();
-                    matrices.pop();
+                    context.getMatrices().pop();
                 }
                 this.client.getProfiler().pop();
             }
-            this.subtitlesHud.render(matrices);
+            this.subtitlesHud.render(context);
             Scoreboard scoreboard = this.client.world.getScoreboard();
             ScoreboardObjective scoreboardObjective = null;
             Team team = scoreboard.getPlayerTeam(this.client.player.getEntityName());
@@ -310,34 +307,34 @@ extends DrawableHelper {
             }
             ScoreboardObjective scoreboardObjective3 = scoreboardObjective2 = scoreboardObjective != null ? scoreboardObjective : scoreboard.getObjectiveForSlot(1);
             if (scoreboardObjective2 != null) {
-                this.renderScoreboardSidebar(matrices, scoreboardObjective2);
+                this.renderScoreboardSidebar(context, scoreboardObjective2);
             }
             RenderSystem.enableBlend();
             n = MathHelper.floor(this.client.mouse.getX() * (double)window.getScaledWidth() / (double)window.getWidth());
             int p = MathHelper.floor(this.client.mouse.getY() * (double)window.getScaledHeight() / (double)window.getHeight());
             this.client.getProfiler().push("chat");
-            this.chatHud.render(matrices, this.ticks, n, p);
+            this.chatHud.render(context, this.ticks, n, p);
             this.client.getProfiler().pop();
             scoreboardObjective2 = scoreboard.getObjectiveForSlot(0);
             if (this.client.options.playerListKey.isPressed() && (!this.client.isInSingleplayer() || this.client.player.networkHandler.getListedPlayerListEntries().size() > 1 || scoreboardObjective2 != null)) {
                 this.playerListHud.setVisible(true);
-                this.playerListHud.render(matrices, this.scaledWidth, scoreboard, scoreboardObjective2);
+                this.playerListHud.render(context, this.scaledWidth, scoreboard, scoreboardObjective2);
             } else {
                 this.playerListHud.setVisible(false);
             }
-            this.renderAutosaveIndicator(matrices);
+            this.renderAutosaveIndicator(context);
         }
     }
 
-    private void drawTextBackground(MatrixStack matrices, TextRenderer textRenderer, int yOffset, int width, int color) {
+    private void drawTextBackground(DrawContext context, TextRenderer textRenderer, int yOffset, int width, int color) {
         int i = this.client.options.getTextBackgroundColor(0.0f);
         if (i != 0) {
             int j = -width / 2;
-            InGameHud.fill(matrices, j - 2, yOffset - 2, j + width + 2, yOffset + textRenderer.fontHeight + 2, ColorHelper.Argb.mixColor(i, color));
+            context.fill(j - 2, yOffset - 2, j + width + 2, yOffset + textRenderer.fontHeight + 2, ColorHelper.Argb.mixColor(i, color));
         }
     }
 
-    private void renderCrosshair(MatrixStack matrices) {
+    private void renderCrosshair(DrawContext context) {
         GameOptions gameOptions = this.client.options;
         if (!gameOptions.getPerspective().isFirstPerson()) {
             return;
@@ -349,7 +346,7 @@ extends DrawableHelper {
             Camera camera = this.client.gameRenderer.getCamera();
             MatrixStack matrixStack = RenderSystem.getModelViewStack();
             matrixStack.push();
-            matrixStack.multiplyPositionMatrix(matrices.peek().getPositionMatrix());
+            matrixStack.multiplyPositionMatrix(context.getMatrices().peek().getPositionMatrix());
             matrixStack.translate(this.scaledWidth / 2, this.scaledHeight / 2, 0.0f);
             matrixStack.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(camera.getPitch()));
             matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw()));
@@ -361,7 +358,7 @@ extends DrawableHelper {
         } else {
             RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ONE_MINUS_DST_COLOR, GlStateManager.DstFactor.ONE_MINUS_SRC_COLOR, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ZERO);
             int i = 15;
-            InGameHud.drawTexture(matrices, (this.scaledWidth - 15) / 2, (this.scaledHeight - 15) / 2, 0, 0, 15, 15);
+            context.drawTexture(ICONS, (this.scaledWidth - 15) / 2, (this.scaledHeight - 15) / 2, 0, 0, 15, 15);
             if (this.client.options.getAttackIndicator().getValue() == AttackIndicator.CROSSHAIR) {
                 float f = this.client.player.getAttackCooldownProgress(0.0f);
                 boolean bl = false;
@@ -372,11 +369,11 @@ extends DrawableHelper {
                 int j = this.scaledHeight / 2 - 7 + 16;
                 int k = this.scaledWidth / 2 - 8;
                 if (bl) {
-                    InGameHud.drawTexture(matrices, k, j, 68, 94, 16, 16);
+                    context.drawTexture(ICONS, k, j, 68, 94, 16, 16);
                 } else if (f < 1.0f) {
                     int l = (int)(f * 17.0f);
-                    InGameHud.drawTexture(matrices, k, j, 36, 94, 16, 4);
-                    InGameHud.drawTexture(matrices, k, j, 52, 94, l, 4);
+                    context.drawTexture(ICONS, k, j, 36, 94, 16, 4);
+                    context.drawTexture(ICONS, k, j, 52, 94, l, 4);
                 }
             }
             RenderSystem.defaultBlendFunc();
@@ -398,7 +395,7 @@ extends DrawableHelper {
         return false;
     }
 
-    protected void renderStatusEffectOverlay(MatrixStack matrices) {
+    protected void renderStatusEffectOverlay(DrawContext context) {
         AbstractInventoryScreen abstractInventoryScreen;
         Screen screen;
         Collection<StatusEffectInstance> collection = this.client.player.getStatusEffects();
@@ -410,7 +407,6 @@ extends DrawableHelper {
         int j = 0;
         StatusEffectSpriteManager statusEffectSpriteManager = this.client.getStatusEffectSpriteManager();
         ArrayList list = Lists.newArrayListWithExpectedSize((int)collection.size());
-        RenderSystem.setShaderTexture(0, HandledScreen.BACKGROUND_TEXTURE);
         for (StatusEffectInstance statusEffectInstance : Ordering.natural().reverse().sortedCopy(collection)) {
             int n;
             StatusEffect statusEffect = statusEffectInstance.getEffectType();
@@ -428,9 +424,9 @@ extends DrawableHelper {
             }
             float f = 1.0f;
             if (statusEffectInstance.isAmbient()) {
-                InGameHud.drawTexture(matrices, k, l, 165, 166, 24, 24);
+                context.drawTexture(HandledScreen.BACKGROUND_TEXTURE, k, l, 165, 166, 24, 24);
             } else {
-                InGameHud.drawTexture(matrices, k, l, 141, 166, 24, 24);
+                context.drawTexture(HandledScreen.BACKGROUND_TEXTURE, k, l, 141, 166, 24, 24);
                 if (statusEffectInstance.isDurationBelow(200)) {
                     int m = statusEffectInstance.getDuration();
                     n = 10 - m / 20;
@@ -442,16 +438,15 @@ extends DrawableHelper {
             int o = l;
             float g = f;
             list.add(() -> {
-                RenderSystem.setShaderTexture(0, sprite.getAtlasId());
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, g);
-                InGameHud.drawSprite(matrices, n + 3, o + 3, 0, 18, 18, sprite);
-                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                context.setShaderColor(1.0f, 1.0f, 1.0f, g);
+                context.drawSprite(n + 3, o + 3, 0, 18, 18, sprite);
+                context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             });
         }
         list.forEach(Runnable::run);
     }
 
-    private void renderHotbar(float tickDelta, MatrixStack matrices) {
+    private void renderHotbar(float tickDelta, DrawContext context) {
         float f;
         int o;
         int n;
@@ -460,36 +455,35 @@ extends DrawableHelper {
         if (playerEntity == null) {
             return;
         }
-        RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
         ItemStack itemStack = playerEntity.getOffHandStack();
         Arm arm = playerEntity.getMainArm().getOpposite();
         int i = this.scaledWidth / 2;
         int j = 182;
         int k = 91;
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, -90.0f);
-        InGameHud.drawTexture(matrices, i - 91, this.scaledHeight - 22, 0, 0, 182, 22);
-        InGameHud.drawTexture(matrices, i - 91 - 1 + playerEntity.getInventory().selectedSlot * 20, this.scaledHeight - 22 - 1, 0, 22, 24, 22);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, -90.0f);
+        context.drawTexture(WIDGETS_TEXTURE, i - 91, this.scaledHeight - 22, 0, 0, 182, 22);
+        context.drawTexture(WIDGETS_TEXTURE, i - 91 - 1 + playerEntity.getInventory().selectedSlot * 20, this.scaledHeight - 22 - 1, 0, 22, 24, 22);
         if (!itemStack.isEmpty()) {
             if (arm == Arm.LEFT) {
-                InGameHud.drawTexture(matrices, i - 91 - 29, this.scaledHeight - 23, 24, 22, 29, 24);
+                context.drawTexture(WIDGETS_TEXTURE, i - 91 - 29, this.scaledHeight - 23, 24, 22, 29, 24);
             } else {
-                InGameHud.drawTexture(matrices, i + 91, this.scaledHeight - 23, 53, 22, 29, 24);
+                context.drawTexture(WIDGETS_TEXTURE, i + 91, this.scaledHeight - 23, 53, 22, 29, 24);
             }
         }
-        matrices.pop();
+        context.getMatrices().pop();
         int l = 1;
         for (m = 0; m < 9; ++m) {
             n = i - 90 + m * 20 + 2;
             o = this.scaledHeight - 16 - 3;
-            this.renderHotbarItem(matrices, n, o, tickDelta, playerEntity, playerEntity.getInventory().main.get(m), l++);
+            this.renderHotbarItem(context, n, o, tickDelta, playerEntity, playerEntity.getInventory().main.get(m), l++);
         }
         if (!itemStack.isEmpty()) {
             m = this.scaledHeight - 16 - 3;
             if (arm == Arm.LEFT) {
-                this.renderHotbarItem(matrices, i - 91 - 26, m, tickDelta, playerEntity, itemStack, l++);
+                this.renderHotbarItem(context, i - 91 - 26, m, tickDelta, playerEntity, itemStack, l++);
             } else {
-                this.renderHotbarItem(matrices, i + 91 + 10, m, tickDelta, playerEntity, itemStack, l++);
+                this.renderHotbarItem(context, i + 91 + 10, m, tickDelta, playerEntity, itemStack, l++);
             }
         }
         RenderSystem.enableBlend();
@@ -499,43 +493,40 @@ extends DrawableHelper {
             if (arm == Arm.RIGHT) {
                 o = i - 91 - 22;
             }
-            RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
             int p = (int)(f * 19.0f);
-            InGameHud.drawTexture(matrices, o, n, 0, 94, 18, 18);
-            InGameHud.drawTexture(matrices, o, n + 18 - p, 18, 112 - p, 18, p);
+            context.drawTexture(ICONS, o, n, 0, 94, 18, 18);
+            context.drawTexture(ICONS, o, n + 18 - p, 18, 112 - p, 18, p);
         }
         RenderSystem.disableBlend();
     }
 
-    public void renderMountJumpBar(JumpingMount mount, MatrixStack matrices, int x) {
+    public void renderMountJumpBar(JumpingMount mount, DrawContext context, int x) {
         this.client.getProfiler().push("jumpBar");
-        RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
         float f = this.client.player.getMountJumpStrength();
         int i = 182;
         int j = (int)(f * 183.0f);
         int k = this.scaledHeight - 32 + 3;
-        InGameHud.drawTexture(matrices, x, k, 0, 84, 182, 5);
+        context.drawTexture(ICONS, x, k, 0, 84, 182, 5);
         if (mount.getJumpCooldown() > 0) {
-            InGameHud.drawTexture(matrices, x, k, 0, 74, 182, 5);
+            context.drawTexture(ICONS, x, k, 0, 74, 182, 5);
         } else if (j > 0) {
-            InGameHud.drawTexture(matrices, x, k, 0, 89, j, 5);
+            context.drawTexture(ICONS, x, k, 0, 89, j, 5);
         }
         this.client.getProfiler().pop();
     }
 
-    public void renderExperienceBar(MatrixStack matrices, int x) {
+    public void renderExperienceBar(DrawContext context, int x) {
         int l;
         int k;
         this.client.getProfiler().push("expBar");
-        RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
         int i = this.client.player.getNextLevelExperience();
         if (i > 0) {
             int j = 182;
             k = (int)(this.client.player.experienceProgress * 183.0f);
             l = this.scaledHeight - 32 + 3;
-            InGameHud.drawTexture(matrices, x, l, 0, 64, 182, 5);
+            context.drawTexture(ICONS, x, l, 0, 64, 182, 5);
             if (k > 0) {
-                InGameHud.drawTexture(matrices, x, l, 0, 69, k, 5);
+                context.drawTexture(ICONS, x, l, 0, 69, k, 5);
             }
         }
         this.client.getProfiler().pop();
@@ -544,16 +535,16 @@ extends DrawableHelper {
             String string = "" + this.client.player.experienceLevel;
             k = (this.scaledWidth - this.getTextRenderer().getWidth(string)) / 2;
             l = this.scaledHeight - 31 - 4;
-            this.getTextRenderer().draw(matrices, string, (float)(k + 1), (float)l, 0);
-            this.getTextRenderer().draw(matrices, string, (float)(k - 1), (float)l, 0);
-            this.getTextRenderer().draw(matrices, string, (float)k, (float)(l + 1), 0);
-            this.getTextRenderer().draw(matrices, string, (float)k, (float)(l - 1), 0);
-            this.getTextRenderer().draw(matrices, string, (float)k, (float)l, 8453920);
+            context.drawText(this.getTextRenderer(), string, k + 1, l, 0, false);
+            context.drawText(this.getTextRenderer(), string, k - 1, l, 0, false);
+            context.drawText(this.getTextRenderer(), string, k, l + 1, 0, false);
+            context.drawText(this.getTextRenderer(), string, k, l - 1, 0, false);
+            context.drawText(this.getTextRenderer(), string, k, l, 8453920, false);
             this.client.getProfiler().pop();
         }
     }
 
-    public void renderHeldItemTooltip(MatrixStack matrices) {
+    public void renderHeldItemTooltip(DrawContext context) {
         this.client.getProfiler().push("selectedItemName");
         if (this.heldItemTooltipFade > 0 && !this.currentStack.isEmpty()) {
             int l;
@@ -571,22 +562,22 @@ extends DrawableHelper {
                 l = 255;
             }
             if (l > 0) {
-                InGameHud.fill(matrices, j - 2, k - 2, j + i + 2, k + this.getTextRenderer().fontHeight + 2, this.client.options.getTextBackgroundColor(0));
-                this.getTextRenderer().drawWithShadow(matrices, mutableText, (float)j, (float)k, 0xFFFFFF + (l << 24));
+                context.fill(j - 2, k - 2, j + i + 2, k + this.getTextRenderer().fontHeight + 2, this.client.options.getTextBackgroundColor(0));
+                context.drawTextWithShadow(this.getTextRenderer(), mutableText, j, k, 0xFFFFFF + (l << 24));
             }
         }
         this.client.getProfiler().pop();
     }
 
-    public void renderDemoTimer(MatrixStack matrices) {
+    public void renderDemoTimer(DrawContext context) {
         this.client.getProfiler().push("demo");
         Text text = this.client.world.getTime() >= 120500L ? DEMO_EXPIRED_MESSAGE : Text.translatable("demo.remainingTime", StringHelper.formatTicks((int)(120500L - this.client.world.getTime())));
         int i = this.getTextRenderer().getWidth(text);
-        this.getTextRenderer().drawWithShadow(matrices, text, (float)(this.scaledWidth - i - 10), 5.0f, 0xFFFFFF);
+        context.drawTextWithShadow(this.getTextRenderer(), text, this.scaledWidth - i - 10, 5, 0xFFFFFF);
         this.client.getProfiler().pop();
     }
 
-    private void renderScoreboardSidebar(MatrixStack matrices, ScoreboardObjective objective) {
+    private void renderScoreboardSidebar(DrawContext context, ScoreboardObjective objective) {
         int i;
         Scoreboard scoreboard = objective.getScoreboard();
         List<Object> collection = scoreboard.getAllPlayerScores(objective);
@@ -616,13 +607,13 @@ extends DrawableHelper {
             int s = o;
             int t = m - ++p * this.getTextRenderer().fontHeight;
             int u = this.scaledWidth - 3 + 2;
-            InGameHud.fill(matrices, s - 2, t, u, t + this.getTextRenderer().fontHeight, q);
-            this.getTextRenderer().draw(matrices, text3, (float)s, (float)t, -1);
-            this.getTextRenderer().draw(matrices, string, (float)(u - this.getTextRenderer().getWidth(string)), (float)t, -1);
+            context.fill(s - 2, t, u, t + this.getTextRenderer().fontHeight, q);
+            context.drawText(this.getTextRenderer(), text3, s, t, -1, false);
+            context.drawText(this.getTextRenderer(), string, u - this.getTextRenderer().getWidth(string), t, -1, false);
             if (p != collection.size()) continue;
-            InGameHud.fill(matrices, s - 2, t - this.getTextRenderer().fontHeight - 1, u, t - 1, r);
-            InGameHud.fill(matrices, s - 2, t - 1, u, t, q);
-            this.getTextRenderer().draw(matrices, text, (float)(s + j / 2 - i / 2), (float)(t - this.getTextRenderer().fontHeight), -1);
+            context.fill(s - 2, t - this.getTextRenderer().fontHeight - 1, u, t - 1, r);
+            context.fill(s - 2, t - 1, u, t, q);
+            context.drawText(this.getTextRenderer(), text, s + j / 2 - i / 2, t - this.getTextRenderer().fontHeight, -1, false);
         }
     }
 
@@ -663,7 +654,7 @@ extends DrawableHelper {
         return (int)Math.ceil((double)heartCount / 10.0);
     }
 
-    private void renderStatusBars(MatrixStack matrices) {
+    private void renderStatusBars(DrawContext context) {
         int ac;
         int ab;
         int aa;
@@ -713,16 +704,16 @@ extends DrawableHelper {
             if (u <= 0) continue;
             x = m + w * 8;
             if (w * 2 + 1 < u) {
-                InGameHud.drawTexture(matrices, x, s, 34, 9, 9, 9);
+                context.drawTexture(ICONS, x, s, 34, 9, 9, 9);
             }
             if (w * 2 + 1 == u) {
-                InGameHud.drawTexture(matrices, x, s, 25, 9, 9, 9);
+                context.drawTexture(ICONS, x, s, 25, 9, 9, 9);
             }
             if (w * 2 + 1 <= u) continue;
-            InGameHud.drawTexture(matrices, x, s, 16, 9, 9, 9);
+            context.drawTexture(ICONS, x, s, 16, 9, 9, 9);
         }
         this.client.getProfiler().swap("health");
-        this.renderHealthBar(matrices, playerEntity, m, o, r, v, f, i, j, p, bl);
+        this.renderHealthBar(context, playerEntity, m, o, r, v, f, i, j, p, bl);
         LivingEntity livingEntity = this.getRiddenEntity();
         x = this.getHeartCount(livingEntity);
         if (x == 0) {
@@ -739,12 +730,12 @@ extends DrawableHelper {
                     z += this.random.nextInt(3) - 1;
                 }
                 ac = n - y * 8 - 9;
-                InGameHud.drawTexture(matrices, ac, z, 16 + ab * 9, 27, 9, 9);
+                context.drawTexture(ICONS, ac, z, 16 + ab * 9, 27, 9, 9);
                 if (y * 2 + 1 < k) {
-                    InGameHud.drawTexture(matrices, ac, z, aa + 36, 27, 9, 9);
+                    context.drawTexture(ICONS, ac, z, aa + 36, 27, 9, 9);
                 }
                 if (y * 2 + 1 != k) continue;
-                InGameHud.drawTexture(matrices, ac, z, aa + 45, 27, 9, 9);
+                context.drawTexture(ICONS, ac, z, aa + 45, 27, 9, 9);
             }
             t -= 10;
         }
@@ -758,18 +749,18 @@ extends DrawableHelper {
             ac = MathHelper.ceil((double)z * 10.0 / (double)y) - ab;
             for (int ad = 0; ad < ab + ac; ++ad) {
                 if (ad < ab) {
-                    InGameHud.drawTexture(matrices, n - ad * 8 - 9, t, 16, 18, 9, 9);
+                    context.drawTexture(ICONS, n - ad * 8 - 9, t, 16, 18, 9, 9);
                     continue;
                 }
-                InGameHud.drawTexture(matrices, n - ad * 8 - 9, t, 25, 18, 9, 9);
+                context.drawTexture(ICONS, n - ad * 8 - 9, t, 25, 18, 9, 9);
             }
         }
         this.client.getProfiler().pop();
     }
 
-    private void renderHealthBar(MatrixStack matrices, PlayerEntity player, int x, int y, int lines, int regeneratingHeartIndex, float maxHealth, int lastHealth, int health, int absorption, boolean blinking) {
+    private void renderHealthBar(DrawContext context, PlayerEntity player, int x, int y, int lines, int regeneratingHeartIndex, float maxHealth, int lastHealth, int health, int absorption, boolean blinking) {
         HeartType heartType = HeartType.fromPlayerState(player);
-        int i = 9 * (player.world.getLevelProperties().isHardcore() ? 5 : 0);
+        int i = 9 * (player.getWorld().getLevelProperties().isHardcore() ? 5 : 0);
         int j = MathHelper.ceil((double)maxHealth / 2.0);
         int k = MathHelper.ceil((double)absorption / 2.0);
         int l = j * 2;
@@ -787,28 +778,28 @@ extends DrawableHelper {
             if (m < j && m == regeneratingHeartIndex) {
                 q -= 2;
             }
-            this.drawHeart(matrices, HeartType.CONTAINER, p, q, i, blinking, false);
+            this.drawHeart(context, HeartType.CONTAINER, p, q, i, blinking, false);
             int r = m * 2;
             boolean bl2 = bl = m >= j;
             if (bl && (s = r - l) < absorption) {
                 boolean bl22 = s + 1 == absorption;
-                this.drawHeart(matrices, heartType == HeartType.WITHERED ? heartType : HeartType.ABSORBING, p, q, i, false, bl22);
+                this.drawHeart(context, heartType == HeartType.WITHERED ? heartType : HeartType.ABSORBING, p, q, i, false, bl22);
             }
             if (blinking && r < health) {
                 bl3 = r + 1 == health;
-                this.drawHeart(matrices, heartType, p, q, i, true, bl3);
+                this.drawHeart(context, heartType, p, q, i, true, bl3);
             }
             if (r >= lastHealth) continue;
             bl3 = r + 1 == lastHealth;
-            this.drawHeart(matrices, heartType, p, q, i, false, bl3);
+            this.drawHeart(context, heartType, p, q, i, false, bl3);
         }
     }
 
-    private void drawHeart(MatrixStack matrices, HeartType type, int x, int y, int v, boolean blinking, boolean halfHeart) {
-        InGameHud.drawTexture(matrices, x, y, type.getU(halfHeart, blinking), v, 9, 9);
+    private void drawHeart(DrawContext context, HeartType type, int x, int y, int v, boolean blinking, boolean halfHeart) {
+        context.drawTexture(ICONS, x, y, type.getU(halfHeart, blinking), v, 9, 9);
     }
 
-    private void renderMountHealth(MatrixStack matrices) {
+    private void renderMountHealth(DrawContext context) {
         LivingEntity livingEntity = this.getRiddenEntity();
         if (livingEntity == null) {
             return;
@@ -831,30 +822,29 @@ extends DrawableHelper {
                 int q = 52;
                 int r = 0;
                 int s = l - p * 8 - 9;
-                InGameHud.drawTexture(matrices, s, m, 52 + r * 9, 9, 9, 9);
+                context.drawTexture(ICONS, s, m, 52 + r * 9, 9, 9, 9);
                 if (p * 2 + 1 + n < j) {
-                    InGameHud.drawTexture(matrices, s, m, 88, 9, 9, 9);
+                    context.drawTexture(ICONS, s, m, 88, 9, 9, 9);
                 }
                 if (p * 2 + 1 + n != j) continue;
-                InGameHud.drawTexture(matrices, s, m, 97, 9, 9, 9);
+                context.drawTexture(ICONS, s, m, 97, 9, 9, 9);
             }
             m -= 10;
             n += 20;
         }
     }
 
-    private void renderOverlay(MatrixStack matrices, Identifier texture, float opacity) {
+    private void renderOverlay(DrawContext context, Identifier texture, float opacity) {
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, opacity);
-        RenderSystem.setShaderTexture(0, texture);
-        InGameHud.drawTexture(matrices, 0, 0, -90, 0.0f, 0.0f, this.scaledWidth, this.scaledHeight, this.scaledWidth, this.scaledHeight);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, opacity);
+        context.drawTexture(texture, 0, 0, -90, 0.0f, 0.0f, this.scaledWidth, this.scaledHeight, this.scaledWidth, this.scaledHeight);
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
-    private void renderSpyglassOverlay(MatrixStack matrices, float scale) {
+    private void renderSpyglassOverlay(DrawContext context, float scale) {
         float f;
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
@@ -866,12 +856,11 @@ extends DrawableHelper {
         int l = (this.scaledHeight - j) / 2;
         int m = k + i;
         int n = l + j;
-        RenderSystem.setShaderTexture(0, SPYGLASS_SCOPE);
-        InGameHud.drawTexture(matrices, k, l, -90, 0.0f, 0.0f, i, j, i, j);
-        InGameHud.fill(matrices, 0, n, this.scaledWidth, this.scaledHeight, -90, -16777216);
-        InGameHud.fill(matrices, 0, 0, this.scaledWidth, l, -90, -16777216);
-        InGameHud.fill(matrices, 0, l, k, n, -90, -16777216);
-        InGameHud.fill(matrices, m, l, this.scaledWidth, n, -90, -16777216);
+        context.drawTexture(SPYGLASS_SCOPE, k, l, -90, 0.0f, 0.0f, i, j, i, j);
+        context.fill(0, n, this.scaledWidth, this.scaledHeight, -90, -16777216);
+        context.fill(0, 0, this.scaledWidth, l, -90, -16777216);
+        context.fill(0, l, k, n, -90, -16777216);
+        context.fill(m, l, this.scaledWidth, n, -90, -16777216);
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
     }
@@ -881,12 +870,12 @@ extends DrawableHelper {
             return;
         }
         BlockPos blockPos = BlockPos.ofFloored(entity.getX(), entity.getEyeY(), entity.getZ());
-        float f = LightmapTextureManager.getBrightness(entity.world.getDimension(), entity.world.getLightLevel(blockPos));
+        float f = LightmapTextureManager.getBrightness(entity.getWorld().getDimension(), entity.getWorld().getLightLevel(blockPos));
         float g = MathHelper.clamp(1.0f - f, 0.0f, 1.0f);
         this.vignetteDarkness += (g - this.vignetteDarkness) * 0.01f;
     }
 
-    private void renderVignetteOverlay(MatrixStack matrices, Entity entity) {
+    private void renderVignetteOverlay(DrawContext context, Entity entity) {
         WorldBorder worldBorder = this.client.world.getWorldBorder();
         float f = (float)worldBorder.getDistanceInsideBorder(entity);
         double d = Math.min(worldBorder.getShrinkingSpeed() * (double)worldBorder.getWarningTime() * 1000.0, Math.abs(worldBorder.getSizeLerpTarget() - worldBorder.getSize()));
@@ -897,21 +886,20 @@ extends DrawableHelper {
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE_MINUS_SRC_COLOR, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ZERO);
         if (f > 0.0f) {
             f = MathHelper.clamp(f, 0.0f, 1.0f);
-            RenderSystem.setShaderColor(0.0f, f, f, 1.0f);
+            context.setShaderColor(0.0f, f, f, 1.0f);
         } else {
             float g = this.vignetteDarkness;
             g = MathHelper.clamp(g, 0.0f, 1.0f);
-            RenderSystem.setShaderColor(g, g, g, 1.0f);
+            context.setShaderColor(g, g, g, 1.0f);
         }
-        RenderSystem.setShaderTexture(0, VIGNETTE_TEXTURE);
-        InGameHud.drawTexture(matrices, 0, 0, -90, 0.0f, 0.0f, this.scaledWidth, this.scaledHeight, this.scaledWidth, this.scaledHeight);
+        context.drawTexture(VIGNETTE_TEXTURE, 0, 0, -90, 0.0f, 0.0f, this.scaledWidth, this.scaledHeight, this.scaledWidth, this.scaledHeight);
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.defaultBlendFunc();
     }
 
-    private void renderPortalOverlay(MatrixStack matrices, float nauseaStrength) {
+    private void renderPortalOverlay(DrawContext context, float nauseaStrength) {
         if (nauseaStrength < 1.0f) {
             nauseaStrength *= nauseaStrength;
             nauseaStrength *= nauseaStrength;
@@ -919,32 +907,31 @@ extends DrawableHelper {
         }
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, nauseaStrength);
-        RenderSystem.setShaderTexture(0, SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, nauseaStrength);
         Sprite sprite = this.client.getBlockRenderManager().getModels().getModelParticleSprite(Blocks.NETHER_PORTAL.getDefaultState());
-        InGameHud.drawSprite(matrices, 0, 0, -90, this.scaledWidth, this.scaledHeight, sprite);
+        context.drawSprite(0, 0, -90, this.scaledWidth, this.scaledHeight, sprite);
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
-    private void renderHotbarItem(MatrixStack matrixStack, int i, int j, float f, PlayerEntity playerEntity, ItemStack itemStack, int k) {
-        if (itemStack.isEmpty()) {
+    private void renderHotbarItem(DrawContext context, int x, int y, float f, PlayerEntity player, ItemStack stack, int seed) {
+        if (stack.isEmpty()) {
             return;
         }
-        float g = (float)itemStack.getBobbingAnimationTime() - f;
+        float g = (float)stack.getBobbingAnimationTime() - f;
         if (g > 0.0f) {
             float h = 1.0f + g / 5.0f;
-            matrixStack.push();
-            matrixStack.translate(i + 8, j + 12, 0.0f);
-            matrixStack.scale(1.0f / h, (h + 1.0f) / 2.0f, 1.0f);
-            matrixStack.translate(-(i + 8), -(j + 12), 0.0f);
+            context.getMatrices().push();
+            context.getMatrices().translate(x + 8, y + 12, 0.0f);
+            context.getMatrices().scale(1.0f / h, (h + 1.0f) / 2.0f, 1.0f);
+            context.getMatrices().translate(-(x + 8), -(y + 12), 0.0f);
         }
-        this.itemRenderer.renderInGuiWithOverrides(matrixStack, playerEntity, itemStack, i, j, k);
+        context.drawItem(player, stack, x, y, seed);
         if (g > 0.0f) {
-            matrixStack.pop();
+            context.getMatrices().pop();
         }
-        this.itemRenderer.renderGuiItemOverlay(matrixStack, this.client.textRenderer, itemStack, i, j);
+        context.drawItemInSlot(this.client.textRenderer, stack, x, y);
     }
 
     public void tick(boolean paused) {
@@ -1078,13 +1065,13 @@ extends DrawableHelper {
         this.debugHud.resetChunk();
     }
 
-    private void renderAutosaveIndicator(MatrixStack matrices) {
+    private void renderAutosaveIndicator(DrawContext context) {
         int i;
         if (this.client.options.getShowAutosaveIndicator().getValue().booleanValue() && (this.autosaveIndicatorAlpha > 0.0f || this.lastAutosaveIndicatorAlpha > 0.0f) && (i = MathHelper.floor(255.0f * MathHelper.clamp(MathHelper.lerp(this.client.getTickDelta(), this.lastAutosaveIndicatorAlpha, this.autosaveIndicatorAlpha), 0.0f, 1.0f))) > 8) {
             TextRenderer textRenderer = this.getTextRenderer();
             int j = textRenderer.getWidth(SAVING_LEVEL_TEXT);
             int k = 0xFFFFFF | i << 24 & 0xFF000000;
-            textRenderer.drawWithShadow(matrices, SAVING_LEVEL_TEXT, (float)(this.scaledWidth - j - 10), (float)(this.scaledHeight - 15), k);
+            context.drawTextWithShadow(textRenderer, SAVING_LEVEL_TEXT, this.scaledWidth - j - 10, this.scaledHeight - 15, k);
         }
     }
 

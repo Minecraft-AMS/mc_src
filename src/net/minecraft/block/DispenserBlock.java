@@ -89,7 +89,7 @@ extends BlockWithEntity {
         int i = dispenserBlockEntity.chooseNonEmptySlot(world.random);
         if (i < 0) {
             world.syncWorldEvent(1001, pos, 0);
-            world.emitGameEvent(null, GameEvent.DISPENSE_FAIL, pos);
+            world.emitGameEvent(GameEvent.BLOCK_ACTIVATE, pos, GameEvent.Emitter.of(dispenserBlockEntity.getCachedState()));
             return;
         }
         ItemStack itemStack = dispenserBlockEntity.getStack(i);

@@ -81,6 +81,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
@@ -123,7 +124,7 @@ VillagerDataContainer {
     public static final int field_30602 = 12;
     public static final Map<Item, Integer> ITEM_FOOD_VALUES = ImmutableMap.of((Object)Items.BREAD, (Object)4, (Object)Items.POTATO, (Object)1, (Object)Items.CARROT, (Object)1, (Object)Items.BEETROOT, (Object)1);
     private static final int field_30604 = 2;
-    private static final Set<Item> GATHERABLE_ITEMS = ImmutableSet.of((Object)Items.BREAD, (Object)Items.POTATO, (Object)Items.CARROT, (Object)Items.WHEAT, (Object)Items.WHEAT_SEEDS, (Object)Items.BEETROOT, (Object[])new Item[]{Items.BEETROOT_SEEDS});
+    private static final Set<Item> GATHERABLE_ITEMS = ImmutableSet.of((Object)Items.BREAD, (Object)Items.POTATO, (Object)Items.CARROT, (Object)Items.WHEAT, (Object)Items.WHEAT_SEEDS, (Object)Items.BEETROOT, (Object[])new Item[]{Items.BEETROOT_SEEDS, Items.TORCHFLOWER_SEEDS, Items.PITCHER_POD});
     private static final int field_30605 = 10;
     private static final int field_30606 = 1200;
     private static final int field_30607 = 24000;
@@ -205,14 +206,14 @@ VillagerDataContainer {
         brain.setCoreActivities((Set<Activity>)ImmutableSet.of((Object)Activity.CORE));
         brain.setDefaultActivity(Activity.IDLE);
         brain.doExclusively(Activity.IDLE);
-        brain.refreshActivities(this.world.getTimeOfDay(), this.world.getTime());
+        brain.refreshActivities(this.getWorld().getTimeOfDay(), this.getWorld().getTime());
     }
 
     @Override
     protected void onGrowUp() {
         super.onGrowUp();
-        if (this.world instanceof ServerWorld) {
-            this.reinitializeBrain((ServerWorld)this.world);
+        if (this.getWorld() instanceof ServerWorld) {
+            this.reinitializeBrain((ServerWorld)this.getWorld());
         }
     }
 
@@ -227,9 +228,9 @@ VillagerDataContainer {
     @Override
     protected void mobTick() {
         Raid raid;
-        this.world.getProfiler().push("villagerBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().push("villagerBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
         if (this.natural) {
             this.natural = false;
         }
@@ -243,13 +244,13 @@ VillagerDataContainer {
                 this.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 200, 0));
             }
         }
-        if (this.lastCustomer != null && this.world instanceof ServerWorld) {
-            ((ServerWorld)this.world).handleInteraction(EntityInteraction.TRADE, this.lastCustomer, this);
-            this.world.sendEntityStatus(this, (byte)14);
+        if (this.lastCustomer != null && this.getWorld() instanceof ServerWorld) {
+            ((ServerWorld)this.getWorld()).handleInteraction(EntityInteraction.TRADE, this.lastCustomer, this);
+            this.getWorld().sendEntityStatus(this, (byte)14);
             this.lastCustomer = null;
         }
-        if (!this.isAiDisabled() && this.random.nextInt(100) == 0 && (raid = ((ServerWorld)this.world).getRaidAt(this.getBlockPos())) != null && raid.isActive() && !raid.isFinished()) {
-            this.world.sendEntityStatus(this, (byte)42);
+        if (!this.isAiDisabled() && this.random.nextInt(100) == 0 && (raid = ((ServerWorld)this.getWorld()).getRaidAt(this.getBlockPos())) != null && raid.isActive() && !raid.isFinished()) {
+            this.getWorld().sendEntityStatus(this, (byte)42);
         }
         if (this.getVillagerData().getProfession() == VillagerProfession.NONE && this.hasCustomer()) {
             this.resetCustomer();
@@ -272,29 +273,29 @@ VillagerDataContainer {
         if (!itemStack.isOf(Items.VILLAGER_SPAWN_EGG) && this.isAlive() && !this.hasCustomer() && !this.isSleeping()) {
             if (this.isBaby()) {
                 this.sayNo();
-                return ActionResult.success(this.world.isClient);
+                return ActionResult.success(this.getWorld().isClient);
             }
             boolean bl = this.getOffers().isEmpty();
             if (hand == Hand.MAIN_HAND) {
-                if (bl && !this.world.isClient) {
+                if (bl && !this.getWorld().isClient) {
                     this.sayNo();
                 }
                 player.incrementStat(Stats.TALKED_TO_VILLAGER);
             }
             if (bl) {
-                return ActionResult.success(this.world.isClient);
+                return ActionResult.success(this.getWorld().isClient);
             }
-            if (!this.world.isClient && !this.offers.isEmpty()) {
+            if (!this.getWorld().isClient && !this.offers.isEmpty()) {
                 this.beginTradeWith(player);
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         return super.interactMob(player, hand);
     }
 
     private void sayNo() {
         this.setHeadRollingTimeLeft(40);
-        if (!this.world.isClient()) {
+        if (!this.getWorld().isClient()) {
             this.playSound(SoundEvents.ENTITY_VILLAGER_NO, this.getSoundVolume(), this.getSoundPitch());
         }
     }
@@ -342,7 +343,7 @@ VillagerDataContainer {
             tradeOffer.resetUses();
         }
         this.sendOffersToCustomer();
-        this.lastRestockTime = this.world.getTime();
+        this.lastRestockTime = this.getWorld().getTime();
         ++this.restocksToday;
     }
 
@@ -363,14 +364,14 @@ VillagerDataContainer {
     }
 
     private boolean canRestock() {
-        return this.restocksToday == 0 || this.restocksToday < 2 && this.world.getTime() > this.lastRestockTime + 2400L;
+        return this.restocksToday == 0 || this.restocksToday < 2 && this.getWorld().getTime() > this.lastRestockTime + 2400L;
     }
 
     public boolean shouldRestock() {
         long l = this.lastRestockTime + 12000L;
-        long m = this.world.getTime();
+        long m = this.getWorld().getTime();
         boolean bl = m > l;
-        long n = this.world.getTimeOfDay();
+        long n = this.getWorld().getTimeOfDay();
         if (this.lastRestockCheckTime > 0L) {
             long p = n / 24000L;
             long o = this.lastRestockCheckTime / 24000L;
@@ -463,8 +464,8 @@ VillagerDataContainer {
         this.lastRestockTime = nbt.getLong("LastRestock");
         this.lastGossipDecayTime = nbt.getLong("LastGossipDecay");
         this.setCanPickUpLoot(true);
-        if (this.world instanceof ServerWorld) {
-            this.reinitializeBrain((ServerWorld)this.world);
+        if (this.getWorld() instanceof ServerWorld) {
+            this.reinitializeBrain((ServerWorld)this.getWorld());
         }
         this.restocksToday = nbt.getInt("RestocksToday");
         if (nbt.contains("AssignProfessionWhenSpawned")) {
@@ -531,7 +532,7 @@ VillagerDataContainer {
             i += 5;
         }
         if (offer.shouldRewardPlayerExperience()) {
-            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.getX(), this.getY() + 0.5, this.getZ(), i));
+            this.getWorld().spawnEntity(new ExperienceOrbEntity(this.getWorld(), this.getX(), this.getY() + 0.5, this.getZ(), i));
         }
     }
 
@@ -545,10 +546,10 @@ VillagerDataContainer {
 
     @Override
     public void setAttacker(@Nullable LivingEntity attacker) {
-        if (attacker != null && this.world instanceof ServerWorld) {
-            ((ServerWorld)this.world).handleInteraction(EntityInteraction.VILLAGER_HURT, attacker, this);
+        if (attacker != null && this.getWorld() instanceof ServerWorld) {
+            ((ServerWorld)this.getWorld()).handleInteraction(EntityInteraction.VILLAGER_HURT, attacker, this);
             if (this.isAlive() && attacker instanceof PlayerEntity) {
-                this.world.sendEntityStatus(this, (byte)13);
+                this.getWorld().sendEntityStatus(this, (byte)13);
             }
         }
         super.setAttacker(attacker);
@@ -573,7 +574,7 @@ VillagerDataContainer {
     }
 
     private void notifyDeath(Entity killer) {
-        World world = this.world;
+        World world = this.getWorld();
         if (!(world instanceof ServerWorld)) {
             return;
         }
@@ -586,10 +587,10 @@ VillagerDataContainer {
     }
 
     public void releaseTicketFor(MemoryModuleType<GlobalPos> pos2) {
-        if (!(this.world instanceof ServerWorld)) {
+        if (!(this.getWorld() instanceof ServerWorld)) {
             return;
         }
-        MinecraftServer minecraftServer = ((ServerWorld)this.world).getServer();
+        MinecraftServer minecraftServer = ((ServerWorld)this.getWorld()).getServer();
         this.brain.getOptionalRegisteredMemory(pos2).ifPresent(pos -> {
             ServerWorld serverWorld = minecraftServer.getWorld(pos.getDimension());
             if (serverWorld == null) {
@@ -754,7 +755,7 @@ VillagerDataContainer {
     }
 
     public boolean hasSeedToPlant() {
-        return this.getInventory().containsAny((Set<Item>)ImmutableSet.of((Object)Items.WHEAT_SEEDS, (Object)Items.POTATO, (Object)Items.CARROT, (Object)Items.BEETROOT_SEEDS));
+        return this.getInventory().containsAny(stack -> stack.isIn(ItemTags.VILLAGER_PLANTABLE_SEEDS));
     }
 
     @Override
@@ -783,7 +784,7 @@ VillagerDataContainer {
     }
 
     private void decayGossip() {
-        long l = this.world.getTime();
+        long l = this.getWorld().getTime();
         if (this.lastGossipDecayTime == 0L) {
             this.lastGossipDecayTime = l;
             return;
@@ -812,7 +813,7 @@ VillagerDataContainer {
     }
 
     public boolean canSummonGolem(long time) {
-        if (!this.hasRecentlySlept(this.world.getTime())) {
+        if (!this.hasRecentlySlept(this.getWorld().getTime())) {
             return false;
         }
         return !this.brain.hasMemoryModule(MemoryModuleType.GOLEM_DETECTED_RECENTLY);
@@ -863,7 +864,7 @@ VillagerDataContainer {
     @Override
     public void sleep(BlockPos pos) {
         super.sleep(pos);
-        this.brain.remember(MemoryModuleType.LAST_SLEPT, this.world.getTime());
+        this.brain.remember(MemoryModuleType.LAST_SLEPT, this.getWorld().getTime());
         this.brain.forget(MemoryModuleType.WALK_TARGET);
         this.brain.forget(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
@@ -871,7 +872,7 @@ VillagerDataContainer {
     @Override
     public void wakeUp() {
         super.wakeUp();
-        this.brain.remember(MemoryModuleType.LAST_WOKEN, this.world.getTime());
+        this.brain.remember(MemoryModuleType.LAST_WOKEN, this.getWorld().getTime());
     }
 
     private boolean hasRecentlySlept(long worldTime) {

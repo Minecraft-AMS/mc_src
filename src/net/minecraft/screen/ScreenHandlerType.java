@@ -23,7 +23,6 @@ import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.GrindstoneScreenHandler;
 import net.minecraft.screen.HopperScreenHandler;
 import net.minecraft.screen.LecternScreenHandler;
-import net.minecraft.screen.LegacySmithingScreenHandler;
 import net.minecraft.screen.LoomScreenHandler;
 import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.screen.ScreenHandler;
@@ -54,8 +53,7 @@ implements ToggleableFeature {
     public static final ScreenHandlerType<LoomScreenHandler> LOOM = ScreenHandlerType.register("loom", LoomScreenHandler::new);
     public static final ScreenHandlerType<MerchantScreenHandler> MERCHANT = ScreenHandlerType.register("merchant", MerchantScreenHandler::new);
     public static final ScreenHandlerType<ShulkerBoxScreenHandler> SHULKER_BOX = ScreenHandlerType.register("shulker_box", ShulkerBoxScreenHandler::new);
-    public static final ScreenHandlerType<LegacySmithingScreenHandler> LEGACY_SMITHING = ScreenHandlerType.register("legacy_smithing", LegacySmithingScreenHandler::new);
-    public static final ScreenHandlerType<SmithingScreenHandler> SMITHING = ScreenHandlerType.register("smithing", SmithingScreenHandler::new, FeatureFlags.UPDATE_1_20);
+    public static final ScreenHandlerType<SmithingScreenHandler> SMITHING = ScreenHandlerType.register("smithing", SmithingScreenHandler::new);
     public static final ScreenHandlerType<SmokerScreenHandler> SMOKER = ScreenHandlerType.register("smoker", SmokerScreenHandler::new);
     public static final ScreenHandlerType<CartographyTableScreenHandler> CARTOGRAPHY_TABLE = ScreenHandlerType.register("cartography_table", CartographyTableScreenHandler::new);
     public static final ScreenHandlerType<StonecutterScreenHandler> STONECUTTER = ScreenHandlerType.register("stonecutter", StonecutterScreenHandler::new);

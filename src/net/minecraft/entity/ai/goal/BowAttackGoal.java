@@ -112,6 +112,11 @@ extends Goal {
                 this.backward = true;
             }
             ((MobEntity)this.actor).getMoveControl().strafeTo(this.backward ? -0.5f : 0.5f, this.movingToLeft ? 0.5f : -0.5f);
+            Entity entity = ((Entity)this.actor).getControllingVehicle();
+            if (entity instanceof MobEntity) {
+                MobEntity mobEntity = (MobEntity)entity;
+                mobEntity.lookAtEntity(livingEntity, 30.0f, 30.0f);
+            }
             ((MobEntity)this.actor).lookAtEntity(livingEntity, 30.0f, 30.0f);
         } else {
             ((MobEntity)this.actor).getLookControl().lookAt(livingEntity, 30.0f, 30.0f);

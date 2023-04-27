@@ -225,7 +225,7 @@ implements AutoCloseable {
         MemoryUtil.memPutInt((long)(this.pointer + l), (int)color);
     }
 
-    public NativeImage apply(IntUnaryOperator operator) {
+    public NativeImage applyToCopy(IntUnaryOperator operator) {
         if (this.format != Format.RGBA) {
             throw new IllegalArgumentException(String.format(Locale.ROOT, "function application only works on RGBA images; have %s", new Object[]{this.format}));
         }
@@ -238,6 +238,18 @@ implements AutoCloseable {
             intBuffer2.put(j, operator.applyAsInt(intBuffer.get(j)));
         }
         return nativeImage;
+    }
+
+    public void apply(IntUnaryOperator operator) {
+        if (this.format != Format.RGBA) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "function application only works on RGBA images; have %s", new Object[]{this.format}));
+        }
+        this.checkAllocated();
+        int i = this.width * this.height;
+        IntBuffer intBuffer = MemoryUtil.memIntBuffer((long)this.pointer, (int)i);
+        for (int j = 0; j < i; ++j) {
+            intBuffer.put(j, operator.applyAsInt(intBuffer.get(j)));
+        }
     }
 
     public int[] copyPixelsRgba() {

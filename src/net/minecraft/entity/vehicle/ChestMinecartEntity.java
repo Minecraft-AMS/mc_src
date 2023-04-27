@@ -64,7 +64,7 @@ extends StorageMinecartEntity {
 
     @Override
     public void onClose(PlayerEntity player) {
-        this.world.emitGameEvent(GameEvent.CONTAINER_CLOSE, this.getPos(), GameEvent.Emitter.of(player));
+        this.getWorld().emitGameEvent(GameEvent.CONTAINER_CLOSE, this.getPos(), GameEvent.Emitter.of(player));
     }
 
     @Override

@@ -13,15 +13,16 @@ package net.minecraft.client.gui.screen.ingame;
 import com.google.common.collect.Sets;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.ScreenHandlerProvider;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
@@ -99,45 +100,41 @@ implements ScreenHandlerProvider<T> {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         ItemStack itemStack;
         int l;
         int i = this.x;
         int j = this.y;
-        this.drawBackground(matrices, delta, mouseX, mouseY);
+        this.drawBackground(context, delta, mouseX, mouseY);
         RenderSystem.disableDepthTest();
-        super.render(matrices, mouseX, mouseY, delta);
-        matrices.push();
-        matrices.translate(i, j, 0.0f);
+        super.render(context, mouseX, mouseY, delta);
+        context.getMatrices().push();
+        context.getMatrices().translate(i, j, 0.0f);
         this.focusedSlot = null;
         for (int k = 0; k < ((ScreenHandler)this.handler).slots.size(); ++k) {
             Slot slot = ((ScreenHandler)this.handler).slots.get(k);
             if (slot.isEnabled()) {
-                this.drawSlot(matrices, slot);
+                this.drawSlot(context, slot);
             }
             if (!this.isPointOverSlot(slot, mouseX, mouseY) || !slot.isEnabled()) continue;
             this.focusedSlot = slot;
             l = slot.x;
             int m = slot.y;
-            HandledScreen.drawSlotHighlight(matrices, l, m, 0);
+            if (!this.focusedSlot.method_51306()) continue;
+            HandledScreen.drawSlotHighlight(context, l, m, 0);
         }
-        this.drawForeground(matrices, mouseX, mouseY);
+        this.drawForeground(context, mouseX, mouseY);
         ItemStack itemStack2 = itemStack = this.touchDragStack.isEmpty() ? ((ScreenHandler)this.handler).getCursorStack() : this.touchDragStack;
         if (!itemStack.isEmpty()) {
             int n = 8;
             l = this.touchDragStack.isEmpty() ? 8 : 16;
             String string = null;
             if (!this.touchDragStack.isEmpty() && this.touchIsRightClickDrag) {
-                itemStack = itemStack.copy();
-                itemStack.setCount(MathHelper.ceil((float)itemStack.getCount() / 2.0f));
-            } else if (this.cursorDragging && this.cursorDragSlots.size() > 1) {
-                itemStack = itemStack.copy();
-                itemStack.setCount(this.draggedStackRemainder);
-                if (itemStack.isEmpty()) {
-                    string = Formatting.YELLOW + "0";
-                }
+                itemStack = itemStack.copyWithCount(MathHelper.ceil((float)itemStack.getCount() / 2.0f));
+            } else if (this.cursorDragging && this.cursorDragSlots.size() > 1 && (itemStack = itemStack.copyWithCount(this.draggedStackRemainder)).isEmpty()) {
+                string = Formatting.YELLOW + "0";
             }
-            this.drawItem(matrices, itemStack, mouseX - i - 8, mouseY - j - l, string);
+            this.drawItem(context, itemStack, mouseX - i - 8, mouseY - j - l, string);
         }
         if (!this.touchDropReturningStack.isEmpty()) {
             float f = (float)(Util.getMeasuringTimeMs() - this.touchDropTime) / 100.0f;
@@ -149,42 +146,47 @@ implements ScreenHandlerProvider<T> {
             int m = this.touchDropOriginSlot.y - this.touchDropY;
             int o = this.touchDropX + (int)((float)l * f);
             int p = this.touchDropY + (int)((float)m * f);
-            this.drawItem(matrices, this.touchDropReturningStack, o, p, null);
+            this.drawItem(context, this.touchDropReturningStack, o, p, null);
         }
-        matrices.pop();
+        context.getMatrices().pop();
         RenderSystem.enableDepthTest();
     }
 
-    public static void drawSlotHighlight(MatrixStack matrices, int x, int y, int z) {
+    public static void drawSlotHighlight(DrawContext context, int x, int y, int z) {
         RenderSystem.disableDepthTest();
         RenderSystem.colorMask(true, true, true, false);
-        HandledScreen.fillGradient(matrices, x, y, x + 16, y + 16, -2130706433, -2130706433, z);
+        context.fillGradient(x, y, x + 16, y + 16, z, -2130706433, -2130706433);
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.enableDepthTest();
     }
 
-    protected void drawMouseoverTooltip(MatrixStack matrices, int x, int y) {
+    protected void drawMouseoverTooltip(DrawContext context, int x, int y) {
         if (((ScreenHandler)this.handler).getCursorStack().isEmpty() && this.focusedSlot != null && this.focusedSlot.hasStack()) {
-            this.renderTooltip(matrices, this.focusedSlot.getStack(), x, y);
+            ItemStack itemStack = this.focusedSlot.getStack();
+            context.drawTooltip(this.textRenderer, this.getTooltipFromItem(itemStack), itemStack.getTooltipData(), x, y);
         }
     }
 
-    private void drawItem(MatrixStack matrices, ItemStack stack, int x, int y, String amountText) {
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, 232.0f);
-        this.itemRenderer.renderInGuiWithOverrides(matrices, stack, x, y);
-        this.itemRenderer.renderGuiItemOverlay(matrices, this.textRenderer, stack, x, y - (this.touchDragStack.isEmpty() ? 0 : 8), amountText);
-        matrices.pop();
+    protected List<Text> getTooltipFromItem(ItemStack stack) {
+        return HandledScreen.getTooltipFromItem(this.client, stack);
     }
 
-    protected void drawForeground(MatrixStack matrices, int mouseX, int mouseY) {
-        this.textRenderer.draw(matrices, this.title, (float)this.titleX, (float)this.titleY, 0x404040);
-        this.textRenderer.draw(matrices, this.playerInventoryTitle, (float)this.playerInventoryTitleX, (float)this.playerInventoryTitleY, 0x404040);
+    private void drawItem(DrawContext context, ItemStack stack, int x, int y, String amountText) {
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 232.0f);
+        context.drawItem(stack, x, y);
+        context.drawItemInSlot(this.textRenderer, stack, x, y - (this.touchDragStack.isEmpty() ? 0 : 8), amountText);
+        context.getMatrices().pop();
     }
 
-    protected abstract void drawBackground(MatrixStack var1, float var2, int var3, int var4);
+    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+        context.drawText(this.textRenderer, this.title, this.titleX, this.titleY, 0x404040, false);
+        context.drawText(this.textRenderer, this.playerInventoryTitle, this.playerInventoryTitleX, this.playerInventoryTitleY, 0x404040, false);
+    }
 
-    private void drawSlot(MatrixStack matrices, Slot slot) {
+    protected abstract void drawBackground(DrawContext var1, float var2, int var3, int var4);
+
+    private void drawSlot(DrawContext context, Slot slot) {
         Pair<Identifier, Identifier> pair;
         int i = slot.x;
         int j = slot.y;
@@ -194,42 +196,41 @@ implements ScreenHandlerProvider<T> {
         ItemStack itemStack2 = ((ScreenHandler)this.handler).getCursorStack();
         String string = null;
         if (slot == this.touchDragSlotStart && !this.touchDragStack.isEmpty() && this.touchIsRightClickDrag && !itemStack.isEmpty()) {
-            itemStack = itemStack.copy();
-            itemStack.setCount(itemStack.getCount() / 2);
+            itemStack = itemStack.copyWithCount(itemStack.getCount() / 2);
         } else if (this.cursorDragging && this.cursorDragSlots.contains(slot) && !itemStack2.isEmpty()) {
             if (this.cursorDragSlots.size() == 1) {
                 return;
             }
             if (ScreenHandler.canInsertItemIntoSlot(slot, itemStack2, true) && ((ScreenHandler)this.handler).canInsertIntoSlot(slot)) {
-                itemStack = itemStack2.copy();
                 bl = true;
-                ScreenHandler.calculateStackSize(this.cursorDragSlots, this.heldButtonType, itemStack, slot.getStack().isEmpty() ? 0 : slot.getStack().getCount());
-                int k = Math.min(itemStack.getMaxCount(), slot.getMaxItemCount(itemStack));
-                if (itemStack.getCount() > k) {
+                int k = Math.min(itemStack2.getMaxCount(), slot.getMaxItemCount(itemStack2));
+                int l = slot.getStack().isEmpty() ? 0 : slot.getStack().getCount();
+                int m = ScreenHandler.calculateStackSize(this.cursorDragSlots, this.heldButtonType, itemStack2) + l;
+                if (m > k) {
+                    m = k;
                     string = Formatting.YELLOW.toString() + k;
-                    itemStack.setCount(k);
                 }
+                itemStack = itemStack2.copyWithCount(m);
             } else {
                 this.cursorDragSlots.remove(slot);
                 this.calculateOffset();
             }
         }
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, 100.0f);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 100.0f);
         if (itemStack.isEmpty() && slot.isEnabled() && (pair = slot.getBackgroundSprite()) != null) {
             Sprite sprite = this.client.getSpriteAtlas((Identifier)pair.getFirst()).apply((Identifier)pair.getSecond());
-            RenderSystem.setShaderTexture(0, sprite.getAtlasId());
-            HandledScreen.drawSprite(matrices, i, j, 0, 16, 16, sprite);
+            context.drawSprite(i, j, 0, 16, 16, sprite);
             bl2 = true;
         }
         if (!bl2) {
             if (bl) {
-                HandledScreen.fill(matrices, i, j, i + 16, j + 16, -2130706433);
+                context.fill(i, j, i + 16, j + 16, -2130706433);
             }
-            this.itemRenderer.renderInGuiWithOverrides(matrices, this.client.player, itemStack, i, j, slot.x + slot.y * this.backgroundWidth);
-            this.itemRenderer.renderGuiItemOverlay(matrices, this.textRenderer, itemStack, i, j, string);
+            context.drawItem(itemStack, i, j, slot.x + slot.y * this.backgroundWidth);
+            context.drawItemInSlot(this.textRenderer, itemStack, i, j, string);
         }
-        matrices.pop();
+        context.getMatrices().pop();
     }
 
     private void calculateOffset() {
@@ -243,15 +244,11 @@ implements ScreenHandlerProvider<T> {
         }
         this.draggedStackRemainder = itemStack.getCount();
         for (Slot slot : this.cursorDragSlots) {
-            ItemStack itemStack2 = itemStack.copy();
-            ItemStack itemStack3 = slot.getStack();
-            int i = itemStack3.isEmpty() ? 0 : itemStack3.getCount();
-            ScreenHandler.calculateStackSize(this.cursorDragSlots, this.heldButtonType, itemStack2, i);
-            int j = Math.min(itemStack2.getMaxCount(), slot.getMaxItemCount(itemStack2));
-            if (itemStack2.getCount() > j) {
-                itemStack2.setCount(j);
-            }
-            this.draggedStackRemainder -= itemStack2.getCount() - i;
+            ItemStack itemStack2 = slot.getStack();
+            int i = itemStack2.isEmpty() ? 0 : itemStack2.getCount();
+            int j = Math.min(itemStack.getMaxCount(), slot.getMaxItemCount(itemStack));
+            int k = Math.min(ScreenHandler.calculateStackSize(this.cursorDragSlots, this.heldButtonType, itemStack) + i, j);
+            this.draggedStackRemainder -= k - i;
         }
     }
 

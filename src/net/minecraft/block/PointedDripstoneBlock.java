@@ -22,7 +22,6 @@ import net.minecraft.block.LandingBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.enums.Thickness;
-import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
@@ -223,11 +222,6 @@ Waterloggable {
         int j = 50 + i;
         BlockState blockState2 = world.getBlockState(blockPos2);
         world.scheduleBlockTick(blockPos2, blockState2.getBlock(), j);
-    }
-
-    @Override
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return PistonBehavior.DESTROY;
     }
 
     @Override

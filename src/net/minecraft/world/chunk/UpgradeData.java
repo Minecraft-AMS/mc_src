@@ -166,13 +166,15 @@ public class UpgradeData {
             if (is == null || is.length <= 0) continue;
             Direction[] directions = Direction.values();
             PalettedContainer<BlockState> palettedContainer = chunkSection.getBlockStateContainer();
-            for (int j : is) {
+            int j = chunk.sectionIndexToCoord(i);
+            int k = ChunkSectionPos.getBlockCoord(j);
+            for (int l : is) {
                 BlockState blockState;
-                int k = j & 0xF;
-                int l = j >> 8 & 0xF;
-                int m = j >> 4 & 0xF;
-                mutable.set(chunkPos.getStartX() + k, chunkSection.getYOffset() + l, chunkPos.getStartZ() + m);
-                BlockState blockState2 = blockState = palettedContainer.get(j);
+                int m = l & 0xF;
+                int n = l >> 8 & 0xF;
+                int o = l >> 4 & 0xF;
+                mutable.set(chunkPos.getStartX() + m, k + n, chunkPos.getStartZ() + o);
+                BlockState blockState2 = blockState = palettedContainer.get(l);
                 for (Direction direction : directions) {
                     mutable2.set((Vec3i)mutable, direction);
                     if (ChunkSectionPos.getSectionCoord(mutable.getX()) != chunkPos.x || ChunkSectionPos.getSectionCoord(mutable.getZ()) != chunkPos.z) continue;

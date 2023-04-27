@@ -95,7 +95,7 @@ implements Ownable {
     }
 
     public void setRadius(float radius) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.getDataTracker().set(RADIUS, Float.valueOf(MathHelper.clamp(radius, 0.0f, 32.0f)));
         }
     }
@@ -182,7 +182,7 @@ implements Ownable {
                     super.tick();
                     bl = this.isWaiting();
                     f = this.getRadius();
-                    if (!this.world.isClient) break block19;
+                    if (!this.getWorld().isClient) break block19;
                     if (bl && this.random.nextBoolean()) {
                         return;
                     }
@@ -217,7 +217,7 @@ implements Ownable {
                             o = 0.01f;
                             p = (0.5 - this.random.nextDouble()) * 0.15;
                         }
-                        this.world.addImportantParticle(particleEffect, d, e, l, n, o, p);
+                        this.getWorld().addImportantParticle(particleEffect, d, e, l, n, o, p);
                     }
                     break block20;
                 }
@@ -250,7 +250,7 @@ implements Ownable {
                 this.affectedEntities.clear();
                 break block20;
             }
-            List<LivingEntity> list2 = this.world.getNonSpectatingEntities(LivingEntity.class, this.getBoundingBox());
+            List<LivingEntity> list2 = this.getWorld().getNonSpectatingEntities(LivingEntity.class, this.getBoundingBox());
             if (list2.isEmpty()) break block20;
             for (LivingEntity livingEntity : list2) {
                 double r;
@@ -322,7 +322,7 @@ implements Ownable {
     @Nullable
     public LivingEntity getOwner() {
         Entity entity;
-        if (this.owner == null && this.ownerUuid != null && this.world instanceof ServerWorld && (entity = ((ServerWorld)this.world).getEntity(this.ownerUuid)) instanceof LivingEntity) {
+        if (this.owner == null && this.ownerUuid != null && this.getWorld() instanceof ServerWorld && (entity = ((ServerWorld)this.getWorld()).getEntity(this.ownerUuid)) instanceof LivingEntity) {
             this.owner = (LivingEntity)entity;
         }
         return this.owner;

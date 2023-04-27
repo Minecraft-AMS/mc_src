@@ -17,6 +17,7 @@ import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.QuickPlayLogger;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientLoginNetworkHandler;
 import net.minecraft.client.network.ServerAddress;
@@ -77,6 +78,7 @@ public class RealmsConnection {
                     UUID uUID = minecraftClient.getSession().getUuidOrNull();
                     RealmsConnection.this.connection.send(new LoginHelloC2SPacket(string4, Optional.ofNullable(uUID)));
                     minecraftClient.ensureAbuseReportContext(ReporterEnvironment.ofRealm(server));
+                    minecraftClient.getQuickPlayLogger().setWorld(QuickPlayLogger.WorldType.REALMS, String.valueOf(server.id), server.name);
                 }
                 catch (Exception exception) {
                     minecraftClient.getServerResourcePackProvider().clear();

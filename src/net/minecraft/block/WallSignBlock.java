@@ -28,6 +28,7 @@ import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -60,7 +61,7 @@ extends AbstractSignBlock {
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        return world.getBlockState(pos.offset(state.get(FACING).getOpposite())).getMaterial().isSolid();
+        return world.getBlockState(pos.offset(state.get(FACING).getOpposite())).isSolid();
     }
 
     @Override
@@ -85,6 +86,17 @@ extends AbstractSignBlock {
             return Blocks.AIR.getDefaultState();
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+    }
+
+    @Override
+    public float getRotationDegrees(BlockState state) {
+        return state.get(FACING).asRotation();
+    }
+
+    @Override
+    public Vec3d getCenter(BlockState state) {
+        VoxelShape voxelShape = FACING_TO_SHAPE.get(state.get(FACING));
+        return voxelShape.getBoundingBox().getCenter();
     }
 
     @Override

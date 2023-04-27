@@ -43,7 +43,7 @@ extends ProjectileEntity {
         this.updateRotation();
         float g = 0.99f;
         float h = 0.06f;
-        if (this.world.getStatesInBox(this.getBoundingBox()).noneMatch(AbstractBlock.AbstractBlockState::isAir)) {
+        if (this.getWorld().getStatesInBox(this.getBoundingBox()).noneMatch(AbstractBlock.AbstractBlockState::isAir)) {
             this.discard();
             return;
         }
@@ -71,7 +71,7 @@ extends ProjectileEntity {
     @Override
     protected void onBlockHit(BlockHitResult blockHitResult) {
         super.onBlockHit(blockHitResult);
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.discard();
         }
     }
@@ -88,7 +88,7 @@ extends ProjectileEntity {
         double f = packet.getVelocityZ();
         for (int i = 0; i < 7; ++i) {
             double g = 0.4 + 0.1 * (double)i;
-            this.world.addParticle(ParticleTypes.SPIT, this.getX(), this.getY(), this.getZ(), d * g, e, f * g);
+            this.getWorld().addParticle(ParticleTypes.SPIT, this.getX(), this.getY(), this.getZ(), d * g, e, f * g);
         }
         this.setVelocity(d, e, f);
     }

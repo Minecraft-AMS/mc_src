@@ -12,7 +12,6 @@ import net.minecraft.block.BlockSetType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ShapeContext;
-import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -50,7 +49,7 @@ extends Block {
     }
 
     @Override
-    public boolean canMobSpawnInside() {
+    public boolean canMobSpawnInside(BlockState state) {
         return true;
     }
 
@@ -142,11 +141,6 @@ extends Block {
     @Override
     public boolean emitsRedstonePower(BlockState state) {
         return true;
-    }
-
-    @Override
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return PistonBehavior.DESTROY;
     }
 
     protected abstract int getRedstoneOutput(World var1, BlockPos var2);

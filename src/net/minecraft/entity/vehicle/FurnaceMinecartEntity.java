@@ -55,7 +55,7 @@ extends AbstractMinecartEntity {
     @Override
     public void tick() {
         super.tick();
-        if (!this.world.isClient()) {
+        if (!this.getWorld().isClient()) {
             if (this.fuel > 0) {
                 --this.fuel;
             }
@@ -66,7 +66,7 @@ extends AbstractMinecartEntity {
             this.setLit(this.fuel > 0);
         }
         if (this.isLit() && this.random.nextInt(4) == 0) {
-            this.world.addParticle(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 0.8, this.getZ(), 0.0, 0.0, 0.0);
+            this.getWorld().addParticle(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 0.8, this.getZ(), 0.0, 0.0, 0.0);
         }
     }
 
@@ -127,7 +127,7 @@ extends AbstractMinecartEntity {
             this.pushX = this.getX() - player.getX();
             this.pushZ = this.getZ() - player.getZ();
         }
-        return ActionResult.success(this.world.isClient);
+        return ActionResult.success(this.getWorld().isClient);
     }
 
     @Override

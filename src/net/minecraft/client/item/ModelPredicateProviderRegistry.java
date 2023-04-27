@@ -36,7 +36,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -97,9 +96,6 @@ public class ModelPredicateProviderRegistry {
             if (world == null) {
                 return 0.0f;
             }
-            if (!world.getEnabledFeatures().contains(FeatureFlags.UPDATE_1_20)) {
-                return Float.NEGATIVE_INFINITY;
-            }
             return ArmorTrim.getTrim(world.getRegistryManager(), stack).map(ArmorTrim::getMaterial).map(RegistryEntry::value).map(ArmorTrimMaterial::itemModelIndex).orElse(Float.valueOf(0.0f)).floatValue();
         };
         ModelPredicateProviderRegistry.register(ItemModelGenerator.TRIM_TYPE, clampedModelPredicateProvider);
@@ -133,8 +129,8 @@ public class ModelPredicateProviderRegistry {
                 if (entity == null) {
                     return 0.0f;
                 }
-                if (clientWorld == null && entity.world instanceof ClientWorld) {
-                    clientWorld = (ClientWorld)entity.world;
+                if (clientWorld == null && entity.getWorld() instanceof ClientWorld) {
+                    clientWorld = (ClientWorld)entity.getWorld();
                 }
                 if (clientWorld == null) {
                     return 0.0f;

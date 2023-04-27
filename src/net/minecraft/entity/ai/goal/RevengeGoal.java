@@ -45,7 +45,7 @@ extends TrackTargetGoal {
         if (i == this.lastAttackedTime || livingEntity == null) {
             return false;
         }
-        if (livingEntity.getType() == EntityType.PLAYER && this.mob.world.getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
+        if (livingEntity.getType() == EntityType.PLAYER && this.mob.getWorld().getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
             return false;
         }
         for (Class<?> class_ : this.noRevengeTypes) {
@@ -76,7 +76,7 @@ extends TrackTargetGoal {
     protected void callSameTypeForRevenge() {
         double d = this.getFollowRange();
         Box box = Box.from(this.mob.getPos()).expand(d, 10.0, d);
-        List<Entity> list = this.mob.world.getEntitiesByClass(this.mob.getClass(), box, EntityPredicates.EXCEPT_SPECTATOR);
+        List<Entity> list = this.mob.getWorld().getEntitiesByClass(this.mob.getClass(), box, EntityPredicates.EXCEPT_SPECTATOR);
         for (MobEntity mobEntity : list) {
             if (this.mob == mobEntity || mobEntity.getTarget() != null || this.mob instanceof TameableEntity && ((TameableEntity)this.mob).getOwner() != ((TameableEntity)mobEntity).getOwner() || mobEntity.isTeammate(this.mob.getAttacker())) continue;
             if (this.noHelpTypes != null) {

@@ -123,7 +123,7 @@ implements VariantHolder<HorseColor> {
 
     @Override
     protected void updateSaddle() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         super.updateSaddle();
@@ -133,7 +133,7 @@ implements VariantHolder<HorseColor> {
 
     private void setArmorTypeFromStack(ItemStack stack) {
         this.equipArmor(stack);
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             int i;
             this.getAttributeInstance(EntityAttributes.GENERIC_ARMOR).removeModifier(HORSE_ARMOR_BONUS_ID);
             if (this.isHorseArmor(stack) && (i = ((HorseArmorItem)stack.getItem()).getBonus()) != 0) {
@@ -200,7 +200,7 @@ implements VariantHolder<HorseColor> {
             }
             if (!this.isTame()) {
                 this.playAngrySound();
-                return ActionResult.success(this.world.isClient);
+                return ActionResult.success(this.getWorld().isClient);
             }
         }
         return super.interactMob(player, hand);

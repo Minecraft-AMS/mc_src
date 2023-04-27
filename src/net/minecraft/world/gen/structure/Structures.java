@@ -24,6 +24,7 @@ import net.minecraft.structure.RuinedPortalStructurePiece;
 import net.minecraft.structure.SavannaVillageData;
 import net.minecraft.structure.SnowyVillageData;
 import net.minecraft.structure.TaigaVillageData;
+import net.minecraft.structure.TrailRuinsGenerator;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.Pool;
@@ -104,6 +105,7 @@ public class Structures {
         structureRegisterable.register(StructureKeys.RUINED_PORTAL_OCEAN, new RuinedPortalStructure(Structures.createConfig(registryEntryLookup.getOrThrow(BiomeTags.RUINED_PORTAL_OCEAN_HAS_STRUCTURE), StructureTerrainAdaptation.NONE), new RuinedPortalStructure.Setup(RuinedPortalStructurePiece.VerticalPlacement.ON_OCEAN_FLOOR, 0.0f, 0.8f, false, false, true, false, 1.0f)));
         structureRegisterable.register(StructureKeys.RUINED_PORTAL_NETHER, new RuinedPortalStructure(Structures.createConfig(registryEntryLookup.getOrThrow(BiomeTags.RUINED_PORTAL_NETHER_HAS_STRUCTURE), StructureTerrainAdaptation.NONE), new RuinedPortalStructure.Setup(RuinedPortalStructurePiece.VerticalPlacement.IN_NETHER, 0.5f, 0.0f, false, false, false, true, 1.0f)));
         structureRegisterable.register(StructureKeys.ANCIENT_CITY, new JigsawStructure(Structures.createConfig(registryEntryLookup.getOrThrow(BiomeTags.ANCIENT_CITY_HAS_STRUCTURE), Arrays.stream(SpawnGroup.values()).collect(Collectors.toMap(spawnGroup -> spawnGroup, spawnGroup -> new StructureSpawns(StructureSpawns.BoundingBox.STRUCTURE, Pool.empty()))), GenerationStep.Feature.UNDERGROUND_DECORATION, StructureTerrainAdaptation.BEARD_BOX), registryEntryLookup2.getOrThrow(AncientCityGenerator.CITY_CENTER), Optional.of(new Identifier("city_anchor")), 7, ConstantHeightProvider.create(YOffset.fixed(-27)), false, Optional.empty(), 116));
+        structureRegisterable.register(StructureKeys.TRAIL_RUINS, new JigsawStructure(Structures.createConfig(registryEntryLookup.getOrThrow(BiomeTags.TRAIL_RUINS_HAS_STRUCTURE), Map.of(), GenerationStep.Feature.UNDERGROUND_STRUCTURES, StructureTerrainAdaptation.BURY), registryEntryLookup2.getOrThrow(TrailRuinsGenerator.TOWER), 7, ConstantHeightProvider.create(YOffset.fixed(-15)), false, Heightmap.Type.WORLD_SURFACE_WG));
     }
 }
 

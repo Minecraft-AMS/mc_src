@@ -57,8 +57,8 @@ implements Ownable {
         if (this.owner != null && !this.owner.isRemoved()) {
             return this.owner;
         }
-        if (this.ownerUuid != null && this.world instanceof ServerWorld) {
-            this.owner = ((ServerWorld)this.world).getEntity(this.ownerUuid);
+        if (this.ownerUuid != null && this.getWorld() instanceof ServerWorld) {
+            this.owner = ((ServerWorld)this.getWorld()).getEntity(this.ownerUuid);
             return this.owner;
         }
         return null;
@@ -107,7 +107,7 @@ implements Ownable {
     private boolean shouldLeaveOwner() {
         Entity entity2 = this.getOwner();
         if (entity2 != null) {
-            for (Entity entity22 : this.world.getOtherEntities(this, this.getBoundingBox().stretch(this.getVelocity()).expand(1.0), entity -> !entity.isSpectator() && entity.canHit())) {
+            for (Entity entity22 : this.getWorld().getOtherEntities(this, this.getBoundingBox().stretch(this.getVelocity()).expand(1.0), entity -> !entity.isSpectator() && entity.canHit())) {
                 if (entity22.getRootVehicle() != entity2.getRootVehicle()) continue;
                 return false;
             }
@@ -138,12 +138,12 @@ implements Ownable {
         HitResult.Type type = hitResult.getType();
         if (type == HitResult.Type.ENTITY) {
             this.onEntityHit((EntityHitResult)hitResult);
-            this.world.emitGameEvent(GameEvent.PROJECTILE_LAND, hitResult.getPos(), GameEvent.Emitter.of(this, null));
+            this.getWorld().emitGameEvent(GameEvent.PROJECTILE_LAND, hitResult.getPos(), GameEvent.Emitter.of(this, null));
         } else if (type == HitResult.Type.BLOCK) {
             BlockHitResult blockHitResult = (BlockHitResult)hitResult;
             this.onBlockHit(blockHitResult);
             BlockPos blockPos = blockHitResult.getBlockPos();
-            this.world.emitGameEvent(GameEvent.PROJECTILE_LAND, blockPos, GameEvent.Emitter.of(this, this.world.getBlockState(blockPos)));
+            this.getWorld().emitGameEvent(GameEvent.PROJECTILE_LAND, blockPos, GameEvent.Emitter.of(this, this.getWorld().getBlockState(blockPos)));
         }
     }
 
@@ -151,8 +151,8 @@ implements Ownable {
     }
 
     protected void onBlockHit(BlockHitResult blockHitResult) {
-        BlockState blockState = this.world.getBlockState(blockHitResult.getBlockPos());
-        blockState.onProjectileHit(this.world, blockState, blockHitResult, this);
+        BlockState blockState = this.getWorld().getBlockState(blockHitResult.getBlockPos());
+        blockState.onProjectileHit(this.getWorld(), blockState, blockHitResult, this);
     }
 
     @Override
@@ -202,7 +202,7 @@ implements Ownable {
     @Override
     public void onSpawnPacket(EntitySpawnS2CPacket packet) {
         super.onSpawnPacket(packet);
-        Entity entity = this.world.getEntityById(packet.getEntityData());
+        Entity entity = this.getWorld().getEntityById(packet.getEntityData());
         if (entity != null) {
             this.setOwner(entity);
         }

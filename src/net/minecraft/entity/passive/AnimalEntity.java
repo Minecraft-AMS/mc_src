@@ -6,6 +6,7 @@
  */
 package net.minecraft.entity.passive;
 
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
@@ -68,7 +69,7 @@ extends PassiveEntity {
                 double d = this.random.nextGaussian() * 0.02;
                 double e = this.random.nextGaussian() * 0.02;
                 double f = this.random.nextGaussian() * 0.02;
-                this.world.addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
+                this.getWorld().addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
             }
         }
     }
@@ -131,7 +132,7 @@ extends PassiveEntity {
 
     @Override
     public int getXpToDrop() {
-        return 1 + this.world.random.nextInt(3);
+        return 1 + this.getWorld().random.nextInt(3);
     }
 
     public boolean isBreedingItem(ItemStack stack) {
@@ -143,7 +144,7 @@ extends PassiveEntity {
         ItemStack itemStack = player.getStackInHand(hand);
         if (this.isBreedingItem(itemStack)) {
             int i = this.getBreedingAge();
-            if (!this.world.isClient && i == 0 && this.canEat()) {
+            if (!this.getWorld().isClient && i == 0 && this.canEat()) {
                 this.eat(player, hand, itemStack);
                 this.lovePlayer(player);
                 return ActionResult.SUCCESS;
@@ -151,9 +152,9 @@ extends PassiveEntity {
             if (this.isBaby()) {
                 this.eat(player, hand, itemStack);
                 this.growUp(AnimalEntity.toGrowUpAge(-i), true);
-                return ActionResult.success(this.world.isClient);
+                return ActionResult.success(this.getWorld().isClient);
             }
-            if (this.world.isClient) {
+            if (this.getWorld().isClient) {
                 return ActionResult.CONSUME;
             }
         }
@@ -175,7 +176,7 @@ extends PassiveEntity {
         if (player != null) {
             this.lovingPlayer = player.getUuid();
         }
-        this.world.sendEntityStatus(this, (byte)18);
+        this.getWorld().sendEntityStatus(this, (byte)18);
     }
 
     public void setLoveTicks(int loveTicks) {
@@ -191,7 +192,7 @@ extends PassiveEntity {
         if (this.lovingPlayer == null) {
             return null;
         }
-        PlayerEntity playerEntity = this.world.getPlayerByUuid(this.lovingPlayer);
+        PlayerEntity playerEntity = this.getWorld().getPlayerByUuid(this.lovingPlayer);
         if (playerEntity instanceof ServerPlayerEntity) {
             return (ServerPlayerEntity)playerEntity;
         }
@@ -221,21 +222,21 @@ extends PassiveEntity {
         if (passiveEntity == null) {
             return;
         }
-        ServerPlayerEntity serverPlayerEntity = this.getLovingPlayer();
-        if (serverPlayerEntity == null && other.getLovingPlayer() != null) {
-            serverPlayerEntity = other.getLovingPlayer();
-        }
-        if (serverPlayerEntity != null) {
-            serverPlayerEntity.incrementStat(Stats.ANIMALS_BRED);
-            Criteria.BRED_ANIMALS.trigger(serverPlayerEntity, this, other, passiveEntity);
-        }
+        passiveEntity.setBaby(true);
+        passiveEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), 0.0f, 0.0f);
+        this.breed(world, other, passiveEntity);
+        world.spawnEntityAndPassengers(passiveEntity);
+    }
+
+    public void breed(ServerWorld world, AnimalEntity other, @Nullable PassiveEntity baby) {
+        Optional.ofNullable(this.getLovingPlayer()).or(() -> Optional.ofNullable(other.getLovingPlayer())).ifPresent(player -> {
+            player.incrementStat(Stats.ANIMALS_BRED);
+            Criteria.BRED_ANIMALS.trigger((ServerPlayerEntity)player, this, other, baby);
+        });
         this.setBreedingAge(6000);
         other.setBreedingAge(6000);
         this.resetLoveTicks();
         other.resetLoveTicks();
-        passiveEntity.setBaby(true);
-        passiveEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), 0.0f, 0.0f);
-        world.spawnEntityAndPassengers(passiveEntity);
         world.sendEntityStatus(this, (byte)18);
         if (world.getGameRules().getBoolean(GameRules.DO_MOB_LOOT)) {
             world.spawnEntity(new ExperienceOrbEntity(world, this.getX(), this.getY(), this.getZ(), this.getRandom().nextInt(7) + 1));
@@ -249,7 +250,7 @@ extends PassiveEntity {
                 double d = this.random.nextGaussian() * 0.02;
                 double e = this.random.nextGaussian() * 0.02;
                 double f = this.random.nextGaussian() * 0.02;
-                this.world.addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
+                this.getWorld().addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
             }
         } else {
             super.handleStatus(status);

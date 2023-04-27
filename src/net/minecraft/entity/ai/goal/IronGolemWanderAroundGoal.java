@@ -36,8 +36,8 @@ extends WanderAroundGoal {
     @Nullable
     protected Vec3d getWanderTarget() {
         Vec3d vec3d;
-        float f = this.mob.world.random.nextFloat();
-        if (this.mob.world.random.nextFloat() < 0.3f) {
+        float f = this.mob.getWorld().random.nextFloat();
+        if (this.mob.getWorld().random.nextFloat() < 0.3f) {
             return this.findRandomInRange();
         }
         if (f < 0.7f) {
@@ -61,12 +61,12 @@ extends WanderAroundGoal {
 
     @Nullable
     private Vec3d findVillagerPos() {
-        ServerWorld serverWorld = (ServerWorld)this.mob.world;
+        ServerWorld serverWorld = (ServerWorld)this.mob.getWorld();
         List<VillagerEntity> list = serverWorld.getEntitiesByType(EntityType.VILLAGER, this.mob.getBoundingBox().expand(32.0), this::canVillagerSummonGolem);
         if (list.isEmpty()) {
             return null;
         }
-        VillagerEntity villagerEntity = list.get(this.mob.world.random.nextInt(list.size()));
+        VillagerEntity villagerEntity = list.get(this.mob.getWorld().random.nextInt(list.size()));
         Vec3d vec3d = villagerEntity.getPos();
         return FuzzyTargeting.findTo(this.mob, 10, 7, vec3d);
     }
@@ -86,7 +86,7 @@ extends WanderAroundGoal {
 
     @Nullable
     private ChunkSectionPos findRandomChunkPos() {
-        ServerWorld serverWorld = (ServerWorld)this.mob.world;
+        ServerWorld serverWorld = (ServerWorld)this.mob.getWorld();
         List list = ChunkSectionPos.stream(ChunkSectionPos.from(this.mob), 2).filter(sectionPos -> serverWorld.getOccupiedPointOfInterestDistance((ChunkSectionPos)sectionPos) == 0).collect(Collectors.toList());
         if (list.isEmpty()) {
             return null;
@@ -96,7 +96,7 @@ extends WanderAroundGoal {
 
     @Nullable
     private BlockPos findRandomPosInChunk(ChunkSectionPos pos) {
-        ServerWorld serverWorld = (ServerWorld)this.mob.world;
+        ServerWorld serverWorld = (ServerWorld)this.mob.getWorld();
         PointOfInterestStorage pointOfInterestStorage = serverWorld.getPointOfInterestStorage();
         List list = pointOfInterestStorage.getInCircle(registryEntry -> true, pos.getCenterPos(), 8, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED).map(PointOfInterest::getPos).collect(Collectors.toList());
         if (list.isEmpty()) {
@@ -106,7 +106,7 @@ extends WanderAroundGoal {
     }
 
     private boolean canVillagerSummonGolem(VillagerEntity villager) {
-        return villager.canSummonGolem(this.mob.world.getTime());
+        return villager.canSummonGolem(this.mob.getWorld().getTime());
     }
 }
 

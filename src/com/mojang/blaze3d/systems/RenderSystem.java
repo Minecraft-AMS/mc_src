@@ -23,6 +23,7 @@ import com.google.common.collect.Queues;
 import com.mojang.blaze3d.platform.GLX;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderCall;
+import com.mojang.blaze3d.systems.VertexSorter;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntConsumer;
 import java.nio.ByteBuffer;
@@ -83,6 +84,8 @@ public class RenderSystem {
     private static Matrix3f inverseViewRotationMatrix;
     private static Matrix4f projectionMatrix;
     private static Matrix4f savedProjectionMatrix;
+    private static VertexSorter vertexSorting;
+    private static VertexSorter savedVertexSorting;
     private static final MatrixStack modelViewStack;
     private static Matrix4f modelViewMatrix;
     private static Matrix4f textureMatrix;
@@ -826,14 +829,16 @@ public class RenderSystem {
         return 0;
     }
 
-    public static void setProjectionMatrix(Matrix4f projectionMatrix) {
+    public static void setProjectionMatrix(Matrix4f projectionMatrix, VertexSorter vertexSorting) {
         Matrix4f matrix4f = new Matrix4f((Matrix4fc)projectionMatrix);
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
                 projectionMatrix = matrix4f;
+                vertexSorting = vertexSorting;
             });
         } else {
             RenderSystem.projectionMatrix = matrix4f;
+            RenderSystem.vertexSorting = vertexSorting;
         }
     }
 
@@ -888,6 +893,7 @@ public class RenderSystem {
 
     private static void _backupProjectionMatrix() {
         savedProjectionMatrix = projectionMatrix;
+        savedVertexSorting = vertexSorting;
     }
 
     public static void restoreProjectionMatrix() {
@@ -900,6 +906,7 @@ public class RenderSystem {
 
     private static void _restoreProjectionMatrix() {
         projectionMatrix = savedProjectionMatrix;
+        vertexSorting = savedVertexSorting;
     }
 
     public static Matrix4f getProjectionMatrix() {
@@ -949,6 +956,11 @@ public class RenderSystem {
     public static float getShaderGameTime() {
         RenderSystem.assertOnRenderThread();
         return shaderGameTime;
+    }
+
+    public static VertexSorter getVertexSorting() {
+        RenderSystem.assertOnRenderThread();
+        return vertexSorting;
     }
 
     private static /* synthetic */ void lambda$setupGui3DDiffuseLighting$59(Vector3f vector3f, Vector3f vector3f2) {
@@ -1201,6 +1213,8 @@ public class RenderSystem {
         inverseViewRotationMatrix = new Matrix3f().zero();
         projectionMatrix = new Matrix4f();
         savedProjectionMatrix = new Matrix4f();
+        vertexSorting = VertexSorter.BY_DISTANCE;
+        savedVertexSorting = VertexSorter.BY_DISTANCE;
         modelViewStack = new MatrixStack();
         modelViewMatrix = new Matrix4f();
         textureMatrix = new Matrix4f();
@@ -1223,7 +1237,7 @@ public class RenderSystem {
         private final int vertexCountInTriangulated;
         private final Triangulator triangulator;
         private int id;
-        private VertexFormat.IndexType indexType = VertexFormat.IndexType.BYTE;
+        private VertexFormat.IndexType indexType = VertexFormat.IndexType.SHORT;
         private int size;
 
         ShapeIndexBuffer(int vertexCountInShape, int vertexCountInTriangulated, Triangulator triangulator) {
@@ -1268,9 +1282,6 @@ public class RenderSystem {
 
         private IntConsumer getIndexConsumer(ByteBuffer indexBuffer) {
             switch (this.indexType) {
-                case BYTE: {
-                    return index -> indexBuffer.put((byte)index);
-                }
                 case SHORT: {
                     return index -> indexBuffer.putShort((short)index);
                 }

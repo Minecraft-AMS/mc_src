@@ -29,7 +29,7 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        return ((MobEntity)this.mob).world.getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER) && this.canStartUniversalAnger();
+        return ((Entity)this.mob).getWorld().getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER) && this.canStartUniversalAnger();
     }
 
     private boolean canStartUniversalAnger() {
@@ -49,7 +49,7 @@ extends Goal {
     private List<? extends MobEntity> getOthersInRange() {
         double d = ((LivingEntity)this.mob).getAttributeValue(EntityAttributes.GENERIC_FOLLOW_RANGE);
         Box box = Box.from(((Entity)this.mob).getPos()).expand(d, 10.0, d);
-        return ((MobEntity)this.mob).world.getEntitiesByClass(this.mob.getClass(), box, EntityPredicates.EXCEPT_SPECTATOR);
+        return ((Entity)this.mob).getWorld().getEntitiesByClass(this.mob.getClass(), box, EntityPredicates.EXCEPT_SPECTATOR);
     }
 }
 

@@ -41,7 +41,7 @@ extends EntityRenderer<FireworkRocketEntity> {
             matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f));
             matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90.0f));
         }
-        this.itemRenderer.renderItem(fireworkRocketEntity.getStack(), ModelTransformationMode.GROUND, i, OverlayTexture.DEFAULT_UV, matrixStack, vertexConsumerProvider, fireworkRocketEntity.world, fireworkRocketEntity.getId());
+        this.itemRenderer.renderItem(fireworkRocketEntity.getStack(), ModelTransformationMode.GROUND, i, OverlayTexture.DEFAULT_UV, matrixStack, vertexConsumerProvider, fireworkRocketEntity.getWorld(), fireworkRocketEntity.getId());
         matrixStack.pop();
         super.render(fireworkRocketEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }

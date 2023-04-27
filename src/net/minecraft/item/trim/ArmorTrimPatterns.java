@@ -30,11 +30,13 @@ public class ArmorTrimPatterns {
     public static final RegistryKey<ArmorTrimPattern> SNOUT = ArmorTrimPatterns.of("snout");
     public static final RegistryKey<ArmorTrimPattern> RIB = ArmorTrimPatterns.of("rib");
     public static final RegistryKey<ArmorTrimPattern> SPIRE = ArmorTrimPatterns.of("spire");
+    public static final RegistryKey<ArmorTrimPattern> WAYFINDER = ArmorTrimPatterns.of("wayfinder");
+    public static final RegistryKey<ArmorTrimPattern> SHAPER = ArmorTrimPatterns.of("shaper");
+    public static final RegistryKey<ArmorTrimPattern> SILENCE = ArmorTrimPatterns.of("silence");
+    public static final RegistryKey<ArmorTrimPattern> RAISER = ArmorTrimPatterns.of("raiser");
+    public static final RegistryKey<ArmorTrimPattern> HOST = ArmorTrimPatterns.of("host");
 
     public static void bootstrap(Registerable<ArmorTrimPattern> registry) {
-    }
-
-    public static void oneTwentyBootstrap(Registerable<ArmorTrimPattern> registry) {
         ArmorTrimPatterns.register(registry, Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, SENTRY);
         ArmorTrimPatterns.register(registry, Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE, DUNE);
         ArmorTrimPatterns.register(registry, Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE, COAST);
@@ -46,6 +48,11 @@ public class ArmorTrimPatterns {
         ArmorTrimPatterns.register(registry, Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE, SNOUT);
         ArmorTrimPatterns.register(registry, Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE, RIB);
         ArmorTrimPatterns.register(registry, Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE, SPIRE);
+        ArmorTrimPatterns.register(registry, Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE, WAYFINDER);
+        ArmorTrimPatterns.register(registry, Items.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE, SHAPER);
+        ArmorTrimPatterns.register(registry, Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE, SILENCE);
+        ArmorTrimPatterns.register(registry, Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE, RAISER);
+        ArmorTrimPatterns.register(registry, Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, HOST);
     }
 
     public static Optional<RegistryEntry.Reference<ArmorTrimPattern>> get(DynamicRegistryManager registryManager, ItemStack stack) {

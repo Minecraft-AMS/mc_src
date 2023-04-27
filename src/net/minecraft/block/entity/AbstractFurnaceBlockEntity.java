@@ -469,12 +469,16 @@ RecipeInputProvider {
     }
 
     @Override
-    public void unlockLastRecipe(PlayerEntity player) {
+    public void unlockLastRecipe(PlayerEntity player, List<ItemStack> ingredients) {
     }
 
     public void dropExperienceForRecipesUsed(ServerPlayerEntity player) {
-        List<Recipe<?>> list = this.getRecipesUsedAndDropExperience(player.getWorld(), player.getPos());
+        List<Recipe<?>> list = this.getRecipesUsedAndDropExperience(player.getServerWorld(), player.getPos());
         player.unlockRecipes(list);
+        for (Recipe<?> recipe : list) {
+            if (recipe == null) continue;
+            player.unlockCraftedRecipe(recipe, this.inventory);
+        }
         this.recipesUsed.clear();
     }
 

@@ -12,12 +12,10 @@ import net.minecraft.block.BlockSetType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.HorizontalFacingBlock;
-import net.minecraft.block.Material;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.TallPlantBlock;
 import net.minecraft.block.enums.DoorHinge;
 import net.minecraft.block.enums.DoubleBlockHalf;
-import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
@@ -65,6 +63,10 @@ extends Block {
         super(settings.sounds(blockSetType.soundType()));
         this.blockSetType = blockSetType;
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(OPEN, false)).with(HINGE, DoorHinge.LEFT)).with(POWERED, false)).with(HALF, DoubleBlockHalf.LOWER));
+    }
+
+    public BlockSetType getBlockSetType() {
+        return this.blockSetType;
     }
 
     @Override
@@ -178,7 +180,7 @@ extends Block {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (this.material == Material.METAL) {
+        if (!this.blockSetType.canOpenByHand()) {
             return ActionResult.PASS;
         }
         state = (BlockState)state.cycle(OPEN);
@@ -229,11 +231,6 @@ extends Block {
     }
 
     @Override
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return PistonBehavior.DESTROY;
-    }
-
-    @Override
     public BlockState rotate(BlockState state, BlockRotation rotation) {
         return (BlockState)state.with(FACING, rotation.rotate(state.get(FACING)));
     }
@@ -256,12 +253,14 @@ extends Block {
         builder.add(HALF, FACING, OPEN, HINGE, POWERED);
     }
 
-    public static boolean isWoodenDoor(World world, BlockPos pos) {
-        return DoorBlock.isWoodenDoor(world.getBlockState(pos));
+    public static boolean canOpenByHand(World world, BlockPos pos) {
+        return DoorBlock.canOpenByHand(world.getBlockState(pos));
     }
 
-    public static boolean isWoodenDoor(BlockState state) {
-        return state.getBlock() instanceof DoorBlock && (state.getMaterial() == Material.WOOD || state.getMaterial() == Material.NETHER_WOOD);
+    public static boolean canOpenByHand(BlockState state) {
+        DoorBlock doorBlock;
+        Block block = state.getBlock();
+        return block instanceof DoorBlock && (doorBlock = (DoorBlock)block).getBlockSetType().canOpenByHand();
     }
 }
 

@@ -67,7 +67,7 @@ extends Feature<RootSystemFeatureConfig> {
             mutablePos.move(Direction.UP);
             if (!config.predicate.test(world, mutablePos) || !RootSystemFeature.hasSpaceForTree(world, config, mutablePos)) continue;
             Vec3i blockPos = mutablePos.down();
-            if (world.getFluidState((BlockPos)blockPos).isIn(FluidTags.LAVA) || !world.getBlockState((BlockPos)blockPos).getMaterial().isSolid()) {
+            if (world.getFluidState((BlockPos)blockPos).isIn(FluidTags.LAVA) || !world.getBlockState((BlockPos)blockPos).isSolid()) {
                 return false;
             }
             if (!config.feature.value().generateUnregistered(world, generator, random, mutablePos)) continue;

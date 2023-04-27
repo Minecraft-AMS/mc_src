@@ -51,7 +51,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -124,9 +123,9 @@ InventoryOwner {
     @Override
     protected void dropEquipment(DamageSource source, int lootingMultiplier, boolean allowDrops) {
         CreeperEntity creeperEntity;
-        Entity entity;
         super.dropEquipment(source, lootingMultiplier, allowDrops);
-        if (this.getWorld().getEnabledFeatures().contains(FeatureFlags.UPDATE_1_20) && (entity = source.getAttacker()) instanceof CreeperEntity && (creeperEntity = (CreeperEntity)entity).shouldDropHead()) {
+        Entity entity = source.getAttacker();
+        if (entity instanceof CreeperEntity && (creeperEntity = (CreeperEntity)entity).shouldDropHead()) {
             ItemStack itemStack = new ItemStack(Items.PIGLIN_HEAD);
             creeperEntity.onHeadDropped();
             this.dropStack(itemStack);
@@ -228,7 +227,7 @@ InventoryOwner {
         if (actionResult.isAccepted()) {
             return actionResult;
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             boolean bl = PiglinBrain.isWillingToTrade(this, player.getStackInHand(hand)) && this.getActivity() != PiglinActivity.ADMIRING_ITEM;
             return bl ? ActionResult.SUCCESS : ActionResult.PASS;
         }
@@ -249,7 +248,7 @@ InventoryOwner {
     @Override
     public void setBaby(boolean baby) {
         this.getDataTracker().set(BABY, baby);
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             EntityAttributeInstance entityAttributeInstance = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
             entityAttributeInstance.removeModifier(BABY_SPEED_BOOST);
             if (baby) {
@@ -274,9 +273,9 @@ InventoryOwner {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("piglinBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().push("piglinBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
         PiglinBrain.tickActivities(this);
         super.mobTick();
     }
@@ -345,7 +344,7 @@ InventoryOwner {
     @Override
     public boolean damage(DamageSource source, float amount) {
         boolean bl = super.damage(source, amount);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return false;
         }
         if (bl && source.getAttacker() instanceof LivingEntity) {
@@ -384,7 +383,7 @@ InventoryOwner {
 
     @Override
     public boolean canGather(ItemStack stack) {
-        return this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) && this.canPickUpLoot() && PiglinBrain.canGather(this, stack);
+        return this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) && this.canPickUpLoot() && PiglinBrain.canGather(this, stack);
     }
 
     protected boolean canEquipStack(ItemStack stack) {
@@ -437,7 +436,7 @@ InventoryOwner {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return null;
         }
         return PiglinBrain.getCurrentActivitySound(this).orElse(null);

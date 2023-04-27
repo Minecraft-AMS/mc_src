@@ -70,7 +70,7 @@ implements Ownable {
     }
 
     private ItemEntity(ItemEntity entity) {
-        super(entity.getType(), entity.world);
+        super(entity.getType(), entity.getWorld());
         this.setStack(entity.getStack().copy());
         this.copyPositionAndRotation(entity);
         this.itemAge = entity.itemAge;
@@ -86,7 +86,7 @@ implements Ownable {
     @Nullable
     public Entity getOwner() {
         World world;
-        if (this.thrower != null && (world = this.world) instanceof ServerWorld) {
+        if (this.thrower != null && (world = this.getWorld()) instanceof ServerWorld) {
             ServerWorld serverWorld = (ServerWorld)world;
             return serverWorld.getEntity(this.thrower);
         }
@@ -127,22 +127,22 @@ implements Ownable {
         } else if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             this.noClip = false;
         } else {
-            boolean bl = this.noClip = !this.world.isSpaceEmpty(this, this.getBoundingBox().contract(1.0E-7));
+            boolean bl = this.noClip = !this.getWorld().isSpaceEmpty(this, this.getBoundingBox().contract(1.0E-7));
             if (this.noClip) {
                 this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().minY + this.getBoundingBox().maxY) / 2.0, this.getZ());
             }
         }
-        if (!this.onGround || this.getVelocity().horizontalLengthSquared() > (double)1.0E-5f || (this.age + this.getId()) % 4 == 0) {
+        if (!this.isOnGround() || this.getVelocity().horizontalLengthSquared() > (double)1.0E-5f || (this.age + this.getId()) % 4 == 0) {
             this.move(MovementType.SELF, this.getVelocity());
             float g = 0.98f;
-            if (this.onGround) {
-                g = this.world.getBlockState(BlockPos.ofFloored(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
+            if (this.isOnGround()) {
+                g = this.getWorld().getBlockState(BlockPos.ofFloored(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
             }
             this.setVelocity(this.getVelocity().multiply(g, 0.98, g));
-            if (this.onGround) {
+            if (this.isOnGround()) {
                 Vec3d vec3d2 = this.getVelocity();
                 if (vec3d2.y < 0.0) {
                     this.setVelocity(vec3d2.multiply(1.0, -0.5, 1.0));
@@ -151,17 +151,17 @@ implements Ownable {
         }
         boolean bl = MathHelper.floor(this.prevX) != MathHelper.floor(this.getX()) || MathHelper.floor(this.prevY) != MathHelper.floor(this.getY()) || MathHelper.floor(this.prevZ) != MathHelper.floor(this.getZ());
         int n = i = bl ? 2 : 40;
-        if (this.age % i == 0 && !this.world.isClient && this.canMerge()) {
+        if (this.age % i == 0 && !this.getWorld().isClient && this.canMerge()) {
             this.tryMerge();
         }
         if (this.itemAge != Short.MIN_VALUE) {
             ++this.itemAge;
         }
         this.velocityDirty |= this.updateWaterState();
-        if (!this.world.isClient && (d = this.getVelocity().subtract(vec3d).lengthSquared()) > 0.01) {
+        if (!this.getWorld().isClient && (d = this.getVelocity().subtract(vec3d).lengthSquared()) > 0.01) {
             this.velocityDirty = true;
         }
-        if (!this.world.isClient && this.itemAge >= 6000) {
+        if (!this.getWorld().isClient && this.itemAge >= 6000) {
             this.discard();
         }
     }
@@ -180,7 +180,7 @@ implements Ownable {
         if (!this.canMerge()) {
             return;
         }
-        List<ItemEntity> list = this.world.getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.5, 0.0, 0.5), otherItemEntity -> otherItemEntity != this && otherItemEntity.canMerge());
+        List<ItemEntity> list = this.getWorld().getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.5, 0.0, 0.5), otherItemEntity -> otherItemEntity != this && otherItemEntity.canMerge());
         for (ItemEntity itemEntity : list) {
             if (!itemEntity.canMerge()) continue;
             this.tryMerge(itemEntity);
@@ -222,8 +222,7 @@ implements Ownable {
 
     public static ItemStack merge(ItemStack stack1, ItemStack stack2, int maxCount) {
         int i = Math.min(Math.min(stack1.getMaxCount(), maxCount) - stack1.getCount(), stack2.getCount());
-        ItemStack itemStack = stack1.copy();
-        itemStack.increment(i);
+        ItemStack itemStack = stack1.copyWithCount(stack1.getCount() + i);
         stack2.decrement(i);
         return itemStack;
     }
@@ -258,7 +257,7 @@ implements Ownable {
         if (!this.getStack().getItem().damage(source)) {
             return false;
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return true;
         }
         this.scheduleVelocityUpdate();
@@ -309,7 +308,7 @@ implements Ownable {
 
     @Override
     public void onPlayerCollision(PlayerEntity player) {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         ItemStack itemStack = this.getStack();
@@ -344,7 +343,7 @@ implements Ownable {
     @Nullable
     public Entity moveToWorld(ServerWorld destination) {
         Entity entity = super.moveToWorld(destination);
-        if (!this.world.isClient && entity instanceof ItemEntity) {
+        if (!this.getWorld().isClient && entity instanceof ItemEntity) {
             ((ItemEntity)entity).tryMerge();
         }
         return entity;

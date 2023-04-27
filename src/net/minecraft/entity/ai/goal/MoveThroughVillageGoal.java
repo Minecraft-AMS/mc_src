@@ -55,16 +55,16 @@ extends Goal {
 
     @Override
     public boolean canStart() {
+        BlockPos blockPos;
         if (!NavigationConditions.hasMobNavigation(this.mob)) {
             return false;
         }
         this.forgetOldTarget();
-        if (this.requiresNighttime && this.mob.world.isDay()) {
+        if (this.requiresNighttime && this.mob.getWorld().isDay()) {
             return false;
         }
-        ServerWorld serverWorld = (ServerWorld)this.mob.world;
-        BlockPos blockPos = this.mob.getBlockPos();
-        if (!serverWorld.isNearOccupiedPointOfInterest(blockPos, 6)) {
+        ServerWorld serverWorld = (ServerWorld)this.mob.getWorld();
+        if (!serverWorld.isNearOccupiedPointOfInterest(blockPos = this.mob.getBlockPos(), 6)) {
             return false;
         }
         Vec3d vec3d = FuzzyTargeting.find(this.mob, 15, 7, pos -> {
@@ -102,7 +102,7 @@ extends Goal {
         for (int i = 0; i < this.targetPath.getLength(); ++i) {
             PathNode pathNode = this.targetPath.getNode(i);
             BlockPos blockPos2 = new BlockPos(pathNode.x, pathNode.y + 1, pathNode.z);
-            if (!DoorBlock.isWoodenDoor(this.mob.world, blockPos2)) continue;
+            if (!DoorBlock.canOpenByHand(this.mob.getWorld(), blockPos2)) continue;
             this.targetPath = this.mob.getNavigation().findPathTo(pathNode.x, (double)pathNode.y, pathNode.z, 0);
             break;
         }

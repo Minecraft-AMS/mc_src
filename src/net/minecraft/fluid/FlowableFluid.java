@@ -26,7 +26,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.FluidFillable;
-import net.minecraft.block.Material;
+import net.minecraft.block.IceBlock;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
@@ -81,7 +81,7 @@ extends Fluid {
             if (f == 0.0f) {
                 Vec3i blockPos;
                 FluidState fluidState2;
-                if (!world.getBlockState(mutable).getMaterial().blocksMovement() && this.isEmptyOrThis(fluidState2 = world.getFluidState((BlockPos)(blockPos = mutable.down()))) && (f = fluidState2.getHeight()) > 0.0f) {
+                if (!world.getBlockState(mutable).blocksMovement() && this.isEmptyOrThis(fluidState2 = world.getFluidState((BlockPos)(blockPos = mutable.down()))) && (f = fluidState2.getHeight()) > 0.0f) {
                     g = state.getHeight() - (f - 0.8888889f);
                 }
             } else if (f > 0.0f) {
@@ -116,7 +116,7 @@ extends Fluid {
         if (direction == Direction.UP) {
             return true;
         }
-        if (blockState.getMaterial() == Material.ICE) {
+        if (blockState.getBlock() instanceof IceBlock) {
             return false;
         }
         return blockState.isSideSolidFullSquare(world, pos, direction);
@@ -178,7 +178,7 @@ extends Fluid {
         if (this.isInfinite(world) && j >= 2) {
             BlockState blockState2 = world.getBlockState(pos.down());
             FluidState fluidState2 = blockState2.getFluidState();
-            if (blockState2.getMaterial().isSolid() || this.isMatchingAndStill(fluidState2)) {
+            if (blockState2.isSolid() || this.isMatchingAndStill(fluidState2)) {
                 return this.getStill(false);
             }
         }
@@ -349,11 +349,10 @@ extends Fluid {
         if (block instanceof DoorBlock || state.isIn(BlockTags.SIGNS) || state.isOf(Blocks.LADDER) || state.isOf(Blocks.SUGAR_CANE) || state.isOf(Blocks.BUBBLE_COLUMN)) {
             return false;
         }
-        Material material = state.getMaterial();
-        if (material == Material.PORTAL || material == Material.STRUCTURE_VOID || material == Material.UNDERWATER_PLANT || material == Material.REPLACEABLE_UNDERWATER_PLANT) {
+        if (state.isOf(Blocks.NETHER_PORTAL) || state.isOf(Blocks.END_PORTAL) || state.isOf(Blocks.END_GATEWAY) || state.isOf(Blocks.STRUCTURE_VOID)) {
             return false;
         }
-        return !material.blocksMovement();
+        return !state.blocksMovement();
     }
 
     protected boolean canFlow(BlockView world, BlockPos fluidPos, BlockState fluidBlockState, Direction flowDirection, BlockPos flowTo, BlockState flowToBlockState, FluidState fluidState, Fluid fluid) {

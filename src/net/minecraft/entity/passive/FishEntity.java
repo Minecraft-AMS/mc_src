@@ -127,9 +127,9 @@ implements Bucketable {
 
     @Override
     public void tickMovement() {
-        if (!this.isTouchingWater() && this.onGround && this.verticalCollision) {
+        if (!this.isTouchingWater() && this.isOnGround() && this.verticalCollision) {
             this.setVelocity(this.getVelocity().add((this.random.nextFloat() * 2.0f - 1.0f) * 0.05f, 0.4f, (this.random.nextFloat() * 2.0f - 1.0f) * 0.05f));
-            this.onGround = false;
+            this.setOnGround(false);
             this.velocityDirty = true;
             this.playSound(this.getFlopSound(), this.getSoundVolume(), this.getSoundPitch());
         }

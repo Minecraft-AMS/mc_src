@@ -12,7 +12,6 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.Material;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttribute;
@@ -57,11 +56,7 @@ implements Vanishable {
         if (state.isOf(Blocks.COBWEB)) {
             return 15.0f;
         }
-        Material material = state.getMaterial();
-        if (material == Material.PLANT || material == Material.REPLACEABLE_PLANT || state.isIn(BlockTags.LEAVES) || material == Material.GOURD) {
-            return 1.5f;
-        }
-        return 1.0f;
+        return state.isIn(BlockTags.SWORD_EFFICIENT) ? 1.5f : 1.0f;
     }
 
     @Override

@@ -8,11 +8,10 @@
  */
 package net.minecraft.client.realms.gui.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.realms.RealmsClient;
 import net.minecraft.client.realms.RealmsPeriodicCheckers;
@@ -22,7 +21,6 @@ import net.minecraft.client.realms.exception.RealmsServiceException;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.util.PeriodicRunnerFactory;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
@@ -149,14 +147,14 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if (validClient) {
-            this.drawIcons(matrices, mouseX, mouseY);
+            this.drawIcons(context, mouseX, mouseY);
         }
-        super.render(matrices, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
     }
 
-    private void drawIcons(MatrixStack matrices, int mouseX, int mouseY) {
+    private void drawIcons(DrawContext context, int mouseX, int mouseY) {
         int i = this.pendingInvitesCount;
         int j = 24;
         int k = this.height / 4 + 48;
@@ -164,31 +162,27 @@ extends RealmsScreen {
         int m = k + 48 + 2;
         int n = 0;
         if (hasUnseenNotification) {
-            RenderSystem.setShaderTexture(0, UNSEEN_NOTIFICATION);
-            DrawableHelper.drawTexture(matrices, l - n + 5, m + 3, 0.0f, 0.0f, 10, 10, 10, 10);
+            context.drawTexture(UNSEEN_NOTIFICATION, l - n + 5, m + 3, 0.0f, 0.0f, 10, 10, 10, 10);
             n += 14;
         }
         if (this.currentRunnersFactory != null && this.currentRunnersFactory.isNews()) {
             if (hasUnreadNews) {
-                RenderSystem.setShaderTexture(0, NEWS_NOTIFICATION);
-                matrices.push();
-                matrices.scale(0.4f, 0.4f, 0.4f);
-                DrawableHelper.drawTexture(matrices, (int)((double)(l + 2 - n) * 2.5), (int)((double)m * 2.5), 0.0f, 0.0f, 40, 40, 40, 40);
-                matrices.pop();
+                context.getMatrices().push();
+                context.getMatrices().scale(0.4f, 0.4f, 0.4f);
+                context.drawTexture(NEWS_NOTIFICATION, (int)((double)(l + 2 - n) * 2.5), (int)((double)m * 2.5), 0.0f, 0.0f, 40, 40, 40, 40);
+                context.getMatrices().pop();
                 n += 14;
             }
             if (i != 0) {
-                RenderSystem.setShaderTexture(0, INVITE_ICON);
-                DrawableHelper.drawTexture(matrices, l - n, m - 6, 0.0f, 0.0f, 15, 25, 31, 25);
+                context.drawTexture(INVITE_ICON, l - n, m - 6, 0.0f, 0.0f, 15, 25, 31, 25);
                 n += 16;
             }
             if (trialAvailable) {
-                RenderSystem.setShaderTexture(0, TRIAL_ICON);
                 int o = 0;
                 if ((Util.getMeasuringTimeMs() / 800L & 1L) == 1L) {
                     o = 8;
                 }
-                DrawableHelper.drawTexture(matrices, l + 4 - n, m + 4, 0.0f, o, 8, 8, 8, 16);
+                context.drawTexture(TRIAL_ICON, l + 4 - n, m + 4, 0.0f, o, 8, 8, 8, 16);
             }
         }
     }

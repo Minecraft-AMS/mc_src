@@ -9,11 +9,11 @@ package net.minecraft.world.chunk;
 import java.io.IOException;
 import java.util.function.BooleanSupplier;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkProvider;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.light.LightSourceView;
 import net.minecraft.world.chunk.light.LightingProvider;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +32,7 @@ AutoCloseable {
 
     @Override
     @Nullable
-    public BlockView getChunk(int chunkX, int chunkZ) {
+    public LightSourceView getChunk(int chunkX, int chunkZ) {
         return this.getChunk(chunkX, chunkZ, ChunkStatus.EMPTY, false);
     }
 

@@ -99,7 +99,7 @@ extends EntityRenderer<T> {
                 float h = 0.0078125f;
                 matrixStack.scale(0.0078125f, 0.0078125f, 0.0078125f);
                 matrixStack.translate(-64.0f, -64.0f, 0.0f);
-                MapState mapState = FilledMapItem.getMapState(optionalInt.getAsInt(), ((ItemFrameEntity)itemFrameEntity).world);
+                MapState mapState = FilledMapItem.getMapState(optionalInt.getAsInt(), ((Entity)itemFrameEntity).getWorld());
                 matrixStack.translate(0.0f, 0.0f, -1.0f);
                 if (mapState != null) {
                     int k = this.getLight(itemFrameEntity, 15728850, i);
@@ -108,7 +108,7 @@ extends EntityRenderer<T> {
             } else {
                 int l = this.getLight(itemFrameEntity, 0xF000F0, i);
                 matrixStack.scale(0.5f, 0.5f, 0.5f);
-                this.itemRenderer.renderItem(itemStack, ModelTransformationMode.FIXED, l, OverlayTexture.DEFAULT_UV, matrixStack, vertexConsumerProvider, ((ItemFrameEntity)itemFrameEntity).world, ((Entity)itemFrameEntity).getId());
+                this.itemRenderer.renderItem(itemStack, ModelTransformationMode.FIXED, l, OverlayTexture.DEFAULT_UV, matrixStack, vertexConsumerProvider, ((Entity)itemFrameEntity).getWorld(), ((Entity)itemFrameEntity).getId());
             }
         }
         matrixStack.pop();

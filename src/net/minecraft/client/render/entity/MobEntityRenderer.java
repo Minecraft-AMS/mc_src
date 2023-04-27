@@ -89,8 +89,8 @@ extends LivingEntityRenderer<T, M> {
         BlockPos blockPos2 = BlockPos.ofFloored(holdingEntity.getCameraPosVec(tickDelta));
         int q = this.getBlockLight(entity, blockPos);
         int r = this.dispatcher.getRenderer(holdingEntity).getBlockLight(holdingEntity, blockPos2);
-        int s = ((MobEntity)entity).world.getLightLevel(LightType.SKY, blockPos);
-        int t = ((MobEntity)entity).world.getLightLevel(LightType.SKY, blockPos2);
+        int s = ((Entity)entity).getWorld().getLightLevel(LightType.SKY, blockPos);
+        int t = ((Entity)entity).getWorld().getLightLevel(LightType.SKY, blockPos2);
         for (u = 0; u <= 24; ++u) {
             MobEntityRenderer.renderLeashPiece(vertexConsumer, matrix4f, j, k, l, q, r, s, t, 0.025f, 0.025f, o, p, u, false);
         }

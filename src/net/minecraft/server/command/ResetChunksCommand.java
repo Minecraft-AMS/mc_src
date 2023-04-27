@@ -78,7 +78,7 @@ public class ResetChunksCommand {
         TaskExecutor<Runnable> taskExecutor = TaskExecutor.create(Util.getMainWorkerExecutor(), "worldgen-resetchunks");
         long o = System.currentTimeMillis();
         int p = (radius * 2 + 1) * (radius * 2 + 1);
-        for (ChunkStatus chunkStatus : ImmutableList.of((Object)ChunkStatus.BIOMES, (Object)ChunkStatus.NOISE, (Object)ChunkStatus.SURFACE, (Object)ChunkStatus.CARVERS, (Object)ChunkStatus.LIQUID_CARVERS, (Object)ChunkStatus.FEATURES)) {
+        for (ChunkStatus chunkStatus : ImmutableList.of((Object)ChunkStatus.BIOMES, (Object)ChunkStatus.NOISE, (Object)ChunkStatus.SURFACE, (Object)ChunkStatus.CARVERS, (Object)ChunkStatus.FEATURES, (Object)ChunkStatus.INITIALIZE_LIGHT)) {
             long q = System.currentTimeMillis();
             CompletionStage<Object> completableFuture = CompletableFuture.supplyAsync(() -> Unit.INSTANCE, taskExecutor::send);
             for (int r = chunkPos.z - radius; r <= chunkPos.z + radius; ++r) {
@@ -97,7 +97,7 @@ public class ResetChunksCommand {
                     }
                     completableFuture = completableFuture.thenComposeAsync(unit -> chunkStatus.runGenerationTask(taskExecutor::send, serverWorld, serverChunkManager.getChunkGenerator(), serverWorld.getStructureTemplateManager(), serverChunkManager.getLightingProvider(), chunk -> {
                         throw new UnsupportedOperationException("Not creating full chunks here");
-                    }, list, true).thenApply(either -> {
+                    }, list).thenApply(either -> {
                         if (chunkStatus == ChunkStatus.NOISE) {
                             either.left().ifPresent(chunk -> Heightmap.populateHeightmaps(chunk, ChunkStatus.POST_CARVER_HEIGHTMAPS));
                         }

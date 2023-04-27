@@ -49,7 +49,7 @@ implements ClientPlayerTickable {
     private Biome activeBiome;
 
     public BiomeEffectSoundPlayer(ClientPlayerEntity player, SoundManager soundManager, BiomeAccess biomeAccess) {
-        this.random = player.world.getRandom();
+        this.random = player.getWorld().getRandom();
         this.player = player;
         this.soundManager = soundManager;
         this.biomeAccess = biomeAccess;
@@ -83,7 +83,7 @@ implements ClientPlayerTickable {
             }
         });
         this.moodSound.ifPresent(sound -> {
-            World world = this.player.world;
+            World world = this.player.getWorld();
             int i = sound.getSpawnRange() * 2 + 1;
             BlockPos blockPos = BlockPos.ofFloored(this.player.getX() + (double)this.random.nextInt(i) - (double)sound.getSpawnRange(), this.player.getEyeY() + (double)this.random.nextInt(i) - (double)sound.getSpawnRange(), this.player.getZ() + (double)this.random.nextInt(i) - (double)sound.getSpawnRange());
             int j = world.getLightLevel(LightType.SKY, blockPos);

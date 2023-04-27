@@ -198,7 +198,7 @@ TypeFilter<Entity, T> {
     public static final EntityType<BlazeEntity> BLAZE = EntityType.register("blaze", Builder.create(BlazeEntity::new, SpawnGroup.MONSTER).makeFireImmune().setDimensions(0.6f, 1.8f).maxTrackingRange(8));
     public static final EntityType<DisplayEntity.BlockDisplayEntity> BLOCK_DISPLAY = EntityType.register("block_display", Builder.create(DisplayEntity.BlockDisplayEntity::new, SpawnGroup.MISC).setDimensions(0.0f, 0.0f).maxTrackingRange(10).trackingTickInterval(1));
     public static final EntityType<BoatEntity> BOAT = EntityType.register("boat", Builder.create(BoatEntity::new, SpawnGroup.MISC).setDimensions(1.375f, 0.5625f).maxTrackingRange(10));
-    public static final EntityType<CamelEntity> CAMEL = EntityType.register("camel", Builder.create(CamelEntity::new, SpawnGroup.CREATURE).setDimensions(1.7f, 2.375f).maxTrackingRange(10).requires(FeatureFlags.UPDATE_1_20));
+    public static final EntityType<CamelEntity> CAMEL = EntityType.register("camel", Builder.create(CamelEntity::new, SpawnGroup.CREATURE).setDimensions(1.7f, 2.375f).maxTrackingRange(10));
     public static final EntityType<CatEntity> CAT = EntityType.register("cat", Builder.create(CatEntity::new, SpawnGroup.CREATURE).setDimensions(0.6f, 0.7f).maxTrackingRange(8));
     public static final EntityType<CaveSpiderEntity> CAVE_SPIDER = EntityType.register("cave_spider", Builder.create(CaveSpiderEntity::new, SpawnGroup.MONSTER).setDimensions(0.7f, 0.5f).maxTrackingRange(8));
     public static final EntityType<ChestBoatEntity> CHEST_BOAT = EntityType.register("chest_boat", Builder.create(ChestBoatEntity::new, SpawnGroup.MISC).setDimensions(1.375f, 0.5625f).maxTrackingRange(10));
@@ -278,7 +278,7 @@ TypeFilter<Entity, T> {
     public static final EntityType<SkeletonHorseEntity> SKELETON_HORSE = EntityType.register("skeleton_horse", Builder.create(SkeletonHorseEntity::new, SpawnGroup.CREATURE).setDimensions(1.3964844f, 1.6f).maxTrackingRange(10));
     public static final EntityType<SlimeEntity> SLIME = EntityType.register("slime", Builder.create(SlimeEntity::new, SpawnGroup.MONSTER).setDimensions(2.04f, 2.04f).maxTrackingRange(10));
     public static final EntityType<SmallFireballEntity> SMALL_FIREBALL = EntityType.register("small_fireball", Builder.create(SmallFireballEntity::new, SpawnGroup.MISC).setDimensions(0.3125f, 0.3125f).maxTrackingRange(4).trackingTickInterval(10));
-    public static final EntityType<SnifferEntity> SNIFFER = EntityType.register("sniffer", Builder.create(SnifferEntity::new, SpawnGroup.CREATURE).setDimensions(1.9f, 1.75f).maxTrackingRange(10).requires(FeatureFlags.UPDATE_1_20));
+    public static final EntityType<SnifferEntity> SNIFFER = EntityType.register("sniffer", Builder.create(SnifferEntity::new, SpawnGroup.CREATURE).setDimensions(1.9f, 1.75f).maxTrackingRange(10));
     public static final EntityType<SnowGolemEntity> SNOW_GOLEM = EntityType.register("snow_golem", Builder.create(SnowGolemEntity::new, SpawnGroup.MISC).allowSpawningInside(Blocks.POWDER_SNOW).setDimensions(0.7f, 1.9f).maxTrackingRange(8));
     public static final EntityType<SnowballEntity> SNOWBALL = EntityType.register("snowball", Builder.create(SnowballEntity::new, SpawnGroup.MISC).setDimensions(0.25f, 0.25f).maxTrackingRange(4).trackingTickInterval(10));
     public static final EntityType<SpawnerMinecartEntity> SPAWNER_MINECART = EntityType.register("spawner_minecart", Builder.create(SpawnerMinecartEntity::new, SpawnGroup.MISC).setDimensions(0.98f, 0.7f).maxTrackingRange(8));

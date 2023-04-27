@@ -37,6 +37,7 @@ import net.minecraft.advancement.criterion.PlacedBlockCriterion;
 import net.minecraft.advancement.criterion.PlayerGeneratesContainerLootCriterion;
 import net.minecraft.advancement.criterion.PlayerHurtEntityCriterion;
 import net.minecraft.advancement.criterion.PlayerInteractedWithEntityCriterion;
+import net.minecraft.advancement.criterion.RecipeCraftedCriterion;
 import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
 import net.minecraft.advancement.criterion.ShotCrossbowCriterion;
 import net.minecraft.advancement.criterion.SlideDownBlockCriterion;
@@ -107,6 +108,7 @@ public class Criteria {
     public static final OnKilledCriterion KILL_MOB_NEAR_SCULK_CATALYST = Criteria.register(new OnKilledCriterion(new Identifier("kill_mob_near_sculk_catalyst")));
     public static final ItemCriterion ALLAY_DROP_ITEM_ON_BLOCK = Criteria.register(new ItemCriterion(new Identifier("allay_drop_item_on_block")));
     public static final TickCriterion AVOID_VIBRATION = Criteria.register(new TickCriterion(new Identifier("avoid_vibration")));
+    public static final RecipeCraftedCriterion RECIPE_CRAFTED = Criteria.register(new RecipeCraftedCriterion());
 
     public static <T extends Criterion<?>> T register(T object) {
         if (VALUES.containsKey(object.getId())) {

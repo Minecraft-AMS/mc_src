@@ -12,8 +12,9 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.input.KeyCodes;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
@@ -34,20 +35,19 @@ extends ClickableWidget {
     public abstract void onPress();
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, this.alpha);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, this.alpha);
         RenderSystem.enableBlend();
         RenderSystem.enableDepthTest();
-        PressableWidget.drawNineSlicedTexture(matrices, this.getX(), this.getY(), this.getWidth(), this.getHeight(), 20, 4, 200, 20, 0, this.getTextureY());
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.drawNineSlicedTexture(WIDGETS_TEXTURE, this.getX(), this.getY(), this.getWidth(), this.getHeight(), 20, 4, 200, 20, 0, this.getTextureY());
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         int i = this.active ? 0xFFFFFF : 0xA0A0A0;
-        this.drawMessage(matrices, minecraftClient.textRenderer, i | MathHelper.ceil(this.alpha * 255.0f) << 24);
+        this.drawMessage(context, minecraftClient.textRenderer, i | MathHelper.ceil(this.alpha * 255.0f) << 24);
     }
 
-    public void drawMessage(MatrixStack matrices, TextRenderer textRenderer, int color) {
-        this.drawScrollableText(matrices, textRenderer, 2, color);
+    public void drawMessage(DrawContext context, TextRenderer textRenderer, int color) {
+        this.drawScrollableText(context, textRenderer, 2, color);
     }
 
     private int getTextureY() {
@@ -70,7 +70,7 @@ extends ClickableWidget {
         if (!this.active || !this.visible) {
             return false;
         }
-        if (keyCode == 257 || keyCode == 32 || keyCode == 335) {
+        if (KeyCodes.isToggle(keyCode)) {
             this.playDownSound(MinecraftClient.getInstance().getSoundManager());
             this.onPress();
             return true;

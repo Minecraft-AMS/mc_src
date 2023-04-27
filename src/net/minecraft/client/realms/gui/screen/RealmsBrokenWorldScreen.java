@@ -12,7 +12,6 @@
 package net.minecraft.client.realms.gui.screen;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -39,11 +38,11 @@ import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.task.OpenServerTask;
 import net.minecraft.client.realms.task.SwitchSlotTask;
 import net.minecraft.client.realms.util.RealmsTextureManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -139,22 +138,22 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        super.render(matrices, mouseX, mouseY, delta);
-        RealmsBrokenWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        super.render(context, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
         for (int i = 0; i < this.message.length; ++i) {
-            RealmsBrokenWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.message[i], this.width / 2, RealmsBrokenWorldScreen.row(-1) + 3 + i * 12, 0xA0A0A0);
+            context.drawCenteredTextWithShadow(this.textRenderer, this.message[i], this.width / 2, RealmsBrokenWorldScreen.row(-1) + 3 + i * 12, 0xA0A0A0);
         }
         if (this.serverData == null) {
             return;
         }
         for (Map.Entry<Integer, RealmsWorldOptions> entry : this.serverData.slots.entrySet()) {
             if (entry.getValue().templateImage != null && entry.getValue().templateId != -1L) {
-                this.drawSlotFrame(matrices, this.getFramePositionX(entry.getKey()), RealmsBrokenWorldScreen.row(1) + 5, mouseX, mouseY, this.serverData.activeSlot == entry.getKey() && !this.isMinigame(), entry.getValue().getSlotName(entry.getKey()), entry.getKey(), entry.getValue().templateId, entry.getValue().templateImage, entry.getValue().empty);
+                this.drawSlotFrame(context, this.getFramePositionX(entry.getKey()), RealmsBrokenWorldScreen.row(1) + 5, mouseX, mouseY, this.serverData.activeSlot == entry.getKey() && !this.isMinigame(), entry.getValue().getSlotName(entry.getKey()), entry.getKey(), entry.getValue().templateId, entry.getValue().templateImage, entry.getValue().empty);
                 continue;
             }
-            this.drawSlotFrame(matrices, this.getFramePositionX(entry.getKey()), RealmsBrokenWorldScreen.row(1) + 5, mouseX, mouseY, this.serverData.activeSlot == entry.getKey() && !this.isMinigame(), entry.getValue().getSlotName(entry.getKey()), entry.getKey(), -1L, null, entry.getValue().empty);
+            this.drawSlotFrame(context, this.getFramePositionX(entry.getKey()), RealmsBrokenWorldScreen.row(1) + 5, mouseX, mouseY, this.serverData.activeSlot == entry.getKey() && !this.isMinigame(), entry.getValue().getSlotName(entry.getKey()), entry.getKey(), -1L, null, entry.getValue().empty);
         }
     }
 
@@ -232,36 +231,23 @@ extends RealmsScreen {
         return this.serverData != null && this.serverData.worldType == RealmsServer.WorldType.MINIGAME;
     }
 
-    private void drawSlotFrame(MatrixStack matrices, int x, int y, int mouseX, int mouseY, boolean activeSlot, String slotName, int slotId, long templateId, @Nullable String templateImage, boolean empty) {
-        if (empty) {
-            RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.EMPTY_FRAME);
-        } else if (templateImage != null && templateId != -1L) {
-            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(String.valueOf(templateId), templateImage));
-        } else if (slotId == 1) {
-            RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.PANORAMA_0);
-        } else if (slotId == 2) {
-            RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.PANORAMA_2);
-        } else if (slotId == 3) {
-            RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.PANORAMA_3);
-        } else {
-            RenderSystem.setShaderTexture(0, RealmsTextureManager.getTextureId(String.valueOf(this.serverData.minigameId), this.serverData.minigameImage));
-        }
+    private void drawSlotFrame(DrawContext context, int x, int y, int mouseX, int mouseY, boolean activeSlot, String slotName, int slotId, long templateId, @Nullable String templateImage, boolean empty) {
+        Identifier identifier = empty ? RealmsWorldSlotButton.EMPTY_FRAME : (templateImage != null && templateId != -1L ? RealmsTextureManager.getTextureId(String.valueOf(templateId), templateImage) : (slotId == 1 ? RealmsWorldSlotButton.PANORAMA_0 : (slotId == 2 ? RealmsWorldSlotButton.PANORAMA_2 : (slotId == 3 ? RealmsWorldSlotButton.PANORAMA_3 : RealmsTextureManager.getTextureId(String.valueOf(this.serverData.minigameId), this.serverData.minigameImage)))));
         if (!activeSlot) {
-            RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
+            context.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
         } else if (activeSlot) {
             float f = 0.9f + 0.1f * MathHelper.cos((float)this.animTick * 0.2f);
-            RenderSystem.setShaderColor(f, f, f, 1.0f);
+            context.setShaderColor(f, f, f, 1.0f);
         }
-        DrawableHelper.drawTexture(matrices, x + 3, y + 3, 0.0f, 0.0f, 74, 74, 74, 74);
-        RenderSystem.setShaderTexture(0, RealmsWorldSlotButton.SLOT_FRAME);
+        context.drawTexture(identifier, x + 3, y + 3, 0.0f, 0.0f, 74, 74, 74, 74);
         if (activeSlot) {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         } else {
-            RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
+            context.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
         }
-        DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 80, 80, 80, 80);
-        RealmsBrokenWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, slotName, x + 40, y + 66, 0xFFFFFF);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.drawTexture(RealmsWorldSlotButton.SLOT_FRAME, x, y, 0.0f, 0.0f, 80, 80, 80, 80);
+        context.drawCenteredTextWithShadow(this.textRenderer, slotName, x + 40, y + 66, 0xFFFFFF);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 }
 

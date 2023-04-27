@@ -319,16 +319,16 @@ implements Attackable {
         if (!this.isTouchingWater()) {
             this.checkWaterState();
         }
-        if (!this.world.isClient && onGround && this.fallDistance > 0.0f) {
+        if (!this.getWorld().isClient && onGround && this.fallDistance > 0.0f) {
             this.removeSoulSpeedBoost();
             this.addSoulSpeedBoostIfNeeded();
         }
-        if (!this.world.isClient && this.fallDistance > 3.0f && onGround) {
+        if (!this.getWorld().isClient && this.fallDistance > 3.0f && onGround) {
             float f = MathHelper.ceil(this.fallDistance - 3.0f);
             if (!state.isAir()) {
                 double d = Math.min((double)(0.2f + f / 15.0f), 2.5);
                 int i = (int)(150.0 * d);
-                ((ServerWorld)this.world).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, state), this.getX(), this.getY(), this.getZ(), i, 0.0, 0.0, 0.0, 0.15f);
+                ((ServerWorld)this.getWorld()).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, state), this.getX(), this.getY(), this.getZ(), i, 0.0, 0.0, 0.0, 0.15f);
             }
         }
         super.fall(heightDifference, onGround, state, landedPosition);
@@ -352,23 +352,23 @@ implements Attackable {
             this.displaySoulSpeedEffects();
         }
         super.baseTick();
-        this.world.getProfiler().push("livingEntityBaseTick");
-        if (this.isFireImmune() || this.world.isClient) {
+        this.getWorld().getProfiler().push("livingEntityBaseTick");
+        if (this.isFireImmune() || this.getWorld().isClient) {
             this.extinguish();
         }
         if (this.isAlive()) {
             BlockPos blockPos;
             boolean bl = this instanceof PlayerEntity;
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 double e;
                 double d;
                 if (this.isInsideWall()) {
                     this.damage(this.getDamageSources().inWall(), 1.0f);
-                } else if (bl && !this.world.getWorldBorder().contains(this.getBoundingBox()) && (d = this.world.getWorldBorder().getDistanceInsideBorder(this) + this.world.getWorldBorder().getSafeZone()) < 0.0 && (e = this.world.getWorldBorder().getDamagePerBlock()) > 0.0) {
+                } else if (bl && !this.getWorld().getWorldBorder().contains(this.getBoundingBox()) && (d = this.getWorld().getWorldBorder().getDistanceInsideBorder(this) + this.getWorld().getWorldBorder().getSafeZone()) < 0.0 && (e = this.getWorld().getWorldBorder().getDamagePerBlock()) > 0.0) {
                     this.damage(this.getDamageSources().inWall(), Math.max(1, MathHelper.floor(-d * e)));
                 }
             }
-            if (this.isSubmergedIn(FluidTags.WATER) && !this.world.getBlockState(BlockPos.ofFloored(this.getX(), this.getEyeY(), this.getZ())).isOf(Blocks.BUBBLE_COLUMN)) {
+            if (this.isSubmergedIn(FluidTags.WATER) && !this.getWorld().getBlockState(BlockPos.ofFloored(this.getX(), this.getEyeY(), this.getZ())).isOf(Blocks.BUBBLE_COLUMN)) {
                 boolean bl2;
                 boolean bl3 = bl2 = !this.canBreatheInWater() && !StatusEffectUtil.hasWaterBreathing(this) && (!bl || !((PlayerEntity)this).getAbilities().invulnerable);
                 if (bl2) {
@@ -380,18 +380,18 @@ implements Attackable {
                             double f = this.random.nextDouble() - this.random.nextDouble();
                             double g = this.random.nextDouble() - this.random.nextDouble();
                             double h = this.random.nextDouble() - this.random.nextDouble();
-                            this.world.addParticle(ParticleTypes.BUBBLE, this.getX() + f, this.getY() + g, this.getZ() + h, vec3d.x, vec3d.y, vec3d.z);
+                            this.getWorld().addParticle(ParticleTypes.BUBBLE, this.getX() + f, this.getY() + g, this.getZ() + h, vec3d.x, vec3d.y, vec3d.z);
                         }
                         this.damage(this.getDamageSources().drown(), 2.0f);
                     }
                 }
-                if (!this.world.isClient && this.hasVehicle() && this.getVehicle() != null && this.getVehicle().shouldDismountUnderwater()) {
+                if (!this.getWorld().isClient && this.hasVehicle() && this.getVehicle() != null && this.getVehicle().shouldDismountUnderwater()) {
                     this.stopRiding();
                 }
             } else if (this.getAir() < this.getMaxAir()) {
                 this.setAir(this.getNextAirOnLand(this.getAir()));
             }
-            if (!this.world.isClient && !Objects.equal((Object)this.lastBlockPos, (Object)(blockPos = this.getBlockPos()))) {
+            if (!this.getWorld().isClient && !Objects.equal((Object)this.lastBlockPos, (Object)(blockPos = this.getBlockPos()))) {
                 this.lastBlockPos = blockPos;
                 this.applyMovementEffects(blockPos);
             }
@@ -405,7 +405,7 @@ implements Attackable {
         if (this.timeUntilRegen > 0 && !(this instanceof ServerPlayerEntity)) {
             --this.timeUntilRegen;
         }
-        if (this.isDead() && this.world.shouldUpdatePostDeath(this)) {
+        if (this.isDead() && this.getWorld().shouldUpdatePostDeath(this)) {
             this.updatePostDeath();
         }
         if (this.playerHitTimer > 0) {
@@ -429,7 +429,7 @@ implements Attackable {
         this.prevHeadYaw = this.headYaw;
         this.prevYaw = this.getYaw();
         this.prevPitch = this.getPitch();
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
     }
 
     public boolean shouldDisplaySoulSpeedEffects() {
@@ -438,13 +438,13 @@ implements Attackable {
 
     protected void displaySoulSpeedEffects() {
         Vec3d vec3d = this.getVelocity();
-        this.world.addParticle(ParticleTypes.SOUL, this.getX() + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.getY() + 0.1, this.getZ() + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), vec3d.x * -0.2, 0.1, vec3d.z * -0.2);
+        this.getWorld().addParticle(ParticleTypes.SOUL, this.getX() + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.getY() + 0.1, this.getZ() + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), vec3d.x * -0.2, 0.1, vec3d.z * -0.2);
         float f = this.random.nextFloat() * 0.4f + this.random.nextFloat() > 0.9f ? 0.6f : 0.0f;
         this.playSound(SoundEvents.PARTICLE_SOUL_ESCAPE, f, 0.6f + this.random.nextFloat() * 0.4f);
     }
 
     protected boolean isOnSoulSpeedBlock() {
-        return this.world.getBlockState(this.getVelocityAffectingPos()).isIn(BlockTags.SOUL_SPEED_BLOCKS);
+        return this.getWorld().getBlockState(this.getVelocityAffectingPos()).isIn(BlockTags.SOUL_SPEED_BLOCKS);
     }
 
     @Override
@@ -509,7 +509,7 @@ implements Attackable {
     protected void applyMovementEffects(BlockPos pos) {
         int i = EnchantmentHelper.getEquipmentLevel(Enchantments.FROST_WALKER, this);
         if (i > 0) {
-            FrostWalkerEnchantment.freezeWater(this, this.world, pos, i);
+            FrostWalkerEnchantment.freezeWater(this, this.getWorld(), pos, i);
         }
         if (this.shouldRemoveSoulSpeedBoost(this.getLandingBlockState())) {
             this.removeSoulSpeedBoost();
@@ -531,8 +531,8 @@ implements Attackable {
 
     protected void updatePostDeath() {
         ++this.deathTime;
-        if (this.deathTime >= 20 && !this.world.isClient() && !this.isRemoved()) {
-            this.world.sendEntityStatus(this, (byte)60);
+        if (this.deathTime >= 20 && !this.getWorld().isClient() && !this.isRemoved()) {
+            this.getWorld().sendEntityStatus(this, (byte)60);
             this.remove(Entity.RemovalReason.KILLED);
         }
     }
@@ -635,8 +635,8 @@ implements Attackable {
         }
         Equipment equipment = Equipment.fromStack(newStack);
         if (equipment != null && !this.isSpectator() && equipment.getSlotType() == slot) {
-            if (!this.world.isClient() && !this.isSilent()) {
-                this.world.playSound(null, this.getX(), this.getY(), this.getZ(), equipment.getEquipSound(), this.getSoundCategory(), 1.0f, 1.0f);
+            if (!this.getWorld().isClient() && !this.isSilent()) {
+                this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), equipment.getEquipSound(), this.getSoundCategory(), 1.0f, 1.0f);
             }
             if (this.isArmorSlot(slot)) {
                 this.emitGameEvent(GameEvent.EQUIP);
@@ -678,7 +678,7 @@ implements Attackable {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         this.setAbsorptionAmount(nbt.getFloat("AbsorptionAmount"));
-        if (nbt.contains("Attributes", 9) && this.world != null && !this.world.isClient) {
+        if (nbt.contains("Attributes", 9) && this.getWorld() != null && !this.getWorld().isClient) {
             this.getAttributes().readNbt(nbt.getList("Attributes", 10));
         }
         if (nbt.contains("ActiveEffects", 9)) {
@@ -699,8 +699,8 @@ implements Attackable {
         if (nbt.contains("Team", 8)) {
             boolean bl;
             String string = nbt.getString("Team");
-            Team team = this.world.getScoreboard().getTeam(string);
-            boolean bl2 = bl = team != null && this.world.getScoreboard().addPlayerToTeam(this.getUuidAsString(), team);
+            Team team = this.getWorld().getScoreboard().getTeam(string);
+            boolean bl2 = bl = team != null && this.getWorld().getScoreboard().addPlayerToTeam(this.getUuidAsString(), team);
             if (!bl) {
                 LOGGER.warn("Unable to add mob to team \"{}\" (that team probably doesn't exist)", (Object)string);
             }
@@ -728,7 +728,7 @@ implements Attackable {
                 StatusEffect statusEffect = iterator.next();
                 StatusEffectInstance statusEffectInstance = this.activeStatusEffects.get(statusEffect);
                 if (!statusEffectInstance.update(this, () -> this.onStatusEffectUpgraded(statusEffectInstance, true, null))) {
-                    if (this.world.isClient) continue;
+                    if (this.getWorld().isClient) continue;
                     iterator.remove();
                     this.onStatusEffectRemoved(statusEffectInstance);
                     continue;
@@ -741,7 +741,7 @@ implements Attackable {
             // empty catch block
         }
         if (this.effectsChanged) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 this.updatePotionVisibility();
                 this.updateGlowing();
             }
@@ -758,7 +758,7 @@ implements Attackable {
                 double d = (double)(i >> 16 & 0xFF) / 255.0;
                 double e = (double)(i >> 8 & 0xFF) / 255.0;
                 double f = (double)(i >> 0 & 0xFF) / 255.0;
-                this.world.addParticle(bl ? ParticleTypes.AMBIENT_ENTITY_EFFECT : ParticleTypes.ENTITY_EFFECT, this.getParticleX(0.5), this.getRandomBodyY(), this.getParticleZ(0.5), d, e, f);
+                this.getWorld().addParticle(bl ? ParticleTypes.AMBIENT_ENTITY_EFFECT : ParticleTypes.ENTITY_EFFECT, this.getParticleX(0.5), this.getRandomBodyY(), this.getParticleZ(0.5), d, e, f);
             }
         }
     }
@@ -805,7 +805,7 @@ implements Attackable {
     }
 
     public boolean canTarget(LivingEntity target) {
-        if (target instanceof PlayerEntity && this.world.getDifficulty() == Difficulty.PEACEFUL) {
+        if (target instanceof PlayerEntity && this.getWorld().getDifficulty() == Difficulty.PEACEFUL) {
             return false;
         }
         return target.canTakeDamage();
@@ -837,7 +837,7 @@ implements Attackable {
     }
 
     public boolean clearStatusEffects() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return false;
         }
         Iterator<StatusEffectInstance> iterator = this.activeStatusEffects.values().iterator();
@@ -925,14 +925,14 @@ implements Attackable {
 
     protected void onStatusEffectApplied(StatusEffectInstance effect, @Nullable Entity source) {
         this.effectsChanged = true;
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             effect.getEffectType().onApplied(this, this.getAttributes(), effect.getAmplifier());
         }
     }
 
     protected void onStatusEffectUpgraded(StatusEffectInstance effect, boolean reapplyEffect, @Nullable Entity source) {
         this.effectsChanged = true;
-        if (reapplyEffect && !this.world.isClient) {
+        if (reapplyEffect && !this.getWorld().isClient) {
             StatusEffect statusEffect = effect.getEffectType();
             statusEffect.onRemoved(this, this.getAttributes(), effect.getAmplifier());
             statusEffect.onApplied(this, this.getAttributes(), effect.getAmplifier());
@@ -941,7 +941,7 @@ implements Attackable {
 
     protected void onStatusEffectRemoved(StatusEffectInstance effect) {
         this.effectsChanged = true;
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             effect.getEffectType().onRemoved(this, this.getAttributes(), effect.getAmplifier());
         }
     }
@@ -972,7 +972,7 @@ implements Attackable {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return false;
         }
         if (this.isDead()) {
@@ -981,7 +981,7 @@ implements Attackable {
         if (source.isIn(DamageTypeTags.IS_FIRE) && this.hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
             return false;
         }
-        if (this.isSleeping() && !this.world.isClient) {
+        if (this.isSleeping() && !this.getWorld().isClient) {
             this.wakeUp();
         }
         this.despawnCounter = 0;
@@ -1042,9 +1042,9 @@ implements Attackable {
         }
         if (bl2) {
             if (bl) {
-                this.world.sendEntityStatus(this, (byte)29);
+                this.getWorld().sendEntityStatus(this, (byte)29);
             } else {
-                this.world.sendEntityDamage(this, source);
+                this.getWorld().sendEntityDamage(this, source);
             }
             if (!(source.isIn(DamageTypeTags.NO_IMPACT) || bl && !(amount > 0.0f))) {
                 this.scheduleVelocityUpdate();
@@ -1076,7 +1076,7 @@ implements Attackable {
         boolean bl4 = bl3 = !bl || amount > 0.0f;
         if (bl3) {
             this.lastDamageSource = source;
-            this.lastDamageTime = this.world.getTime();
+            this.lastDamageTime = this.getWorld().getTime();
         }
         if (this instanceof ServerPlayerEntity) {
             Criteria.ENTITY_HURT_PLAYER.trigger((ServerPlayerEntity)this, source, f, amount, bl);
@@ -1121,14 +1121,14 @@ implements Attackable {
             this.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 900, 1));
             this.addStatusEffect(new StatusEffectInstance(StatusEffects.ABSORPTION, 100, 1));
             this.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 800, 0));
-            this.world.sendEntityStatus(this, (byte)35);
+            this.getWorld().sendEntityStatus(this, (byte)35);
         }
         return itemStack != null;
     }
 
     @Nullable
     public DamageSource getRecentDamageSource() {
-        if (this.world.getTime() - this.lastDamageTime > 40L) {
+        if (this.getWorld().getTime() - this.lastDamageTime > 40L) {
             this.lastDamageSource = null;
         }
         return this.lastDamageSource;
@@ -1163,7 +1163,7 @@ implements Attackable {
     private void playEquipmentBreakEffects(ItemStack stack) {
         if (!stack.isEmpty()) {
             if (!this.isSilent()) {
-                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ITEM_BREAK, this.getSoundCategory(), 0.8f, 0.8f + this.world.random.nextFloat() * 0.4f, false);
+                this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ITEM_BREAK, this.getSoundCategory(), 0.8f, 0.8f + this.getWorld().random.nextFloat() * 0.4f, false);
             }
             this.spawnItemParticles(stack, 5);
         }
@@ -1181,39 +1181,41 @@ implements Attackable {
         if (this.isSleeping()) {
             this.wakeUp();
         }
-        if (!this.world.isClient && this.hasCustomName()) {
+        if (!this.getWorld().isClient && this.hasCustomName()) {
             LOGGER.info("Named entity {} died: {}", (Object)this, (Object)this.getDamageTracker().getDeathMessage().getString());
         }
         this.dead = true;
         this.getDamageTracker().update();
-        if (this.world instanceof ServerWorld) {
-            if (entity == null || entity.onKilledOther((ServerWorld)this.world, this)) {
+        World world = this.getWorld();
+        if (world instanceof ServerWorld) {
+            ServerWorld serverWorld = (ServerWorld)world;
+            if (entity == null || entity.onKilledOther(serverWorld, this)) {
                 this.emitGameEvent(GameEvent.ENTITY_DIE);
                 this.drop(damageSource);
                 this.onKilledBy(livingEntity);
             }
-            this.world.sendEntityStatus(this, (byte)3);
+            this.getWorld().sendEntityStatus(this, (byte)3);
         }
         this.setPose(EntityPose.DYING);
     }
 
     protected void onKilledBy(@Nullable LivingEntity adversary) {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         boolean bl = false;
         if (adversary instanceof WitherEntity) {
-            if (this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 BlockPos blockPos = this.getBlockPos();
                 BlockState blockState = Blocks.WITHER_ROSE.getDefaultState();
-                if (this.world.getBlockState(blockPos).isAir() && blockState.canPlaceAt(this.world, blockPos)) {
-                    this.world.setBlockState(blockPos, blockState, 3);
+                if (this.getWorld().getBlockState(blockPos).isAir() && blockState.canPlaceAt(this.getWorld(), blockPos)) {
+                    this.getWorld().setBlockState(blockPos, blockState, 3);
                     bl = true;
                 }
             }
             if (!bl) {
-                ItemEntity itemEntity = new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), new ItemStack(Items.WITHER_ROSE));
-                this.world.spawnEntity(itemEntity);
+                ItemEntity itemEntity = new ItemEntity(this.getWorld(), this.getX(), this.getY(), this.getZ(), new ItemStack(Items.WITHER_ROSE));
+                this.getWorld().spawnEntity(itemEntity);
             }
         }
     }
@@ -1223,7 +1225,7 @@ implements Attackable {
         Entity entity = source.getAttacker();
         int i = entity instanceof PlayerEntity ? EnchantmentHelper.getLooting((LivingEntity)entity) : 0;
         boolean bl2 = bl = this.playerHitTimer > 0;
-        if (this.shouldDropLoot() && this.world.getGameRules().getBoolean(GameRules.DO_MOB_LOOT)) {
+        if (this.shouldDropLoot() && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_LOOT)) {
             this.dropLoot(source, bl);
             this.dropEquipment(source, i, bl);
         }
@@ -1235,8 +1237,8 @@ implements Attackable {
     }
 
     protected void dropXp() {
-        if (this.world instanceof ServerWorld && !this.isExperienceDroppingDisabled() && (this.shouldAlwaysDropXp() || this.playerHitTimer > 0 && this.shouldDropXp() && this.world.getGameRules().getBoolean(GameRules.DO_MOB_LOOT))) {
-            ExperienceOrbEntity.spawn((ServerWorld)this.world, this.getPos(), this.getXpToDrop());
+        if (this.getWorld() instanceof ServerWorld && !this.isExperienceDroppingDisabled() && (this.shouldAlwaysDropXp() || this.playerHitTimer > 0 && this.shouldDropXp() && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_LOOT))) {
+            ExperienceOrbEntity.spawn((ServerWorld)this.getWorld(), this.getPos(), this.getXpToDrop());
         }
     }
 
@@ -1249,13 +1251,13 @@ implements Attackable {
 
     protected void dropLoot(DamageSource source, boolean causedByPlayer) {
         Identifier identifier = this.getLootTable();
-        LootTable lootTable = this.world.getServer().getLootManager().getTable(identifier);
+        LootTable lootTable = this.getWorld().getServer().getLootManager().getLootTable(identifier);
         LootContext.Builder builder = this.getLootContextBuilder(causedByPlayer, source);
         lootTable.generateLoot(builder.build(LootContextTypes.ENTITY), this::dropStack);
     }
 
     protected LootContext.Builder getLootContextBuilder(boolean causedByPlayer, DamageSource source) {
-        LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).random(this.random).parameter(LootContextParameters.THIS_ENTITY, this).parameter(LootContextParameters.ORIGIN, this.getPos()).parameter(LootContextParameters.DAMAGE_SOURCE, source).optionalParameter(LootContextParameters.KILLER_ENTITY, source.getAttacker()).optionalParameter(LootContextParameters.DIRECT_KILLER_ENTITY, source.getSource());
+        LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.getWorld()).random(this.random).parameter(LootContextParameters.THIS_ENTITY, this).parameter(LootContextParameters.ORIGIN, this.getPos()).parameter(LootContextParameters.DAMAGE_SOURCE, source).optionalParameter(LootContextParameters.KILLER_ENTITY, source.getAttacker()).optionalParameter(LootContextParameters.DIRECT_KILLER_ENTITY, source.getSource());
         if (causedByPlayer && this.attackingPlayer != null) {
             builder = builder.parameter(LootContextParameters.LAST_DAMAGE_PLAYER, this.attackingPlayer).luck(this.attackingPlayer.getLuck());
         }
@@ -1269,7 +1271,7 @@ implements Attackable {
         this.velocityDirty = true;
         Vec3d vec3d = this.getVelocity();
         Vec3d vec3d2 = new Vec3d(x, 0.0, z).normalize().multiply(strength);
-        this.setVelocity(vec3d.x / 2.0 - vec3d2.x, this.onGround ? Math.min(0.4, vec3d.y / 2.0 + strength) : vec3d.y, vec3d.z / 2.0 - vec3d2.z);
+        this.setVelocity(vec3d.x / 2.0 - vec3d2.x, this.isOnGround() ? Math.min(0.4, vec3d.y / 2.0 + strength) : vec3d.y, vec3d.z / 2.0 - vec3d2.z);
     }
 
     public void tiltScreen(double deltaX, double deltaZ) {
@@ -1353,7 +1355,7 @@ implements Attackable {
 
     private boolean canEnterTrapdoor(BlockPos pos, BlockState state) {
         BlockState blockState;
-        return state.get(TrapdoorBlock.OPEN) != false && (blockState = this.world.getBlockState(pos.down())).isOf(Blocks.LADDER) && blockState.get(LadderBlock.FACING) == state.get(TrapdoorBlock.FACING);
+        return state.get(TrapdoorBlock.OPEN) != false && (blockState = this.getWorld().getBlockState(pos.down())).isOf(Blocks.LADDER) && blockState.get(LadderBlock.FACING) == state.get(TrapdoorBlock.FACING);
     }
 
     @Override
@@ -1384,13 +1386,13 @@ implements Attackable {
     }
 
     protected void playBlockFallSound() {
-        int k;
-        int j;
         if (this.isSilent()) {
             return;
         }
         int i = MathHelper.floor(this.getX());
-        BlockState blockState = this.world.getBlockState(new BlockPos(i, j = MathHelper.floor(this.getY() - (double)0.2f), k = MathHelper.floor(this.getZ())));
+        int j = MathHelper.floor(this.getY() - (double)0.2f);
+        int k = MathHelper.floor(this.getZ());
+        BlockState blockState = this.getWorld().getBlockState(new BlockPos(i, j, k));
         if (!blockState.isAir()) {
             BlockSoundGroup blockSoundGroup = blockState.getSoundGroup();
             this.playSound(blockSoundGroup.getFallSound(), blockSoundGroup.getVolume() * 0.5f, blockSoundGroup.getPitch() * 0.75f);
@@ -1533,9 +1535,9 @@ implements Attackable {
             this.handSwingTicks = -1;
             this.handSwinging = true;
             this.preferredHand = hand;
-            if (this.world instanceof ServerWorld) {
+            if (this.getWorld() instanceof ServerWorld) {
                 EntityAnimationS2CPacket entityAnimationS2CPacket = new EntityAnimationS2CPacket(this, hand == Hand.MAIN_HAND ? 0 : 3);
-                ServerChunkManager serverChunkManager = ((ServerWorld)this.world).getChunkManager();
+                ServerChunkManager serverChunkManager = ((ServerWorld)this.getWorld()).getChunkManager();
                 if (fromServerPlayer) {
                     serverChunkManager.sendToNearbyPlayers(this, entityAnimationS2CPacket);
                 } else {
@@ -1556,7 +1558,7 @@ implements Attackable {
         }
         this.damage(this.getDamageSources().generic(), 0.0f);
         this.lastDamageSource = damageSource;
-        this.lastDamageTime = this.world.getTime();
+        this.lastDamageTime = this.getWorld().getTime();
     }
 
     @Override
@@ -1573,11 +1575,11 @@ implements Attackable {
                 break;
             }
             case 30: {
-                this.playSound(SoundEvents.ITEM_SHIELD_BREAK, 0.8f, 0.8f + this.world.random.nextFloat() * 0.4f);
+                this.playSound(SoundEvents.ITEM_SHIELD_BREAK, 0.8f, 0.8f + this.getWorld().random.nextFloat() * 0.4f);
                 break;
             }
             case 29: {
-                this.playSound(SoundEvents.ITEM_SHIELD_BLOCK, 1.0f, 0.8f + this.world.random.nextFloat() * 0.4f);
+                this.playSound(SoundEvents.ITEM_SHIELD_BLOCK, 1.0f, 0.8f + this.getWorld().random.nextFloat() * 0.4f);
                 break;
             }
             case 46: {
@@ -1590,7 +1592,7 @@ implements Attackable {
                     double e = MathHelper.lerp(d, this.prevX, this.getX()) + (this.random.nextDouble() - 0.5) * (double)this.getWidth() * 2.0;
                     double k = MathHelper.lerp(d, this.prevY, this.getY()) + this.random.nextDouble() * (double)this.getHeight();
                     double l = MathHelper.lerp(d, this.prevZ, this.getZ()) + (this.random.nextDouble() - 0.5) * (double)this.getWidth() * 2.0;
-                    this.world.addParticle(ParticleTypes.PORTAL, e, k, l, f, g, h);
+                    this.getWorld().addParticle(ParticleTypes.PORTAL, e, k, l, f, g, h);
                 }
                 break;
             }
@@ -1641,7 +1643,7 @@ implements Attackable {
             double d = this.random.nextGaussian() * 0.02;
             double e = this.random.nextGaussian() * 0.02;
             double f = this.random.nextGaussian() * 0.02;
-            this.world.addParticle(ParticleTypes.POOF, this.getParticleX(1.0), this.getRandomBodyY(), this.getParticleZ(1.0), d, e, f);
+            this.getWorld().addParticle(ParticleTypes.POOF, this.getParticleX(1.0), this.getRandomBodyY(), this.getParticleZ(1.0), d, e, f);
         }
     }
 
@@ -1805,7 +1807,7 @@ implements Attackable {
         Vec3d vec3d;
         if (this.isRemoved()) {
             vec3d = this.getPos();
-        } else if (vehicle.isRemoved() || this.world.getBlockState(vehicle.getBlockPos()).isIn(BlockTags.PORTALS)) {
+        } else if (vehicle.isRemoved() || this.getWorld().getBlockState(vehicle.getBlockPos()).isIn(BlockTags.PORTALS)) {
             double d = Math.max(this.getY(), vehicle.getY());
             vec3d = new Vec3d(this.getX(), d, this.getZ());
         } else {
@@ -1863,7 +1865,7 @@ implements Attackable {
                 d = 0.01;
                 this.onLanding();
             }
-            FluidState fluidState = this.world.getFluidState(this.getBlockPos());
+            FluidState fluidState = this.getWorld().getFluidState(this.getBlockPos());
             if (this.isTouchingWater() && this.shouldSwimInFluids() && !this.canWalkOnFluid(fluidState)) {
                 double e = this.getY();
                 float f = this.isSprinting() ? 0.9f : this.getBaseMovementSpeedMultiplier();
@@ -1872,7 +1874,7 @@ implements Attackable {
                 if (h > 3.0f) {
                     h = 3.0f;
                 }
-                if (!this.onGround) {
+                if (!this.isOnGround()) {
                     h *= 0.5f;
                 }
                 if (h > 0.0f) {
@@ -1940,28 +1942,28 @@ implements Attackable {
                 }
                 this.setVelocity(vec3d4.multiply(0.99f, 0.98f, 0.99f));
                 this.move(MovementType.SELF, this.getVelocity());
-                if (this.horizontalCollision && !this.world.isClient && (o = (float)((n = j - (m = this.getVelocity().horizontalLength())) * 10.0 - 3.0)) > 0.0f) {
+                if (this.horizontalCollision && !this.getWorld().isClient && (o = (float)((n = j - (m = this.getVelocity().horizontalLength())) * 10.0 - 3.0)) > 0.0f) {
                     this.playSound(this.getFallSound((int)o), 1.0f, 1.0f);
                     this.damage(this.getDamageSources().flyIntoWall(), o);
                 }
-                if (this.onGround && !this.world.isClient) {
+                if (this.isOnGround() && !this.getWorld().isClient) {
                     this.setFlag(7, false);
                 }
             } else {
                 BlockPos blockPos = this.getVelocityAffectingPos();
-                float p = this.world.getBlockState(blockPos).getBlock().getSlipperiness();
-                float f = this.onGround ? p * 0.91f : 0.91f;
+                float p = this.getWorld().getBlockState(blockPos).getBlock().getSlipperiness();
+                float f = this.isOnGround() ? p * 0.91f : 0.91f;
                 Vec3d vec3d6 = this.applyMovementInput(movementInput, p);
                 double q = vec3d6.y;
                 if (this.hasStatusEffect(StatusEffects.LEVITATION)) {
                     q += (0.05 * (double)(this.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() + 1) - vec3d6.y) * 0.2;
                     this.onLanding();
-                } else if (!this.world.isClient || this.world.isChunkLoaded(blockPos)) {
+                } else if (!this.getWorld().isClient || this.getWorld().isChunkLoaded(blockPos)) {
                     if (!this.hasNoGravity()) {
                         q -= d;
                     }
                 } else {
-                    q = this.getY() > (double)this.world.getBottomY() ? -0.1 : 0.0;
+                    q = this.getY() > (double)this.getWorld().getBottomY() ? -0.1 : 0.0;
                 }
                 if (this.hasNoDrag()) {
                     this.setVelocity(vec3d6.x, q, vec3d6.z);
@@ -1973,11 +1975,11 @@ implements Attackable {
         this.updateLimbs(this instanceof Flutterer);
     }
 
-    private void travelControlled(LivingEntity controllingPassenger, Vec3d movementInput) {
-        Vec3d vec3d = this.getControlledMovementInput(controllingPassenger, movementInput);
-        this.tickControlled(controllingPassenger, vec3d);
+    private void travelControlled(PlayerEntity controllingPlayer, Vec3d movementInput) {
+        Vec3d vec3d = this.getControlledMovementInput(controllingPlayer, movementInput);
+        this.tickControlled(controllingPlayer, vec3d);
         if (this.isLogicalSideForUpdatingMovement()) {
-            this.setMovementSpeed(this.getSaddledSpeed(controllingPassenger));
+            this.setMovementSpeed(this.getSaddledSpeed(controllingPlayer));
             this.travel(vec3d);
         } else {
             this.updateLimbs(false);
@@ -1986,14 +1988,14 @@ implements Attackable {
         }
     }
 
-    protected void tickControlled(LivingEntity controllingPassenger, Vec3d movementInput) {
+    protected void tickControlled(PlayerEntity controllingPlayer, Vec3d movementInput) {
     }
 
-    protected Vec3d getControlledMovementInput(LivingEntity controllingPassenger, Vec3d movementInput) {
+    protected Vec3d getControlledMovementInput(PlayerEntity controllingPlayer, Vec3d movementInput) {
         return movementInput;
     }
 
-    protected float getSaddledSpeed(LivingEntity controllingPassenger) {
+    protected float getSaddledSpeed(PlayerEntity controllingPlayer) {
         return this.getMovementSpeed();
     }
 
@@ -2042,7 +2044,7 @@ implements Attackable {
     }
 
     private float getMovementSpeed(float slipperiness) {
-        if (this.onGround) {
+        if (this.isOnGround()) {
             return this.getMovementSpeed() * (0.21600002f / (slipperiness * slipperiness * slipperiness));
         }
         return this.getOffGroundSpeed();
@@ -2070,7 +2072,7 @@ implements Attackable {
         super.tick();
         this.tickActiveItemStack();
         this.updateLeaningPitch();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             int j;
             int i = this.getStuckArrowCount();
             if (i > 0) {
@@ -2119,14 +2121,14 @@ implements Attackable {
         if (this.handSwingProgress > 0.0f) {
             g = this.getYaw();
         }
-        if (!this.onGround) {
+        if (!this.isOnGround()) {
             k = 0.0f;
         }
         this.stepBobbingAmount += (k - this.stepBobbingAmount) * 0.3f;
-        this.world.getProfiler().push("headTurn");
+        this.getWorld().getProfiler().push("headTurn");
         h = this.turnHead(g, h);
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("rangeChecks");
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("rangeChecks");
         while (this.getYaw() - this.prevYaw < -180.0f) {
             this.prevYaw -= 360.0f;
         }
@@ -2151,7 +2153,7 @@ implements Attackable {
         while (this.headYaw - this.prevHeadYaw >= 180.0f) {
             this.prevHeadYaw += 360.0f;
         }
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
         this.lookDirection += h;
         this.roll = this.isFallFlying() ? ++this.roll : 0;
         if (this.isSleeping()) {
@@ -2210,7 +2212,7 @@ implements Attackable {
         ItemStack itemStack = equipmentChanges.get((Object)EquipmentSlot.MAINHAND);
         ItemStack itemStack2 = equipmentChanges.get((Object)EquipmentSlot.OFFHAND);
         if (itemStack != null && itemStack2 != null && ItemStack.areEqual(itemStack, this.getSyncedHandStack(EquipmentSlot.OFFHAND)) && ItemStack.areEqual(itemStack2, this.getSyncedHandStack(EquipmentSlot.MAINHAND))) {
-            ((ServerWorld)this.world).getChunkManager().sendToOtherNearbyPlayers(this, new EntityStatusS2CPacket(this, 55));
+            ((ServerWorld)this.getWorld()).getChunkManager().sendToOtherNearbyPlayers(this, new EntityStatusS2CPacket(this, 55));
             equipmentChanges.remove((Object)EquipmentSlot.MAINHAND);
             equipmentChanges.remove((Object)EquipmentSlot.OFFHAND);
             this.setSyncedHandStack(EquipmentSlot.MAINHAND, itemStack.copy());
@@ -2233,7 +2235,7 @@ implements Attackable {
                 }
             }
         });
-        ((ServerWorld)this.world).getChunkManager().sendToOtherNearbyPlayers(this, new EntityEquipmentUpdateS2CPacket(this.getId(), list));
+        ((ServerWorld)this.getWorld()).getChunkManager().sendToOtherNearbyPlayers(this, new EntityEquipmentUpdateS2CPacket(this.getId(), list));
     }
 
     private ItemStack getSyncedArmorStack(EquipmentSlot slot) {
@@ -2267,6 +2269,9 @@ implements Attackable {
         return headRotation;
     }
 
+    /*
+     * Unable to fully structure code
+     */
     public void tickMovement() {
         if (this.jumpingCooldown > 0) {
             --this.jumpingCooldown;
@@ -2276,10 +2281,10 @@ implements Attackable {
             this.updateTrackedPosition(this.getX(), this.getY(), this.getZ());
         }
         if (this.bodyTrackingIncrements > 0) {
-            double d = this.getX() + (this.serverX - this.getX()) / (double)this.bodyTrackingIncrements;
-            double e = this.getY() + (this.serverY - this.getY()) / (double)this.bodyTrackingIncrements;
-            double f = this.getZ() + (this.serverZ - this.getZ()) / (double)this.bodyTrackingIncrements;
-            double g = MathHelper.wrapDegrees(this.serverYaw - (double)this.getYaw());
+            d = this.getX() + (this.serverX - this.getX()) / (double)this.bodyTrackingIncrements;
+            e = this.getY() + (this.serverY - this.getY()) / (double)this.bodyTrackingIncrements;
+            f = this.getZ() + (this.serverZ - this.getZ()) / (double)this.bodyTrackingIncrements;
+            g = MathHelper.wrapDegrees(this.serverYaw - (double)this.getYaw());
             this.setYaw(this.getYaw() + (float)g / (float)this.bodyTrackingIncrements);
             this.setPitch(this.getPitch() + (float)(this.serverPitch - (double)this.getPitch()) / (float)this.bodyTrackingIncrements);
             --this.bodyTrackingIncrements;
@@ -2292,10 +2297,10 @@ implements Attackable {
             this.headYaw += (float)MathHelper.wrapDegrees(this.serverHeadYaw - (double)this.headYaw) / (float)this.headTrackingIncrements;
             --this.headTrackingIncrements;
         }
-        Vec3d vec3d = this.getVelocity();
-        double h = vec3d.x;
-        double i = vec3d.y;
-        double j = vec3d.z;
+        vec3d = this.getVelocity();
+        h = vec3d.x;
+        i = vec3d.y;
+        j = vec3d.z;
         if (Math.abs(vec3d.x) < 0.003) {
             h = 0.0;
         }
@@ -2306,50 +2311,55 @@ implements Attackable {
             j = 0.0;
         }
         this.setVelocity(h, i, j);
-        this.world.getProfiler().push("ai");
+        this.getWorld().getProfiler().push("ai");
         if (this.isImmobile()) {
             this.jumping = false;
             this.sidewaysSpeed = 0.0f;
             this.forwardSpeed = 0.0f;
         } else if (this.canMoveVoluntarily()) {
-            this.world.getProfiler().push("newAi");
+            this.getWorld().getProfiler().push("newAi");
             this.tickNewAi();
-            this.world.getProfiler().pop();
+            this.getWorld().getProfiler().pop();
         }
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("jump");
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("jump");
         if (this.jumping && this.shouldSwimInFluids()) {
-            double k = this.isInLava() ? this.getFluidHeight(FluidTags.LAVA) : this.getFluidHeight(FluidTags.WATER);
-            boolean bl = this.isTouchingWater() && k > 0.0;
-            double l = this.getSwimHeight();
-            if (bl && (!this.onGround || k > l)) {
+            k = this.isInLava() != false ? this.getFluidHeight(FluidTags.LAVA) : this.getFluidHeight(FluidTags.WATER);
+            bl = this.isTouchingWater() != false && k > 0.0;
+            l = this.getSwimHeight();
+            if (bl && (!this.isOnGround() || k > l)) {
                 this.swimUpward(FluidTags.WATER);
-            } else if (this.isInLava() && (!this.onGround || k > l)) {
+            } else if (this.isInLava() && (!this.isOnGround() || k > l)) {
                 this.swimUpward(FluidTags.LAVA);
-            } else if ((this.onGround || bl && k <= l) && this.jumpingCooldown == 0) {
+            } else if ((this.isOnGround() || bl && k <= l) && this.jumpingCooldown == 0) {
                 this.jump();
                 this.jumpingCooldown = 10;
             }
         } else {
             this.jumpingCooldown = 0;
         }
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("travel");
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("travel");
         this.sidewaysSpeed *= 0.98f;
         this.forwardSpeed *= 0.98f;
         this.tickFallFlying();
-        Box box = this.getBoundingBox();
-        LivingEntity livingEntity = this.getControllingPassenger();
-        Vec3d vec3d2 = new Vec3d(this.sidewaysSpeed, this.upwardSpeed, this.forwardSpeed);
-        if (livingEntity != null && this.isAlive()) {
-            this.travelControlled(livingEntity, vec3d2);
-        } else {
+        box = this.getBoundingBox();
+        vec3d2 = new Vec3d(this.sidewaysSpeed, this.upwardSpeed, this.forwardSpeed);
+        var11_15 = this.getControllingPassenger();
+        if (!(var11_15 instanceof PlayerEntity)) ** GOTO lbl-1000
+        playerEntity = (PlayerEntity)var11_15;
+        if (this.isAlive()) {
+            this.travelControlled(playerEntity, vec3d2);
+        } else lbl-1000:
+        // 2 sources
+
+        {
             this.travel(vec3d2);
         }
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("freezing");
-        if (!this.world.isClient && !this.isDead()) {
-            int m = this.getFrozenTicks();
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("freezing");
+        if (!this.getWorld().isClient && !this.isDead()) {
+            m = this.getFrozenTicks();
             if (this.inPowderSnow && this.canFreeze()) {
                 this.setFrozenTicks(Math.min(this.getMinFreezeDamageTicks(), m + 1));
             } else {
@@ -2358,18 +2368,18 @@ implements Attackable {
         }
         this.removePowderSnowSlow();
         this.addPowderSnowSlowIfNeeded();
-        if (!this.world.isClient && this.age % 40 == 0 && this.isFrozen() && this.canFreeze()) {
+        if (!this.getWorld().isClient && this.age % 40 == 0 && this.isFrozen() && this.canFreeze()) {
             this.damage(this.getDamageSources().freeze(), 1.0f);
         }
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("push");
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("push");
         if (this.riptideTicks > 0) {
             --this.riptideTicks;
             this.tickRiptide(box, this.getBoundingBox());
         }
         this.tickCramming();
-        this.world.getProfiler().pop();
-        if (!this.world.isClient && this.hurtByWater() && this.isWet()) {
+        this.getWorld().getProfiler().pop();
+        if (!this.getWorld().isClient && this.hurtByWater() && this.isWet()) {
             this.damage(this.getDamageSources().drown(), 1.0f);
         }
     }
@@ -2380,12 +2390,12 @@ implements Attackable {
 
     private void tickFallFlying() {
         boolean bl = this.getFlag(7);
-        if (bl && !this.onGround && !this.hasVehicle() && !this.hasStatusEffect(StatusEffects.LEVITATION)) {
+        if (bl && !this.isOnGround() && !this.hasVehicle() && !this.hasStatusEffect(StatusEffects.LEVITATION)) {
             ItemStack itemStack = this.getEquippedStack(EquipmentSlot.CHEST);
             if (itemStack.isOf(Items.ELYTRA) && ElytraItem.isUsable(itemStack)) {
                 bl = true;
                 int i = this.roll + 1;
-                if (!this.world.isClient && i % 10 == 0) {
+                if (!this.getWorld().isClient && i % 10 == 0) {
                     int j = i / 10;
                     if (j % 2 == 0) {
                         itemStack.damage(1, this, player -> player.sendEquipmentBreakStatus(EquipmentSlot.CHEST));
@@ -2398,7 +2408,7 @@ implements Attackable {
         } else {
             bl = false;
         }
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.setFlag(7, bl);
         }
     }
@@ -2407,14 +2417,14 @@ implements Attackable {
     }
 
     protected void tickCramming() {
-        if (this.world.isClient()) {
-            this.world.getEntitiesByType(TypeFilter.instanceOf(PlayerEntity.class), this.getBoundingBox(), EntityPredicates.canBePushedBy(this)).forEach(this::pushAway);
+        if (this.getWorld().isClient()) {
+            this.getWorld().getEntitiesByType(TypeFilter.instanceOf(PlayerEntity.class), this.getBoundingBox(), EntityPredicates.canBePushedBy(this)).forEach(this::pushAway);
             return;
         }
-        List<Entity> list = this.world.getOtherEntities(this, this.getBoundingBox(), EntityPredicates.canBePushedBy(this));
+        List<Entity> list = this.getWorld().getOtherEntities(this, this.getBoundingBox(), EntityPredicates.canBePushedBy(this));
         if (!list.isEmpty()) {
             int j;
-            int i = this.world.getGameRules().getInt(GameRules.MAX_ENTITY_CRAMMING);
+            int i = this.getWorld().getGameRules().getInt(GameRules.MAX_ENTITY_CRAMMING);
             if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
                 j = 0;
                 for (int k = 0; k < list.size(); ++k) {
@@ -2434,7 +2444,7 @@ implements Attackable {
 
     protected void tickRiptide(Box a, Box b) {
         Box box = a.union(b);
-        List<Entity> list = this.world.getOtherEntities(this, box);
+        List<Entity> list = this.getWorld().getOtherEntities(this, box);
         if (!list.isEmpty()) {
             for (int i = 0; i < list.size(); ++i) {
                 Entity entity = list.get(i);
@@ -2447,7 +2457,7 @@ implements Attackable {
         } else if (this.horizontalCollision) {
             this.riptideTicks = 0;
         }
-        if (!this.world.isClient && this.riptideTicks <= 0) {
+        if (!this.getWorld().isClient && this.riptideTicks <= 0) {
             this.setLivingFlag(4, false);
         }
     }
@@ -2467,7 +2477,7 @@ implements Attackable {
     public void stopRiding() {
         Entity entity = this.getVehicle();
         super.stopRiding();
-        if (entity != null && entity != this.getVehicle() && !this.world.isClient) {
+        if (entity != null && entity != this.getVehicle() && !this.getWorld().isClient) {
             this.onDismounted(entity);
         }
     }
@@ -2508,13 +2518,13 @@ implements Attackable {
     }
 
     public void sendPickup(Entity item, int count) {
-        if (!item.isRemoved() && !this.world.isClient && (item instanceof ItemEntity || item instanceof PersistentProjectileEntity || item instanceof ExperienceOrbEntity)) {
-            ((ServerWorld)this.world).getChunkManager().sendToOtherNearbyPlayers(item, new ItemPickupAnimationS2CPacket(item.getId(), this.getId(), count));
+        if (!item.isRemoved() && !this.getWorld().isClient && (item instanceof ItemEntity || item instanceof PersistentProjectileEntity || item instanceof ExperienceOrbEntity)) {
+            ((ServerWorld)this.getWorld()).getChunkManager().sendToOtherNearbyPlayers(item, new ItemPickupAnimationS2CPacket(item.getId(), this.getId(), count));
         }
     }
 
     public boolean canSee(Entity entity) {
-        if (entity.world != this.world) {
+        if (entity.getWorld() != this.getWorld()) {
             return false;
         }
         Vec3d vec3d = new Vec3d(this.getX(), this.getEyeY(), this.getZ());
@@ -2522,7 +2532,7 @@ implements Attackable {
         if (vec3d2.distanceTo(vec3d) > 128.0) {
             return false;
         }
-        return this.world.raycast(new RaycastContext(vec3d, vec3d2, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this)).getType() == HitResult.Type.MISS;
+        return this.getWorld().raycast(new RaycastContext(vec3d, vec3d2, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this)).getType() == HitResult.Type.MISS;
     }
 
     @Override
@@ -2618,11 +2628,11 @@ implements Attackable {
     }
 
     protected void tickItemStackUsage(ItemStack stack) {
-        stack.usageTick(this.world, this, this.getItemUseTimeLeft());
+        stack.usageTick(this.getWorld(), this, this.getItemUseTimeLeft());
         if (this.shouldSpawnConsumptionEffects()) {
             this.spawnConsumptionEffects(stack, 5);
         }
-        if (--this.itemUseTimeLeft == 0 && !this.world.isClient && !stack.isUsedOnRelease()) {
+        if (--this.itemUseTimeLeft == 0 && !this.getWorld().isClient && !stack.isUsedOnRelease()) {
             this.consumeItem();
         }
     }
@@ -2652,7 +2662,7 @@ implements Attackable {
         }
         this.activeItemStack = itemStack;
         this.itemUseTimeLeft = itemStack.getMaxUseTime();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.setLivingFlag(1, true);
             this.setLivingFlag(2, hand == Hand.OFF_HAND);
             this.emitGameEvent(GameEvent.ITEM_INTERACT_START);
@@ -2663,10 +2673,10 @@ implements Attackable {
     public void onTrackedDataSet(TrackedData<?> data) {
         super.onTrackedDataSet(data);
         if (SLEEPING_POSITION.equals(data)) {
-            if (this.world.isClient) {
+            if (this.getWorld().isClient) {
                 this.getSleepingPosition().ifPresent(this::setPositionInBed);
             }
-        } else if (LIVING_FLAGS.equals(data) && this.world.isClient) {
+        } else if (LIVING_FLAGS.equals(data) && this.getWorld().isClient) {
             if (this.isUsingItem() && this.activeItemStack.isEmpty()) {
                 this.activeItemStack = this.getStackInHand(this.getActiveHand());
                 if (!this.activeItemStack.isEmpty()) {
@@ -2691,7 +2701,7 @@ implements Attackable {
             return;
         }
         if (stack.getUseAction() == UseAction.DRINK) {
-            this.playSound(this.getDrinkSound(stack), 0.5f, this.world.random.nextFloat() * 0.1f + 0.9f);
+            this.playSound(this.getDrinkSound(stack), 0.5f, this.getWorld().random.nextFloat() * 0.1f + 0.9f);
         }
         if (stack.getUseAction() == UseAction.EAT) {
             this.spawnItemParticles(stack, particleCount);
@@ -2709,12 +2719,12 @@ implements Attackable {
             vec3d2 = vec3d2.rotateX(-this.getPitch() * ((float)Math.PI / 180));
             vec3d2 = vec3d2.rotateY(-this.getYaw() * ((float)Math.PI / 180));
             vec3d2 = vec3d2.add(this.getX(), this.getEyeY(), this.getZ());
-            this.world.addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, stack), vec3d2.x, vec3d2.y, vec3d2.z, vec3d.x, vec3d.y + 0.05, vec3d.z);
+            this.getWorld().addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, stack), vec3d2.x, vec3d2.y, vec3d2.z, vec3d.x, vec3d.y + 0.05, vec3d.z);
         }
     }
 
     protected void consumeItem() {
-        if (this.world.isClient && !this.isUsingItem()) {
+        if (this.getWorld().isClient && !this.isUsingItem()) {
             return;
         }
         Hand hand = this.getActiveHand();
@@ -2724,7 +2734,7 @@ implements Attackable {
         }
         if (!this.activeItemStack.isEmpty() && this.isUsingItem()) {
             this.spawnConsumptionEffects(this.activeItemStack, 16);
-            ItemStack itemStack = this.activeItemStack.finishUsing(this.world, this);
+            ItemStack itemStack = this.activeItemStack.finishUsing(this.getWorld(), this);
             if (itemStack != this.activeItemStack) {
                 this.setStackInHand(hand, itemStack);
             }
@@ -2749,7 +2759,7 @@ implements Attackable {
 
     public void stopUsingItem() {
         if (!this.activeItemStack.isEmpty()) {
-            this.activeItemStack.onStoppedUsing(this.world, this, this.getItemUseTimeLeft());
+            this.activeItemStack.onStoppedUsing(this.getWorld(), this, this.getItemUseTimeLeft());
             if (this.activeItemStack.isUsedOnRelease()) {
                 this.tickActiveItemStack();
             }
@@ -2758,7 +2768,7 @@ implements Attackable {
     }
 
     public void clearActiveItem() {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             boolean bl = this.isUsingItem();
             this.setLivingFlag(1, false);
             if (bl) {
@@ -2803,14 +2813,14 @@ implements Attackable {
         double f = this.getZ();
         double g = y;
         boolean bl = false;
-        World world = this.world;
         BlockPos blockPos = BlockPos.ofFloored(x, g, z);
+        World world = this.getWorld();
         if (world.isChunkLoaded(blockPos)) {
             boolean bl2 = false;
             while (!bl2 && blockPos.getY() > world.getBottomY()) {
                 BlockPos blockPos2 = blockPos.down();
                 BlockState blockState = world.getBlockState(blockPos2);
-                if (blockState.getMaterial().blocksMovement()) {
+                if (blockState.blocksMovement()) {
                     bl2 = true;
                     continue;
                 }
@@ -2892,8 +2902,8 @@ implements Attackable {
         if (this.hasVehicle()) {
             this.stopRiding();
         }
-        if ((blockState = this.world.getBlockState(pos)).getBlock() instanceof BedBlock) {
-            this.world.setBlockState(pos, (BlockState)blockState.with(BedBlock.OCCUPIED, true), 3);
+        if ((blockState = this.getWorld().getBlockState(pos)).getBlock() instanceof BedBlock) {
+            this.getWorld().setBlockState(pos, (BlockState)blockState.with(BedBlock.OCCUPIED, true), 3);
         }
         this.setPose(EntityPose.SLEEPING);
         this.setPositionInBed(pos);
@@ -2907,16 +2917,16 @@ implements Attackable {
     }
 
     private boolean isSleepingInBed() {
-        return this.getSleepingPosition().map(pos -> this.world.getBlockState((BlockPos)pos).getBlock() instanceof BedBlock).orElse(false);
+        return this.getSleepingPosition().map(pos -> this.getWorld().getBlockState((BlockPos)pos).getBlock() instanceof BedBlock).orElse(false);
     }
 
     public void wakeUp() {
-        this.getSleepingPosition().filter(this.world::isChunkLoaded).ifPresent(pos -> {
-            BlockState blockState = this.world.getBlockState((BlockPos)pos);
+        this.getSleepingPosition().filter(this.getWorld()::isChunkLoaded).ifPresent(pos -> {
+            BlockState blockState = this.getWorld().getBlockState((BlockPos)pos);
             if (blockState.getBlock() instanceof BedBlock) {
                 Direction direction = blockState.get(BedBlock.FACING);
-                this.world.setBlockState((BlockPos)pos, (BlockState)blockState.with(BedBlock.OCCUPIED, false), 3);
-                Vec3d vec3d = BedBlock.findWakeUpPosition(this.getType(), (CollisionView)this.world, pos, direction, this.getYaw()).orElseGet(() -> {
+                this.getWorld().setBlockState((BlockPos)pos, (BlockState)blockState.with(BedBlock.OCCUPIED, false), 3);
+                Vec3d vec3d = BedBlock.findWakeUpPosition(this.getType(), (CollisionView)this.getWorld(), pos, direction, this.getYaw()).orElseGet(() -> {
                     BlockPos blockPos2 = pos.up();
                     return new Vec3d((double)blockPos2.getX() + 0.5, (double)blockPos2.getY() + 0.1, (double)blockPos2.getZ() + 0.5);
                 });
@@ -2936,7 +2946,7 @@ implements Attackable {
     @Nullable
     public Direction getSleepingDirection() {
         BlockPos blockPos = this.getSleepingPosition().orElse(null);
-        return blockPos != null ? BedBlock.getDirection(this.world, blockPos) : null;
+        return blockPos != null ? BedBlock.getDirection(this.getWorld(), blockPos) : null;
     }
 
     @Override
@@ -3005,7 +3015,7 @@ implements Attackable {
     }
 
     public void sendEquipmentBreakStatus(EquipmentSlot slot) {
-        this.world.sendEntityStatus(this, LivingEntity.getEquipmentBreakStatus(slot));
+        this.getWorld().sendEntityStatus(this, LivingEntity.getEquipmentBreakStatus(slot));
     }
 
     public void sendToolBreakStatus(Hand hand) {
@@ -3079,7 +3089,7 @@ implements Attackable {
 
     @Override
     public boolean isGlowing() {
-        return !this.world.isClient() && this.hasStatusEffect(StatusEffects.GLOWING) || super.isGlowing();
+        return !this.getWorld().isClient() && this.hasStatusEffect(StatusEffects.GLOWING) || super.isGlowing();
     }
 
     @Override

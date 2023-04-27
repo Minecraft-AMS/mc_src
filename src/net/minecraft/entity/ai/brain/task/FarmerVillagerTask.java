@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
 import net.minecraft.block.FarmlandBlock;
 import net.minecraft.entity.LivingEntity;
@@ -25,8 +24,10 @@ import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.inventory.SimpleInventory;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -116,30 +117,15 @@ extends MultiTickTask<VillagerEntity> {
             if (blockState.isAir() && block2 instanceof FarmlandBlock && villagerEntity.hasSeedToPlant()) {
                 SimpleInventory simpleInventory = villagerEntity.getInventory();
                 for (int i = 0; i < simpleInventory.size(); ++i) {
+                    Item item;
                     ItemStack itemStack = simpleInventory.getStack(i);
                     boolean bl = false;
-                    if (!itemStack.isEmpty()) {
-                        if (itemStack.isOf(Items.WHEAT_SEEDS)) {
-                            blockState2 = Blocks.WHEAT.getDefaultState();
-                            serverWorld.setBlockState(this.currentTarget, blockState2);
-                            serverWorld.emitGameEvent(GameEvent.BLOCK_PLACE, this.currentTarget, GameEvent.Emitter.of(villagerEntity, blockState2));
-                            bl = true;
-                        } else if (itemStack.isOf(Items.POTATO)) {
-                            blockState2 = Blocks.POTATOES.getDefaultState();
-                            serverWorld.setBlockState(this.currentTarget, blockState2);
-                            serverWorld.emitGameEvent(GameEvent.BLOCK_PLACE, this.currentTarget, GameEvent.Emitter.of(villagerEntity, blockState2));
-                            bl = true;
-                        } else if (itemStack.isOf(Items.CARROT)) {
-                            blockState2 = Blocks.CARROTS.getDefaultState();
-                            serverWorld.setBlockState(this.currentTarget, blockState2);
-                            serverWorld.emitGameEvent(GameEvent.BLOCK_PLACE, this.currentTarget, GameEvent.Emitter.of(villagerEntity, blockState2));
-                            bl = true;
-                        } else if (itemStack.isOf(Items.BEETROOT_SEEDS)) {
-                            blockState2 = Blocks.BEETROOTS.getDefaultState();
-                            serverWorld.setBlockState(this.currentTarget, blockState2);
-                            serverWorld.emitGameEvent(GameEvent.BLOCK_PLACE, this.currentTarget, GameEvent.Emitter.of(villagerEntity, blockState2));
-                            bl = true;
-                        }
+                    if (!itemStack.isEmpty() && itemStack.isIn(ItemTags.VILLAGER_PLANTABLE_SEEDS) && (item = itemStack.getItem()) instanceof BlockItem) {
+                        BlockItem blockItem = (BlockItem)item;
+                        BlockState blockState2 = blockItem.getBlock().getDefaultState();
+                        serverWorld.setBlockState(this.currentTarget, blockState2);
+                        serverWorld.emitGameEvent(GameEvent.BLOCK_PLACE, this.currentTarget, GameEvent.Emitter.of(villagerEntity, blockState2));
+                        bl = true;
                     }
                     if (!bl) continue;
                     serverWorld.playSound(null, (double)this.currentTarget.getX(), (double)this.currentTarget.getY(), this.currentTarget.getZ(), SoundEvents.ITEM_CROP_PLANT, SoundCategory.BLOCKS, 1.0f, 1.0f);

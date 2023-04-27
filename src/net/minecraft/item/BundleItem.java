@@ -137,8 +137,7 @@ extends Item {
             nbtList.remove(nbtCompound2);
             nbtList.add(0, nbtCompound2);
         } else {
-            ItemStack itemStack2 = stack.copy();
-            itemStack2.setCount(k);
+            ItemStack itemStack2 = stack.copyWithCount(k);
             NbtCompound nbtCompound3 = new NbtCompound();
             itemStack2.writeNbt(nbtCompound3);
             nbtList.add(0, nbtCompound3);

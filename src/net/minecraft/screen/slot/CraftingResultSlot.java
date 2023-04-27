@@ -50,11 +50,13 @@ extends Slot {
 
     @Override
     protected void onCrafted(ItemStack stack) {
+        Inventory inventory;
         if (this.amount > 0) {
-            stack.onCraft(this.player.world, this.player, this.amount);
+            stack.onCraft(this.player.getWorld(), this.player, this.amount);
         }
-        if (this.inventory instanceof RecipeUnlocker) {
-            ((RecipeUnlocker)((Object)this.inventory)).unlockLastRecipe(this.player);
+        if ((inventory = this.inventory) instanceof RecipeUnlocker) {
+            RecipeUnlocker recipeUnlocker = (RecipeUnlocker)((Object)inventory);
+            recipeUnlocker.unlockLastRecipe(this.player, this.input.getInputStacks());
         }
         this.amount = 0;
     }
@@ -62,7 +64,7 @@ extends Slot {
     @Override
     public void onTakeItem(PlayerEntity player, ItemStack stack) {
         this.onCrafted(stack);
-        DefaultedList<ItemStack> defaultedList = player.world.getRecipeManager().getRemainingStacks(RecipeType.CRAFTING, this.input, player.world);
+        DefaultedList<ItemStack> defaultedList = player.getWorld().getRecipeManager().getRemainingStacks(RecipeType.CRAFTING, this.input, player.getWorld());
         for (int i = 0; i < defaultedList.size(); ++i) {
             ItemStack itemStack = this.input.getStack(i);
             ItemStack itemStack2 = defaultedList.get(i);

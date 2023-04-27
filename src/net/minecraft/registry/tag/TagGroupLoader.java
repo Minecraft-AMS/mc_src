@@ -2,12 +2,9 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.HashMultimap
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.ImmutableSet$Builder
  *  com.google.common.collect.Maps
- *  com.google.common.collect.Multimap
- *  com.google.common.collect.Sets
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParser
  *  com.mojang.datafixers.util.Either
@@ -20,11 +17,8 @@
  */
 package net.minecraft.registry.tag;
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Either;
@@ -39,17 +33,16 @@ import java.lang.runtime.ObjectMethods;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import net.minecraft.registry.tag.TagEntry;
 import net.minecraft.registry.tag.TagFile;
+import net.minecraft.resource.DependencyTracker;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
@@ -99,31 +92,6 @@ public class TagGroupLoader<T> {
         return map;
     }
 
-    private static void resolveAll(Map<Identifier, List<TrackedEntry>> tags, Multimap<Identifier, Identifier> referencedTagIdsByTagId, Set<Identifier> alreadyResolved, Identifier tagId, BiConsumer<Identifier, List<TrackedEntry>> resolver) {
-        if (!alreadyResolved.add(tagId)) {
-            return;
-        }
-        referencedTagIdsByTagId.get((Object)tagId).forEach(resolvedTagId -> TagGroupLoader.resolveAll(tags, referencedTagIdsByTagId, alreadyResolved, resolvedTagId, resolver));
-        List<TrackedEntry> list = tags.get(tagId);
-        if (list != null) {
-            resolver.accept(tagId, list);
-        }
-    }
-
-    private static boolean hasCircularDependency(Multimap<Identifier, Identifier> referencedTagIdsByTagId, Identifier tagId, Identifier referencedTagId) {
-        Collection collection = referencedTagIdsByTagId.get((Object)referencedTagId);
-        if (collection.contains(tagId)) {
-            return true;
-        }
-        return collection.stream().anyMatch(id -> TagGroupLoader.hasCircularDependency(referencedTagIdsByTagId, tagId, id));
-    }
-
-    private static void addReference(Multimap<Identifier, Identifier> referencedTagIdsByTagId, Identifier tagId, Identifier referencedTagId) {
-        if (!TagGroupLoader.hasCircularDependency(referencedTagIdsByTagId, tagId, referencedTagId)) {
-            referencedTagIdsByTagId.put((Object)tagId, (Object)referencedTagId);
-        }
-    }
-
     private Either<Collection<TrackedEntry>, Collection<T>> resolveAll(TagEntry.ValueGetter<T> valueGetter, List<TrackedEntry> entries) {
         ImmutableSet.Builder builder = ImmutableSet.builder();
         ArrayList<TrackedEntry> list = new ArrayList<TrackedEntry>();
@@ -134,8 +102,8 @@ public class TagGroupLoader<T> {
         return list.isEmpty() ? Either.right((Object)builder.build()) : Either.left(list);
     }
 
-    public Map<Identifier, Collection<T>> buildGroup(Map<Identifier, List<TrackedEntry>> tags) {
-        final HashMap map = Maps.newHashMap();
+    public Map<Identifier, Collection<T>> buildGroup(Map<Identifier, List<TrackedEntry>> map) {
+        final HashMap map2 = Maps.newHashMap();
         TagEntry.ValueGetter valueGetter = new TagEntry.ValueGetter<T>(){
 
             @Override
@@ -147,31 +115,17 @@ public class TagGroupLoader<T> {
             @Override
             @Nullable
             public Collection<T> tag(Identifier id) {
-                return (Collection)map.get(id);
+                return (Collection)map2.get(id);
             }
         };
-        HashMultimap multimap = HashMultimap.create();
-        tags.forEach((arg_0, arg_1) -> TagGroupLoader.method_32843((Multimap)multimap, arg_0, arg_1));
-        tags.forEach((arg_0, arg_1) -> TagGroupLoader.method_32835((Multimap)multimap, arg_0, arg_1));
-        HashSet set = Sets.newHashSet();
-        tags.keySet().forEach(arg_0 -> this.method_32838(tags, (Multimap)multimap, set, valueGetter, map, arg_0));
-        return map;
+        DependencyTracker<Identifier, class_8522> dependencyTracker = new DependencyTracker<Identifier, class_8522>();
+        map.forEach((id, list) -> dependencyTracker.add((Identifier)id, new class_8522((List<TrackedEntry>)list)));
+        dependencyTracker.traverse((id, arg) -> this.resolveAll(valueGetter, arg.entries).ifLeft(missingReferences -> LOGGER.error("Couldn't load tag {} as it is missing following references: {}", id, (Object)missingReferences.stream().map(Objects::toString).collect(Collectors.joining(", ")))).ifRight(resolvedEntries -> map2.put(id, resolvedEntries)));
+        return map2;
     }
 
     public Map<Identifier, Collection<T>> load(ResourceManager manager) {
         return this.buildGroup(this.loadTags(manager));
-    }
-
-    private /* synthetic */ void method_32838(Map map, Multimap multimap, Set set, TagEntry.ValueGetter valueGetter, Map map2, Identifier tagId) {
-        TagGroupLoader.resolveAll(map, (Multimap<Identifier, Identifier>)multimap, set, tagId, (tagId2, entries) -> this.resolveAll(valueGetter, (List<TrackedEntry>)entries).ifLeft(missingReferences -> LOGGER.error("Couldn't load tag {} as it is missing following references: {}", tagId2, (Object)missingReferences.stream().map(Objects::toString).collect(Collectors.joining(", ")))).ifRight(resolvedEntries -> map2.put(tagId2, resolvedEntries)));
-    }
-
-    private static /* synthetic */ void method_32835(Multimap multimap, Identifier tagId, List entries) {
-        entries.forEach(entry -> entry.entry.forEachOptionalTagId(referencedTagId -> TagGroupLoader.addReference((Multimap<Identifier, Identifier>)multimap, tagId, referencedTagId)));
-    }
-
-    private static /* synthetic */ void method_32843(Multimap multimap, Identifier tagId, List entries) {
-        entries.forEach(entry -> entry.entry.forEachRequiredTagId(referencedTagId -> TagGroupLoader.addReference((Multimap<Identifier, Identifier>)multimap, tagId, referencedTagId)));
     }
 
     public static final class TrackedEntry
@@ -205,6 +159,45 @@ public class TagGroupLoader<T> {
 
         public String source() {
             return this.source;
+        }
+    }
+
+    static final class class_8522
+    extends Record
+    implements DependencyTracker.Dependencies<Identifier> {
+        final List<TrackedEntry> entries;
+
+        class_8522(List<TrackedEntry> list) {
+            this.entries = list;
+        }
+
+        @Override
+        public void forDependencies(Consumer<Identifier> callback) {
+            this.entries.forEach(trackedEntry -> trackedEntry.entry.forEachRequiredTagId(callback));
+        }
+
+        @Override
+        public void forOptionalDependencies(Consumer<Identifier> callback) {
+            this.entries.forEach(trackedEntry -> trackedEntry.entry.forEachOptionalTagId(callback));
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{class_8522.class, "entries", "entries"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{class_8522.class, "entries", "entries"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{class_8522.class, "entries", "entries"}, this, object);
+        }
+
+        public List<TrackedEntry> entries() {
+            return this.entries;
         }
     }
 }

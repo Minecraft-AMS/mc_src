@@ -17,16 +17,14 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.toast.Toast;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
-public class ToastManager
-extends DrawableHelper {
+public class ToastManager {
     private static final int SPACES = 5;
     private static final int ALL_OCCUPIED = -1;
     final MinecraftClient client;
@@ -38,13 +36,13 @@ extends DrawableHelper {
         this.client = client;
     }
 
-    public void draw(MatrixStack matrices) {
+    public void draw(DrawContext context) {
         if (this.client.options.hudHidden) {
             return;
         }
         int i = this.client.getWindow().getScaledWidth();
         this.visibleEntries.removeIf(visibleEntry -> {
-            if (visibleEntry != null && visibleEntry.draw(i, matrices)) {
+            if (visibleEntry != null && visibleEntry.draw(i, context)) {
                 this.occupiedSpaces.clear(visibleEntry.topIndex, visibleEntry.topIndex + visibleEntry.requiredSpaceCount);
                 return true;
             }
@@ -148,7 +146,7 @@ extends DrawableHelper {
             return f;
         }
 
-        public boolean draw(int x, MatrixStack matrices) {
+        public boolean draw(int x, DrawContext context) {
             long l = Util.getMeasuringTimeMs();
             if (this.startTime == -1L) {
                 this.startTime = l;
@@ -157,10 +155,10 @@ extends DrawableHelper {
             if (this.visibility == Toast.Visibility.SHOW && l - this.startTime <= 600L) {
                 this.showTime = l;
             }
-            matrices.push();
-            matrices.translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), this.topIndex * 32, 800.0f);
-            Toast.Visibility visibility = this.instance.draw(matrices, this.field_2245, l - this.showTime);
-            matrices.pop();
+            context.getMatrices().push();
+            context.getMatrices().translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), this.topIndex * 32, 800.0f);
+            Toast.Visibility visibility = this.instance.draw(context, this.field_2245, l - this.showTime);
+            context.getMatrices().pop();
             if (visibility != this.visibility) {
                 this.startTime = l - (long)((int)((1.0f - this.getDisappearProgress(l)) * 600.0f));
                 this.visibility = visibility;

@@ -34,7 +34,7 @@ extends AbstractSignBlock {
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        return world.getBlockState(pos.down()).getMaterial().isSolid();
+        return world.getBlockState(pos.down()).isSolid();
     }
 
     @Override
@@ -49,6 +49,11 @@ extends AbstractSignBlock {
             return Blocks.AIR.getDefaultState();
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+    }
+
+    @Override
+    public float getRotationDegrees(BlockState state) {
+        return RotationPropertyHelper.toDegrees(state.get(ROTATION));
     }
 
     @Override

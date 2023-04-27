@@ -23,6 +23,7 @@ import net.minecraft.client.render.block.entity.BedBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BellBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
+import net.minecraft.client.render.block.entity.BrushableBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.CampfireBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ChestBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.ConduitBlockEntityRenderer;
@@ -38,7 +39,6 @@ import net.minecraft.client.render.block.entity.ShulkerBoxBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SkullBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.StructureBlockBlockEntityRenderer;
-import net.minecraft.client.render.block.entity.SuspiciousSandBlockEntityRenderer;
 import net.minecraft.registry.Registries;
 
 @Environment(value=EnvType.CLIENT)
@@ -83,7 +83,7 @@ public class BlockEntityRendererFactories {
         BlockEntityRendererFactories.register(BlockEntityType.CONDUIT, ConduitBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.BELL, BellBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.CAMPFIRE, CampfireBlockEntityRenderer::new);
-        BlockEntityRendererFactories.register(BlockEntityType.SUSPICIOUS_SAND, SuspiciousSandBlockEntityRenderer::new);
+        BlockEntityRendererFactories.register(BlockEntityType.BRUSHABLE_BLOCK, BrushableBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.DECORATED_POT, DecoratedPotBlockEntityRenderer::new);
     }
 }

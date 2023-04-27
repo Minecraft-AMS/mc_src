@@ -148,7 +148,7 @@ public class WardenBrain {
     }
 
     public static void lookAtDisturbance(WardenEntity warden, BlockPos pos) {
-        if (!warden.world.getWorldBorder().contains(pos) || warden.getPrimeSuspect().isPresent() || warden.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).isPresent()) {
+        if (!warden.getWorld().getWorldBorder().contains(pos) || warden.getPrimeSuspect().isPresent() || warden.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).isPresent()) {
             return;
         }
         WardenBrain.resetDigCooldown(warden);

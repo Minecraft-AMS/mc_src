@@ -45,6 +45,8 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.item.Instrument;
 import net.minecraft.item.Instruments;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.ItemGroups;
 import net.minecraft.item.Items;
 import net.minecraft.loot.condition.LootConditionType;
 import net.minecraft.loot.condition.LootConditionTypes;
@@ -81,6 +83,7 @@ import net.minecraft.structure.pool.StructurePoolElementType;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.structure.rule.PosRuleTestType;
 import net.minecraft.structure.rule.RuleTestType;
+import net.minecraft.structure.rule.blockentity.RuleBlockEntityModifierType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.floatprovider.FloatProviderType;
@@ -135,6 +138,7 @@ public class Registries {
     public static final Registry<Identifier> CUSTOM_STAT = Registries.create(RegistryKeys.CUSTOM_STAT, registry -> Stats.JUMP);
     public static final DefaultedRegistry<ChunkStatus> CHUNK_STATUS = Registries.create(RegistryKeys.CHUNK_STATUS, "empty", (Registry<T> registry) -> ChunkStatus.EMPTY);
     public static final Registry<RuleTestType<?>> RULE_TEST = Registries.create(RegistryKeys.RULE_TEST, registry -> RuleTestType.ALWAYS_TRUE);
+    public static final Registry<RuleBlockEntityModifierType<?>> RULE_BLOCK_ENTITY_MODIFIER = Registries.create(RegistryKeys.RULE_BLOCK_ENTITY_MODIFIER, registry -> RuleBlockEntityModifierType.PASSTHROUGH);
     public static final Registry<PosRuleTestType<?>> POS_RULE_TEST = Registries.create(RegistryKeys.POS_RULE_TEST, registry -> PosRuleTestType.ALWAYS_TRUE);
     public static final Registry<ScreenHandlerType<?>> SCREEN_HANDLER = Registries.create(RegistryKeys.SCREEN_HANDLER, registry -> ScreenHandlerType.ANVIL);
     public static final Registry<RecipeType<?>> RECIPE_TYPE = Registries.create(RegistryKeys.RECIPE_TYPE, registry -> RecipeType.CRAFTING);
@@ -183,7 +187,8 @@ public class Registries {
     public static final Registry<FrogVariant> FROG_VARIANT = Registries.create(RegistryKeys.FROG_VARIANT, registry -> FrogVariant.TEMPERATE);
     public static final Registry<BannerPattern> BANNER_PATTERN = Registries.create(RegistryKeys.BANNER_PATTERN, BannerPatterns::registerAndGetDefault);
     public static final Registry<Instrument> INSTRUMENT = Registries.create(RegistryKeys.INSTRUMENT, Instruments::registerAndGetDefault);
-    public static final Registry<String> DECORATED_POT_PATTERNS = Registries.create(RegistryKeys.DECORATED_POT_PATTERNS, DecoratedPotPatterns::registerAndGetDefault);
+    public static final Registry<String> DECORATED_POT_PATTERN = Registries.create(RegistryKeys.DECORATED_POT_PATTERN, DecoratedPotPatterns::registerAndGetDefault);
+    public static final Registry<ItemGroup> ITEM_GROUP = Registries.create(RegistryKeys.ITEM_GROUP, ItemGroups::registerAndGetDefault);
     public static final Registry<? extends Registry<?>> REGISTRIES = ROOT;
 
     private static <T> Registry<T> create(RegistryKey<? extends Registry<T>> key, Initializer<T> initializer) {

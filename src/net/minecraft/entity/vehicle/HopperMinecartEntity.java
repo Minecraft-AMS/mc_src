@@ -90,16 +90,16 @@ implements Hopper {
     @Override
     public void tick() {
         super.tick();
-        if (!this.world.isClient && this.isAlive() && this.isEnabled() && this.canOperate()) {
+        if (!this.getWorld().isClient && this.isAlive() && this.isEnabled() && this.canOperate()) {
             this.markDirty();
         }
     }
 
     public boolean canOperate() {
-        if (HopperBlockEntity.extract(this.world, this)) {
+        if (HopperBlockEntity.extract(this.getWorld(), this)) {
             return true;
         }
-        List<Entity> list = this.world.getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.25, 0.0, 0.25), EntityPredicates.VALID_ENTITY);
+        List<Entity> list = this.getWorld().getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.25, 0.0, 0.25), EntityPredicates.VALID_ENTITY);
         for (ItemEntity itemEntity : list) {
             if (!HopperBlockEntity.extract(this, itemEntity)) continue;
             return true;

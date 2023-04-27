@@ -97,6 +97,8 @@ public class ChunkSerializer {
     public static final String SKY_LIGHT_KEY = "SkyLight";
 
     public static ProtoChunk deserialize(ServerWorld world, PointOfInterestStorage poiStorage, ChunkPos chunkPos, NbtCompound nbt) {
+        int o;
+        NbtList nbtList3;
         Chunk chunk;
         ChunkPos chunkPos2 = new ChunkPos(nbt.getInt(X_POS_KEY), nbt.getInt(Z_POS_KEY));
         if (!Objects.equals(chunkPos, chunkPos2)) {
@@ -122,8 +124,9 @@ public class ChunkSerializer {
                 ChunkSection chunkSection;
                 PalettedContainer palettedContainer = nbtCompound.contains("block_states", 10) ? (PalettedContainer)CODEC.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound.getCompound("block_states")).promotePartial(errorMessage -> ChunkSerializer.logRecoverableError(chunkPos, k, errorMessage)).getOrThrow(false, arg_0 -> ((Logger)LOGGER).error(arg_0)) : new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
                 ReadableContainer<RegistryEntry<Biome>> readableContainer = nbtCompound.contains("biomes", 10) ? (ReadableContainer)codec.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound.getCompound("biomes")).promotePartial(errorMessage -> ChunkSerializer.logRecoverableError(chunkPos, k, errorMessage)).getOrThrow(false, arg_0 -> ((Logger)LOGGER).error(arg_0)) : new PalettedContainer<RegistryEntry<Biome>>(registry.getIndexedEntries(), registry.entryOf(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
-                chunkSections[l] = chunkSection = new ChunkSection(k, palettedContainer, readableContainer);
-                poiStorage.initForPalette(chunkPos, chunkSection);
+                chunkSections[l] = chunkSection = new ChunkSection(palettedContainer, readableContainer);
+                ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunkPos, k);
+                poiStorage.initForPalette(chunkSectionPos, chunkSection);
             }
             boolean bl4 = nbtCompound.contains(BLOCK_LIGHT_KEY, 7);
             boolean bl6 = bl5 = bl2 && nbtCompound.contains(SKY_LIGHT_KEY, 7);
@@ -133,10 +136,10 @@ public class ChunkSerializer {
                 bl3 = true;
             }
             if (bl4) {
-                lightingProvider.enqueueSectionData(LightType.BLOCK, ChunkSectionPos.from(chunkPos, k), new ChunkNibbleArray(nbtCompound.getByteArray(BLOCK_LIGHT_KEY)), true);
+                lightingProvider.enqueueSectionData(LightType.BLOCK, ChunkSectionPos.from(chunkPos, k), new ChunkNibbleArray(nbtCompound.getByteArray(BLOCK_LIGHT_KEY)));
             }
             if (!bl5) continue;
-            lightingProvider.enqueueSectionData(LightType.SKY, ChunkSectionPos.from(chunkPos, k), new ChunkNibbleArray(nbtCompound.getByteArray(SKY_LIGHT_KEY)), true);
+            lightingProvider.enqueueSectionData(LightType.SKY, ChunkSectionPos.from(chunkPos, k), new ChunkNibbleArray(nbtCompound.getByteArray(SKY_LIGHT_KEY)));
         }
         long m = nbt.getLong("InhabitedTime");
         ChunkStatus.ChunkType chunkType = ChunkSerializer.getChunkType(nbt);
@@ -146,7 +149,6 @@ public class ChunkSerializer {
             ChunkTickScheduler<Fluid> chunkTickScheduler2 = ChunkTickScheduler.create(nbt.getList(FLUID_TICKS, 10), id -> Registries.FLUID.getOrEmpty(Identifier.tryParse(id)), chunkPos);
             chunk = new WorldChunk(world.toServerWorld(), chunkPos, upgradeData, chunkTickScheduler, chunkTickScheduler2, m, chunkSections, ChunkSerializer.getEntityLoadingCallback(world, nbt), blendingData);
         } else {
-            boolean bl6;
             SimpleTickScheduler<Block> simpleTickScheduler = SimpleTickScheduler.tick(nbt.getList(BLOCK_TICKS, 10), id -> Registries.BLOCK.getOrEmpty(Identifier.tryParse(id)), chunkPos);
             SimpleTickScheduler<Fluid> simpleTickScheduler2 = SimpleTickScheduler.tick(nbt.getList(FLUID_TICKS, 10), id -> Registries.FLUID.getOrEmpty(Identifier.tryParse(id)), chunkPos);
             ProtoChunk protoChunk = new ProtoChunk(chunkPos, upgradeData, chunkSections, simpleTickScheduler, simpleTickScheduler2, world, registry, blendingData);
@@ -157,16 +159,8 @@ public class ChunkSerializer {
             }
             ChunkStatus chunkStatus = ChunkStatus.byId(nbt.getString("Status"));
             protoChunk.setStatus(chunkStatus);
-            if (chunkStatus.isAtLeast(ChunkStatus.FEATURES)) {
+            if (chunkStatus.isAtLeast(ChunkStatus.INITIALIZE_LIGHT)) {
                 protoChunk.setLightingProvider(lightingProvider);
-            }
-            BelowZeroRetrogen belowZeroRetrogen = protoChunk.getBelowZeroRetrogen();
-            boolean bl7 = bl6 = chunkStatus.isAtLeast(ChunkStatus.LIGHT) || belowZeroRetrogen != null && belowZeroRetrogen.getTargetStatus().isAtLeast(ChunkStatus.LIGHT);
-            if (!bl && bl6) {
-                for (BlockPos blockPos : BlockPos.iterate(chunkPos.getStartX(), world.getBottomY(), chunkPos.getStartZ(), chunkPos.getEndX(), world.getTopY() - 1, chunkPos.getEndZ())) {
-                    if (chunk.getBlockState(blockPos).getLuminance() == 0) continue;
-                    protoChunk.addLightSource(blockPos);
-                }
             }
         }
         chunk.setLightOn(bl);
@@ -189,8 +183,8 @@ public class ChunkSerializer {
         }
         NbtList nbtList2 = nbt.getList("PostProcessing", 9);
         for (int n = 0; n < nbtList2.size(); ++n) {
-            NbtList nbtList3 = nbtList2.getList(n);
-            for (int o = 0; o < nbtList3.size(); ++o) {
+            nbtList3 = nbtList2.getList(n);
+            for (o = 0; o < nbtList3.size(); ++o) {
                 chunk.markBlockForPostProcessing(nbtList3.getShort(o), n);
             }
         }
@@ -198,8 +192,8 @@ public class ChunkSerializer {
             return new ReadOnlyChunk((WorldChunk)chunk, false);
         }
         ProtoChunk protoChunk2 = (ProtoChunk)chunk;
-        NbtList nbtList3 = nbt.getList("entities", 10);
-        for (int o = 0; o < nbtList3.size(); ++o) {
+        nbtList3 = nbt.getList("entities", 10);
+        for (o = 0; o < nbtList3.size(); ++o) {
             protoChunk2.addEntity(nbtList3.getCompound(o));
         }
         NbtList nbtList4 = nbt.getList("block_entities", 10);
@@ -207,19 +201,10 @@ public class ChunkSerializer {
             NbtCompound nbtCompound4 = nbtList4.getCompound(p);
             chunk.addPendingBlockEntityNbt(nbtCompound4);
         }
-        NbtList nbtList5 = nbt.getList("Lights", 9);
-        for (int q = 0; q < nbtList5.size(); ++q) {
-            ChunkSection chunkSection2 = chunkSections[q];
-            if (chunkSection2 == null || chunkSection2.isEmpty()) continue;
-            NbtList nbtList6 = nbtList5.getList(q);
-            for (int r = 0; r < nbtList6.size(); ++r) {
-                protoChunk2.addLightSource(nbtList6.getShort(r), q);
-            }
-        }
-        NbtCompound nbtCompound4 = nbt.getCompound("CarvingMasks");
-        for (String string2 : nbtCompound4.getKeys()) {
+        NbtCompound nbtCompound5 = nbt.getCompound("CarvingMasks");
+        for (String string2 : nbtCompound5.getKeys()) {
             GenerationStep.Carver carver = GenerationStep.Carver.valueOf(string2);
-            protoChunk2.setCarvingMask(carver, new CarvingMask(nbtCompound4.getLongArray(string2), chunk.getBottomY()));
+            protoChunk2.setCarvingMask(carver, new CarvingMask(nbtCompound5.getLongArray(string2), chunk.getBottomY()));
         }
         return protoChunk2;
     }
@@ -298,7 +283,6 @@ public class ChunkSerializer {
             NbtList nbtList3 = new NbtList();
             nbtList3.addAll(protoChunk.getEntities());
             nbtCompound.put("entities", nbtList3);
-            nbtCompound.put("Lights", ChunkSerializer.toNbt(protoChunk.getLightSourcesBySection()));
             nbtCompound3 = new NbtCompound();
             for (GenerationStep.Carver carver : GenerationStep.Carver.values()) {
                 CarvingMask carvingMask = protoChunk.getCarvingMask(carver);

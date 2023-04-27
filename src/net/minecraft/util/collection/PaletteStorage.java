@@ -20,7 +20,7 @@ public interface PaletteStorage {
 
     public void forEach(IntConsumer var1);
 
-    public void method_39892(int[] var1);
+    public void writePaletteIndices(int[] var1);
 
     public PaletteStorage copy();
 }

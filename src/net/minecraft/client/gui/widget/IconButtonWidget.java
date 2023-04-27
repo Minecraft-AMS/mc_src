@@ -10,8 +10,8 @@ package net.minecraft.client.gui.widget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -44,16 +44,16 @@ extends ButtonWidget {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        super.renderButton(matrices, mouseX, mouseY, delta);
-        this.drawTexture(matrices, this.iconTexture, this.getIconX(), this.getIconY(), this.iconU, this.iconV, this.iconHoveredVOffset, this.iconWidth, this.iconHeight, this.iconTextureWidth, this.iconTextureHeight);
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.renderButton(context, mouseX, mouseY, delta);
+        this.drawTexture(context, this.iconTexture, this.getIconX(), this.getIconY(), this.iconU, this.iconV, this.iconHoveredVOffset, this.iconWidth, this.iconHeight, this.iconTextureWidth, this.iconTextureHeight);
     }
 
     @Override
-    public void drawMessage(MatrixStack matrices, TextRenderer textRenderer, int color) {
+    public void drawMessage(DrawContext context, TextRenderer textRenderer, int color) {
         int i = this.getX() + 2;
         int j = this.getX() + this.getWidth() - this.iconWidth - 6;
-        IconButtonWidget.drawScrollableText(matrices, textRenderer, this.getMessage(), i, this.getY(), j, this.getY() + this.getHeight(), color);
+        IconButtonWidget.drawScrollableText(context, textRenderer, this.getMessage(), i, this.getY(), j, this.getY() + this.getHeight(), color);
     }
 
     private int getIconX() {

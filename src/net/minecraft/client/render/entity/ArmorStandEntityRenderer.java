@@ -48,7 +48,7 @@ extends LivingEntityRenderer<ArmorStandEntity, ArmorStandArmorEntityModel> {
     @Override
     protected void setupTransforms(ArmorStandEntity armorStandEntity, MatrixStack matrixStack, float f, float g, float h) {
         matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - g));
-        float i = (float)(armorStandEntity.world.getTime() - armorStandEntity.lastHitTime) + h;
+        float i = (float)(armorStandEntity.getWorld().getTime() - armorStandEntity.lastHitTime) + h;
         if (i < 5.0f) {
             matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(MathHelper.sin(i / 1.5f * (float)Math.PI) * 3.0f));
         }

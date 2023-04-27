@@ -112,20 +112,20 @@ VariantHolder<Type> {
             player2.setStackInHand(hand, itemStack3);
             SoundEvent soundEvent = bl ? SoundEvents.ENTITY_MOOSHROOM_SUSPICIOUS_MILK : SoundEvents.ENTITY_MOOSHROOM_MILK;
             this.playSound(soundEvent, 1.0f, 1.0f);
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         if (itemStack.isOf(Items.SHEARS) && this.isShearable()) {
             this.sheared(SoundCategory.PLAYERS);
             this.emitGameEvent(GameEvent.SHEAR, player2);
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         if (this.getVariant() == Type.BROWN && itemStack.isIn(ItemTags.SMALL_FLOWERS)) {
             if (this.stewEffect != null) {
                 for (int i = 0; i < 2; ++i) {
-                    this.world.addParticle(ParticleTypes.SMOKE, this.getX() + this.random.nextDouble() / 2.0, this.getBodyY(0.5), this.getZ() + this.random.nextDouble() / 2.0, 0.0, this.random.nextDouble() / 5.0, 0.0);
+                    this.getWorld().addParticle(ParticleTypes.SMOKE, this.getX() + this.random.nextDouble() / 2.0, this.getBodyY(0.5), this.getZ() + this.random.nextDouble() / 2.0, 0.0, this.random.nextDouble() / 5.0, 0.0);
                 }
             } else {
                 Optional<Pair<StatusEffect, Integer>> optional = this.getStewEffectFrom(itemStack);
@@ -137,13 +137,13 @@ VariantHolder<Type> {
                     itemStack.decrement(1);
                 }
                 for (int j = 0; j < 4; ++j) {
-                    this.world.addParticle(ParticleTypes.EFFECT, this.getX() + this.random.nextDouble() / 2.0, this.getBodyY(0.5), this.getZ() + this.random.nextDouble() / 2.0, 0.0, this.random.nextDouble() / 5.0, 0.0);
+                    this.getWorld().addParticle(ParticleTypes.EFFECT, this.getX() + this.random.nextDouble() / 2.0, this.getBodyY(0.5), this.getZ() + this.random.nextDouble() / 2.0, 0.0, this.random.nextDouble() / 5.0, 0.0);
                 }
                 this.stewEffect = (StatusEffect)pair.getLeft();
                 this.stewEffectDuration = (Integer)pair.getRight();
                 this.playSound(SoundEvents.ENTITY_MOOSHROOM_EAT, 2.0f, 1.0f);
             }
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         return super.interactMob(player2, hand);
     }
@@ -151,9 +151,9 @@ VariantHolder<Type> {
     @Override
     public void sheared(SoundCategory shearedSoundCategory) {
         CowEntity cowEntity;
-        this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_MOOSHROOM_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
-        if (!this.world.isClient() && (cowEntity = EntityType.COW.create(this.world)) != null) {
-            ((ServerWorld)this.world).spawnParticles(ParticleTypes.EXPLOSION, this.getX(), this.getBodyY(0.5), this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
+        this.getWorld().playSoundFromEntity(null, this, SoundEvents.ENTITY_MOOSHROOM_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
+        if (!this.getWorld().isClient() && (cowEntity = EntityType.COW.create(this.getWorld())) != null) {
+            ((ServerWorld)this.getWorld()).spawnParticles(ParticleTypes.EXPLOSION, this.getX(), this.getBodyY(0.5), this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
             this.discard();
             cowEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
             cowEntity.setHealth(this.getHealth());
@@ -166,9 +166,9 @@ VariantHolder<Type> {
                 cowEntity.setPersistent();
             }
             cowEntity.setInvulnerable(this.isInvulnerable());
-            this.world.spawnEntity(cowEntity);
+            this.getWorld().spawnEntity(cowEntity);
             for (int i = 0; i < 5; ++i) {
-                this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getBodyY(1.0), this.getZ(), new ItemStack(this.getVariant().mushroom.getBlock())));
+                this.getWorld().spawnEntity(new ItemEntity(this.getWorld(), this.getX(), this.getBodyY(1.0), this.getZ(), new ItemStack(this.getVariant().mushroom.getBlock())));
             }
         }
     }
@@ -192,10 +192,10 @@ VariantHolder<Type> {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         this.setVariant(Type.fromName(nbt.getString("Type")));
-        if (nbt.contains("EffectId", 1)) {
+        if (nbt.contains("EffectId", 99)) {
             this.stewEffect = StatusEffect.byRawId(nbt.getInt("EffectId"));
         }
-        if (nbt.contains("EffectDuration", 3)) {
+        if (nbt.contains("EffectDuration", 99)) {
             this.stewEffectDuration = nbt.getInt("EffectDuration");
         }
     }

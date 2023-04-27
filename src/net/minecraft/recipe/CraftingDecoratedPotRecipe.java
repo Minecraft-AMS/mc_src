@@ -3,7 +3,6 @@
  */
 package net.minecraft.recipe;
 
-import java.util.List;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.DecoratedPotBlockEntity;
 import net.minecraft.inventory.CraftingInventory;
@@ -37,7 +36,7 @@ extends SpecialCraftingRecipe {
                 case 3: 
                 case 5: 
                 case 7: {
-                    if (itemStack.isIn(ItemTags.DECORATED_POT_SHARDS)) continue block3;
+                    if (itemStack.isIn(ItemTags.DECORATED_POT_INGREDIENTS)) continue block3;
                     return false;
                 }
                 default: {
@@ -51,9 +50,13 @@ extends SpecialCraftingRecipe {
 
     @Override
     public ItemStack craft(CraftingInventory craftingInventory, DynamicRegistryManager dynamicRegistryManager) {
+        DecoratedPotBlockEntity.Sherds sherds = new DecoratedPotBlockEntity.Sherds(craftingInventory.getStack(1).getItem(), craftingInventory.getStack(3).getItem(), craftingInventory.getStack(5).getItem(), craftingInventory.getStack(7).getItem());
+        return CraftingDecoratedPotRecipe.getPotStackWith(sherds);
+    }
+
+    public static ItemStack getPotStackWith(DecoratedPotBlockEntity.Sherds sherds) {
         ItemStack itemStack = Items.DECORATED_POT.getDefaultStack();
-        NbtCompound nbtCompound = new NbtCompound();
-        DecoratedPotBlockEntity.writeShardsToNbt(List.of(craftingInventory.getStack(1).getItem(), craftingInventory.getStack(3).getItem(), craftingInventory.getStack(5).getItem(), craftingInventory.getStack(7).getItem()), nbtCompound);
+        NbtCompound nbtCompound = sherds.toNbt(new NbtCompound());
         BlockItem.setBlockEntityNbt(itemStack, BlockEntityType.DECORATED_POT, nbtCompound);
         return itemStack;
     }

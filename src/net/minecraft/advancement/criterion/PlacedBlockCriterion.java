@@ -63,7 +63,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, BlockPos blockPos, ItemStack stack) {
         BlockState blockState = player.getWorld().getBlockState(blockPos);
-        this.trigger(player, conditions -> conditions.matches(blockState, blockPos, player.getWorld(), stack));
+        this.trigger(player, conditions -> conditions.matches(blockState, blockPos, player.getServerWorld(), stack));
     }
 
     @Override

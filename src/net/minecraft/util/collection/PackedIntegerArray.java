@@ -138,7 +138,7 @@ implements PaletteStorage {
     }
 
     @Override
-    public void method_39892(int[] is) {
+    public void writePaletteIndices(int[] out) {
         int m;
         long l;
         int k;
@@ -147,7 +147,7 @@ implements PaletteStorage {
         for (k = 0; k < i - 1; ++k) {
             l = this.data[k];
             for (m = 0; m < this.elementsPerLong; ++m) {
-                is[j + m] = (int)(l & this.maxValue);
+                out[j + m] = (int)(l & this.maxValue);
                 l >>= this.elementBits;
             }
             j += this.elementsPerLong;
@@ -156,7 +156,7 @@ implements PaletteStorage {
         if (k > 0) {
             l = this.data[i - 1];
             for (m = 0; m < k; ++m) {
-                is[j + m] = (int)(l & this.maxValue);
+                out[j + m] = (int)(l & this.maxValue);
                 l >>= this.elementBits;
             }
         }

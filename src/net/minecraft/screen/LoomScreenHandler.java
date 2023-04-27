@@ -266,8 +266,7 @@ extends ScreenHandler {
         ItemStack itemStack3 = ItemStack.EMPTY;
         if (!itemStack.isEmpty() && !itemStack2.isEmpty()) {
             NbtList nbtList;
-            itemStack3 = itemStack.copy();
-            itemStack3.setCount(1);
+            itemStack3 = itemStack.copyWithCount(1);
             DyeColor dyeColor = ((DyeItem)itemStack2.getItem()).getColor();
             NbtCompound nbtCompound = BlockItem.getBlockEntityNbt(itemStack3);
             if (nbtCompound != null && nbtCompound.contains("Patterns", 9)) {

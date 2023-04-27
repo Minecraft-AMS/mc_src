@@ -61,13 +61,13 @@ extends AbstractPhase {
     private void tickInRange() {
         int i;
         if (this.path != null && this.path.isFinished()) {
-            BlockPos blockPos = this.dragon.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(EndPortalFeature.ORIGIN));
+            BlockPos blockPos = this.dragon.getWorld().getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(EndPortalFeature.ORIGIN));
             int n = i = this.dragon.getFight() == null ? 0 : this.dragon.getFight().getAliveEndCrystals();
             if (this.dragon.getRandom().nextInt(i + 3) == 0) {
                 this.dragon.getPhaseManager().setPhase(PhaseType.LANDING_APPROACH);
                 return;
             }
-            PlayerEntity playerEntity = this.dragon.world.getClosestPlayer(PLAYERS_IN_RANGE_PREDICATE, this.dragon, (double)blockPos.getX(), (double)blockPos.getY(), blockPos.getZ());
+            PlayerEntity playerEntity = this.dragon.getWorld().getClosestPlayer(PLAYERS_IN_RANGE_PREDICATE, this.dragon, (double)blockPos.getX(), (double)blockPos.getY(), blockPos.getZ());
             double d = playerEntity != null ? blockPos.getSquaredDistance(playerEntity.getPos()) / 512.0 : 64.0;
             if (playerEntity != null && (this.dragon.getRandom().nextInt((int)(d + 2.0)) == 0 || this.dragon.getRandom().nextInt(i + 2) == 0)) {
                 this.strafePlayer(playerEntity);

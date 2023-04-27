@@ -85,11 +85,11 @@ implements TypeSpecificPredicate {
     }
 
     @Override
-    public boolean test(Entity entity2, ServerWorld world, @Nullable Vec3d pos) {
-        if (!(entity2 instanceof ServerPlayerEntity)) {
+    public boolean test(Entity entity, ServerWorld world, @Nullable Vec3d pos) {
+        if (!(entity instanceof ServerPlayerEntity)) {
             return false;
         }
-        ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity2;
+        ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
         if (!this.experienceLevel.test(serverPlayerEntity.experienceLevel)) {
             return false;
         }
@@ -120,12 +120,12 @@ implements TypeSpecificPredicate {
             Vec3d vec3d = serverPlayerEntity.getEyePos();
             Vec3d vec3d2 = serverPlayerEntity.getRotationVec(1.0f);
             Vec3d vec3d3 = vec3d.add(vec3d2.x * 100.0, vec3d2.y * 100.0, vec3d2.z * 100.0);
-            EntityHitResult entityHitResult = ProjectileUtil.getEntityCollision(serverPlayerEntity.world, serverPlayerEntity, vec3d, vec3d3, new Box(vec3d, vec3d3).expand(1.0), entity -> !entity.isSpectator(), 0.0f);
+            EntityHitResult entityHitResult = ProjectileUtil.getEntityCollision(serverPlayerEntity.getWorld(), serverPlayerEntity, vec3d, vec3d3, new Box(vec3d, vec3d3).expand(1.0), hitEntity -> !hitEntity.isSpectator(), 0.0f);
             if (entityHitResult == null || entityHitResult.getType() != HitResult.Type.ENTITY) {
                 return false;
             }
-            Entity entity22 = entityHitResult.getEntity();
-            if (!this.lookingAt.test(serverPlayerEntity, entity22) || !serverPlayerEntity.canSee(entity22)) {
+            Entity entity2 = entityHitResult.getEntity();
+            if (!this.lookingAt.test(serverPlayerEntity, entity2) || !serverPlayerEntity.canSee(entity2)) {
                 return false;
             }
         }

@@ -160,7 +160,7 @@ implements VariantHolder<Type> {
 
     @Override
     public double getMountedHeightOffset() {
-        return this.getVariant() == Type.BAMBOO ? 0.3 : -0.1;
+        return this.getVariant() == Type.BAMBOO ? 0.25 : -0.1;
     }
 
     @Override
@@ -169,7 +169,7 @@ implements VariantHolder<Type> {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (this.world.isClient || this.isRemoved()) {
+        if (this.getWorld().isClient || this.isRemoved()) {
             return true;
         }
         this.setDamageWobbleSide(-this.getDamageWobbleSide());
@@ -179,7 +179,7 @@ implements VariantHolder<Type> {
         this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
         boolean bl2 = bl = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).getAbilities().creativeMode;
         if (bl || this.getDamageWobbleStrength() > 40.0f) {
-            if (!bl && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+            if (!bl && this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                 this.dropItems(source);
             }
             this.discard();
@@ -193,16 +193,16 @@ implements VariantHolder<Type> {
 
     @Override
     public void onBubbleColumnSurfaceCollision(boolean drag) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.onBubbleColumnSurface = true;
             this.bubbleColumnIsDrag = drag;
             if (this.getBubbleWobbleTicks() == 0) {
                 this.setBubbleWobbleTicks(60);
             }
         }
-        this.world.addParticle(ParticleTypes.SPLASH, this.getX() + (double)this.random.nextFloat(), this.getY() + 0.7, this.getZ() + (double)this.random.nextFloat(), 0.0, 0.0, 0.0);
+        this.getWorld().addParticle(ParticleTypes.SPLASH, this.getX() + (double)this.random.nextFloat(), this.getY() + 0.7, this.getZ() + (double)this.random.nextFloat(), 0.0, 0.0, 0.0);
         if (this.random.nextInt(20) == 0) {
-            this.world.playSound(this.getX(), this.getY(), this.getZ(), this.getSplashSound(), this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat(), false);
+            this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), this.getSplashSound(), this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat(), false);
             this.emitGameEvent(GameEvent.SPLASH, this.getControllingPassenger());
         }
     }
@@ -264,7 +264,7 @@ implements VariantHolder<Type> {
         this.lastLocation = this.location;
         this.location = this.checkLocation();
         this.ticksUnderwater = this.location == Location.UNDER_WATER || this.location == Location.UNDER_FLOWING_WATER ? (this.ticksUnderwater += 1.0f) : 0.0f;
-        if (!this.world.isClient && this.ticksUnderwater >= 60.0f) {
+        if (!this.getWorld().isClient && this.ticksUnderwater >= 60.0f) {
             this.removeAllPassengers();
         }
         if (this.getDamageWobbleTicks() > 0) {
@@ -280,9 +280,9 @@ implements VariantHolder<Type> {
                 this.setPaddleMovings(false, false);
             }
             this.updateVelocity();
-            if (this.world.isClient) {
+            if (this.getWorld().isClient) {
                 this.updatePaddles();
-                this.world.sendPacket(new BoatPaddleStateC2SPacket(this.isPaddleMoving(0), this.isPaddleMoving(1)));
+                this.getWorld().sendPacket(new BoatPaddleStateC2SPacket(this.isPaddleMoving(0), this.isPaddleMoving(1)));
             }
             this.move(MovementType.SELF, this.getVelocity());
         } else {
@@ -296,7 +296,7 @@ implements VariantHolder<Type> {
                     Vec3d vec3d = this.getRotationVec(1.0f);
                     double d = i == 1 ? -vec3d.z : vec3d.z;
                     double e = i == 1 ? vec3d.x : -vec3d.x;
-                    this.world.playSound(null, this.getX() + d, this.getY(), this.getZ() + e, soundEvent, this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat());
+                    this.getWorld().playSound(null, this.getX() + d, this.getY(), this.getZ() + e, soundEvent, this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat());
                 }
                 int n = i;
                 this.paddlePhases[n] = this.paddlePhases[n] + 0.3926991f;
@@ -305,9 +305,9 @@ implements VariantHolder<Type> {
             this.paddlePhases[i] = 0.0f;
         }
         this.checkBlockCollision();
-        List<Entity> list = this.world.getOtherEntities(this, this.getBoundingBox().expand(0.2f, -0.01f, 0.2f), EntityPredicates.canBePushedBy(this));
+        List<Entity> list = this.getWorld().getOtherEntities(this, this.getBoundingBox().expand(0.2f, -0.01f, 0.2f), EntityPredicates.canBePushedBy(this));
         if (!list.isEmpty()) {
-            boolean bl = !this.world.isClient && !(this.getControllingPassenger() instanceof PlayerEntity);
+            boolean bl = !this.getWorld().isClient && !(this.getControllingPassenger() instanceof PlayerEntity);
             for (int j = 0; j < list.size(); ++j) {
                 Entity entity = list.get(j);
                 if (entity.hasPassenger(this)) continue;
@@ -321,12 +321,12 @@ implements VariantHolder<Type> {
     }
 
     private void handleBubbleColumn() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             int i = this.getBubbleWobbleTicks();
             this.bubbleWobbleStrength = i > 0 ? (this.bubbleWobbleStrength += 0.05f) : (this.bubbleWobbleStrength -= 0.1f);
             this.bubbleWobbleStrength = MathHelper.clamp(this.bubbleWobbleStrength, 0.0f, 1.0f);
             this.lastBubbleWobble = this.bubbleWobble;
-            this.bubbleWobble = 10.0f * (float)Math.sin(0.5f * (float)this.world.getTime()) * this.bubbleWobbleStrength;
+            this.bubbleWobble = 10.0f * (float)Math.sin(0.5f * (float)this.getWorld().getTime()) * this.bubbleWobbleStrength;
         } else {
             int i;
             if (!this.onBubbleColumnSurface) {
@@ -427,9 +427,9 @@ implements VariantHolder<Type> {
             for (int p = i; p < j; ++p) {
                 for (int q = m; q < n; ++q) {
                     mutable.set(p, o, q);
-                    FluidState fluidState = this.world.getFluidState(mutable);
+                    FluidState fluidState = this.getWorld().getFluidState(mutable);
                     if (fluidState.isIn(FluidTags.WATER)) {
-                        f = Math.max(f, fluidState.getHeight(this.world, mutable));
+                        f = Math.max(f, fluidState.getHeight(this.getWorld(), mutable));
                     }
                     if (f >= 1.0f) continue block0;
                 }
@@ -460,8 +460,8 @@ implements VariantHolder<Type> {
                 for (int s = k; s < l; ++s) {
                     if (r > 0 && (s == k || s == l - 1)) continue;
                     mutable.set(p, s, q);
-                    BlockState blockState = this.world.getBlockState(mutable);
-                    if (blockState.getBlock() instanceof LilyPadBlock || !VoxelShapes.matchesAnywhere(blockState.getCollisionShape(this.world, mutable).offset(p, s, q), voxelShape, BooleanBiFunction.AND)) continue;
+                    BlockState blockState = this.getWorld().getBlockState(mutable);
+                    if (blockState.getBlock() instanceof LilyPadBlock || !VoxelShapes.matchesAnywhere(blockState.getCollisionShape(this.getWorld(), mutable).offset(p, s, q), voxelShape, BooleanBiFunction.AND)) continue;
                     f += blockState.getBlock().getSlipperiness();
                     ++o;
                 }
@@ -485,9 +485,9 @@ implements VariantHolder<Type> {
             for (int p = k; p < l; ++p) {
                 for (int q = m; q < n; ++q) {
                     mutable.set(o, p, q);
-                    FluidState fluidState = this.world.getFluidState(mutable);
+                    FluidState fluidState = this.getWorld().getFluidState(mutable);
                     if (!fluidState.isIn(FluidTags.WATER)) continue;
-                    float f = (float)p + fluidState.getHeight(this.world, mutable);
+                    float f = (float)p + fluidState.getHeight(this.getWorld(), mutable);
                     this.waterLevel = Math.max((double)f, this.waterLevel);
                     bl |= box.minY < (double)f;
                 }
@@ -512,8 +512,8 @@ implements VariantHolder<Type> {
             for (int p = k; p < l; ++p) {
                 for (int q = m; q < n; ++q) {
                     mutable.set(o, p, q);
-                    FluidState fluidState = this.world.getFluidState(mutable);
-                    if (!fluidState.isIn(FluidTags.WATER) || !(d < (double)((float)mutable.getY() + fluidState.getHeight(this.world, mutable)))) continue;
+                    FluidState fluidState = this.getWorld().getFluidState(mutable);
+                    if (!fluidState.isIn(FluidTags.WATER) || !(d < (double)((float)mutable.getY() + fluidState.getHeight(this.getWorld(), mutable)))) continue;
                     if (fluidState.isStill()) {
                         bl = true;
                         continue;
@@ -625,24 +625,24 @@ implements VariantHolder<Type> {
 
     @Override
     public Vec3d updatePassengerForDismount(LivingEntity passenger) {
-        double e;
         Vec3d vec3d = BoatEntity.getPassengerDismountOffset(this.getWidth() * MathHelper.SQUARE_ROOT_OF_TWO, passenger.getWidth(), passenger.getYaw());
         double d = this.getX() + vec3d.x;
-        BlockPos blockPos = BlockPos.ofFloored(d, this.getBoundingBox().maxY, e = this.getZ() + vec3d.z);
+        double e = this.getZ() + vec3d.z;
+        BlockPos blockPos = BlockPos.ofFloored(d, this.getBoundingBox().maxY, e);
         BlockPos blockPos2 = blockPos.down();
-        if (!this.world.isWater(blockPos2)) {
+        if (!this.getWorld().isWater(blockPos2)) {
             double g;
             ArrayList list = Lists.newArrayList();
-            double f = this.world.getDismountHeight(blockPos);
+            double f = this.getWorld().getDismountHeight(blockPos);
             if (Dismounting.canDismountInBlock(f)) {
                 list.add(new Vec3d(d, (double)blockPos.getY() + f, e));
             }
-            if (Dismounting.canDismountInBlock(g = this.world.getDismountHeight(blockPos2))) {
+            if (Dismounting.canDismountInBlock(g = this.getWorld().getDismountHeight(blockPos2))) {
                 list.add(new Vec3d(d, (double)blockPos2.getY() + g, e));
             }
             for (EntityPose entityPose : passenger.getPoses()) {
                 for (Vec3d vec3d2 : list) {
-                    if (!Dismounting.canPlaceEntityAt(this.world, vec3d2, passenger, entityPose)) continue;
+                    if (!Dismounting.canPlaceEntityAt(this.getWorld(), vec3d2, passenger, entityPose)) continue;
                     passenger.setPose(entityPose);
                     return vec3d2;
                 }
@@ -683,7 +683,7 @@ implements VariantHolder<Type> {
             return ActionResult.PASS;
         }
         if (this.ticksUnderwater < 60.0f) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 return player.startRiding(this) ? ActionResult.CONSUME : ActionResult.PASS;
             }
             return ActionResult.SUCCESS;
@@ -704,9 +704,9 @@ implements VariantHolder<Type> {
                     return;
                 }
                 this.handleFallDamage(this.fallDistance, 1.0f, this.getDamageSources().fall());
-                if (!this.world.isClient && !this.isRemoved()) {
+                if (!this.getWorld().isClient && !this.isRemoved()) {
                     this.kill();
-                    if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+                    if (this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                         int i;
                         for (i = 0; i < 3; ++i) {
                             this.dropItem(this.getVariant().getBaseBlock());
@@ -718,7 +718,7 @@ implements VariantHolder<Type> {
                 }
             }
             this.onLanding();
-        } else if (!this.world.getFluidState(this.getBlockPos().down()).isIn(FluidTags.WATER) && heightDifference < 0.0) {
+        } else if (!this.getWorld().getFluidState(this.getBlockPos().down()).isIn(FluidTags.WATER) && heightDifference < 0.0) {
             this.fallDistance -= (float)heightDifference;
         }
     }

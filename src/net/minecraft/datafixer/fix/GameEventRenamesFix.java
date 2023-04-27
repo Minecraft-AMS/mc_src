@@ -16,33 +16,29 @@ import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
-import java.util.Map;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 import net.minecraft.datafixer.schema.IdentifierNormalizingSchema;
 
 public class GameEventRenamesFix
 extends DataFix {
     private final String name;
-    private final Map<String, String> renames;
-    private final DSL.TypeReference field_38383;
+    private final DSL.TypeReference typeReference;
+    private final UnaryOperator<String> renamer;
 
-    public GameEventRenamesFix(Schema schema, DSL.TypeReference typeReference, Map<String, String> renames) {
-        this(schema, typeReference, typeReference.typeName() + "-renames at version: " + schema.getVersionKey(), renames);
-    }
-
-    public GameEventRenamesFix(Schema schema, DSL.TypeReference typeReference, String name, Map<String, String> renames) {
+    public GameEventRenamesFix(Schema schema, String name, DSL.TypeReference typeReference, UnaryOperator<String> renamer) {
         super(schema, false);
-        this.renames = renames;
         this.name = name;
-        this.field_38383 = typeReference;
+        this.typeReference = typeReference;
+        this.renamer = renamer;
     }
 
     protected TypeRewriteRule makeRule() {
-        Type type = DSL.named((String)this.field_38383.typeName(), IdentifierNormalizingSchema.getIdentifierType());
-        if (!Objects.equals(type, this.getInputSchema().getType(this.field_38383))) {
-            throw new IllegalStateException("\"" + this.field_38383.typeName() + "\" type is not what was expected.");
+        Type type = DSL.named((String)this.typeReference.typeName(), IdentifierNormalizingSchema.getIdentifierType());
+        if (!Objects.equals(type, this.getInputSchema().getType(this.typeReference))) {
+            throw new IllegalStateException("\"" + this.typeReference.typeName() + "\" is not what was expected.");
         }
-        return this.fixTypeEverywhere(this.name, type, dynamicOps -> pair -> pair.mapSecond(string -> this.renames.getOrDefault(string, (String)string)));
+        return this.fixTypeEverywhere(this.name, type, dynamicOps -> pair -> pair.mapSecond(this.renamer));
     }
 }
 

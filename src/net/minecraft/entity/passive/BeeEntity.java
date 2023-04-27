@@ -231,7 +231,7 @@ Flutterer {
         this.ticksSincePollination = nbt.getInt(TICKS_SINCE_POLLINATION_KEY);
         this.cannotEnterHiveTicks = nbt.getInt(CANNOT_ENTER_HIVE_TICKS_KEY);
         this.cropsGrownSincePollination = nbt.getInt(CROPS_GROWN_SINCE_POLLINATION_KEY);
-        this.readAngerFromNbt(this.world, nbt);
+        this.readAngerFromNbt(this.getWorld(), nbt);
     }
 
     @Override
@@ -242,9 +242,9 @@ Flutterer {
             if (target instanceof LivingEntity) {
                 ((LivingEntity)target).setStingerCount(((LivingEntity)target).getStingerCount() + 1);
                 int i = 0;
-                if (this.world.getDifficulty() == Difficulty.NORMAL) {
+                if (this.getWorld().getDifficulty() == Difficulty.NORMAL) {
                     i = 10;
-                } else if (this.world.getDifficulty() == Difficulty.HARD) {
+                } else if (this.getWorld().getDifficulty() == Difficulty.HARD) {
                     i = 18;
                 }
                 if (i > 0) {
@@ -263,7 +263,7 @@ Flutterer {
         super.tick();
         if (this.hasNectar() && this.getCropsGrownSincePollination() < 10 && this.random.nextFloat() < 0.05f) {
             for (int i = 0; i < this.random.nextInt(2) + 1; ++i) {
-                this.addParticle(this.world, this.getX() - (double)0.3f, this.getX() + (double)0.3f, this.getZ() - (double)0.3f, this.getZ() + (double)0.3f, this.getBodyY(0.5), ParticleTypes.FALLING_NECTAR);
+                this.addParticle(this.getWorld(), this.getX() - (double)0.3f, this.getX() + (double)0.3f, this.getZ() - (double)0.3f, this.getZ() + (double)0.3f, this.getBodyY(0.5), ParticleTypes.FALLING_NECTAR);
             }
         }
         this.updateBodyPitch();
@@ -329,7 +329,7 @@ Flutterer {
         if (this.cannotEnterHiveTicks > 0 || this.pollinateGoal.isRunning() || this.hasStung() || this.getTarget() != null) {
             return false;
         }
-        boolean bl = this.failedPollinatingTooLong() || this.world.isRaining() || this.world.isNight() || this.hasNectar();
+        boolean bl = this.failedPollinatingTooLong() || this.getWorld().isRaining() || this.getWorld().isNight() || this.hasNectar();
         return bl && !this.isHiveNearFire();
     }
 
@@ -362,8 +362,8 @@ Flutterer {
         if (!this.hasNectar()) {
             ++this.ticksSincePollination;
         }
-        if (!this.world.isClient) {
-            this.tickAngerLogic((ServerWorld)this.world, false);
+        if (!this.getWorld().isClient) {
+            this.tickAngerLogic((ServerWorld)this.getWorld(), false);
         }
     }
 
@@ -375,7 +375,7 @@ Flutterer {
         if (this.hivePos == null) {
             return false;
         }
-        BlockEntity blockEntity = this.world.getBlockEntity(this.hivePos);
+        BlockEntity blockEntity = this.getWorld().getBlockEntity(this.hivePos);
         return blockEntity instanceof BeehiveBlockEntity && ((BeehiveBlockEntity)blockEntity).isNearFire();
     }
 
@@ -406,7 +406,7 @@ Flutterer {
     }
 
     private boolean doesHiveHaveSpace(BlockPos pos) {
-        BlockEntity blockEntity = this.world.getBlockEntity(pos);
+        BlockEntity blockEntity = this.getWorld().getBlockEntity(pos);
         if (blockEntity instanceof BeehiveBlockEntity) {
             return !((BeehiveBlockEntity)blockEntity).isFullOfBees();
         }
@@ -450,7 +450,7 @@ Flutterer {
     @Override
     public void tickMovement() {
         super.tickMovement();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             if (this.cannotEnterHiveTicks > 0) {
                 --this.cannotEnterHiveTicks;
             }
@@ -475,7 +475,7 @@ Flutterer {
         if (this.isTooFar(this.hivePos)) {
             return false;
         }
-        BlockEntity blockEntity = this.world.getBlockEntity(this.hivePos);
+        BlockEntity blockEntity = this.getWorld().getBlockEntity(this.hivePos);
         return blockEntity != null && blockEntity.getType() == BlockEntityType.BEEHIVE;
     }
 
@@ -555,7 +555,7 @@ Flutterer {
     }
 
     boolean isFlowers(BlockPos pos) {
-        return this.world.canSetBlock(pos) && this.world.getBlockState(pos).isIn(BlockTags.FLOWERS);
+        return this.getWorld().canSetBlock(pos) && this.getWorld().getBlockState(pos).isIn(BlockTags.FLOWERS);
     }
 
     @Override
@@ -607,7 +607,7 @@ Flutterer {
 
     @Override
     public boolean isInAir() {
-        return !this.onGround;
+        return !this.isOnGround();
     }
 
     public void onHoneyDelivered() {
@@ -620,7 +620,7 @@ Flutterer {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.pollinateGoal.cancel();
         }
         return super.damage(source, amount);
@@ -694,7 +694,7 @@ Flutterer {
             if (BeeEntity.this.hasNectar()) {
                 return false;
             }
-            if (BeeEntity.this.world.isRaining()) {
+            if (BeeEntity.this.getWorld().isRaining()) {
                 return false;
             }
             Optional<BlockPos> optional = this.getFlower();
@@ -715,7 +715,7 @@ Flutterer {
             if (!BeeEntity.this.hasFlower()) {
                 return false;
             }
-            if (BeeEntity.this.world.isRaining()) {
+            if (BeeEntity.this.getWorld().isRaining()) {
                 return false;
             }
             if (this.completedPollination()) {
@@ -832,7 +832,7 @@ Flutterer {
                         int n = l = k < j && k > -j ? j : 0;
                         while (l <= j) {
                             mutable.set(blockPos, k, i - 1, l);
-                            if (blockPos.isWithinDistance(mutable, searchDistance) && predicate.test(BeeEntity.this.world.getBlockState(mutable))) {
+                            if (blockPos.isWithinDistance(mutable, searchDistance) && predicate.test(BeeEntity.this.getWorld().getBlockState(mutable))) {
                                 return Optional.of(mutable);
                             }
                             l = l > 0 ? -l : 1 - l;
@@ -892,7 +892,7 @@ Flutterer {
         @Override
         public boolean canBeeStart() {
             BlockEntity blockEntity;
-            if (BeeEntity.this.hasHive() && BeeEntity.this.canEnterHive() && BeeEntity.this.hivePos.isWithinDistance(BeeEntity.this.getPos(), 2.0) && (blockEntity = BeeEntity.this.world.getBlockEntity(BeeEntity.this.hivePos)) instanceof BeehiveBlockEntity) {
+            if (BeeEntity.this.hasHive() && BeeEntity.this.canEnterHive() && BeeEntity.this.hivePos.isWithinDistance(BeeEntity.this.getPos(), 2.0) && (blockEntity = BeeEntity.this.getWorld().getBlockEntity(BeeEntity.this.hivePos)) instanceof BeehiveBlockEntity) {
                 BeehiveBlockEntity beehiveBlockEntity = (BeehiveBlockEntity)blockEntity;
                 if (beehiveBlockEntity.isFullOfBees()) {
                     BeeEntity.this.hivePos = null;
@@ -910,7 +910,7 @@ Flutterer {
 
         @Override
         public void start() {
-            BlockEntity blockEntity = BeeEntity.this.world.getBlockEntity(BeeEntity.this.hivePos);
+            BlockEntity blockEntity = BeeEntity.this.getWorld().getBlockEntity(BeeEntity.this.hivePos);
             if (blockEntity instanceof BeehiveBlockEntity) {
                 BeehiveBlockEntity beehiveBlockEntity = (BeehiveBlockEntity)blockEntity;
                 beehiveBlockEntity.tryEnterHive(BeeEntity.this, BeeEntity.this.hasNectar());
@@ -951,7 +951,7 @@ Flutterer {
 
         private List<BlockPos> getNearbyFreeHives() {
             BlockPos blockPos = BeeEntity.this.getBlockPos();
-            PointOfInterestStorage pointOfInterestStorage = ((ServerWorld)BeeEntity.this.world).getPointOfInterestStorage();
+            PointOfInterestStorage pointOfInterestStorage = ((ServerWorld)BeeEntity.this.getWorld()).getPointOfInterestStorage();
             Stream<PointOfInterest> stream = pointOfInterestStorage.getInCircle(poiType -> poiType.isIn(PointOfInterestTypeTags.BEE_HOME), blockPos, 20, PointOfInterestStorage.OccupationStatus.ANY);
             return stream.map(PointOfInterest::getPos).filter(BeeEntity.this::doesHiveHaveSpace).sorted(Comparator.comparingDouble(blockPos2 -> blockPos2.getSquaredDistance(blockPos))).collect(Collectors.toList());
         }
@@ -970,14 +970,14 @@ Flutterer {
         private int ticksUntilLost;
 
         MoveToHiveGoal() {
-            this.ticks = BeeEntity.this.world.random.nextInt(10);
+            this.ticks = BeeEntity.this.getWorld().random.nextInt(10);
             this.possibleHives = Lists.newArrayList();
             this.setControls(EnumSet.of(Goal.Control.MOVE));
         }
 
         @Override
         public boolean canBeeStart() {
-            return BeeEntity.this.hivePos != null && !BeeEntity.this.hasPositionTarget() && BeeEntity.this.canEnterHive() && !this.isCloseEnough(BeeEntity.this.hivePos) && BeeEntity.this.world.getBlockState(BeeEntity.this.hivePos).isIn(BlockTags.BEEHIVES);
+            return BeeEntity.this.hivePos != null && !BeeEntity.this.hasPositionTarget() && BeeEntity.this.canEnterHive() && !this.isCloseEnough(BeeEntity.this.hivePos) && BeeEntity.this.getWorld().getBlockState(BeeEntity.this.hivePos).isIn(BlockTags.BEEHIVES);
         }
 
         @Override
@@ -1083,7 +1083,7 @@ Flutterer {
         int ticks;
 
         MoveToFlowerGoal() {
-            this.ticks = BeeEntity.this.world.random.nextInt(10);
+            this.ticks = BeeEntity.this.getWorld().random.nextInt(10);
             this.setControls(EnumSet.of(Goal.Control.MOVE));
         }
 
@@ -1165,7 +1165,7 @@ Flutterer {
             }
             for (int i = 1; i <= 2; ++i) {
                 BlockPos blockPos = BeeEntity.this.getBlockPos().down(i);
-                BlockState blockState = BeeEntity.this.world.getBlockState(blockPos);
+                BlockState blockState = BeeEntity.this.getWorld().getBlockState(blockPos);
                 Block block = blockState.getBlock();
                 boolean bl = false;
                 IntProperty intProperty = null;
@@ -1189,11 +1189,11 @@ Flutterer {
                         intProperty = SweetBerryBushBlock.AGE;
                     }
                 } else if (blockState.isOf(Blocks.CAVE_VINES) || blockState.isOf(Blocks.CAVE_VINES_PLANT)) {
-                    ((Fertilizable)((Object)blockState.getBlock())).grow((ServerWorld)BeeEntity.this.world, BeeEntity.this.random, blockPos, blockState);
+                    ((Fertilizable)((Object)blockState.getBlock())).grow((ServerWorld)BeeEntity.this.getWorld(), BeeEntity.this.random, blockPos, blockState);
                 }
                 if (!bl) continue;
-                BeeEntity.this.world.syncWorldEvent(2005, blockPos, 0);
-                BeeEntity.this.world.setBlockState(blockPos, (BlockState)blockState.with(intProperty, blockState.get(intProperty) + 1));
+                BeeEntity.this.getWorld().syncWorldEvent(2005, blockPos, 0);
+                BeeEntity.this.getWorld().setBlockState(blockPos, (BlockState)blockState.with(intProperty, blockState.get(intProperty) + 1));
                 BeeEntity.this.addCropCounter();
             }
         }

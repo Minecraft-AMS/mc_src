@@ -31,7 +31,7 @@ import net.minecraft.util.dynamic.Codecs;
 
 public record PlayerPublicKey(PublicKeyData data) {
     public static final Text EXPIRED_PUBLIC_KEY_TEXT = Text.translatable("multiplayer.disconnect.expired_public_key");
-    private static final Text INVALID_PUBLIC_KEY_SIGNATURE_TEXT = Text.translatable("multiplayer.disconnect.invalid_public_key_signature");
+    private static final Text INVALID_PUBLIC_KEY_SIGNATURE_TEXT = Text.translatable("multiplayer.disconnect.invalid_public_key_signature.new");
     public static final Duration EXPIRATION_GRACE_PERIOD = Duration.ofHours(8L);
     public static final Codec<PlayerPublicKey> CODEC = PublicKeyData.CODEC.xmap(PlayerPublicKey::new, PlayerPublicKey::data);
 

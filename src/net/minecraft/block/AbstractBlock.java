@@ -23,13 +23,14 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.MapColor;
-import net.minecraft.block.Material;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.SideShapeType;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.block.enums.Instrument;
 import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -70,6 +71,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -87,7 +89,6 @@ import org.jetbrains.annotations.Nullable;
 public abstract class AbstractBlock
 implements ToggleableFeature {
     protected static final Direction[] DIRECTIONS = new Direction[]{Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.DOWN, Direction.UP};
-    protected final Material material;
     protected final boolean collidable;
     protected final float resistance;
     protected final boolean randomTicks;
@@ -102,7 +103,6 @@ implements ToggleableFeature {
     protected Identifier lootTableId;
 
     public AbstractBlock(Settings settings) {
-        this.material = settings.material;
         this.collidable = settings.collidable;
         this.lootTableId = settings.lootTableId;
         this.resistance = settings.resistance;
@@ -188,11 +188,6 @@ implements ToggleableFeature {
     }
 
     @Deprecated
-    public PistonBehavior getPistonBehavior(BlockState state) {
-        return this.material.getPistonBehavior();
-    }
-
-    @Deprecated
     public FluidState getFluidState(BlockState state) {
         return Fluids.EMPTY.getDefaultState();
     }
@@ -227,12 +222,12 @@ implements ToggleableFeature {
 
     @Deprecated
     public boolean canReplace(BlockState state, ItemPlacementContext context) {
-        return this.material.isReplaceable() && (context.getStack().isEmpty() || !context.getStack().isOf(this.asItem()));
+        return state.isReplaceable() && (context.getStack().isEmpty() || !context.getStack().isOf(this.asItem()));
     }
 
     @Deprecated
     public boolean canBucketPlace(BlockState state, Fluid fluid) {
-        return this.material.isReplaceable() || !this.material.isSolid();
+        return state.isReplaceable() || !state.isSolid();
     }
 
     @Deprecated
@@ -243,7 +238,7 @@ implements ToggleableFeature {
         }
         LootContext lootContext = builder.parameter(LootContextParameters.BLOCK_STATE, state).build(LootContextTypes.BLOCK);
         ServerWorld serverWorld = lootContext.getWorld();
-        LootTable lootTable = serverWorld.getServer().getLootManager().getTable(identifier);
+        LootTable lootTable = serverWorld.getServer().getLootManager().getLootTable(identifier);
         return lootTable.generateLoot(lootContext);
     }
 
@@ -387,8 +382,7 @@ implements ToggleableFeature {
     }
 
     public static class Settings {
-        Material material;
-        Function<BlockState, MapColor> mapColorProvider;
+        Function<BlockState, MapColor> mapColorProvider = state -> MapColor.CLEAR;
         boolean collidable = true;
         BlockSoundGroup soundGroup = BlockSoundGroup.STONE;
         ToIntFunction<BlockState> luminance = state -> 0;
@@ -402,45 +396,35 @@ implements ToggleableFeature {
         Identifier lootTableId;
         boolean opaque = true;
         boolean isAir;
+        boolean burnable;
+        @Deprecated
+        boolean liquid;
+        @Deprecated
+        boolean forceNotSolid;
+        boolean forceSolid;
+        PistonBehavior pistonBehavior = PistonBehavior.NORMAL;
         boolean blockBreakParticles = true;
+        Instrument instrument = Instrument.HARP;
+        boolean replaceable;
         TypedContextPredicate<EntityType<?>> allowsSpawningPredicate = (state, world, pos, type) -> state.isSideSolidFullSquare(world, pos, Direction.UP) && state.getLuminance() < 14;
-        ContextPredicate solidBlockPredicate = (state, world, pos) -> state.getMaterial().blocksLight() && state.isFullCube(world, pos);
+        ContextPredicate solidBlockPredicate = (state, world, pos) -> state.isFullCube(world, pos);
         ContextPredicate suffocationPredicate;
-        ContextPredicate blockVisionPredicate = this.suffocationPredicate = (state, world, pos) -> this.material.blocksMovement() && state.isFullCube(world, pos);
+        ContextPredicate blockVisionPredicate = this.suffocationPredicate = (state, world, pos) -> state.blocksMovement() && state.isFullCube(world, pos);
         ContextPredicate postProcessPredicate = (state, world, pos) -> false;
         ContextPredicate emissiveLightingPredicate = (state, world, pos) -> false;
         boolean dynamicBounds;
         FeatureSet requiredFeatures = FeatureFlags.VANILLA_FEATURES;
         Optional<Offsetter> offsetter = Optional.empty();
 
-        private Settings(Material material, MapColor mapColorProvider) {
-            this(material, (BlockState state) -> mapColorProvider);
+        private Settings() {
         }
 
-        private Settings(Material material, Function<BlockState, MapColor> mapColorProvider) {
-            this.material = material;
-            this.mapColorProvider = mapColorProvider;
-        }
-
-        public static Settings of(Material material) {
-            return Settings.of(material, material.getColor());
-        }
-
-        public static Settings of(Material material, DyeColor color) {
-            return Settings.of(material, color.getMapColor());
-        }
-
-        public static Settings of(Material material, MapColor color) {
-            return new Settings(material, color);
-        }
-
-        public static Settings of(Material material, Function<BlockState, MapColor> mapColor) {
-            return new Settings(material, mapColor);
+        public static Settings of() {
+            return new Settings();
         }
 
         public static Settings copy(AbstractBlock block) {
-            Settings settings = new Settings(block.material, block.settings.mapColorProvider);
-            settings.material = block.settings.material;
+            Settings settings = new Settings();
             settings.hardness = block.settings.hardness;
             settings.resistance = block.settings.resistance;
             settings.collidable = block.settings.collidable;
@@ -453,11 +437,34 @@ implements ToggleableFeature {
             settings.dynamicBounds = block.settings.dynamicBounds;
             settings.opaque = block.settings.opaque;
             settings.isAir = block.settings.isAir;
+            settings.burnable = block.settings.burnable;
+            settings.liquid = block.settings.liquid;
+            settings.forceNotSolid = block.settings.forceNotSolid;
+            settings.forceSolid = block.settings.forceSolid;
+            settings.pistonBehavior = block.settings.pistonBehavior;
             settings.toolRequired = block.settings.toolRequired;
             settings.offsetter = block.settings.offsetter;
             settings.blockBreakParticles = block.settings.blockBreakParticles;
             settings.requiredFeatures = block.settings.requiredFeatures;
+            settings.emissiveLightingPredicate = block.settings.emissiveLightingPredicate;
+            settings.instrument = block.settings.instrument;
+            settings.replaceable = block.settings.replaceable;
             return settings;
+        }
+
+        public Settings mapColor(DyeColor color) {
+            this.mapColorProvider = state -> color.getMapColor();
+            return this;
+        }
+
+        public Settings mapColor(MapColor color) {
+            this.mapColorProvider = state -> color;
+            return this;
+        }
+
+        public Settings mapColor(Function<BlockState, MapColor> mapColorProvider) {
+            this.mapColorProvider = mapColorProvider;
+            return this;
         }
 
         public Settings noCollision() {
@@ -529,6 +536,32 @@ implements ToggleableFeature {
             return this;
         }
 
+        public Settings burnable() {
+            this.burnable = true;
+            return this;
+        }
+
+        public Settings liquid() {
+            this.liquid = true;
+            return this;
+        }
+
+        public Settings solid() {
+            this.forceSolid = true;
+            return this;
+        }
+
+        @Deprecated
+        public Settings notSolid() {
+            this.forceNotSolid = true;
+            return this;
+        }
+
+        public Settings pistonBehavior(PistonBehavior pistonBehavior) {
+            this.pistonBehavior = pistonBehavior;
+            return this;
+        }
+
         public Settings air() {
             this.isAir = true;
             return this;
@@ -566,11 +599,6 @@ implements ToggleableFeature {
 
         public Settings requiresTool() {
             this.toolRequired = true;
-            return this;
-        }
-
-        public Settings mapColor(MapColor color) {
-            this.mapColorProvider = state -> color;
             return this;
         }
 
@@ -625,6 +653,16 @@ implements ToggleableFeature {
             this.requiredFeatures = FeatureFlags.FEATURE_MANAGER.featureSetOf(features);
             return this;
         }
+
+        public Settings instrument(Instrument instrument) {
+            this.instrument = instrument;
+            return this;
+        }
+
+        public Settings replaceable() {
+            this.replaceable = true;
+            return this;
+        }
     }
 
     public static interface TypedContextPredicate<A> {
@@ -644,7 +682,12 @@ implements ToggleableFeature {
         private final int luminance;
         private final boolean hasSidedTransparency;
         private final boolean isAir;
-        private final Material material;
+        private final boolean burnable;
+        @Deprecated
+        private final boolean liquid;
+        @Deprecated
+        private boolean solid;
+        private final PistonBehavior pistonBehavior;
         private final MapColor mapColor;
         private final float hardness;
         private final boolean toolRequired;
@@ -656,6 +699,8 @@ implements ToggleableFeature {
         private final ContextPredicate emissiveLightingPredicate;
         private final Optional<Offsetter> offsetter;
         private final boolean blockBreakParticles;
+        private final Instrument instrument;
+        private final boolean replaceable;
         @Nullable
         protected ShapeCache shapeCache;
         private FluidState fluidState = Fluids.EMPTY.getDefaultState();
@@ -667,7 +712,9 @@ implements ToggleableFeature {
             this.luminance = settings.luminance.applyAsInt(this.asBlockState());
             this.hasSidedTransparency = block.hasSidedTransparency(this.asBlockState());
             this.isAir = settings.isAir;
-            this.material = settings.material;
+            this.burnable = settings.burnable;
+            this.liquid = settings.liquid;
+            this.pistonBehavior = settings.pistonBehavior;
             this.mapColor = settings.mapColorProvider.apply(this.asBlockState());
             this.hardness = settings.hardness;
             this.toolRequired = settings.toolRequired;
@@ -679,6 +726,29 @@ implements ToggleableFeature {
             this.emissiveLightingPredicate = settings.emissiveLightingPredicate;
             this.offsetter = settings.offsetter;
             this.blockBreakParticles = settings.blockBreakParticles;
+            this.instrument = settings.instrument;
+            this.replaceable = settings.replaceable;
+        }
+
+        private boolean shouldBeSolid() {
+            if (((Block)this.owner).settings.forceSolid) {
+                return true;
+            }
+            if (((Block)this.owner).settings.forceNotSolid) {
+                return false;
+            }
+            if (this.shapeCache == null) {
+                return false;
+            }
+            VoxelShape voxelShape = this.shapeCache.collisionShape;
+            if (voxelShape.isEmpty()) {
+                return false;
+            }
+            Box box = voxelShape.getBoundingBox();
+            if (box.getAverageSideLength() >= 0.7291666666666666) {
+                return true;
+            }
+            return box.getYLength() >= 1.0;
         }
 
         public void initShapeCache() {
@@ -687,6 +757,7 @@ implements ToggleableFeature {
             if (!this.getBlock().hasDynamicBounds()) {
                 this.shapeCache = new ShapeCache(this.asBlockState());
             }
+            this.solid = this.shouldBeSolid();
         }
 
         public Block getBlock() {
@@ -697,8 +768,15 @@ implements ToggleableFeature {
             return ((Block)this.owner).getRegistryEntry();
         }
 
-        public Material getMaterial() {
-            return this.material;
+        @Deprecated
+        public boolean blocksMovement() {
+            Block block = this.getBlock();
+            return block != Blocks.COBWEB && block != Blocks.BAMBOO_SAPLING && this.isSolid();
+        }
+
+        @Deprecated
+        public boolean isSolid() {
+            return this.solid;
         }
 
         public boolean allowsSpawning(BlockView world, BlockPos pos, EntityType<?> type) {
@@ -744,6 +822,15 @@ implements ToggleableFeature {
 
         public boolean isAir() {
             return this.isAir;
+        }
+
+        public boolean isBurnable() {
+            return this.burnable;
+        }
+
+        @Deprecated
+        public boolean isLiquid() {
+            return this.liquid;
         }
 
         public MapColor getMapColor(BlockView world, BlockPos pos) {
@@ -803,7 +890,7 @@ implements ToggleableFeature {
         }
 
         public PistonBehavior getPistonBehavior() {
-            return this.getBlock().getPistonBehavior(this.asBlockState());
+            return this.pistonBehavior;
         }
 
         public boolean isOpaqueFullCube(BlockView world, BlockPos pos) {
@@ -886,7 +973,6 @@ implements ToggleableFeature {
         }
 
         public final void updateNeighbors(WorldAccess world, BlockPos pos, int flags, int maxUpdateDepth) {
-            this.getBlock();
             BlockPos.Mutable mutable = new BlockPos.Mutable();
             for (Direction direction : DIRECTIONS) {
                 mutable.set((Vec3i)pos, direction);
@@ -963,7 +1049,7 @@ implements ToggleableFeature {
         }
 
         public boolean isReplaceable() {
-            return this.getMaterial().isReplaceable();
+            return this.replaceable;
         }
 
         public boolean canPlaceAt(WorldView world, BlockPos pos) {
@@ -1057,6 +1143,10 @@ implements ToggleableFeature {
 
         public boolean hasBlockBreakParticles() {
             return this.blockBreakParticles;
+        }
+
+        public Instrument getInstrument() {
+            return this.instrument;
         }
 
         static final class ShapeCache {

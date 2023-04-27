@@ -152,7 +152,7 @@ implements VariantHolder<RegistryEntry<PaintingVariant>> {
 
     @Override
     public void onBreak(@Nullable Entity entity) {
-        if (!this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+        if (!this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
             return;
         }
         this.playSound(SoundEvents.ENTITY_PAINTING_BREAK, 1.0f, 1.0f);

@@ -70,9 +70,9 @@ extends MultiTickTask<E> {
     }
 
     public static <E extends MobEntity> boolean shouldJumpTo(E entity, BlockPos pos) {
-        World world = entity.world;
-        BlockPos blockPos = pos.down();
-        return world.getBlockState(blockPos).isOpaqueFullCube(world, blockPos) && entity.getPathfindingPenalty(LandPathNodeMaker.getLandNodeType(world, pos.mutableCopy())) == 0.0f;
+        BlockPos blockPos;
+        World world = entity.getWorld();
+        return world.getBlockState(blockPos = pos.down()).isOpaqueFullCube(world, blockPos) && entity.getPathfindingPenalty(LandPathNodeMaker.getLandNodeType(world, pos.mutableCopy())) == 0.0f;
     }
 
     public LongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound, BiPredicate<E, BlockPos> jumpToPredicate) {
@@ -237,7 +237,7 @@ extends MultiTickTask<E> {
         Vec3d vec3d5 = vec3d;
         for (int j = 0; j < i; ++j) {
             Vec3d vec3d6 = vec3d5 = j == i - 1 ? vec3d2 : vec3d5.add(vec3d4.multiply(d * (double)0.9f));
-            if (entity.world.isSpaceEmpty(entity, dimensions.getBoxAt(vec3d5))) continue;
+            if (entity.getWorld().isSpaceEmpty(entity, dimensions.getBoxAt(vec3d5))) continue;
             return false;
         }
         return true;

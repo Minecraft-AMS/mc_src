@@ -30,7 +30,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.LoadingDisplay;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
@@ -42,7 +42,6 @@ import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
@@ -62,6 +61,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     static final ThreadPoolExecutor SERVER_PINGER_THREAD_POOL = new ScheduledThreadPoolExecutor(5, new ThreadFactoryBuilder().setNameFormat("Server Pinger #%d").setDaemon(true).setUncaughtExceptionHandler((Thread.UncaughtExceptionHandler)new UncaughtExceptionLogger(LOGGER)).build());
     static final Identifier UNKNOWN_SERVER_TEXTURE = new Identifier("textures/misc/unknown_server.png");
     static final Identifier SERVER_SELECTION_TEXTURE = new Identifier("textures/gui/server_selection.png");
+    static final Identifier ICONS_TEXTURE = new Identifier("textures/gui/icons.png");
     static final Text LAN_SCANNING_TEXT = Text.translatable("lanServer.scanning");
     static final Text CANNOT_RESOLVE_TEXT = Text.translatable("multiplayer.status.cannot_resolve").styled(style -> style.withColor(-65536));
     static final Text CANNOT_CONNECT_TEXT = Text.translatable("multiplayer.status.cannot_connect").styled(style -> style.withColor(-65536));
@@ -139,11 +139,11 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         private final MinecraftClient client = MinecraftClient.getInstance();
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             int i = y + entryHeight / 2 - this.client.textRenderer.fontHeight / 2;
-            this.client.textRenderer.draw(matrices, LAN_SCANNING_TEXT, (float)(this.client.currentScreen.width / 2 - this.client.textRenderer.getWidth(LAN_SCANNING_TEXT) / 2), (float)i, 0xFFFFFF);
+            context.drawText(this.client.textRenderer, LAN_SCANNING_TEXT, this.client.currentScreen.width / 2 - this.client.textRenderer.getWidth(LAN_SCANNING_TEXT) / 2, i, 0xFFFFFF, false);
             String string = LoadingDisplay.get(Util.getMeasuringTimeMs());
-            this.client.textRenderer.draw(matrices, string, (float)(this.client.currentScreen.width / 2 - this.client.textRenderer.getWidth(string) / 2), (float)(i + this.client.textRenderer.fontHeight), 0x808080);
+            context.drawText(this.client.textRenderer, string, this.client.currentScreen.width / 2 - this.client.textRenderer.getWidth(string) / 2, i + this.client.textRenderer.fontHeight, 0x808080, false);
         }
 
         @Override
@@ -190,7 +190,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             List<Text> list2;
             Text text2;
             int l;
@@ -214,14 +214,14 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 });
             }
             boolean bl = !this.protocolVersionMatches();
-            this.client.textRenderer.draw(matrices, this.server.name, (float)(x + 32 + 3), (float)(y + 1), 0xFFFFFF);
+            context.drawText(this.client.textRenderer, this.server.name, x + 32 + 3, y + 1, 0xFFFFFF, false);
             List<OrderedText> list = this.client.textRenderer.wrapLines(this.server.label, entryWidth - 32 - 2);
             for (int i = 0; i < Math.min(list.size(), 2); ++i) {
-                this.client.textRenderer.draw(matrices, list.get(i), (float)(x + 32 + 3), (float)(y + 12 + this.client.textRenderer.fontHeight * i), 0x808080);
+                context.drawText(this.client.textRenderer, list.get(i), x + 32 + 3, y + 12 + this.client.textRenderer.fontHeight * i, 0x808080, false);
             }
             Text text = bl ? this.server.version.copy().formatted(Formatting.RED) : this.server.playerCountLabel;
             int j = this.client.textRenderer.getWidth(text);
-            this.client.textRenderer.draw(matrices, text, (float)(x + entryWidth - j - 15 - 2), (float)(y + 1), 0x808080);
+            context.drawText(this.client.textRenderer, text, x + entryWidth - j - 15 - 2, y + 1, 0x808080, false);
             int k = 0;
             if (bl) {
                 l = 5;
@@ -245,8 +245,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 text2 = PINGING_TEXT;
                 list2 = Collections.emptyList();
             }
-            RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
-            DrawableHelper.drawTexture(matrices, x + entryWidth - 15, y, k * 10, 176 + l * 8, 10, 8, 256, 256);
+            context.drawTexture(ICONS_TEXTURE, x + entryWidth - 15, y, k * 10, 176 + l * 8, 10, 8, 256, 256);
             byte[] bs = this.server.getFavicon();
             if (!Arrays.equals(bs, this.favicon)) {
                 if (this.uploadFavicon(bs)) {
@@ -257,9 +256,9 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 }
             }
             if (this.icon == null) {
-                this.draw(matrices, x, y, UNKNOWN_SERVER_TEXTURE);
+                this.draw(context, x, y, UNKNOWN_SERVER_TEXTURE);
             } else {
-                this.draw(matrices, x, y, this.iconTextureId);
+                this.draw(context, x, y, this.iconTextureId);
             }
             int m = mouseX - x;
             int n = mouseY - y;
@@ -269,29 +268,28 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 this.screen.setMultiplayerScreenTooltip(list2);
             }
             if (this.client.options.getTouchscreen().getValue().booleanValue() || hovered) {
-                RenderSystem.setShaderTexture(0, SERVER_SELECTION_TEXTURE);
-                DrawableHelper.fill(matrices, x, y, x + 32, y + 32, -1601138544);
+                context.fill(x, y, x + 32, y + 32, -1601138544);
                 int o = mouseX - x;
                 int p = mouseY - y;
                 if (this.canConnect()) {
                     if (o < 32 && o > 16) {
-                        DrawableHelper.drawTexture(matrices, x, y, 0.0f, 32.0f, 32, 32, 256, 256);
+                        context.drawTexture(SERVER_SELECTION_TEXTURE, x, y, 0.0f, 32.0f, 32, 32, 256, 256);
                     } else {
-                        DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 32, 32, 256, 256);
+                        context.drawTexture(SERVER_SELECTION_TEXTURE, x, y, 0.0f, 0.0f, 32, 32, 256, 256);
                     }
                 }
                 if (index > 0) {
                     if (o < 16 && p < 16) {
-                        DrawableHelper.drawTexture(matrices, x, y, 96.0f, 32.0f, 32, 32, 256, 256);
+                        context.drawTexture(SERVER_SELECTION_TEXTURE, x, y, 96.0f, 32.0f, 32, 32, 256, 256);
                     } else {
-                        DrawableHelper.drawTexture(matrices, x, y, 96.0f, 0.0f, 32, 32, 256, 256);
+                        context.drawTexture(SERVER_SELECTION_TEXTURE, x, y, 96.0f, 0.0f, 32, 32, 256, 256);
                     }
                 }
                 if (index < this.screen.getServerList().size() - 1) {
                     if (o < 16 && p > 16) {
-                        DrawableHelper.drawTexture(matrices, x, y, 64.0f, 32.0f, 32, 32, 256, 256);
+                        context.drawTexture(SERVER_SELECTION_TEXTURE, x, y, 64.0f, 32.0f, 32, 32, 256, 256);
                     } else {
-                        DrawableHelper.drawTexture(matrices, x, y, 64.0f, 0.0f, 32, 32, 256, 256);
+                        context.drawTexture(SERVER_SELECTION_TEXTURE, x, y, 64.0f, 0.0f, 32, 32, 256, 256);
                     }
                 }
             }
@@ -309,10 +307,9 @@ extends AlwaysSelectedEntryListWidget<Entry> {
             this.screen.getServerList().saveFile();
         }
 
-        protected void draw(MatrixStack matrices, int x, int y, Identifier textureId) {
-            RenderSystem.setShaderTexture(0, textureId);
+        protected void draw(DrawContext context, int x, int y, Identifier textureId) {
             RenderSystem.enableBlend();
-            DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
+            context.drawTexture(textureId, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
             RenderSystem.disableBlend();
         }
 
@@ -454,13 +451,13 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            this.client.textRenderer.draw(matrices, TITLE_TEXT, (float)(x + 32 + 3), (float)(y + 1), 0xFFFFFF);
-            this.client.textRenderer.draw(matrices, this.server.getMotd(), (float)(x + 32 + 3), (float)(y + 12), 0x808080);
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            context.drawText(this.client.textRenderer, TITLE_TEXT, x + 32 + 3, y + 1, 0xFFFFFF, false);
+            context.drawText(this.client.textRenderer, this.server.getMotd(), x + 32 + 3, y + 12, 0x808080, false);
             if (this.client.options.hideServerAddress) {
-                this.client.textRenderer.draw(matrices, HIDDEN_ADDRESS_TEXT, (float)(x + 32 + 3), (float)(y + 12 + 11), 0x303030);
+                context.drawText(this.client.textRenderer, HIDDEN_ADDRESS_TEXT, x + 32 + 3, y + 12 + 11, 0x303030, false);
             } else {
-                this.client.textRenderer.draw(matrices, this.server.getAddressPort(), (float)(x + 32 + 3), (float)(y + 12 + 11), 0x303030);
+                context.drawText(this.client.textRenderer, this.server.getAddressPort(), x + 32 + 3, y + 12 + 11, 0x303030, false);
             }
         }
 

@@ -20,8 +20,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
@@ -56,6 +54,7 @@ import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.chunk.UpgradeData;
+import net.minecraft.world.chunk.light.ChunkLightProvider;
 import net.minecraft.world.event.listener.GameEventDispatcher;
 import net.minecraft.world.event.listener.GameEventListener;
 import net.minecraft.world.event.listener.SimpleGameEventDispatcher;
@@ -93,7 +92,6 @@ extends Chunk {
     };
     private final Map<BlockPos, WrappedBlockEntityTickInvoker> blockEntityTickers = Maps.newHashMap();
     private boolean loadedToWorld;
-    private boolean shouldRenderOnUpdate = false;
     final World world;
     @Nullable
     private Supplier<ChunkHolder.LevelType> levelTypeProvider;
@@ -135,6 +133,7 @@ extends Chunk {
             if (!ChunkStatus.FULL.getHeightmapTypes().contains(entry.getKey())) continue;
             this.setHeightmap(entry.getKey(), entry.getValue().asLongArray());
         }
+        this.field_44708 = protoChunk.field_44708;
         this.setLightOn(protoChunk.isLightOn());
         this.needsSaving = true;
     }
@@ -159,7 +158,7 @@ extends Chunk {
         World world = this.world;
         if (world instanceof ServerWorld) {
             ServerWorld serverWorld = (ServerWorld)world;
-            return (GameEventDispatcher)this.gameEventDispatchers.computeIfAbsent(ySectionCoord, sectionCoord -> new SimpleGameEventDispatcher(serverWorld));
+            return (GameEventDispatcher)this.gameEventDispatchers.computeIfAbsent(ySectionCoord, sectionCoord -> new SimpleGameEventDispatcher(serverWorld, ySectionCoord, this::removeGameEventDispatcher));
         }
         return super.getGameEventDispatcher(ySectionCoord);
     }
@@ -241,6 +240,14 @@ extends Chunk {
         boolean bl2 = chunkSection.isEmpty();
         if (bl != bl2) {
             this.world.getChunkManager().getLightingProvider().setSectionStatus(pos, bl2);
+        }
+        if (ChunkLightProvider.needsLightUpdate(this, pos, blockState, state)) {
+            Profiler profiler = this.world.getProfiler();
+            profiler.push("updateSkyLightSources");
+            this.field_44708.method_51536(this, j, i, l);
+            profiler.swap("queueCheckLight");
+            this.world.getChunkManager().getLightingProvider().checkBlock(pos);
+            profiler.pop();
         }
         boolean bl3 = blockState.hasBlockEntity();
         if (!this.world.isClient) {
@@ -389,10 +396,11 @@ extends Chunk {
             int i = ChunkSectionPos.getSectionCoord(blockEntity.getPos().getY());
             GameEventDispatcher gameEventDispatcher = this.getGameEventDispatcher(i);
             gameEventDispatcher.removeListener(gameEventListener);
-            if (gameEventDispatcher.isEmpty()) {
-                this.gameEventDispatchers.remove(i);
-            }
         }
+    }
+
+    private void removeGameEventDispatcher(int ySectionCoord) {
+        this.gameEventDispatchers.remove(ySectionCoord);
     }
 
     private void removeBlockEntityTicker(BlockPos pos) {
@@ -423,6 +431,7 @@ extends Chunk {
             if (!nbt2.contains(string, 12)) continue;
             this.setHeightmap(type, nbt2.getLongArray(string));
         }
+        this.method_51522();
         consumer.accept((pos, blockEntityType, nbt) -> {
             BlockEntity blockEntity = this.getBlockEntity(pos, CreationType.IMMEDIATE);
             if (blockEntity != null && nbt != null && blockEntity.getType() == blockEntityType) {
@@ -447,11 +456,6 @@ extends Chunk {
 
     public Map<BlockPos, BlockEntity> getBlockEntities() {
         return this.blockEntities;
-    }
-
-    @Override
-    public Stream<BlockPos> getLightSourcesStream() {
-        return StreamSupport.stream(BlockPos.iterate(this.pos.getStartX(), this.getBottomY(), this.pos.getStartZ(), this.pos.getEndX(), this.getTopY() - 1, this.pos.getEndZ()).spliterator(), false).filter(blockPos -> this.getBlockState((BlockPos)blockPos).getLuminance() != 0);
     }
 
     public void runPostProcessing() {
@@ -582,14 +586,6 @@ extends Chunk {
 
     private <T extends BlockEntity> BlockEntityTickInvoker wrapTicker(T blockEntity, BlockEntityTicker<T> blockEntityTicker) {
         return new DirectBlockEntityTickInvoker(this, blockEntity, blockEntityTicker);
-    }
-
-    public boolean shouldRenderOnUpdate() {
-        return this.shouldRenderOnUpdate;
-    }
-
-    public void setShouldRenderOnUpdate(boolean shouldRenderOnUpdate) {
-        this.shouldRenderOnUpdate = shouldRenderOnUpdate;
     }
 
     @FunctionalInterface

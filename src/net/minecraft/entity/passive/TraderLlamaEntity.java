@@ -42,7 +42,7 @@ extends LlamaEntity {
     @Override
     @Nullable
     protected LlamaEntity createChild() {
-        return EntityType.TRADER_LLAMA.create(this.world);
+        return EntityType.TRADER_LLAMA.create(this.getWorld());
     }
 
     @Override
@@ -82,7 +82,7 @@ extends LlamaEntity {
     @Override
     public void tickMovement() {
         super.tickMovement();
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.tryDespawn();
         }
     }

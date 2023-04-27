@@ -34,7 +34,7 @@ extends AbstractFireballEntity {
     @Override
     protected void onEntityHit(EntityHitResult entityHitResult) {
         super.onEntityHit(entityHitResult);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         Entity entity = entityHitResult.getEntity();
@@ -50,21 +50,23 @@ extends AbstractFireballEntity {
 
     @Override
     protected void onBlockHit(BlockHitResult blockHitResult) {
-        BlockPos blockPos;
         super.onBlockHit(blockHitResult);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         Entity entity = this.getOwner();
-        if ((!(entity instanceof MobEntity) || this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) && this.world.isAir(blockPos = blockHitResult.getBlockPos().offset(blockHitResult.getSide()))) {
-            this.world.setBlockState(blockPos, AbstractFireBlock.getState(this.world, blockPos));
+        if (!(entity instanceof MobEntity) || this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            BlockPos blockPos = blockHitResult.getBlockPos().offset(blockHitResult.getSide());
+            if (this.getWorld().isAir(blockPos)) {
+                this.getWorld().setBlockState(blockPos, AbstractFireBlock.getState(this.getWorld(), blockPos));
+            }
         }
     }
 
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.discard();
         }
     }

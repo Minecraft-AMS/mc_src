@@ -10,6 +10,7 @@ package net.minecraft.client.render.entity.model;
 import java.util.Arrays;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
 import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelPartBuilder;
@@ -37,8 +38,9 @@ extends SinglePartEntityModel<T> {
     public static TexturedModelData getTexturedModelData() {
         ModelData modelData = new ModelData();
         ModelPartData modelPartData = modelData.getRoot();
+        Dilation dilation = new Dilation(0.02f);
         int i = -16;
-        modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 0).cuboid(-6.0f, -8.0f, -6.0f, 12.0f, 16.0f, 12.0f), ModelTransform.pivot(0.0f, 8.0f, 0.0f));
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 0).cuboid(-6.0f, -8.0f, -6.0f, 12.0f, 16.0f, 12.0f, dilation), ModelTransform.pivot(0.0f, 8.0f, 0.0f));
         int j = 8;
         ModelPartBuilder modelPartBuilder = ModelPartBuilder.create().uv(48, 0).cuboid(-1.0f, 0.0f, -1.0f, 2.0f, 18.0f, 2.0f);
         for (int k = 0; k < 8; ++k) {

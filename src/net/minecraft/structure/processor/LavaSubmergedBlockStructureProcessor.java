@@ -26,10 +26,10 @@ extends StructureProcessor {
     @Override
     @Nullable
     public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
-        BlockPos blockPos = currentBlockInfo.pos;
+        BlockPos blockPos = currentBlockInfo.pos();
         boolean bl = world.getBlockState(blockPos).isOf(Blocks.LAVA);
-        if (bl && !Block.isShapeFullCube(currentBlockInfo.state.getOutlineShape(world, blockPos))) {
-            return new StructureTemplate.StructureBlockInfo(blockPos, Blocks.LAVA.getDefaultState(), currentBlockInfo.nbt);
+        if (bl && !Block.isShapeFullCube(currentBlockInfo.state().getOutlineShape(world, blockPos))) {
+            return new StructureTemplate.StructureBlockInfo(blockPos, Blocks.LAVA.getDefaultState(), currentBlockInfo.nbt());
         }
         return currentBlockInfo;
     }

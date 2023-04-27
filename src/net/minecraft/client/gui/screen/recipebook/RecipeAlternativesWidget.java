@@ -17,13 +17,12 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.Recipe;
@@ -37,7 +36,6 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RecipeAlternativesWidget
-extends DrawableHelper
 implements Drawable,
 Element {
     static final Identifier BACKGROUND_TEXTURE = new Identifier("textures/gui/recipe_book.png");
@@ -49,7 +47,7 @@ Element {
     private boolean visible;
     private int buttonX;
     private int buttonY;
-    MinecraftClient client;
+    private MinecraftClient client;
     private RecipeResultCollection resultCollection;
     @Nullable
     private Recipe<?> lastClickedRecipe;
@@ -130,25 +128,24 @@ Element {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if (!this.visible) {
             return;
         }
         this.time += delta;
         RenderSystem.enableBlend();
-        RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
-        matrices.push();
-        matrices.translate(0.0f, 0.0f, 170.0f);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 170.0f);
         int i = this.alternativeButtons.size() <= 16 ? 4 : 5;
         int j = Math.min(this.alternativeButtons.size(), i);
         int k = MathHelper.ceil((float)this.alternativeButtons.size() / (float)i);
         int l = 4;
-        RecipeAlternativesWidget.drawNineSlicedTexture(matrices, this.buttonX, this.buttonY, j * 25 + 8, k * 25 + 8, 4, 32, 32, 82, 208);
+        context.drawNineSlicedTexture(BACKGROUND_TEXTURE, this.buttonX, this.buttonY, j * 25 + 8, k * 25 + 8, 4, 32, 32, 82, 208);
         RenderSystem.disableBlend();
         for (AlternativeButtonWidget alternativeButtonWidget : this.alternativeButtons) {
-            alternativeButtonWidget.render(matrices, mouseX, mouseY, delta);
+            alternativeButtonWidget.render(context, mouseX, mouseY, delta);
         }
-        matrices.pop();
+        context.getMatrices().pop();
     }
 
     public void setVisible(boolean visible) {
@@ -218,9 +215,8 @@ Element {
         }
 
         @Override
-        public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
             int j;
-            RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
             int i = 152;
             if (!this.craftable) {
                 i += 26;
@@ -229,18 +225,18 @@ Element {
             if (this.isSelected()) {
                 j += 26;
             }
-            AlternativeButtonWidget.drawTexture(matrices, this.getX(), this.getY(), i, j, this.width, this.height);
-            matrices.push();
-            matrices.translate((double)(this.getX() + 2), (double)(this.getY() + 2), 150.0);
+            context.drawTexture(BACKGROUND_TEXTURE, this.getX(), this.getY(), i, j, this.width, this.height);
+            context.getMatrices().push();
+            context.getMatrices().translate((double)(this.getX() + 2), (double)(this.getY() + 2), 150.0);
             for (InputSlot inputSlot : this.slots) {
-                matrices.push();
-                matrices.translate((double)inputSlot.y, (double)inputSlot.x, 0.0);
-                matrices.scale(0.375f, 0.375f, 1.0f);
-                matrices.translate(-8.0, -8.0, 0.0);
-                RecipeAlternativesWidget.this.client.getItemRenderer().renderInGuiWithOverrides(matrices, inputSlot.stacks[MathHelper.floor(RecipeAlternativesWidget.this.time / 30.0f) % inputSlot.stacks.length], 0, 0);
-                matrices.pop();
+                context.getMatrices().push();
+                context.getMatrices().translate((double)inputSlot.y, (double)inputSlot.x, 0.0);
+                context.getMatrices().scale(0.375f, 0.375f, 1.0f);
+                context.getMatrices().translate(-8.0, -8.0, 0.0);
+                context.drawItem(inputSlot.stacks[MathHelper.floor(RecipeAlternativesWidget.this.time / 30.0f) % inputSlot.stacks.length], 0, 0);
+                context.getMatrices().pop();
             }
-            matrices.pop();
+            context.getMatrices().pop();
         }
 
         @Environment(value=EnvType.CLIENT)

@@ -24,13 +24,13 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        if (!this.golem.world.isDay()) {
+        if (!this.golem.getWorld().isDay()) {
             return false;
         }
         if (this.golem.getRandom().nextInt(8000) != 0) {
             return false;
         }
-        this.targetVillager = this.golem.world.getClosestEntity(VillagerEntity.class, CLOSE_VILLAGER_PREDICATE, this.golem, this.golem.getX(), this.golem.getY(), this.golem.getZ(), this.golem.getBoundingBox().expand(6.0, 2.0, 6.0));
+        this.targetVillager = this.golem.getWorld().getClosestEntity(VillagerEntity.class, CLOSE_VILLAGER_PREDICATE, this.golem, this.golem.getX(), this.golem.getY(), this.golem.getZ(), this.golem.getBoundingBox().expand(6.0, 2.0, 6.0));
         return this.targetVillager != null;
     }
 

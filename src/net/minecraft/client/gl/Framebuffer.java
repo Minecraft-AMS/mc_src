@@ -11,6 +11,7 @@ package net.minecraft.client.gl;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.VertexSorter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -235,7 +236,7 @@ public abstract class Framebuffer {
         ShaderProgram shaderProgram = minecraftClient.gameRenderer.blitScreenProgram;
         shaderProgram.addSampler("DiffuseSampler", this.colorAttachment);
         Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, (float)width, (float)height, 0.0f, 1000.0f, 3000.0f);
-        RenderSystem.setProjectionMatrix(matrix4f);
+        RenderSystem.setProjectionMatrix(matrix4f, VertexSorter.BY_Z);
         if (shaderProgram.modelViewMat != null) {
             shaderProgram.modelViewMat.set(new Matrix4f().translation(0.0f, 0.0f, -2000.0f));
         }

@@ -7,11 +7,10 @@
  */
 package net.minecraft.client.gui.widget;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -39,10 +38,9 @@ extends ButtonWidget {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        RenderSystem.setShaderTexture(0, ButtonWidget.WIDGETS_TEXTURE);
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         IconLocation iconLocation = !this.active ? (this.locked ? IconLocation.LOCKED_DISABLED : IconLocation.UNLOCKED_DISABLED) : (this.isSelected() ? (this.locked ? IconLocation.LOCKED_HOVER : IconLocation.UNLOCKED_HOVER) : (this.locked ? IconLocation.LOCKED : IconLocation.UNLOCKED));
-        LockButtonWidget.drawTexture(matrices, this.getX(), this.getY(), iconLocation.getU(), iconLocation.getV(), this.width, this.height);
+        context.drawTexture(ButtonWidget.WIDGETS_TEXTURE, this.getX(), this.getY(), iconLocation.getU(), iconLocation.getV(), this.width, this.height);
     }
 
     @Environment(value=EnvType.CLIENT)

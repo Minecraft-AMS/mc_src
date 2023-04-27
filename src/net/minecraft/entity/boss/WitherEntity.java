@@ -160,7 +160,7 @@ RangedAttackMob {
         int i;
         Entity entity;
         Vec3d vec3d = this.getVelocity().multiply(1.0, 0.6, 1.0);
-        if (!this.world.isClient && this.getTrackedEntityId(0) > 0 && (entity = this.world.getEntityById(this.getTrackedEntityId(0))) != null) {
+        if (!this.getWorld().isClient && this.getTrackedEntityId(0) > 0 && (entity = this.getWorld().getEntityById(this.getTrackedEntityId(0))) != null) {
             double d = vec3d.y;
             if (this.getY() < entity.getY() || !this.shouldRenderOverlay() && this.getY() < entity.getY() + 5.0) {
                 d = Math.max(0.0, d);
@@ -186,7 +186,7 @@ RangedAttackMob {
             int j2 = this.getTrackedEntityId(i + 1);
             Entity entity2 = null;
             if (j2 > 0) {
-                entity2 = this.world.getEntityById(j2);
+                entity2 = this.getWorld().getEntityById(j2);
             }
             if (entity2 != null) {
                 double e = this.getHeadX(i + 1);
@@ -209,13 +209,13 @@ RangedAttackMob {
             double p = this.getHeadX(j);
             double q = this.getHeadY(j);
             double r = this.getHeadZ(j);
-            this.world.addParticle(ParticleTypes.SMOKE, p + this.random.nextGaussian() * (double)0.3f, q + this.random.nextGaussian() * (double)0.3f, r + this.random.nextGaussian() * (double)0.3f, 0.0, 0.0, 0.0);
-            if (!bl || this.world.random.nextInt(4) != 0) continue;
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, p + this.random.nextGaussian() * (double)0.3f, q + this.random.nextGaussian() * (double)0.3f, r + this.random.nextGaussian() * (double)0.3f, 0.7f, 0.7f, 0.5);
+            this.getWorld().addParticle(ParticleTypes.SMOKE, p + this.random.nextGaussian() * (double)0.3f, q + this.random.nextGaussian() * (double)0.3f, r + this.random.nextGaussian() * (double)0.3f, 0.0, 0.0, 0.0);
+            if (!bl || this.getWorld().random.nextInt(4) != 0) continue;
+            this.getWorld().addParticle(ParticleTypes.ENTITY_EFFECT, p + this.random.nextGaussian() * (double)0.3f, q + this.random.nextGaussian() * (double)0.3f, r + this.random.nextGaussian() * (double)0.3f, 0.7f, 0.7f, 0.5);
         }
         if (this.getInvulnerableTimer() > 0) {
             for (j = 0; j < 3; ++j) {
-                this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() + this.random.nextGaussian(), this.getY() + (double)(this.random.nextFloat() * 3.3f), this.getZ() + this.random.nextGaussian(), 0.7f, 0.7f, 0.9f);
+                this.getWorld().addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() + this.random.nextGaussian(), this.getY() + (double)(this.random.nextFloat() * 3.3f), this.getZ() + this.random.nextGaussian(), 0.7f, 0.7f, 0.9f);
             }
         }
     }
@@ -228,9 +228,9 @@ RangedAttackMob {
             int i2 = this.getInvulnerableTimer() - 1;
             this.bossBar.setPercent(1.0f - (float)i2 / 220.0f);
             if (i2 <= 0) {
-                this.world.createExplosion((Entity)this, this.getX(), this.getEyeY(), this.getZ(), 7.0f, false, World.ExplosionSourceType.MOB);
+                this.getWorld().createExplosion((Entity)this, this.getX(), this.getEyeY(), this.getZ(), 7.0f, false, World.ExplosionSourceType.MOB);
                 if (!this.isSilent()) {
-                    this.world.syncGlobalEvent(1023, this.getBlockPos(), 0);
+                    this.getWorld().syncGlobalEvent(1023, this.getBlockPos(), 0);
                 }
             }
             this.setInvulTimer(i2);
@@ -243,7 +243,7 @@ RangedAttackMob {
         for (i = 1; i < 3; ++i) {
             if (this.age < this.skullCooldowns[i - 1]) continue;
             this.skullCooldowns[i - 1] = this.age + 10 + this.random.nextInt(10);
-            if (this.world.getDifficulty() == Difficulty.NORMAL || this.world.getDifficulty() == Difficulty.HARD) {
+            if (this.getWorld().getDifficulty() == Difficulty.NORMAL || this.getWorld().getDifficulty() == Difficulty.HARD) {
                 int n = i - 1;
                 int n2 = this.chargedSkullCooldowns[n];
                 this.chargedSkullCooldowns[n] = n2 + 1;
@@ -258,7 +258,7 @@ RangedAttackMob {
                 }
             }
             if ((j = this.getTrackedEntityId(i)) > 0) {
-                LivingEntity livingEntity = (LivingEntity)this.world.getEntityById(j);
+                LivingEntity livingEntity = (LivingEntity)this.getWorld().getEntityById(j);
                 if (livingEntity == null || !this.canTarget(livingEntity) || this.squaredDistanceTo(livingEntity) > 900.0 || !this.canSee(livingEntity)) {
                     this.setTrackedEntityId(i, 0);
                     continue;
@@ -268,7 +268,7 @@ RangedAttackMob {
                 this.chargedSkullCooldowns[i - 1] = 0;
                 continue;
             }
-            List<LivingEntity> list = this.world.getTargets(LivingEntity.class, HEAD_TARGET_PREDICATE, this, this.getBoundingBox().expand(20.0, 8.0, 20.0));
+            List<LivingEntity> list = this.getWorld().getTargets(LivingEntity.class, HEAD_TARGET_PREDICATE, this, this.getBoundingBox().expand(20.0, 8.0, 20.0));
             if (list.isEmpty()) continue;
             LivingEntity livingEntity2 = list.get(this.random.nextInt(list.size()));
             this.setTrackedEntityId(i, livingEntity2.getId());
@@ -280,7 +280,7 @@ RangedAttackMob {
         }
         if (this.blockBreakingCooldown > 0) {
             --this.blockBreakingCooldown;
-            if (this.blockBreakingCooldown == 0 && this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (this.blockBreakingCooldown == 0 && this.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 i = MathHelper.floor(this.getY());
                 j = MathHelper.floor(this.getX());
                 int k = MathHelper.floor(this.getZ());
@@ -292,14 +292,14 @@ RangedAttackMob {
                             int p = i + n;
                             int q = k + m;
                             BlockPos blockPos = new BlockPos(o, p, q);
-                            BlockState blockState = this.world.getBlockState(blockPos);
+                            BlockState blockState = this.getWorld().getBlockState(blockPos);
                             if (!WitherEntity.canDestroy(blockState)) continue;
-                            bl = this.world.breakBlock(blockPos, true, this) || bl;
+                            bl = this.getWorld().breakBlock(blockPos, true, this) || bl;
                         }
                     }
                 }
                 if (bl) {
-                    this.world.syncWorldEvent(null, 1022, this.getBlockPos(), 0);
+                    this.getWorld().syncWorldEvent(null, 1022, this.getBlockPos(), 0);
                 }
             }
         }
@@ -377,7 +377,7 @@ RangedAttackMob {
 
     private void shootSkullAt(int headIndex, double targetX, double targetY, double targetZ, boolean charged) {
         if (!this.isSilent()) {
-            this.world.syncWorldEvent(null, 1024, this.getBlockPos(), 0);
+            this.getWorld().syncWorldEvent(null, 1024, this.getBlockPos(), 0);
         }
         double d = this.getHeadX(headIndex);
         double e = this.getHeadY(headIndex);
@@ -385,13 +385,13 @@ RangedAttackMob {
         double g = targetX - d;
         double h = targetY - e;
         double i = targetZ - f;
-        WitherSkullEntity witherSkullEntity = new WitherSkullEntity(this.world, this, g, h, i);
+        WitherSkullEntity witherSkullEntity = new WitherSkullEntity(this.getWorld(), this, g, h, i);
         witherSkullEntity.setOwner(this);
         if (charged) {
             witherSkullEntity.setCharged(true);
         }
         witherSkullEntity.setPos(d, e, f);
-        this.world.spawnEntity(witherSkullEntity);
+        this.getWorld().spawnEntity(witherSkullEntity);
     }
 
     @Override
@@ -440,7 +440,7 @@ RangedAttackMob {
 
     @Override
     public void checkDespawn() {
-        if (this.world.getDifficulty() == Difficulty.PEACEFUL && this.isDisallowedInPeaceful()) {
+        if (this.getWorld().getDifficulty() == Difficulty.PEACEFUL && this.isDisallowedInPeaceful()) {
             this.discard();
             return;
         }

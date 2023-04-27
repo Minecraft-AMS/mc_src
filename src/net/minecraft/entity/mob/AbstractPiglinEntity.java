@@ -99,12 +99,12 @@ extends HostileEntity {
         this.timeInOverworld = this.shouldZombify() ? ++this.timeInOverworld : 0;
         if (this.timeInOverworld > 300) {
             this.playZombificationSound();
-            this.zombify((ServerWorld)this.world);
+            this.zombify((ServerWorld)this.getWorld());
         }
     }
 
     public boolean shouldZombify() {
-        return !this.world.getDimension().piglinSafe() && !this.isImmuneToZombification() && !this.isAiDisabled();
+        return !this.getWorld().getDimension().piglinSafe() && !this.isImmuneToZombification() && !this.isAiDisabled();
     }
 
     protected void zombify(ServerWorld world) {

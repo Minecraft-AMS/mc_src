@@ -9,6 +9,7 @@
 package net.minecraft.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.VertexSorter;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.fabricmc.api.EnvType;
@@ -41,7 +42,7 @@ public class CubeMapRenderer {
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         Matrix4f matrix4f = new Matrix4f().setPerspective(1.4835298f, (float)client.getWindow().getFramebufferWidth() / (float)client.getWindow().getFramebufferHeight(), 0.05f, 10.0f);
         RenderSystem.backupProjectionMatrix();
-        RenderSystem.setProjectionMatrix(matrix4f);
+        RenderSystem.setProjectionMatrix(matrix4f, VertexSorter.BY_DISTANCE);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
         matrixStack.loadIdentity();

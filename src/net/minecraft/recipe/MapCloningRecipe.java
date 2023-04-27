@@ -65,9 +65,7 @@ extends SpecialCraftingRecipe {
         if (itemStack.isEmpty() || i < 1) {
             return ItemStack.EMPTY;
         }
-        ItemStack itemStack3 = itemStack.copy();
-        itemStack3.setCount(i + 1);
-        return itemStack3;
+        return itemStack.copyWithCount(i + 1);
     }
 
     @Override

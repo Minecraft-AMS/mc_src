@@ -106,6 +106,21 @@ public class Codecs {
             return DataResult.error(illegalArgumentException::getMessage);
         }
     });
+    public static final Codec<Text> STRINGIFIED_TEXT = Codec.STRING.flatXmap(json -> {
+        try {
+            return DataResult.success((Object)Text.Serializer.fromJson(json));
+        }
+        catch (JsonParseException jsonParseException) {
+            return DataResult.error(jsonParseException::getMessage);
+        }
+    }, text -> {
+        try {
+            return DataResult.success((Object)Text.Serializer.toJson(text));
+        }
+        catch (IllegalArgumentException illegalArgumentException) {
+            return DataResult.error(illegalArgumentException::getMessage);
+        }
+    });
     public static final Codec<Vector3f> VECTOR_3F = Codec.FLOAT.listOf().comapFlatMap(list2 -> Util.toArray(list2, 3).map(list -> new Vector3f(((Float)list.get(0)).floatValue(), ((Float)list.get(1)).floatValue(), ((Float)list.get(2)).floatValue())), vec3f -> List.of(Float.valueOf(vec3f.x()), Float.valueOf(vec3f.y()), Float.valueOf(vec3f.z())));
     public static final Codec<Quaternionf> QUATERNIONF = Codec.FLOAT.listOf().comapFlatMap(list2 -> Util.toArray(list2, 4).map(list -> new Quaternionf(((Float)list.get(0)).floatValue(), ((Float)list.get(1)).floatValue(), ((Float)list.get(2)).floatValue(), ((Float)list.get(3)).floatValue())), quaternion -> List.of(Float.valueOf(quaternion.x), Float.valueOf(quaternion.y), Float.valueOf(quaternion.z), Float.valueOf(quaternion.w)));
     public static final Codec<AxisAngle4f> AXIS_ANGLE4F = RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("angle").forGetter(axisAngle -> Float.valueOf(axisAngle.angle)), (App)VECTOR_3F.fieldOf("axis").forGetter(axisAngle -> new Vector3f(axisAngle.x, axisAngle.y, axisAngle.z))).apply((Applicative)instance, AxisAngle4f::new));
@@ -167,6 +182,13 @@ public class Codecs {
         return profile;
     }));
     public static final Codec<String> NON_EMPTY_STRING = Codecs.validate(Codec.STRING, string -> string.isEmpty() ? DataResult.error(() -> "Expected non-empty string") : DataResult.success((Object)string));
+    public static final Codec<Integer> CODEPOINT = Codec.STRING.comapFlatMap(string -> {
+        int[] is = string.codePoints().toArray();
+        if (is.length != 1) {
+            return DataResult.error(() -> "Expected one codepoint, got: " + string);
+        }
+        return DataResult.success((Object)is[0]);
+    }, Character::toString);
 
     public static <F, S> Codec<com.mojang.datafixers.util.Either<F, S>> xor(Codec<F> first, Codec<S> second) {
         return new Xor<F, S>(first, second);

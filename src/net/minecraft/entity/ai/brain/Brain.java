@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Memory;
@@ -387,7 +388,7 @@ public class Brain<E extends LivingEntity> {
     }
 
     public void stopAllTasks(ServerWorld world, E entity) {
-        long l = ((LivingEntity)entity).world.getTime();
+        long l = ((Entity)entity).getWorld().getTime();
         for (Task<E> task : this.getRunningTasks()) {
             task.stop(world, entity, l);
         }

@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.IntConsumer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
@@ -143,6 +144,7 @@ public class CommandFunctionManager {
         private final Tracer tracer;
         private final Deque<Entry> queue = Queues.newArrayDeque();
         private final List<Entry> waitlist = Lists.newArrayList();
+        boolean returned = false;
 
         Execution(Tracer tracer) {
             this.tracer = tracer;
@@ -150,9 +152,18 @@ public class CommandFunctionManager {
 
         void recursiveRun(CommandFunction function, ServerCommandSource source) {
             int i = CommandFunctionManager.this.getMaxCommandChainLength();
+            ServerCommandSource serverCommandSource = this.addReturnConsumer(source);
             if (this.queue.size() + this.waitlist.size() < i) {
-                this.waitlist.add(new Entry(source, this.depth, new CommandFunction.FunctionElement(function)));
+                this.waitlist.add(new Entry(serverCommandSource, this.depth, new CommandFunction.FunctionElement(function)));
             }
+        }
+
+        private ServerCommandSource addReturnConsumer(ServerCommandSource source) {
+            IntConsumer intConsumer = source.getReturnValueConsumer();
+            if (intConsumer instanceof ReturnValueConsumer) {
+                return source;
+            }
+            return source.withReturnValueConsumer(new ReturnValueConsumer(intConsumer));
         }
 
         /*
@@ -160,10 +171,11 @@ public class CommandFunctionManager {
          */
         int run(CommandFunction function, ServerCommandSource source) {
             int i = CommandFunctionManager.this.getMaxCommandChainLength();
+            ServerCommandSource serverCommandSource = this.addReturnConsumer(source);
             int j = 0;
             CommandFunction.Element[] elements = function.getElements();
             for (int k = elements.length - 1; k >= 0; --k) {
-                this.queue.push(new Entry(source, 0, elements[k]));
+                this.queue.push(new Entry(serverCommandSource, 0, elements[k]));
             }
             while (!this.queue.isEmpty()) {
                 try {
@@ -171,10 +183,15 @@ public class CommandFunctionManager {
                     CommandFunctionManager.this.server.getProfiler().push(entry::toString);
                     this.depth = entry.depth;
                     entry.execute(CommandFunctionManager.this, this.queue, i, this.tracer);
-                    if (!this.waitlist.isEmpty()) {
+                    if (this.returned) {
+                        while (!this.queue.isEmpty() && this.queue.peek().depth >= this.depth) {
+                            this.queue.removeFirst();
+                        }
+                        this.returned = false;
+                    } else if (!this.waitlist.isEmpty()) {
                         Lists.reverse(this.waitlist).forEach(this.queue::addFirst);
-                        this.waitlist.clear();
                     }
+                    this.waitlist.clear();
                 }
                 finally {
                     CommandFunctionManager.this.server.getProfiler().pop();
@@ -188,6 +205,21 @@ public class CommandFunctionManager {
         public void reportError(String message) {
             if (this.tracer != null) {
                 this.tracer.traceError(this.depth, message);
+            }
+        }
+
+        class ReturnValueConsumer
+        implements IntConsumer {
+            private final IntConsumer delegate;
+
+            ReturnValueConsumer(IntConsumer delegate) {
+                this.delegate = delegate;
+            }
+
+            @Override
+            public void accept(int value) {
+                this.delegate.accept(value);
+                Execution.this.returned = true;
             }
         }
     }

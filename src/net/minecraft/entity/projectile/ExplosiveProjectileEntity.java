@@ -65,7 +65,7 @@ extends ProjectileEntity {
     public void tick() {
         HitResult hitResult;
         Entity entity = this.getOwner();
-        if (!this.world.isClient && (entity != null && entity.isRemoved() || !this.world.isChunkLoaded(this.getBlockPos()))) {
+        if (!this.getWorld().isClient && (entity != null && entity.isRemoved() || !this.getWorld().isChunkLoaded(this.getBlockPos()))) {
             this.discard();
             return;
         }
@@ -86,12 +86,12 @@ extends ProjectileEntity {
         if (this.isTouchingWater()) {
             for (int i = 0; i < 4; ++i) {
                 float h = 0.25f;
-                this.world.addParticle(ParticleTypes.BUBBLE, d - vec3d.x * 0.25, e - vec3d.y * 0.25, f - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
+                this.getWorld().addParticle(ParticleTypes.BUBBLE, d - vec3d.x * 0.25, e - vec3d.y * 0.25, f - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
             }
             g = 0.8f;
         }
         this.setVelocity(vec3d.add(this.powerX, this.powerY, this.powerZ).multiply(g));
-        this.world.addParticle(this.getParticleType(), d, e + 0.5, f, 0.0, 0.0, 0.0);
+        this.getWorld().addParticle(this.getParticleType(), d, e + 0.5, f, 0.0, 0.0, 0.0);
         this.setPosition(d, e, f);
     }
 
@@ -147,7 +147,7 @@ extends ProjectileEntity {
         this.scheduleVelocityUpdate();
         Entity entity = source.getAttacker();
         if (entity != null) {
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 Vec3d vec3d = entity.getRotationVector();
                 this.setVelocity(vec3d);
                 this.powerX = vec3d.x * 0.1;

@@ -3,6 +3,7 @@
  */
 package net.minecraft.inventory;
 
+import java.util.List;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
@@ -89,6 +90,10 @@ RecipeInputProvider {
 
     public int getWidth() {
         return this.width;
+    }
+
+    public List<ItemStack> getInputStacks() {
+        return List.copyOf(this.stacks);
     }
 
     @Override

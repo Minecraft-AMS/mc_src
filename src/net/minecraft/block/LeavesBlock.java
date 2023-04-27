@@ -3,6 +3,7 @@
  */
 package net.minecraft.block;
 
+import java.util.OptionalInt;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -98,13 +99,17 @@ implements Waterloggable {
     }
 
     private static int getDistanceFromLog(BlockState state) {
+        return LeavesBlock.getOptionalDistanceFromLog(state).orElse(7);
+    }
+
+    public static OptionalInt getOptionalDistanceFromLog(BlockState state) {
         if (state.isIn(BlockTags.LOGS)) {
-            return 0;
+            return OptionalInt.of(0);
         }
-        if (state.getBlock() instanceof LeavesBlock) {
-            return state.get(DISTANCE);
+        if (state.contains(DISTANCE)) {
+            return OptionalInt.of(state.get(DISTANCE));
         }
-        return 7;
+        return OptionalInt.empty();
     }
 
     @Override

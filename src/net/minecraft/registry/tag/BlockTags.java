@@ -13,6 +13,7 @@ public final class BlockTags {
     public static final TagKey<Block> PLANKS = BlockTags.of("planks");
     public static final TagKey<Block> STONE_BRICKS = BlockTags.of("stone_bricks");
     public static final TagKey<Block> WOODEN_BUTTONS = BlockTags.of("wooden_buttons");
+    public static final TagKey<Block> STONE_BUTTONS = BlockTags.of("stone_buttons");
     public static final TagKey<Block> BUTTONS = BlockTags.of("buttons");
     public static final TagKey<Block> WOOL_CARPETS = BlockTags.of("wool_carpets");
     public static final TagKey<Block> WOODEN_DOORS = BlockTags.of("wooden_doors");
@@ -124,6 +125,7 @@ public final class BlockTags {
     public static final TagKey<Block> CAULDRONS = BlockTags.of("cauldrons");
     public static final TagKey<Block> CRYSTAL_SOUND_BLOCKS = BlockTags.of("crystal_sound_blocks");
     public static final TagKey<Block> INSIDE_STEP_SOUND_BLOCKS = BlockTags.of("inside_step_sound_blocks");
+    public static final TagKey<Block> COMBINATION_STEP_SOUND_BLOCKS = BlockTags.of("combination_step_sound_blocks");
     public static final TagKey<Block> OCCLUDES_VIBRATION_SIGNALS = BlockTags.of("occludes_vibration_signals");
     public static final TagKey<Block> DAMPENS_VIBRATIONS = BlockTags.of("dampens_vibrations");
     public static final TagKey<Block> DRIPSTONE_REPLACEABLE_BLOCKS = BlockTags.of("dripstone_replaceable_blocks");
@@ -138,6 +140,7 @@ public final class BlockTags {
     public static final TagKey<Block> HOE_MINEABLE = BlockTags.of("mineable/hoe");
     public static final TagKey<Block> PICKAXE_MINEABLE = BlockTags.of("mineable/pickaxe");
     public static final TagKey<Block> SHOVEL_MINEABLE = BlockTags.of("mineable/shovel");
+    public static final TagKey<Block> SWORD_EFFICIENT = BlockTags.of("sword_efficient");
     public static final TagKey<Block> NEEDS_DIAMOND_TOOL = BlockTags.of("needs_diamond_tool");
     public static final TagKey<Block> NEEDS_IRON_TOOL = BlockTags.of("needs_iron_tool");
     public static final TagKey<Block> NEEDS_STONE_TOOL = BlockTags.of("needs_stone_tool");
@@ -148,6 +151,7 @@ public final class BlockTags {
     public static final TagKey<Block> SCULK_REPLACEABLE = BlockTags.of("sculk_replaceable");
     public static final TagKey<Block> SCULK_REPLACEABLE_WORLD_GEN = BlockTags.of("sculk_replaceable_world_gen");
     public static final TagKey<Block> ANCIENT_CITY_REPLACEABLE = BlockTags.of("ancient_city_replaceable");
+    public static final TagKey<Block> VIBRATION_RESONATORS = BlockTags.of("vibration_resonators");
     public static final TagKey<Block> ANIMALS_SPAWNABLE_ON = BlockTags.of("animals_spawnable_on");
     public static final TagKey<Block> AXOLOTLS_SPAWNABLE_ON = BlockTags.of("axolotls_spawnable_on");
     public static final TagKey<Block> GOATS_SPAWNABLE_ON = BlockTags.of("goats_spawnable_on");
@@ -159,16 +163,22 @@ public final class BlockTags {
     public static final TagKey<Block> WOLVES_SPAWNABLE_ON = BlockTags.of("wolves_spawnable_on");
     public static final TagKey<Block> FROGS_SPAWNABLE_ON = BlockTags.of("frogs_spawnable_on");
     public static final TagKey<Block> AZALEA_GROWS_ON = BlockTags.of("azalea_grows_on");
-    public static final TagKey<Block> REPLACEABLE_PLANTS = BlockTags.of("replaceable_plants");
     public static final TagKey<Block> CONVERTABLE_TO_MUD = BlockTags.of("convertable_to_mud");
     public static final TagKey<Block> MANGROVE_LOGS_CAN_GROW_THROUGH = BlockTags.of("mangrove_logs_can_grow_through");
     public static final TagKey<Block> MANGROVE_ROOTS_CAN_GROW_THROUGH = BlockTags.of("mangrove_roots_can_grow_through");
     public static final TagKey<Block> DEAD_BUSH_MAY_PLACE_ON = BlockTags.of("dead_bush_may_place_on");
     public static final TagKey<Block> SNAPS_GOAT_HORN = BlockTags.of("snaps_goat_horn");
+    public static final TagKey<Block> REPLACEABLE_BY_TREES = BlockTags.of("replaceable_by_trees");
     public static final TagKey<Block> SNOW_LAYER_CANNOT_SURVIVE_ON = BlockTags.of("snow_layer_cannot_survive_on");
     public static final TagKey<Block> SNOW_LAYER_CAN_SURVIVE_ON = BlockTags.of("snow_layer_can_survive_on");
     public static final TagKey<Block> INVALID_SPAWN_INSIDE = BlockTags.of("invalid_spawn_inside");
     public static final TagKey<Block> SNIFFER_DIGGABLE_BLOCK = BlockTags.of("sniffer_diggable_block");
+    public static final TagKey<Block> SNIFFER_EGG_HATCH_BOOST = BlockTags.of("sniffer_egg_hatch_boost");
+    public static final TagKey<Block> TRAIL_RUINS_REPLACEABLE = BlockTags.of("trail_ruins_replaceable");
+    public static final TagKey<Block> REPLACEABLE = BlockTags.of("replaceable");
+    public static final TagKey<Block> ENCHANTMENT_POWER_PROVIDER = BlockTags.of("enchantment_power_provider");
+    public static final TagKey<Block> ENCHANTMENT_POWER_TRANSMITTER = BlockTags.of("enchantment_power_transmitter");
+    public static final TagKey<Block> MAINTAINS_FARMLAND = BlockTags.of("maintains_farmland");
 
     private BlockTags() {
     }

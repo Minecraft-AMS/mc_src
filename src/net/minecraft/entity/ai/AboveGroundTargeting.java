@@ -27,7 +27,7 @@ public class AboveGroundTargeting {
             if (blockPos2 == null) {
                 return null;
             }
-            if (NavigationConditions.isWaterAt(entity, blockPos2 = FuzzyPositions.upWhile(blockPos2, entity.getRandom().nextInt(maxAboveSolid - minAboveSolid + 1) + minAboveSolid, pathAwareEntity.world.getTopY(), pos -> NavigationConditions.isSolidAt(entity, pos))) || NavigationConditions.hasPathfindingPenalty(entity, blockPos2)) {
+            if (NavigationConditions.isWaterAt(entity, blockPos2 = FuzzyPositions.upWhile(blockPos2, entity.getRandom().nextInt(maxAboveSolid - minAboveSolid + 1) + minAboveSolid, entity.getWorld().getTopY(), pos -> NavigationConditions.isSolidAt(entity, pos))) || NavigationConditions.hasPathfindingPenalty(entity, blockPos2)) {
                 return null;
             }
             return blockPos2;

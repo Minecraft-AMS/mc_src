@@ -9,19 +9,18 @@
 package net.minecraft.client.gui.screen.recipebook;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookResults;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.book.RecipeBook;
@@ -68,13 +67,12 @@ extends ClickableWidget {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         boolean bl;
         if (!Screen.hasControlDown()) {
             this.time += delta;
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
         int i = 29;
         if (!this.resultCollection.hasCraftableRecipes()) {
             i += 25;
@@ -86,24 +84,24 @@ extends ClickableWidget {
         boolean bl2 = bl = this.bounce > 0.0f;
         if (bl) {
             float f = 1.0f + 0.1f * (float)Math.sin(this.bounce / 15.0f * (float)Math.PI);
-            matrices.push();
-            matrices.translate(this.getX() + 8, this.getY() + 12, 0.0f);
-            matrices.scale(f, f, 1.0f);
-            matrices.translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
+            context.getMatrices().push();
+            context.getMatrices().translate(this.getX() + 8, this.getY() + 12, 0.0f);
+            context.getMatrices().scale(f, f, 1.0f);
+            context.getMatrices().translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
             this.bounce -= delta;
         }
-        AnimatedResultButton.drawTexture(matrices, this.getX(), this.getY(), i, j, this.width, this.height);
+        context.drawTexture(BACKGROUND_TEXTURE, this.getX(), this.getY(), i, j, this.width, this.height);
         List<Recipe<?>> list = this.getResults();
         this.currentResultIndex = MathHelper.floor(this.time / 30.0f) % list.size();
         ItemStack itemStack = list.get(this.currentResultIndex).getOutput(this.resultCollection.getRegistryManager());
         int k = 4;
         if (this.resultCollection.hasSingleOutput() && this.getResults().size() > 1) {
-            minecraftClient.getItemRenderer().renderInGuiWithOverrides(matrices, itemStack, this.getX() + k + 1, this.getY() + k + 1, 0, 10);
+            context.drawItem(itemStack, this.getX() + k + 1, this.getY() + k + 1, 0, 10);
             --k;
         }
-        minecraftClient.getItemRenderer().renderInGui(matrices, itemStack, this.getX() + k, this.getY() + k);
+        context.drawItemWithoutEntity(itemStack, this.getX() + k, this.getY() + k);
         if (bl) {
-            matrices.pop();
+            context.getMatrices().pop();
         }
     }
 
@@ -124,9 +122,9 @@ extends ClickableWidget {
         return list.get(this.currentResultIndex);
     }
 
-    public List<Text> getTooltip(Screen screen) {
+    public List<Text> getTooltip() {
         ItemStack itemStack = this.getResults().get(this.currentResultIndex).getOutput(this.resultCollection.getRegistryManager());
-        ArrayList list = Lists.newArrayList(screen.getTooltipFromItem(itemStack));
+        ArrayList list = Lists.newArrayList(Screen.getTooltipFromItem(MinecraftClient.getInstance(), itemStack));
         if (this.resultCollection.getResults(this.recipeBook.isFilteringCraftable(this.craftingScreenHandler)).size() > 1) {
             list.add(MORE_RECIPES_TEXT);
         }

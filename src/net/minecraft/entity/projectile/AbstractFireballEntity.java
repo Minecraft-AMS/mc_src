@@ -13,7 +13,6 @@ import net.minecraft.entity.projectile.ExplosiveProjectileEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.util.Util;
 import net.minecraft.world.World;
 
 public abstract class AbstractFireballEntity
@@ -33,9 +32,9 @@ implements FlyingItemEntity {
         super(entityType, livingEntity, d, e, f, world);
     }
 
-    public void setItem(ItemStack stack2) {
-        if (!stack2.isOf(Items.FIRE_CHARGE) || stack2.hasNbt()) {
-            this.getDataTracker().set(ITEM, Util.make(stack2.copy(), stack -> stack.setCount(1)));
+    public void setItem(ItemStack stack) {
+        if (!stack.isOf(Items.FIRE_CHARGE) || stack.hasNbt()) {
+            this.getDataTracker().set(ITEM, stack.copyWithCount(1));
         }
     }
 

@@ -104,9 +104,9 @@ import org.slf4j.Logger;
 
 public final class ItemStack
 implements FabricItemStack {
-    public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registries.ITEM.getCodec().fieldOf("id").forGetter(stack -> stack.item), (App)Codec.INT.fieldOf("Count").forGetter(stack -> stack.count), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.nbt))).apply((Applicative)instance, ItemStack::new));
+    public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registries.ITEM.getCodec().fieldOf("id").forGetter(ItemStack::getItem), (App)Codec.INT.fieldOf("Count").forGetter(ItemStack::getCount), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.getNbt()))).apply((Applicative)instance, ItemStack::new));
     private static final Logger LOGGER = LogUtils.getLogger();
-    public static final ItemStack EMPTY = new ItemStack((ItemConvertible)null);
+    public static final ItemStack EMPTY = new ItemStack((Void)null);
     public static final DecimalFormat MODIFIER_FORMAT = Util.make(new DecimalFormat("#.##"), decimalFormat -> decimalFormat.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.ROOT)));
     public static final String ENCHANTMENTS_KEY = "Enchantments";
     public static final String DISPLAY_KEY = "display";
@@ -125,10 +125,10 @@ implements FabricItemStack {
     private int count;
     private int bobbingAnimationTime;
     @Deprecated
+    @Nullable
     private final Item item;
     @Nullable
     private NbtCompound nbt;
-    private boolean empty;
     @Nullable
     private Entity holder;
     @Nullable
@@ -158,17 +158,15 @@ implements FabricItemStack {
     }
 
     public ItemStack(ItemConvertible item, int count) {
-        this.item = item == null ? null : item.asItem();
+        this.item = item.asItem();
         this.count = count;
-        if (this.item != null && this.item.isDamageable()) {
+        if (this.item.isDamageable()) {
             this.setDamage(this.getDamage());
         }
-        this.updateEmptyState();
     }
 
-    private void updateEmptyState() {
-        this.empty = false;
-        this.empty = this.isEmpty();
+    private ItemStack(@Nullable Void void_) {
+        this.item = null;
     }
 
     private ItemStack(NbtCompound nbt) {
@@ -181,7 +179,6 @@ implements FabricItemStack {
         if (this.getItem().isDamageable()) {
             this.setDamage(this.getDamage());
         }
-        this.updateEmptyState();
     }
 
     public static ItemStack fromNbt(NbtCompound nbt) {
@@ -195,13 +192,7 @@ implements FabricItemStack {
     }
 
     public boolean isEmpty() {
-        if (this == EMPTY) {
-            return true;
-        }
-        if (this.getItem() == null || this.isOf(Items.AIR)) {
-            return true;
-        }
-        return this.count <= 0;
+        return this == EMPTY || this.item == Items.AIR || this.count <= 0;
     }
 
     public boolean isItemEnabled(FeatureSet enabledFeatures) {
@@ -209,15 +200,23 @@ implements FabricItemStack {
     }
 
     public ItemStack split(int amount) {
-        int i = Math.min(amount, this.count);
-        ItemStack itemStack = this.copy();
-        itemStack.setCount(i);
+        int i = Math.min(amount, this.getCount());
+        ItemStack itemStack = this.copyWithCount(i);
         this.decrement(i);
         return itemStack;
     }
 
+    public ItemStack copyAndEmpty() {
+        if (this.isEmpty()) {
+            return EMPTY;
+        }
+        ItemStack itemStack = this.copy();
+        this.setCount(0);
+        return itemStack;
+    }
+
     public Item getItem() {
-        return this.empty ? Items.AIR : this.item;
+        return this.isEmpty() ? Items.AIR : this.item;
     }
 
     public RegistryEntry<Item> getRegistryEntry() {
@@ -290,7 +289,7 @@ implements FabricItemStack {
     }
 
     public boolean isDamageable() {
-        if (this.empty || this.getItem().getMaxDamage() <= 0) {
+        if (this.isEmpty() || this.getItem().getMaxDamage() <= 0) {
             return false;
         }
         NbtCompound nbtCompound = this.getNbt();
@@ -338,7 +337,7 @@ implements FabricItemStack {
     }
 
     public <T extends LivingEntity> void damage(int amount, T entity, Consumer<T> breakCallback) {
-        if (entity.world.isClient || entity instanceof PlayerEntity && ((PlayerEntity)entity).getAbilities().creativeMode) {
+        if (entity.getWorld().isClient || entity instanceof PlayerEntity && ((PlayerEntity)entity).getAbilities().creativeMode) {
             return;
         }
         if (!this.isDamageable()) {
@@ -356,15 +355,15 @@ implements FabricItemStack {
     }
 
     public boolean isItemBarVisible() {
-        return this.item.isItemBarVisible(this);
+        return this.getItem().isItemBarVisible(this);
     }
 
     public int getItemBarStep() {
-        return this.item.getItemBarStep(this);
+        return this.getItem().getItemBarStep(this);
     }
 
     public int getItemBarColor() {
-        return this.item.getItemBarColor(this);
+        return this.getItem().getItemBarColor(this);
     }
 
     public boolean onStackClicked(Slot slot, ClickType clickType, PlayerEntity player) {
@@ -410,6 +409,9 @@ implements FabricItemStack {
     }
 
     public ItemStack copyWithCount(int count) {
+        if (this.isEmpty()) {
+            return EMPTY;
+        }
         ItemStack itemStack = this.copy();
         itemStack.setCount(count);
         return itemStack;
@@ -439,7 +441,7 @@ implements FabricItemStack {
     }
 
     private boolean isEqual(ItemStack stack) {
-        if (this.count != stack.count) {
+        if (this.getCount() != stack.getCount()) {
             return false;
         }
         if (!this.isOf(stack.getItem())) {
@@ -474,7 +476,7 @@ implements FabricItemStack {
     }
 
     public String toString() {
-        return this.count + " " + this.getItem();
+        return this.getCount() + " " + this.getItem();
     }
 
     public void inventoryTick(World world, Entity entity, int slot, boolean selected) {
@@ -508,7 +510,7 @@ implements FabricItemStack {
     }
 
     public boolean hasNbt() {
-        return !this.empty && this.nbt != null && !this.nbt.isEmpty();
+        return !this.isEmpty() && this.nbt != null && !this.nbt.isEmpty();
     }
 
     @Nullable
@@ -624,11 +626,11 @@ implements FabricItemStack {
             list.add(Text.literal("#" + integer).formatted(Formatting.GRAY));
         }
         if (ItemStack.isSectionVisible(i = this.getHideFlags(), TooltipSection.ADDITIONAL)) {
-            this.getItem().appendTooltip(this, player == null ? null : player.world, list, context);
+            this.getItem().appendTooltip(this, player == null ? null : player.getWorld(), list, context);
         }
         if (this.hasNbt()) {
             if (ItemStack.isSectionVisible(i, TooltipSection.UPGRADES) && player != null) {
-                ArmorTrim.appendTooltip(this, player.world.getRegistryManager(), list);
+                ArmorTrim.appendTooltip(this, player.getWorld().getRegistryManager(), list);
             }
             if (ItemStack.isSectionVisible(i, TooltipSection.ENCHANTMENTS)) {
                 ItemStack.appendEnchantments(list, this.getEnchantments());
@@ -810,7 +812,7 @@ implements FabricItemStack {
 
     @Nullable
     public Entity getHolder() {
-        return !this.empty ? this.holder : null;
+        return !this.isEmpty() ? this.holder : null;
     }
 
     public int getRepairCost() {
@@ -862,7 +864,7 @@ implements FabricItemStack {
             mutableText.formatted(Formatting.ITALIC);
         }
         MutableText mutableText2 = Texts.bracketed(mutableText);
-        if (!this.empty) {
+        if (!this.isEmpty()) {
             mutableText2.formatted(this.getRarity().formatting).styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackContent(this))));
         }
         return mutableText2;
@@ -891,16 +893,15 @@ implements FabricItemStack {
     }
 
     public int getCount() {
-        return this.empty ? 0 : this.count;
+        return this.isEmpty() ? 0 : this.count;
     }
 
     public void setCount(int count) {
         this.count = count;
-        this.updateEmptyState();
     }
 
     public void increment(int amount) {
-        this.setCount(this.count + amount);
+        this.setCount(this.getCount() + amount);
     }
 
     public void decrement(int amount) {

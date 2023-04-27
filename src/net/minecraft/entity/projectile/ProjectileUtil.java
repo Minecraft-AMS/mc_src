@@ -28,16 +28,27 @@ import org.jetbrains.annotations.Nullable;
 
 public final class ProjectileUtil {
     public static HitResult getCollision(Entity entity, Predicate<Entity> predicate) {
-        EntityHitResult hitResult2;
-        Vec3d vec3d3;
         Vec3d vec3d = entity.getVelocity();
-        World world = entity.world;
+        World world = entity.getWorld();
         Vec3d vec3d2 = entity.getPos();
-        HitResult hitResult = world.raycast(new RaycastContext(vec3d2, vec3d3 = vec3d2.add(vec3d), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity));
+        return ProjectileUtil.getCollision(vec3d2, entity, predicate, vec3d, world);
+    }
+
+    public static HitResult getCollision(Entity entity, Predicate<Entity> predicate, double range) {
+        Vec3d vec3d = entity.getRotationVec(0.0f).multiply(range);
+        World world = entity.getWorld();
+        Vec3d vec3d2 = entity.getEyePos();
+        return ProjectileUtil.getCollision(vec3d2, entity, predicate, vec3d, world);
+    }
+
+    private static HitResult getCollision(Vec3d pos, Entity entity, Predicate<Entity> predicate, Vec3d velocity, World world) {
+        EntityHitResult hitResult2;
+        Vec3d vec3d = pos.add(velocity);
+        HitResult hitResult = world.raycast(new RaycastContext(pos, vec3d, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity));
         if (((HitResult)hitResult).getType() != HitResult.Type.MISS) {
-            vec3d3 = hitResult.getPos();
+            vec3d = hitResult.getPos();
         }
-        if ((hitResult2 = ProjectileUtil.getEntityCollision(world, entity, vec3d2, vec3d3, entity.getBoundingBox().stretch(entity.getVelocity()).expand(1.0), predicate)) != null) {
+        if ((hitResult2 = ProjectileUtil.getEntityCollision(world, entity, pos, vec3d, entity.getBoundingBox().stretch(velocity).expand(1.0), predicate)) != null) {
             hitResult = hitResult2;
         }
         return hitResult;
@@ -45,7 +56,7 @@ public final class ProjectileUtil {
 
     @Nullable
     public static EntityHitResult raycast(Entity entity, Vec3d min, Vec3d max, Box box, Predicate<Entity> predicate, double d) {
-        World world = entity.world;
+        World world = entity.getWorld();
         double e = d;
         Entity entity2 = null;
         Vec3d vec3d = null;
@@ -84,12 +95,12 @@ public final class ProjectileUtil {
     }
 
     @Nullable
-    public static EntityHitResult getEntityCollision(World world, Entity entity, Vec3d min, Vec3d max, Box box, Predicate<Entity> predicate, float f) {
+    public static EntityHitResult getEntityCollision(World world, Entity entity, Vec3d min, Vec3d max, Box box, Predicate<Entity> predicate, float margin) {
         double d = Double.MAX_VALUE;
         Entity entity2 = null;
         for (Entity entity3 : world.getOtherEntities(entity, box, predicate)) {
             double e;
-            Box box2 = entity3.getBoundingBox().expand(f);
+            Box box2 = entity3.getBoundingBox().expand(margin);
             Optional<Vec3d> optional = box2.raycast(min, max);
             if (!optional.isPresent() || !((e = min.squaredDistanceTo(optional.get())) < d)) continue;
             entity2 = entity3;
@@ -131,7 +142,7 @@ public final class ProjectileUtil {
 
     public static PersistentProjectileEntity createArrowProjectile(LivingEntity entity, ItemStack stack, float damageModifier) {
         ArrowItem arrowItem = (ArrowItem)(stack.getItem() instanceof ArrowItem ? stack.getItem() : Items.ARROW);
-        PersistentProjectileEntity persistentProjectileEntity = arrowItem.createArrow(entity.world, stack, entity);
+        PersistentProjectileEntity persistentProjectileEntity = arrowItem.createArrow(entity.getWorld(), stack, entity);
         persistentProjectileEntity.applyEnchantmentEffects(entity, damageModifier);
         if (stack.isOf(Items.TIPPED_ARROW) && persistentProjectileEntity instanceof ArrowEntity) {
             ((ArrowEntity)persistentProjectileEntity).initFromStack(stack);

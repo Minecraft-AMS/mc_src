@@ -36,12 +36,12 @@ extends LandPathNodeMaker {
     public void init(ChunkCache cachedWorld, MobEntity entity) {
         super.init(cachedWorld, entity);
         this.pathNodes.clear();
-        this.waterPathNodeTypeWeight = entity.getPathfindingPenalty(PathNodeType.WATER);
+        entity.onStartPathfinding();
     }
 
     @Override
     public void clear() {
-        this.entity.setPathfindingPenalty(PathNodeType.WATER, this.waterPathNodeTypeWeight);
+        this.entity.onFinishPathfinding();
         this.pathNodes.clear();
         super.clear();
     }

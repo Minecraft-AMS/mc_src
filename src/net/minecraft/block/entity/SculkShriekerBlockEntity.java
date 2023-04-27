@@ -47,40 +47,49 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
+import net.minecraft.world.World;
 import net.minecraft.world.event.BlockPositionSource;
 import net.minecraft.world.event.GameEvent;
+import net.minecraft.world.event.PositionSource;
+import net.minecraft.world.event.Vibrations;
 import net.minecraft.world.event.listener.GameEventListener;
-import net.minecraft.world.event.listener.VibrationListener;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class SculkShriekerBlockEntity
 extends BlockEntity
-implements VibrationListener.Callback {
+implements GameEventListener.Holder<Vibrations.VibrationListener>,
+Vibrations {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final int RANGE = 8;
     private static final int field_38750 = 10;
     private static final int WARDEN_SPAWN_TRIES = 20;
     private static final int WARDEN_SPAWN_HORIZONTAL_RANGE = 5;
     private static final int WARDEN_SPAWN_VERTICAL_RANGE = 6;
     private static final int DARKNESS_RANGE = 40;
+    private static final int SHRIEK_DELAY = 90;
     private static final Int2ObjectMap<SoundEvent> WARNING_SOUNDS = (Int2ObjectMap)Util.make(new Int2ObjectOpenHashMap(), warningSounds -> {
         warningSounds.put(1, (Object)SoundEvents.ENTITY_WARDEN_NEARBY_CLOSE);
         warningSounds.put(2, (Object)SoundEvents.ENTITY_WARDEN_NEARBY_CLOSER);
         warningSounds.put(3, (Object)SoundEvents.ENTITY_WARDEN_NEARBY_CLOSEST);
         warningSounds.put(4, (Object)SoundEvents.ENTITY_WARDEN_LISTENING_ANGRY);
     });
-    private static final int SHRIEK_DELAY = 90;
     private int warningLevel;
-    private VibrationListener vibrationListener;
+    private final Vibrations.Callback vibrationCallback = new VibrationCallback();
+    private Vibrations.ListenerData vibrationListenerData = new Vibrations.ListenerData();
+    private final Vibrations.VibrationListener vibrationListener = new Vibrations.VibrationListener(this);
 
     public SculkShriekerBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityType.SCULK_SHRIEKER, pos, state);
-        this.vibrationListener = new VibrationListener(new BlockPositionSource(this.pos), 8, this);
     }
 
-    public VibrationListener getVibrationListener() {
-        return this.vibrationListener;
+    @Override
+    public Vibrations.ListenerData getVibrationListenerData() {
+        return this.vibrationListenerData;
+    }
+
+    @Override
+    public Vibrations.Callback getVibrationCallback() {
+        return this.vibrationCallback;
     }
 
     @Override
@@ -90,8 +99,8 @@ implements VibrationListener.Callback {
             this.warningLevel = nbt.getInt("warning_level");
         }
         if (nbt.contains("listener", 10)) {
-            VibrationListener.createCodec(this).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(vibrationListener -> {
-                this.vibrationListener = vibrationListener;
+            Vibrations.ListenerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(vibrationListener -> {
+                this.vibrationListenerData = vibrationListener;
             });
         }
     }
@@ -100,17 +109,7 @@ implements VibrationListener.Callback {
     protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.putInt("warning_level", this.warningLevel);
-        VibrationListener.createCodec(this).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.vibrationListener).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("listener", (NbtElement)nbtElement));
-    }
-
-    @Override
-    public TagKey<GameEvent> getTag() {
-        return GameEventTags.SHRIEKER_CAN_LISTEN;
-    }
-
-    @Override
-    public boolean accepts(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, GameEvent.Emitter emitter) {
-        return this.getCachedState().get(SculkShriekerBlock.SHRIEKING) == false && SculkShriekerBlockEntity.findResponsiblePlayerFromEntity(emitter.sourceEntity()) != null;
+        Vibrations.ListenerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.vibrationListenerData).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("listener", (NbtElement)nbtElement));
     }
 
     @Nullable
@@ -137,11 +136,6 @@ implements VibrationListener.Callback {
             return serverPlayerEntity2;
         }
         return null;
-    }
-
-    @Override
-    public void accept(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, @Nullable Entity entity, @Nullable Entity sourceEntity, float distance) {
-        this.shriek(world, SculkShriekerBlockEntity.findResponsiblePlayerFromEntity(sourceEntity != null ? sourceEntity : entity));
     }
 
     public void shriek(ServerWorld world, @Nullable ServerPlayerEntity player) {
@@ -183,20 +177,20 @@ implements VibrationListener.Callback {
     public void warn(ServerWorld world) {
         if (this.canWarn(world) && this.warningLevel > 0) {
             if (!this.trySpawnWarden(world)) {
-                this.playWarningSound();
+                this.playWarningSound(world);
             }
             WardenEntity.addDarknessToClosePlayers(world, Vec3d.ofCenter(this.getPos()), null, 40);
         }
     }
 
-    private void playWarningSound() {
+    private void playWarningSound(World world) {
         SoundEvent soundEvent = (SoundEvent)WARNING_SOUNDS.get(this.warningLevel);
         if (soundEvent != null) {
             BlockPos blockPos = this.getPos();
-            int i = blockPos.getX() + MathHelper.nextBetween(this.world.random, -10, 10);
-            int j = blockPos.getY() + MathHelper.nextBetween(this.world.random, -10, 10);
-            int k = blockPos.getZ() + MathHelper.nextBetween(this.world.random, -10, 10);
-            this.world.playSound(null, (double)i, (double)j, k, soundEvent, SoundCategory.HOSTILE, 5.0f, 1.0f);
+            int i = blockPos.getX() + MathHelper.nextBetween(world.random, -10, 10);
+            int j = blockPos.getY() + MathHelper.nextBetween(world.random, -10, 10);
+            int k = blockPos.getZ() + MathHelper.nextBetween(world.random, -10, 10);
+            world.playSound(null, (double)i, (double)j, k, soundEvent, SoundCategory.HOSTILE, 5.0f, 1.0f);
         }
     }
 
@@ -208,8 +202,58 @@ implements VibrationListener.Callback {
     }
 
     @Override
-    public void onListen() {
-        this.markDirty();
+    public Vibrations.VibrationListener getEventListener() {
+        return this.vibrationListener;
+    }
+
+    @Override
+    public /* synthetic */ GameEventListener getEventListener() {
+        return this.getEventListener();
+    }
+
+    class VibrationCallback
+    implements Vibrations.Callback {
+        private static final int RANGE = 8;
+        private final PositionSource positionSource;
+
+        public VibrationCallback() {
+            this.positionSource = new BlockPositionSource(SculkShriekerBlockEntity.this.pos);
+        }
+
+        @Override
+        public int getRange() {
+            return 8;
+        }
+
+        @Override
+        public PositionSource getPositionSource() {
+            return this.positionSource;
+        }
+
+        @Override
+        public TagKey<GameEvent> getTag() {
+            return GameEventTags.SHRIEKER_CAN_LISTEN;
+        }
+
+        @Override
+        public boolean accepts(ServerWorld world, BlockPos pos, GameEvent event, GameEvent.Emitter emitter) {
+            return SculkShriekerBlockEntity.this.getCachedState().get(SculkShriekerBlock.SHRIEKING) == false && SculkShriekerBlockEntity.findResponsiblePlayerFromEntity(emitter.sourceEntity()) != null;
+        }
+
+        @Override
+        public void accept(ServerWorld world, BlockPos pos, GameEvent event, @Nullable Entity sourceEntity, @Nullable Entity entity, float distance) {
+            SculkShriekerBlockEntity.this.shriek(world, SculkShriekerBlockEntity.findResponsiblePlayerFromEntity(entity != null ? entity : sourceEntity));
+        }
+
+        @Override
+        public void onListen() {
+            SculkShriekerBlockEntity.this.markDirty();
+        }
+
+        @Override
+        public boolean requiresTickingChunksAround() {
+            return true;
+        }
     }
 }
 

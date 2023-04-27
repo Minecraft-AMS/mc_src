@@ -80,7 +80,7 @@ extends SquidEntity {
         if (i > 0) {
             this.setDarkTicksRemaining(i - 1);
         }
-        this.world.addParticle(ParticleTypes.GLOW, this.getParticleX(0.6), this.getRandomBodyY(), this.getParticleZ(0.6), 0.0, 0.0, 0.0);
+        this.getWorld().addParticle(ParticleTypes.GLOW, this.getParticleX(0.6), this.getRandomBodyY(), this.getParticleZ(0.6), 0.0, 0.0, 0.0);
     }
 
     @Override

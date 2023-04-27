@@ -58,7 +58,7 @@ extends AbstractMinecartEntity {
     @Override
     protected void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.logic.readNbt(this.world, this.getBlockPos(), nbt);
+        this.logic.readNbt(this.getWorld(), this.getBlockPos(), nbt);
     }
 
     @Override
@@ -69,7 +69,7 @@ extends AbstractMinecartEntity {
 
     @Override
     public void handleStatus(byte status) {
-        this.logic.handleStatus(this.world, status);
+        this.logic.handleStatus(this.getWorld(), status);
     }
 
     @Override

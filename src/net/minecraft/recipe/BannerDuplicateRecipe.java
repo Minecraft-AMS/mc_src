@@ -67,9 +67,7 @@ extends SpecialCraftingRecipe {
             int j;
             ItemStack itemStack = craftingInventory.getStack(i);
             if (itemStack.isEmpty() || (j = BannerBlockEntity.getPatternCount(itemStack)) <= 0 || j > 6) continue;
-            ItemStack itemStack2 = itemStack.copy();
-            itemStack2.setCount(1);
-            return itemStack2;
+            return itemStack.copyWithCount(1);
         }
         return ItemStack.EMPTY;
     }
@@ -85,9 +83,7 @@ extends SpecialCraftingRecipe {
                 continue;
             }
             if (!itemStack.hasNbt() || BannerBlockEntity.getPatternCount(itemStack) <= 0) continue;
-            ItemStack itemStack2 = itemStack.copy();
-            itemStack2.setCount(1);
-            defaultedList.set(i, itemStack2);
+            defaultedList.set(i, itemStack.copyWithCount(1));
         }
         return defaultedList;
     }

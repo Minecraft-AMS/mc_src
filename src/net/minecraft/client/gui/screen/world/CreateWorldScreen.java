@@ -17,7 +17,6 @@
 package net.minecraft.client.gui.screen.world;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
@@ -39,7 +38,9 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.ScreenRect;
@@ -66,7 +67,6 @@ import net.minecraft.client.gui.widget.TabNavigationWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.client.toast.SystemToast;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.GeneratorOptionsHolder;
 import net.minecraft.registry.CombinedDynamicRegistries;
 import net.minecraft.registry.RegistryKey;
@@ -124,6 +124,7 @@ extends Screen {
     private static final int field_42171 = 8;
     public static final Identifier HEADER_SEPARATOR_TEXTURE = new Identifier("textures/gui/header_separator.png");
     public static final Identifier FOOTER_SEPARATOR_TEXTURE = new Identifier("textures/gui/footer_separator.png");
+    public static final Identifier LIGHT_DIRT_BACKGROUND_TEXTURE = new Identifier("textures/gui/light_dirt_background.png");
     final WorldCreator worldCreator;
     private final TabManager tabManager = new TabManager(this::addDrawableChild, child -> this.remove((Element)child));
     private boolean recreated;
@@ -279,18 +280,16 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        RenderSystem.setShaderTexture(0, FOOTER_SEPARATOR_TEXTURE);
-        CreateWorldScreen.drawTexture(matrices, 0, MathHelper.roundUpToMultiple(this.height - 36 - 2, 2), 0.0f, 0.0f, this.width, 2, 32, 2);
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.drawTexture(FOOTER_SEPARATOR_TEXTURE, 0, MathHelper.roundUpToMultiple(this.height - 36 - 2, 2), 0.0f, 0.0f, this.width, 2, 32, 2);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
-    public void renderBackgroundTexture(MatrixStack matrices) {
-        RenderSystem.setShaderTexture(0, LIGHT_DIRT_BACKGROUND_TEXTURE);
+    public void renderBackgroundTexture(DrawContext context) {
         int i = 32;
-        CreateWorldScreen.drawTexture(matrices, 0, 0, 0, 0.0f, 0.0f, this.width, this.height, 32, 32);
+        context.drawTexture(LIGHT_DIRT_BACKGROUND_TEXTURE, 0, 0, 0, 0.0f, 0.0f, this.width, this.height, 32, 32);
     }
 
     @Override
@@ -554,15 +553,14 @@ extends Screen {
                 cyclingButtonWidget3.setValue(CreateWorldScreen.this.worldCreator.areCheatsEnabled());
                 cyclingButtonWidget.active = !CreateWorldScreen.this.worldCreator.isDebug() && !CreateWorldScreen.this.worldCreator.isHardcore();
             });
+            if (!SharedConstants.getGameVersion().isStable()) {
+                adder.add(ButtonWidget.builder(EXPERIMENTS_TEXT, button -> CreateWorldScreen.this.openExperimentsScreen(CreateWorldScreen.this.worldCreator.getGeneratorOptionsHolder().dataConfiguration())).width(210).build());
+            }
         }
 
         @Override
         public void tick() {
             this.worldNameField.tick();
-        }
-
-        private /* synthetic */ void method_49012(ButtonWidget button) {
-            CreateWorldScreen.this.openExperimentsScreen(CreateWorldScreen.this.worldCreator.getGeneratorOptionsHolder().dataConfiguration());
         }
     }
 

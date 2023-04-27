@@ -42,7 +42,7 @@ public class ItemUsage {
     }
 
     public static void spawnItemContents(ItemEntity itemEntity, Stream<ItemStack> contents) {
-        World world = itemEntity.world;
+        World world = itemEntity.getWorld();
         if (world.isClient) {
             return;
         }

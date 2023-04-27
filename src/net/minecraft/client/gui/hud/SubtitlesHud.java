@@ -14,11 +14,10 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.sound.SoundInstanceListener;
 import net.minecraft.client.sound.WeightedSoundSet;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -26,7 +25,6 @@ import net.minecraft.util.math.Vec3d;
 
 @Environment(value=EnvType.CLIENT)
 public class SubtitlesHud
-extends DrawableHelper
 implements SoundInstanceListener {
     private static final long REMOVE_DELAY = 3000L;
     private final MinecraftClient client;
@@ -37,7 +35,7 @@ implements SoundInstanceListener {
         this.client = client;
     }
 
-    public void render(MatrixStack matrices) {
+    public void render(DrawContext context) {
         if (!this.enabled && this.client.options.getShowSubtitles().getValue().booleanValue()) {
             this.client.getSoundManager().registerListener(this);
             this.enabled = true;
@@ -79,20 +77,20 @@ implements SoundInstanceListener {
             int o = this.client.textRenderer.getWidth(text);
             int p = MathHelper.floor(MathHelper.clampedLerp(255.0f, 75.0f, (float)(Util.getMeasuringTimeMs() - subtitleEntry.getTime()) / (float)(3000.0 * d)));
             int q = p << 16 | p << 8 | p;
-            matrices.push();
-            matrices.translate((float)this.client.getWindow().getScaledWidth() - (float)l * 1.0f - 2.0f, (float)(this.client.getWindow().getScaledHeight() - 35) - (float)(i * (m + 1)) * 1.0f, 0.0f);
-            matrices.scale(1.0f, 1.0f, 1.0f);
-            SubtitlesHud.fill(matrices, -l - 1, -n - 1, l + 1, n + 1, this.client.options.getTextBackgroundColor(0.8f));
+            context.getMatrices().push();
+            context.getMatrices().translate((float)this.client.getWindow().getScaledWidth() - (float)l * 1.0f - 2.0f, (float)(this.client.getWindow().getScaledHeight() - 35) - (float)(i * (m + 1)) * 1.0f, 0.0f);
+            context.getMatrices().scale(1.0f, 1.0f, 1.0f);
+            context.fill(-l - 1, -n - 1, l + 1, n + 1, this.client.options.getTextBackgroundColor(0.8f));
             int r = q + -16777216;
             if (!bl) {
                 if (e > 0.0) {
-                    SubtitlesHud.drawTextWithShadow(matrices, this.client.textRenderer, ">", l - this.client.textRenderer.getWidth(">"), -n, r);
+                    context.drawTextWithShadow(this.client.textRenderer, ">", l - this.client.textRenderer.getWidth(">"), -n, r);
                 } else if (e < 0.0) {
-                    SubtitlesHud.drawTextWithShadow(matrices, this.client.textRenderer, "<", -l, -n, r);
+                    context.drawTextWithShadow(this.client.textRenderer, "<", -l, -n, r);
                 }
             }
-            SubtitlesHud.drawTextWithShadow(matrices, this.client.textRenderer, text, -o / 2, -n, r);
-            matrices.pop();
+            context.drawTextWithShadow(this.client.textRenderer, text, -o / 2, -n, r);
+            context.getMatrices().pop();
             ++i;
         }
     }

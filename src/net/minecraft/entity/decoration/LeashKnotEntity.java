@@ -92,12 +92,12 @@ extends AbstractDecorationEntity {
 
     @Override
     public ActionResult interact(PlayerEntity player, Hand hand) {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return ActionResult.SUCCESS;
         }
         boolean bl = false;
         double d = 7.0;
-        List<MobEntity> list = this.world.getNonSpectatingEntities(MobEntity.class, new Box(this.getX() - 7.0, this.getY() - 7.0, this.getZ() - 7.0, this.getX() + 7.0, this.getY() + 7.0, this.getZ() + 7.0));
+        List<MobEntity> list = this.getWorld().getNonSpectatingEntities(MobEntity.class, new Box(this.getX() - 7.0, this.getY() - 7.0, this.getZ() - 7.0, this.getX() + 7.0, this.getY() + 7.0, this.getZ() + 7.0));
         for (MobEntity mobEntity : list) {
             if (mobEntity.getHoldingEntity() != player) continue;
             mobEntity.attachLeash(this, true);
@@ -122,7 +122,7 @@ extends AbstractDecorationEntity {
 
     @Override
     public boolean canStayAttached() {
-        return this.world.getBlockState(this.attachmentPos).isIn(BlockTags.FENCES);
+        return this.getWorld().getBlockState(this.attachmentPos).isIn(BlockTags.FENCES);
     }
 
     public static LeashKnotEntity getOrCreate(World world, BlockPos pos) {

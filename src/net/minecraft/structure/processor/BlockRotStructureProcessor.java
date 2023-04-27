@@ -50,8 +50,8 @@ extends StructureProcessor {
     @Override
     @Nullable
     public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
-        Random random = data.getRandom(currentBlockInfo.pos);
-        if (this.rottableBlocks.isPresent() && !originalBlockInfo.state.isIn(this.rottableBlocks.get()) || random.nextFloat() <= this.integrity) {
+        Random random = data.getRandom(currentBlockInfo.pos());
+        if (this.rottableBlocks.isPresent() && !originalBlockInfo.state().isIn(this.rottableBlocks.get()) || random.nextFloat() <= this.integrity) {
             return currentBlockInfo;
         }
         return null;

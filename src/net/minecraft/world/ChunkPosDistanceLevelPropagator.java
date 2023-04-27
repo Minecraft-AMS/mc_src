@@ -19,6 +19,9 @@ extends LevelPropagator {
 
     @Override
     protected void propagateLevel(long id, int level, boolean decrease) {
+        if (decrease && level >= this.levelCount - 2) {
+            return;
+        }
         ChunkPos chunkPos = new ChunkPos(id);
         int i = chunkPos.x;
         int j = chunkPos.z;

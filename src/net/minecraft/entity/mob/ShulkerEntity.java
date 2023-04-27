@@ -185,13 +185,13 @@ Monster {
     @Override
     public void tick() {
         super.tick();
-        if (!(this.world.isClient || this.hasVehicle() || this.canStay(this.getBlockPos(), this.getAttachedFace()))) {
+        if (!(this.getWorld().isClient || this.hasVehicle() || this.canStay(this.getBlockPos(), this.getAttachedFace()))) {
             this.tryAttachOrTeleport();
         }
         if (this.tickOpenProgress()) {
             this.moveEntities();
         }
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             if (this.teleportLerpTimer > 0) {
                 --this.teleportLerpTimer;
             } else {
@@ -240,7 +240,7 @@ Monster {
         if (h <= 0.0f) {
             return;
         }
-        List<Entity> list = this.world.getOtherEntities(this, ShulkerEntity.calculateBoundingBox(direction, g, f).offset(this.getX() - 0.5, this.getY(), this.getZ() - 0.5), EntityPredicates.EXCEPT_SPECTATOR.and(entity -> !entity.isConnectedThroughVehicle(this)));
+        List<Entity> list = this.getWorld().getOtherEntities(this, ShulkerEntity.calculateBoundingBox(direction, g, f).offset(this.getX() - 0.5, this.getY(), this.getZ() - 0.5), EntityPredicates.EXCEPT_SPECTATOR.and(entity -> !entity.isConnectedThroughVehicle(this)));
         for (Entity entity2 : list) {
             if (entity2 instanceof ShulkerEntity || entity2.noClip) continue;
             entity2.move(MovementType.SHULKER, new Vec3d(h * (float)direction.getOffsetX(), h * (float)direction.getOffsetY(), h * (float)direction.getOffsetZ()));
@@ -268,7 +268,7 @@ Monster {
 
     @Override
     public boolean startRiding(Entity entity, boolean force) {
-        if (this.world.isClient()) {
+        if (this.getWorld().isClient()) {
             this.prevAttachedBlock = null;
             this.teleportLerpTimer = 0;
         }
@@ -279,7 +279,7 @@ Monster {
     @Override
     public void stopRiding() {
         super.stopRiding();
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             this.prevAttachedBlock = this.getBlockPos();
         }
         this.prevBodyYaw = 0.0f;
@@ -328,7 +328,7 @@ Monster {
         if (!blockPos2.equals(blockPos)) {
             this.dataTracker.set(PEEK_AMOUNT, (byte)0);
             this.velocityDirty = true;
-            if (this.world.isClient && !this.hasVehicle() && !blockPos2.equals(this.prevAttachedBlock)) {
+            if (this.getWorld().isClient && !this.hasVehicle() && !blockPos2.equals(this.prevAttachedBlock)) {
                 this.prevAttachedBlock = blockPos;
                 this.teleportLerpTimer = 6;
                 this.lastRenderX = this.getX();
@@ -352,15 +352,15 @@ Monster {
             return false;
         }
         Direction direction2 = direction.getOpposite();
-        if (!this.world.isDirectionSolid(pos.offset(direction), this, direction2)) {
+        if (!this.getWorld().isDirectionSolid(pos.offset(direction), this, direction2)) {
             return false;
         }
         Box box = ShulkerEntity.calculateBoundingBox(direction2, 1.0f).offset(pos).contract(1.0E-6);
-        return this.world.isSpaceEmpty(this, box);
+        return this.getWorld().isSpaceEmpty(this, box);
     }
 
     private boolean isInvalidPosition(BlockPos pos) {
-        BlockState blockState = this.world.getBlockState(pos);
+        BlockState blockState = this.getWorld().getBlockState(pos);
         if (blockState.isAir()) {
             return false;
         }
@@ -376,12 +376,12 @@ Monster {
         for (int i = 0; i < 5; ++i) {
             Direction direction;
             BlockPos blockPos2 = blockPos.add(MathHelper.nextBetween(this.random, -8, 8), MathHelper.nextBetween(this.random, -8, 8), MathHelper.nextBetween(this.random, -8, 8));
-            if (blockPos2.getY() <= this.world.getBottomY() || !this.world.isAir(blockPos2) || !this.world.getWorldBorder().contains(blockPos2) || !this.world.isSpaceEmpty(this, new Box(blockPos2).contract(1.0E-6)) || (direction = this.findAttachSide(blockPos2)) == null) continue;
+            if (blockPos2.getY() <= this.getWorld().getBottomY() || !this.getWorld().isAir(blockPos2) || !this.getWorld().getWorldBorder().contains(blockPos2) || !this.getWorld().isSpaceEmpty(this, new Box(blockPos2).contract(1.0E-6)) || (direction = this.findAttachSide(blockPos2)) == null) continue;
             this.detach();
             this.setAttachedFace(direction);
             this.playSound(SoundEvents.ENTITY_SHULKER_TELEPORT, 1.0f, 1.0f);
             this.setPosition((double)blockPos2.getX() + 0.5, blockPos2.getY(), (double)blockPos2.getZ() + 0.5);
-            this.world.emitGameEvent(GameEvent.TELEPORT, blockPos, GameEvent.Emitter.of(this));
+            this.getWorld().emitGameEvent(GameEvent.TELEPORT, blockPos, GameEvent.Emitter.of(this));
             this.dataTracker.set(PEEK_AMOUNT, (byte)0);
             this.setTarget(null);
             return true;
@@ -423,16 +423,16 @@ Monster {
         if (this.isClosed() || !this.tryTeleport()) {
             return;
         }
-        int i = this.world.getEntitiesByType(EntityType.SHULKER, box.expand(8.0), Entity::isAlive).size();
+        int i = this.getWorld().getEntitiesByType(EntityType.SHULKER, box.expand(8.0), Entity::isAlive).size();
         float f = (float)(i - 1) / 5.0f;
-        if (this.world.random.nextFloat() < f) {
+        if (this.getWorld().random.nextFloat() < f) {
             return;
         }
-        ShulkerEntity shulkerEntity = EntityType.SHULKER.create(this.world);
+        ShulkerEntity shulkerEntity = EntityType.SHULKER.create(this.getWorld());
         if (shulkerEntity != null) {
             shulkerEntity.setVariant((Optional<DyeColor>)this.getVariant());
             shulkerEntity.refreshPositionAfterTeleport(vec3d);
-            this.world.spawnEntity(shulkerEntity);
+            this.getWorld().spawnEntity(shulkerEntity);
         }
     }
 
@@ -462,7 +462,7 @@ Monster {
     }
 
     void setPeekAmount(int peekAmount) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.getAttributeInstance(EntityAttributes.GENERIC_ARMOR).removeModifier(COVERED_ARMOR_BONUS);
             if (peekAmount == 0) {
                 this.getAttributeInstance(EntityAttributes.GENERIC_ARMOR).addPersistentModifier(COVERED_ARMOR_BONUS);
@@ -594,7 +594,7 @@ Monster {
             if (livingEntity == null || !livingEntity.isAlive()) {
                 return false;
             }
-            return ShulkerEntity.this.world.getDifficulty() != Difficulty.PEACEFUL;
+            return ShulkerEntity.this.getWorld().getDifficulty() != Difficulty.PEACEFUL;
         }
 
         @Override
@@ -615,7 +615,7 @@ Monster {
 
         @Override
         public void tick() {
-            if (ShulkerEntity.this.world.getDifficulty() == Difficulty.PEACEFUL) {
+            if (ShulkerEntity.this.getWorld().getDifficulty() == Difficulty.PEACEFUL) {
                 return;
             }
             --this.counter;
@@ -628,7 +628,7 @@ Monster {
             if (d < 400.0) {
                 if (this.counter <= 0) {
                     this.counter = 20 + ShulkerEntity.this.random.nextInt(10) * 20 / 2;
-                    ShulkerEntity.this.world.spawnEntity(new ShulkerBulletEntity(ShulkerEntity.this.world, ShulkerEntity.this, livingEntity, ShulkerEntity.this.getAttachedFace().getAxis()));
+                    ShulkerEntity.this.getWorld().spawnEntity(new ShulkerBulletEntity(ShulkerEntity.this.getWorld(), ShulkerEntity.this, livingEntity, ShulkerEntity.this.getAttachedFace().getAxis()));
                     ShulkerEntity.this.playSound(SoundEvents.ENTITY_SHULKER_SHOOT, 2.0f, (ShulkerEntity.this.random.nextFloat() - ShulkerEntity.this.random.nextFloat()) * 0.2f + 1.0f);
                 }
             } else {
@@ -682,7 +682,7 @@ Monster {
 
         @Override
         public boolean canStart() {
-            if (ShulkerEntity.this.world.getDifficulty() == Difficulty.PEACEFUL) {
+            if (ShulkerEntity.this.getWorld().getDifficulty() == Difficulty.PEACEFUL) {
                 return false;
             }
             return super.canStart();

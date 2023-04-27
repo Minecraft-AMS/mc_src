@@ -19,11 +19,11 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.block.enums.StructureBlockMode;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.packet.c2s.play.UpdateStructureBlockC2SPacket;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
@@ -388,41 +388,41 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
         StructureBlockMode structureBlockMode = this.structureBlock.getMode();
-        StructureBlockScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
         if (structureBlockMode != StructureBlockMode.DATA) {
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, STRUCTURE_NAME_TEXT, this.width / 2 - 153, 30, 0xA0A0A0);
-            this.inputName.render(matrices, mouseX, mouseY, delta);
+            context.drawTextWithShadow(this.textRenderer, STRUCTURE_NAME_TEXT, this.width / 2 - 153, 30, 0xA0A0A0);
+            this.inputName.render(context, mouseX, mouseY, delta);
         }
         if (structureBlockMode == StructureBlockMode.LOAD || structureBlockMode == StructureBlockMode.SAVE) {
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, POSITION_TEXT, this.width / 2 - 153, 70, 0xA0A0A0);
-            this.inputPosX.render(matrices, mouseX, mouseY, delta);
-            this.inputPosY.render(matrices, mouseX, mouseY, delta);
-            this.inputPosZ.render(matrices, mouseX, mouseY, delta);
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, INCLUDE_ENTITIES_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(INCLUDE_ENTITIES_TEXT), 150, 0xA0A0A0);
+            context.drawTextWithShadow(this.textRenderer, POSITION_TEXT, this.width / 2 - 153, 70, 0xA0A0A0);
+            this.inputPosX.render(context, mouseX, mouseY, delta);
+            this.inputPosY.render(context, mouseX, mouseY, delta);
+            this.inputPosZ.render(context, mouseX, mouseY, delta);
+            context.drawTextWithShadow(this.textRenderer, INCLUDE_ENTITIES_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(INCLUDE_ENTITIES_TEXT), 150, 0xA0A0A0);
         }
         if (structureBlockMode == StructureBlockMode.SAVE) {
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, SIZE_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
-            this.inputSizeX.render(matrices, mouseX, mouseY, delta);
-            this.inputSizeY.render(matrices, mouseX, mouseY, delta);
-            this.inputSizeZ.render(matrices, mouseX, mouseY, delta);
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, DETECT_SIZE_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(DETECT_SIZE_TEXT), 110, 0xA0A0A0);
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, SHOW_AIR_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(SHOW_AIR_TEXT), 70, 0xA0A0A0);
+            context.drawTextWithShadow(this.textRenderer, SIZE_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
+            this.inputSizeX.render(context, mouseX, mouseY, delta);
+            this.inputSizeY.render(context, mouseX, mouseY, delta);
+            this.inputSizeZ.render(context, mouseX, mouseY, delta);
+            context.drawTextWithShadow(this.textRenderer, DETECT_SIZE_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(DETECT_SIZE_TEXT), 110, 0xA0A0A0);
+            context.drawTextWithShadow(this.textRenderer, SHOW_AIR_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(SHOW_AIR_TEXT), 70, 0xA0A0A0);
         }
         if (structureBlockMode == StructureBlockMode.LOAD) {
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, INTEGRITY_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
-            this.inputIntegrity.render(matrices, mouseX, mouseY, delta);
-            this.inputSeed.render(matrices, mouseX, mouseY, delta);
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, SHOW_BOUNDING_BOX_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(SHOW_BOUNDING_BOX_TEXT), 70, 0xA0A0A0);
+            context.drawTextWithShadow(this.textRenderer, INTEGRITY_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
+            this.inputIntegrity.render(context, mouseX, mouseY, delta);
+            this.inputSeed.render(context, mouseX, mouseY, delta);
+            context.drawTextWithShadow(this.textRenderer, SHOW_BOUNDING_BOX_TEXT, this.width / 2 + 154 - this.textRenderer.getWidth(SHOW_BOUNDING_BOX_TEXT), 70, 0xA0A0A0);
         }
         if (structureBlockMode == StructureBlockMode.DATA) {
-            StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, CUSTOM_DATA_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
-            this.inputMetadata.render(matrices, mouseX, mouseY, delta);
+            context.drawTextWithShadow(this.textRenderer, CUSTOM_DATA_TEXT, this.width / 2 - 153, 110, 0xA0A0A0);
+            this.inputMetadata.render(context, mouseX, mouseY, delta);
         }
-        StructureBlockScreen.drawTextWithShadow(matrices, this.textRenderer, structureBlockMode.asText(), this.width / 2 - 153, 174, 0xA0A0A0);
-        super.render(matrices, mouseX, mouseY, delta);
+        context.drawTextWithShadow(this.textRenderer, structureBlockMode.asText(), this.width / 2 - 153, 174, 0xA0A0A0);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override

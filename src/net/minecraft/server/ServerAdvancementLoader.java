@@ -25,7 +25,7 @@ import java.util.Map;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementManager;
 import net.minecraft.advancement.AdvancementPositioner;
-import net.minecraft.loot.condition.LootConditionManager;
+import net.minecraft.loot.LootManager;
 import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
 import net.minecraft.resource.JsonDataLoader;
 import net.minecraft.resource.ResourceManager;
@@ -40,9 +40,9 @@ extends JsonDataLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().create();
     private AdvancementManager manager = new AdvancementManager();
-    private final LootConditionManager conditionManager;
+    private final LootManager conditionManager;
 
-    public ServerAdvancementLoader(LootConditionManager conditionManager) {
+    public ServerAdvancementLoader(LootManager conditionManager) {
         super(GSON, "advancements");
         this.conditionManager = conditionManager;
     }

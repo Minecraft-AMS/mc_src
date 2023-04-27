@@ -107,7 +107,7 @@ implements FlyingItemEntity {
         if (this.wasShotByEntity()) {
             if (this.shooter == null) {
                 this.dataTracker.get(SHOOTER_ENTITY_ID).ifPresent(id -> {
-                    Entity entity = this.world.getEntityById(id);
+                    Entity entity = this.getWorld().getEntityById(id);
                     if (entity instanceof LivingEntity) {
                         this.shooter = (LivingEntity)entity;
                     }
@@ -143,19 +143,19 @@ implements FlyingItemEntity {
         }
         this.updateRotation();
         if (this.life == 0 && !this.isSilent()) {
-            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3.0f, 1.0f);
+            this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3.0f, 1.0f);
         }
         ++this.life;
-        if (this.world.isClient && this.life % 2 < 2) {
-            this.world.addParticle(ParticleTypes.FIREWORK, this.getX(), this.getY(), this.getZ(), this.random.nextGaussian() * 0.05, -this.getVelocity().y * 0.5, this.random.nextGaussian() * 0.05);
+        if (this.getWorld().isClient && this.life % 2 < 2) {
+            this.getWorld().addParticle(ParticleTypes.FIREWORK, this.getX(), this.getY(), this.getZ(), this.random.nextGaussian() * 0.05, -this.getVelocity().y * 0.5, this.random.nextGaussian() * 0.05);
         }
-        if (!this.world.isClient && this.life > this.lifeTime) {
+        if (!this.getWorld().isClient && this.life > this.lifeTime) {
             this.explodeAndRemove();
         }
     }
 
     private void explodeAndRemove() {
-        this.world.sendEntityStatus(this, (byte)17);
+        this.getWorld().sendEntityStatus(this, (byte)17);
         this.emitGameEvent(GameEvent.EXPLODE, this.getOwner());
         this.explode();
         this.discard();
@@ -164,7 +164,7 @@ implements FlyingItemEntity {
     @Override
     protected void onEntityHit(EntityHitResult entityHitResult) {
         super.onEntityHit(entityHitResult);
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             return;
         }
         this.explodeAndRemove();
@@ -173,8 +173,8 @@ implements FlyingItemEntity {
     @Override
     protected void onBlockHit(BlockHitResult blockHitResult) {
         BlockPos blockPos = new BlockPos(blockHitResult.getBlockPos());
-        this.world.getBlockState(blockPos).onEntityCollision(this.world, blockPos, this);
-        if (!this.world.isClient() && this.hasExplosionEffects()) {
+        this.getWorld().getBlockState(blockPos).onEntityCollision(this.getWorld(), blockPos, this);
+        if (!this.getWorld().isClient() && this.hasExplosionEffects()) {
             this.explodeAndRemove();
         }
         super.onBlockHit(blockHitResult);
@@ -202,13 +202,13 @@ implements FlyingItemEntity {
             }
             double d = 5.0;
             Vec3d vec3d = this.getPos();
-            List<LivingEntity> list = this.world.getNonSpectatingEntities(LivingEntity.class, this.getBoundingBox().expand(5.0));
+            List<LivingEntity> list = this.getWorld().getNonSpectatingEntities(LivingEntity.class, this.getBoundingBox().expand(5.0));
             for (LivingEntity livingEntity : list) {
                 if (livingEntity == this.shooter || this.squaredDistanceTo(livingEntity) > 25.0) continue;
                 boolean bl = false;
                 for (int i = 0; i < 2; ++i) {
                     Vec3d vec3d2 = new Vec3d(livingEntity.getX(), livingEntity.getBodyY(0.5 * (double)i), livingEntity.getZ());
-                    BlockHitResult hitResult = this.world.raycast(new RaycastContext(vec3d, vec3d2, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+                    BlockHitResult hitResult = this.getWorld().raycast(new RaycastContext(vec3d, vec3d2, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
                     if (((HitResult)hitResult).getType() != HitResult.Type.MISS) continue;
                     bl = true;
                     break;
@@ -230,16 +230,16 @@ implements FlyingItemEntity {
 
     @Override
     public void handleStatus(byte status) {
-        if (status == 17 && this.world.isClient) {
+        if (status == 17 && this.getWorld().isClient) {
             if (!this.hasExplosionEffects()) {
                 for (int i = 0; i < this.random.nextInt(3) + 2; ++i) {
-                    this.world.addParticle(ParticleTypes.POOF, this.getX(), this.getY(), this.getZ(), this.random.nextGaussian() * 0.05, 0.005, this.random.nextGaussian() * 0.05);
+                    this.getWorld().addParticle(ParticleTypes.POOF, this.getX(), this.getY(), this.getZ(), this.random.nextGaussian() * 0.05, 0.005, this.random.nextGaussian() * 0.05);
                 }
             } else {
                 ItemStack itemStack = this.dataTracker.get(ITEM);
                 NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubNbt("Fireworks");
                 Vec3d vec3d = this.getVelocity();
-                this.world.addFireworkParticle(this.getX(), this.getY(), this.getZ(), vec3d.x, vec3d.y, vec3d.z, nbtCompound);
+                this.getWorld().addFireworkParticle(this.getX(), this.getY(), this.getZ(), vec3d.x, vec3d.y, vec3d.z, nbtCompound);
             }
         }
         super.handleStatus(status);

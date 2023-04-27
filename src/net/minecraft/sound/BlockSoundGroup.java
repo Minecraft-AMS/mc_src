@@ -7,6 +7,7 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 
 public class BlockSoundGroup {
+    public static final BlockSoundGroup field_44608 = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.INTENTIONALLY_EMPTY, SoundEvents.INTENTIONALLY_EMPTY, SoundEvents.INTENTIONALLY_EMPTY, SoundEvents.INTENTIONALLY_EMPTY, SoundEvents.INTENTIONALLY_EMPTY);
     public static final BlockSoundGroup WOOD = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_WOOD_BREAK, SoundEvents.BLOCK_WOOD_STEP, SoundEvents.BLOCK_WOOD_PLACE, SoundEvents.BLOCK_WOOD_HIT, SoundEvents.BLOCK_WOOD_FALL);
     public static final BlockSoundGroup GRAVEL = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_GRAVEL_BREAK, SoundEvents.BLOCK_GRAVEL_STEP, SoundEvents.BLOCK_GRAVEL_PLACE, SoundEvents.BLOCK_GRAVEL_HIT, SoundEvents.BLOCK_GRAVEL_FALL);
     public static final BlockSoundGroup GRASS = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_GRASS_BREAK, SoundEvents.BLOCK_GRASS_STEP, SoundEvents.BLOCK_GRASS_PLACE, SoundEvents.BLOCK_GRASS_HIT, SoundEvents.BLOCK_GRASS_FALL);
@@ -106,7 +107,9 @@ public class BlockSoundGroup {
     public static final BlockSoundGroup CHERRY_WOOD_HANGING_SIGN = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_CHERRY_WOOD_HANGING_SIGN_BREAK, SoundEvents.BLOCK_CHERRY_WOOD_HANGING_SIGN_STEP, SoundEvents.BLOCK_CHERRY_WOOD_HANGING_SIGN_PLACE, SoundEvents.BLOCK_CHERRY_WOOD_HANGING_SIGN_HIT, SoundEvents.BLOCK_CHERRY_WOOD_HANGING_SIGN_FALL);
     public static final BlockSoundGroup CHISELED_BOOKSHELF = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_CHISELED_BOOKSHELF_BREAK, SoundEvents.BLOCK_CHISELED_BOOKSHELF_STEP, SoundEvents.BLOCK_CHISELED_BOOKSHELF_PLACE, SoundEvents.BLOCK_CHISELED_BOOKSHELF_HIT, SoundEvents.BLOCK_CHISELED_BOOKSHELF_FALL);
     public static final BlockSoundGroup SUSPICIOUS_SAND = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_SUSPICIOUS_SAND_BREAK, SoundEvents.BLOCK_SUSPICIOUS_SAND_STEP, SoundEvents.BLOCK_SUSPICIOUS_SAND_PLACE, SoundEvents.BLOCK_SUSPICIOUS_SAND_HIT, SoundEvents.BLOCK_SUSPICIOUS_SAND_FALL);
-    public static final BlockSoundGroup DECORATED_POT = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.INTENTIONALLY_EMPTY, SoundEvents.BLOCK_DECORATED_POT_STEP, SoundEvents.BLOCK_DECORATED_POT_PLACE, SoundEvents.BLOCK_DECORATED_POT_HIT, SoundEvents.BLOCK_DECORATED_POT_FALL);
+    public static final BlockSoundGroup SUSPICIOUS_GRAVEL = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_SUSPICIOUS_GRAVEL_BREAK, SoundEvents.BLOCK_SUSPICIOUS_GRAVEL_STEP, SoundEvents.BLOCK_SUSPICIOUS_GRAVEL_PLACE, SoundEvents.BLOCK_SUSPICIOUS_GRAVEL_HIT, SoundEvents.BLOCK_SUSPICIOUS_GRAVEL_FALL);
+    public static final BlockSoundGroup DECORATED_POT = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_DECORATED_POT_BREAK, SoundEvents.BLOCK_DECORATED_POT_STEP, SoundEvents.BLOCK_DECORATED_POT_PLACE, SoundEvents.BLOCK_DECORATED_POT_HIT, SoundEvents.BLOCK_DECORATED_POT_FALL);
+    public static final BlockSoundGroup DECORATED_POT_SHATTER = new BlockSoundGroup(1.0f, 1.0f, SoundEvents.BLOCK_DECORATED_POT_SHATTER, SoundEvents.BLOCK_DECORATED_POT_STEP, SoundEvents.BLOCK_DECORATED_POT_PLACE, SoundEvents.BLOCK_DECORATED_POT_HIT, SoundEvents.BLOCK_DECORATED_POT_FALL);
     public final float volume;
     public final float pitch;
     private final SoundEvent breakSound;

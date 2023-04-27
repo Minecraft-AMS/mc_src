@@ -105,7 +105,6 @@ FabricBlock {
     public static final int FORCE_STATE = 16;
     public static final int SKIP_DROPS = 32;
     public static final int MOVED = 64;
-    public static final int SKIP_LIGHTING_UPDATES = 128;
     public static final int field_31035 = 4;
     public static final int NOTIFY_ALL = 3;
     public static final int field_31022 = 11;
@@ -370,8 +369,8 @@ FabricBlock {
     public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
     }
 
-    public boolean canMobSpawnInside() {
-        return !this.material.isSolid() && !this.material.isLiquid();
+    public boolean canMobSpawnInside(BlockState state) {
+        return !state.isSolid() && !state.isLiquid();
     }
 
     public MutableText getName() {

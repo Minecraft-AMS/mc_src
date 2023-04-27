@@ -108,7 +108,7 @@ implements RangedAttackMob {
     @Override
     public void tickMovement() {
         super.tickMovement();
-        if (this.world.isClient && this.isInvisible()) {
+        if (this.getWorld().isClient && this.isInvisible()) {
             --this.mirrorSpellTimer;
             if (this.mirrorSpellTimer < 0) {
                 this.mirrorSpellTimer = 0;
@@ -123,9 +123,9 @@ implements RangedAttackMob {
                     this.mirrorCopyOffsets[1][j] = new Vec3d((double)(-6.0f + (float)this.random.nextInt(13)) * 0.5, Math.max(0, this.random.nextInt(6) - 4), (double)(-6.0f + (float)this.random.nextInt(13)) * 0.5);
                 }
                 for (j = 0; j < 16; ++j) {
-                    this.world.addParticle(ParticleTypes.CLOUD, this.getParticleX(0.5), this.getRandomBodyY(), this.offsetZ(0.5), 0.0, 0.0, 0.0);
+                    this.getWorld().addParticle(ParticleTypes.CLOUD, this.getParticleX(0.5), this.getRandomBodyY(), this.offsetZ(0.5), 0.0, 0.0, 0.0);
                 }
-                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ILLUSIONER_MIRROR_MOVE, this.getSoundCategory(), 1.0f, 1.0f, false);
+                this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ILLUSIONER_MIRROR_MOVE, this.getSoundCategory(), 1.0f, 1.0f, false);
             } else if (this.hurtTime == this.maxHurtTime - 1) {
                 this.mirrorSpellTimer = 3;
                 for (int k = 0; k < 4; ++k) {
@@ -197,9 +197,9 @@ implements RangedAttackMob {
         double e = target.getBodyY(0.3333333333333333) - persistentProjectileEntity.getY();
         double f = target.getZ() - this.getZ();
         double g = Math.sqrt(d * d + f * f);
-        persistentProjectileEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
+        persistentProjectileEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.getWorld().getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-        this.world.spawnEntity(persistentProjectileEntity);
+        this.getWorld().spawnEntity(persistentProjectileEntity);
     }
 
     @Override
@@ -271,7 +271,7 @@ implements RangedAttackMob {
             if (IllusionerEntity.this.getTarget().getId() == this.targetId) {
                 return false;
             }
-            return IllusionerEntity.this.world.getLocalDifficulty(IllusionerEntity.this.getBlockPos()).isHarderThan(Difficulty.NORMAL.ordinal());
+            return IllusionerEntity.this.getWorld().getLocalDifficulty(IllusionerEntity.this.getBlockPos()).isHarderThan(Difficulty.NORMAL.ordinal());
         }
 
         @Override

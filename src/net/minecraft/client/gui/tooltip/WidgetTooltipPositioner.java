@@ -11,7 +11,6 @@ package net.minecraft.client.gui.tooltip;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.util.math.MathHelper;
@@ -32,16 +31,16 @@ implements TooltipPositioner {
     }
 
     @Override
-    public Vector2ic getPosition(Screen screen, int x, int y, int width, int height) {
+    public Vector2ic getPosition(int screenWidth, int screenHeight, int x, int y, int width, int height) {
         int k;
         Vector2i vector2i = new Vector2i(x + 12, y);
-        if (vector2i.x + width > screen.width - 5) {
+        if (vector2i.x + width > screenWidth - 5) {
             vector2i.x = Math.max(x - 12 - width, 9);
         }
         vector2i.y += 3;
         int i = height + 3 + 3;
         int j = this.widget.getY() + this.widget.getHeight() + 3 + WidgetTooltipPositioner.getOffsetY(0, 0, this.widget.getHeight());
-        vector2i.y = j + i <= (k = screen.height - 5) ? (vector2i.y += WidgetTooltipPositioner.getOffsetY(vector2i.y, this.widget.getY(), this.widget.getHeight())) : (vector2i.y -= i + WidgetTooltipPositioner.getOffsetY(vector2i.y, this.widget.getY() + this.widget.getHeight(), this.widget.getHeight()));
+        vector2i.y = j + i <= (k = screenHeight - 5) ? (vector2i.y += WidgetTooltipPositioner.getOffsetY(vector2i.y, this.widget.getY(), this.widget.getHeight())) : (vector2i.y -= i + WidgetTooltipPositioner.getOffsetY(vector2i.y, this.widget.getY() + this.widget.getHeight(), this.widget.getHeight()));
         return vector2i;
     }
 

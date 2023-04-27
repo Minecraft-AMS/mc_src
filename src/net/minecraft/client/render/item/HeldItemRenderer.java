@@ -135,7 +135,7 @@ public class HeldItemRenderer {
         if (stack.isEmpty()) {
             return;
         }
-        this.itemRenderer.renderItem(entity, stack, renderMode, leftHanded, matrices, vertexConsumers, entity.world, light, OverlayTexture.DEFAULT_UV, entity.getId() + renderMode.ordinal());
+        this.itemRenderer.renderItem(entity, stack, renderMode, leftHanded, matrices, vertexConsumers, entity.getWorld(), light, OverlayTexture.DEFAULT_UV, entity.getId() + renderMode.ordinal());
     }
 
     private float getMapAngle(float tickDelta) {
@@ -271,26 +271,27 @@ public class HeldItemRenderer {
 
     private void applyBrushTransformation(MatrixStack matrices, float tickDelta, Arm arm, ItemStack stack, float equipProgress) {
         this.applyEquipOffset(matrices, arm, equipProgress);
-        float f = (float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f;
-        float g = 1.0f - f / (float)stack.getMaxUseTime();
-        float h = -90.0f;
-        float i = 60.0f;
-        int j = 45;
+        float f = this.client.player.getItemUseTimeLeft() % 10;
+        float g = f - tickDelta + 1.0f;
+        float h = 1.0f - g / 10.0f;
+        float i = -90.0f;
+        float j = 60.0f;
         float k = 150.0f;
         float l = -15.0f;
-        float m = -15.0f + 75.0f * MathHelper.cos(g * 45.0f * (float)Math.PI);
+        int m = 2;
+        float n = -15.0f + 75.0f * MathHelper.cos(h * 2.0f * (float)Math.PI);
         if (arm != Arm.RIGHT) {
             matrices.translate(0.1, 0.83, 0.35);
             matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-80.0f));
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90.0f));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(m));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(n));
             matrices.translate(-0.3, 0.22, 0.35);
         } else {
             matrices.translate(-0.25, 0.22, 0.35);
             matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-80.0f));
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(90.0f));
             matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(0.0f));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(m));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(n));
         }
     }
 

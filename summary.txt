@@ -1,4 +1,4 @@
-Summary for .\1.19.4\minecraft-merged-project-root-1.19.4-net.fabricmc.yarn.1_19_4.1.19.4+build.2-v2.jar
+Summary for .\23w17a\minecraft-merged-project-root-23w17a-net.fabricmc.yarn.23w17a.23w17a+build.4-v2.jar
 Decompiled with CFR 0.152
 
 
@@ -6,18 +6,25 @@ net.minecraft.nbt.NbtList
 ----------------------------
 
 doAccept(java.io.DataInput net.minecraft.nbt.scanner.NbtScanner )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [4[SWITCH], 8[CASE]], but top level block is 9[SWITCH]
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [8[CASE], 4[SWITCH]], but top level block is 9[SWITCH]
 
 
-net.minecraft.client.util.Window
+net.minecraft.entity.LivingEntity
 ----------------------------
 
-readImage(net.minecraft.resource.InputSupplier<java.io.InputStream> java.nio.IntBuffer java.nio.IntBuffer java.nio.IntBuffer )
-  Loose catch block
+tickMovement()
+  Unable to fully structure code
 
 
 net.minecraft.entity.passive.RabbitEntity
 ----------------------------
 
 createChild(net.minecraft.server.world.ServerWorld net.minecraft.entity.passive.PassiveEntity )
+  Unable to fully structure code
+
+
+net.minecraft.world.gen.feature.TreeFeature
+----------------------------
+
+placeLogsAndLeaves(net.minecraft.world.WorldAccess net.minecraft.util.math.BlockBox java.util.Set<net.minecraft.util.math.BlockPos> java.util.Set<net.minecraft.util.math.BlockPos> java.util.Set<net.minecraft.util.math.BlockPos> )
   Unable to fully structure code

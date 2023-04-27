@@ -8,13 +8,11 @@
  */
 package net.minecraft.client.gui.hud;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -93,9 +91,8 @@ public record MessageIndicator(int indicatorColor, @Nullable Icon icon, @Nullabl
             this.height = height;
         }
 
-        public void draw(MatrixStack matrices, int x, int y) {
-            RenderSystem.setShaderTexture(0, CHAT_TAGS_TEXTURE);
-            DrawableHelper.drawTexture(matrices, x, y, this.u, this.v, this.width, this.height, 32, 32);
+        public void draw(DrawContext context, int x, int y) {
+            context.drawTexture(CHAT_TAGS_TEXTURE, x, y, this.u, this.v, this.width, this.height, 32, 32);
         }
 
         private static /* synthetic */ Icon[] method_44711() {

@@ -70,7 +70,7 @@ extends AbstractHorseEntity {
 
     @Override
     protected SoundEvent getSwimSound() {
-        if (this.onGround) {
+        if (this.isOnGround()) {
             if (this.hasPassengers()) {
                 ++this.soundTicks;
                 if (this.soundTicks > 5 && this.soundTicks % 3 == 0) {
@@ -88,7 +88,7 @@ extends AbstractHorseEntity {
 
     @Override
     protected void playSwimSound(float volume) {
-        if (this.onGround) {
+        if (this.isOnGround()) {
             super.playSwimSound(0.3f);
         } else {
             super.playSwimSound(Math.min(0.1f, volume * 25.0f));

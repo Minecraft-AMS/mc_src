@@ -91,15 +91,20 @@ FabricBlockLootTableGenerator {
     protected static final LootCondition.Builder WITH_SHEARS = MatchToolLootCondition.builder(ItemPredicate.Builder.create().items(Items.SHEARS));
     private static final LootCondition.Builder WITH_SILK_TOUCH_OR_SHEARS = WITH_SHEARS.or(WITH_SILK_TOUCH);
     private static final LootCondition.Builder WITHOUT_SILK_TOUCH_NOR_SHEARS = WITH_SILK_TOUCH_OR_SHEARS.invert();
-    private final Set<Item> explosionImmuneItems;
-    private final FeatureSet requiredFeatures;
-    private final Map<Identifier, LootTable.Builder> lootTables = new HashMap<Identifier, LootTable.Builder>();
+    protected final Set<Item> explosionImmuneItems;
+    protected final FeatureSet requiredFeatures;
+    protected final Map<Identifier, LootTable.Builder> lootTables;
     protected static final float[] SAPLING_DROP_CHANCE = new float[]{0.05f, 0.0625f, 0.083333336f, 0.1f};
     private static final float[] LEAVES_STICK_DROP_CHANCE = new float[]{0.02f, 0.022222223f, 0.025f, 0.033333335f, 0.1f};
 
     protected BlockLootTableGenerator(Set<Item> explosionImmuneItems, FeatureSet requiredFeatures) {
+        this(explosionImmuneItems, requiredFeatures, new HashMap<Identifier, LootTable.Builder>());
+    }
+
+    protected BlockLootTableGenerator(Set<Item> explosionImmuneItems, FeatureSet requiredFeatures, Map<Identifier, LootTable.Builder> lootTables) {
         this.explosionImmuneItems = explosionImmuneItems;
         this.requiredFeatures = requiredFeatures;
+        this.lootTables = lootTables;
     }
 
     public <T extends LootFunctionConsumingBuilder<T>> T applyExplosionDecay(ItemConvertible drop, LootFunctionConsumingBuilder<T> builder) {

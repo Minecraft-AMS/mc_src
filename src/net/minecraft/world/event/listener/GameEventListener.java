@@ -41,5 +41,9 @@ public interface GameEventListener {
             field_40355 = TriggerOrder.method_45493();
         }
     }
+
+    public static interface Holder<T extends GameEventListener> {
+        public T getEventListener();
+    }
 }
 

@@ -5,6 +5,7 @@
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.system.MemoryUtil
  *  org.slf4j.Logger
  */
@@ -22,11 +23,13 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntUnaryOperator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.util.annotation.DeobfuscateClass;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 
@@ -110,16 +113,23 @@ public class TextureUtil {
     }
 
     public static void writeAsPNG(Path directory, String prefix, int textureId, int scales, int width, int height) {
+        TextureUtil.writeAsPNG(directory, prefix, textureId, scales, width, height, null);
+    }
+
+    public static void writeAsPNG(Path path, String string, int i, int j, int k, int l, @Nullable IntUnaryOperator intUnaryOperator) {
         RenderSystem.assertOnRenderThread();
-        TextureUtil.bind(textureId);
-        for (int i = 0; i <= scales; ++i) {
-            int j = width >> i;
-            int k = height >> i;
-            try (NativeImage nativeImage = new NativeImage(j, k, false);){
-                nativeImage.loadFromTextureImage(i, false);
-                Path path = directory.resolve(prefix + "_" + i + ".png");
-                nativeImage.writeTo(path);
-                LOGGER.debug("Exported png to: {}", (Object)path.toAbsolutePath());
+        TextureUtil.bind(i);
+        for (int m = 0; m <= j; ++m) {
+            int n = k >> m;
+            int o = l >> m;
+            try (NativeImage nativeImage = new NativeImage(n, o, false);){
+                nativeImage.loadFromTextureImage(m, false);
+                if (intUnaryOperator != null) {
+                    nativeImage.apply(intUnaryOperator);
+                }
+                Path path2 = path.resolve(string + "_" + m + ".png");
+                nativeImage.writeTo(path2);
+                LOGGER.debug("Exported png to: {}", (Object)path2.toAbsolutePath());
                 continue;
             }
             catch (IOException iOException) {

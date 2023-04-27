@@ -13,12 +13,10 @@ extends LevelPropagator {
     }
 
     @Override
-    protected boolean isMarker(long id) {
-        return id == Long.MAX_VALUE;
-    }
-
-    @Override
     protected void propagateLevel(long id, int level, boolean decrease) {
+        if (decrease && level >= this.levelCount - 2) {
+            return;
+        }
         for (int i = -1; i <= 1; ++i) {
             for (int j = -1; j <= 1; ++j) {
                 for (int k = -1; k <= 1; ++k) {
@@ -55,7 +53,7 @@ extends LevelPropagator {
 
     @Override
     protected int getPropagatedLevel(long sourceId, long targetId, int level) {
-        if (sourceId == Long.MAX_VALUE) {
+        if (this.isMarker(sourceId)) {
             return this.getInitialLevel(targetId);
         }
         return level + 1;

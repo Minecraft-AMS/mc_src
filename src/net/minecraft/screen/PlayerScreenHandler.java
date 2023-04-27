@@ -145,19 +145,19 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
 
     @Override
     public boolean matches(Recipe<? super CraftingInventory> recipe) {
-        return recipe.matches(this.craftingInput, this.owner.world);
+        return recipe.matches(this.craftingInput, this.owner.getWorld());
     }
 
     @Override
     public void onContentChanged(Inventory inventory) {
-        CraftingScreenHandler.updateResult(this, this.owner.world, this.owner, this.craftingInput, this.craftingResult);
+        CraftingScreenHandler.updateResult(this, this.owner.getWorld(), this.owner, this.craftingInput, this.craftingResult);
     }
 
     @Override
     public void onClosed(PlayerEntity player) {
         super.onClosed(player);
         this.craftingResult.clear();
-        if (player.world.isClient) {
+        if (player.getWorld().isClient) {
             return;
         }
         this.dropInventory(player, this.craftingInput);

@@ -9,6 +9,7 @@ package net.minecraft.client.realms.gui.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.realms.dto.RealmsServer;
@@ -17,7 +18,6 @@ import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
 import net.minecraft.client.realms.gui.screen.RealmsResetWorldScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.task.WorldCreationTask;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 
@@ -91,18 +91,18 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        RealmsCreateRealmScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 11, 0xFFFFFF);
-        this.textRenderer.draw(matrices, WORLD_NAME_TEXT, (float)(this.width / 2 - 100), 52.0f, 0xA0A0A0);
-        this.textRenderer.draw(matrices, WORLD_DESCRIPTION_TEXT, (float)(this.width / 2 - 100), 102.0f, 0xA0A0A0);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 11, 0xFFFFFF);
+        context.drawText(this.textRenderer, WORLD_NAME_TEXT, this.width / 2 - 100, 52, 0xA0A0A0, false);
+        context.drawText(this.textRenderer, WORLD_DESCRIPTION_TEXT, this.width / 2 - 100, 102, 0xA0A0A0, false);
         if (this.nameBox != null) {
-            this.nameBox.render(matrices, mouseX, mouseY, delta);
+            this.nameBox.render(context, mouseX, mouseY, delta);
         }
         if (this.descriptionBox != null) {
-            this.descriptionBox.render(matrices, mouseX, mouseY, delta);
+            this.descriptionBox.render(context, mouseX, mouseY, delta);
         }
-        super.render(matrices, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
     }
 }
 

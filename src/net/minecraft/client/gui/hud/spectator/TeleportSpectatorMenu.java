@@ -7,21 +7,19 @@
  */
 package net.minecraft.client.gui.hud.spectator;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.SpectatorHud;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenu;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommandGroup;
 import net.minecraft.client.gui.hud.spectator.TeleportToSpecificPlayerSpectatorCommand;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.world.GameMode;
 
@@ -63,9 +61,8 @@ SpectatorMenuCommand {
     }
 
     @Override
-    public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
-        RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
-        DrawableHelper.drawTexture(matrices, 0, 0, 0.0f, 0.0f, 16, 16, 256, 256);
+    public void renderIcon(DrawContext context, float brightness, int alpha) {
+        context.drawTexture(SpectatorHud.SPECTATOR_TEXTURE, 0, 0, 0.0f, 0.0f, 16, 16, 256, 256);
     }
 
     @Override

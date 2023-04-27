@@ -249,21 +249,22 @@ public class ItemModelGenerator {
         this.register(Items.MOJANG_BANNER_PATTERN, Models.GENERATED);
         this.register(Items.MUSHROOM_STEW, Models.GENERATED);
         this.register(Items.DISC_FRAGMENT_5, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_11, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_13, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_BLOCKS, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_CAT, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_CHIRP, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_FAR, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_MALL, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_MELLOHI, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_PIGSTEP, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_STAL, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_STRAD, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_WAIT, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_WARD, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_OTHERSIDE, Models.GENERATED);
-        this.register(Items.MUSIC_DISC_5, Models.GENERATED);
+        this.register(Items.MUSIC_DISC_11, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_13, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_BLOCKS, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_CAT, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_CHIRP, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_FAR, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_MALL, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_MELLOHI, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_PIGSTEP, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_STAL, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_STRAD, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_WAIT, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_WARD, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_OTHERSIDE, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_RELIC, Models.TEMPLATE_MUSIC_DISC);
+        this.register(Items.MUSIC_DISC_5, Models.TEMPLATE_MUSIC_DISC);
         this.register(Items.MUTTON, Models.GENERATED);
         this.register(Items.NAME_TAG, Models.GENERATED);
         this.register(Items.NAUTILUS_SHELL, Models.GENERATED);
@@ -354,6 +355,11 @@ public class ItemModelGenerator {
         this.register(Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
         this.register(Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
         this.register(Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
+        this.register(Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, Models.GENERATED);
         this.register(Items.DEBUG_STICK, Items.STICK, Models.HANDHELD);
         this.register(Items.ENCHANTED_GOLDEN_APPLE, Items.GOLDEN_APPLE, Models.GENERATED);
         for (Item item : Registries.ITEM) {
@@ -361,10 +367,26 @@ public class ItemModelGenerator {
             ArmorItem armorItem = (ArmorItem)item;
             this.registerArmor(armorItem);
         }
-        this.register(Items.POTTERY_SHARD_ARCHER, Models.GENERATED);
-        this.register(Items.POTTERY_SHARD_PRIZE, Models.GENERATED);
-        this.register(Items.POTTERY_SHARD_ARMS_UP, Models.GENERATED);
-        this.register(Items.POTTERY_SHARD_SKULL, Models.GENERATED);
+        this.register(Items.ANGLER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.ARCHER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.ARMS_UP_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.BLADE_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.BREWER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.BURN_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.DANGER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.EXPLORER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.FRIEND_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.HEART_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.HEARTBREAK_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.HOWL_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.MINER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.MOURNER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.PLENTY_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.PRIZE_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.SHEAF_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.SHELTER_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.SKULL_POTTERY_SHERD, Models.GENERATED);
+        this.register(Items.SNORT_POTTERY_SHERD, Models.GENERATED);
     }
 
     record TrimMaterial(String name, float itemModelIndex, Map<ArmorMaterial, String> overrideArmorMaterials) {

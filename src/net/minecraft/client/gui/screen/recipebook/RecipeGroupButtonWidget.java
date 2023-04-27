@@ -12,13 +12,13 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.recipebook.ClientRecipeBook;
 import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
@@ -52,16 +52,15 @@ extends ToggleButtonWidget {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         if (this.bounce > 0.0f) {
             float f = 1.0f + 0.1f * (float)Math.sin(this.bounce / 15.0f * (float)Math.PI);
-            matrices.push();
-            matrices.translate(this.getX() + 8, this.getY() + 12, 0.0f);
-            matrices.scale(1.0f, f, 1.0f);
-            matrices.translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
+            context.getMatrices().push();
+            context.getMatrices().translate(this.getX() + 8, this.getY() + 12, 0.0f);
+            context.getMatrices().scale(1.0f, f, 1.0f);
+            context.getMatrices().translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        RenderSystem.setShaderTexture(0, this.texture);
         RenderSystem.disableDepthTest();
         int i = this.u;
         int j = this.v;
@@ -75,24 +74,24 @@ extends ToggleButtonWidget {
         if (this.toggled) {
             k -= 2;
         }
-        RecipeGroupButtonWidget.drawTexture(matrices, k, this.getY(), i, j, this.width, this.height);
+        context.drawTexture(this.texture, k, this.getY(), i, j, this.width, this.height);
         RenderSystem.enableDepthTest();
-        this.renderIcons(matrices, minecraftClient.getItemRenderer());
+        this.renderIcons(context, minecraftClient.getItemRenderer());
         if (this.bounce > 0.0f) {
-            matrices.pop();
+            context.getMatrices().pop();
             this.bounce -= delta;
         }
     }
 
-    private void renderIcons(MatrixStack matrices, ItemRenderer itemRenderer) {
+    private void renderIcons(DrawContext context, ItemRenderer itemRenderer) {
         int i;
         List<ItemStack> list = this.category.getIcons();
         int n = i = this.toggled ? -2 : 0;
         if (list.size() == 1) {
-            itemRenderer.renderInGui(matrices, list.get(0), this.getX() + 9 + i, this.getY() + 5);
+            context.drawItemWithoutEntity(list.get(0), this.getX() + 9 + i, this.getY() + 5);
         } else if (list.size() == 2) {
-            itemRenderer.renderInGui(matrices, list.get(0), this.getX() + 3 + i, this.getY() + 5);
-            itemRenderer.renderInGui(matrices, list.get(1), this.getX() + 14 + i, this.getY() + 5);
+            context.drawItemWithoutEntity(list.get(0), this.getX() + 3 + i, this.getY() + 5);
+            context.drawItemWithoutEntity(list.get(1), this.getX() + 14 + i, this.getY() + 5);
         }
     }
 

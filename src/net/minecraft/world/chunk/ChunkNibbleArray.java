@@ -6,30 +6,34 @@
  */
 package net.minecraft.world.chunk;
 
+import java.util.Arrays;
 import net.minecraft.util.Util;
 import net.minecraft.util.annotation.Debug;
 import org.jetbrains.annotations.Nullable;
 
-public final class ChunkNibbleArray {
+public class ChunkNibbleArray {
     public static final int COPY_TIMES = 16;
     public static final int COPY_BLOCK_SIZE = 128;
     public static final int BYTES_LENGTH = 2048;
     private static final int NIBBLE_BITS = 4;
     @Nullable
     protected byte[] bytes;
+    private int defaultValue;
 
     public ChunkNibbleArray() {
+        this(0);
+    }
+
+    public ChunkNibbleArray(int defaultValue) {
+        this.defaultValue = defaultValue;
     }
 
     public ChunkNibbleArray(byte[] bytes) {
         this.bytes = bytes;
+        this.defaultValue = 0;
         if (bytes.length != 2048) {
             throw Util.throwOrPause(new IllegalArgumentException("DataLayer should be 2048 bytes not: " + bytes.length));
         }
-    }
-
-    protected ChunkNibbleArray(int size) {
-        this.bytes = new byte[size];
     }
 
     public int get(int x, int y, int z) {
@@ -46,7 +50,7 @@ public final class ChunkNibbleArray {
 
     private int get(int index) {
         if (this.bytes == null) {
-            return 0;
+            return this.defaultValue;
         }
         int i = ChunkNibbleArray.getArrayIndex(index);
         int j = ChunkNibbleArray.occupiesSmallerBits(index);
@@ -54,14 +58,12 @@ public final class ChunkNibbleArray {
     }
 
     private void set(int index, int value) {
-        if (this.bytes == null) {
-            this.bytes = new byte[2048];
-        }
+        byte[] bs = this.asByteArray();
         int i = ChunkNibbleArray.getArrayIndex(index);
         int j = ChunkNibbleArray.occupiesSmallerBits(index);
         int k = ~(15 << 4 * j);
         int l = (value & 0xF) << 4 * j;
-        this.bytes[i] = (byte)(this.bytes[i] & k | l);
+        bs[i] = (byte)(bs[i] & k | l);
     }
 
     private static int occupiesSmallerBits(int i) {
@@ -72,16 +74,32 @@ public final class ChunkNibbleArray {
         return i >> 1;
     }
 
+    public void method_51527(int i) {
+        this.defaultValue = i;
+        this.bytes = null;
+    }
+
+    private static byte pack(int value) {
+        byte b = (byte)value;
+        for (int i = 4; i < 8; i += 4) {
+            b = (byte)(b | value << i);
+        }
+        return b;
+    }
+
     public byte[] asByteArray() {
         if (this.bytes == null) {
             this.bytes = new byte[2048];
+            if (this.defaultValue != 0) {
+                Arrays.fill(this.bytes, ChunkNibbleArray.pack(this.defaultValue));
+            }
         }
         return this.bytes;
     }
 
     public ChunkNibbleArray copy() {
         if (this.bytes == null) {
-            return new ChunkNibbleArray();
+            return new ChunkNibbleArray(this.defaultValue);
         }
         return new ChunkNibbleArray((byte[])this.bytes.clone());
     }
@@ -110,8 +128,16 @@ public final class ChunkNibbleArray {
         return stringBuilder.toString();
     }
 
-    public boolean isUninitialized() {
+    public boolean isArrayUninitialized() {
         return this.bytes == null;
+    }
+
+    public boolean isUninitialized(int expectedDefaultValue) {
+        return this.bytes == null && this.defaultValue == expectedDefaultValue;
+    }
+
+    public boolean isUninitialized() {
+        return this.bytes == null && this.defaultValue == 0;
     }
 }
 

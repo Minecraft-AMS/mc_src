@@ -206,7 +206,6 @@ extends DataFix {
             return ChunkHeightAndBiomeFix.fixCarvingMasks(level, 24, 0);
         }
         level = ChunkHeightAndBiomeFix.fixHeightmaps(level);
-        level = ChunkHeightAndBiomeFix.fixChunkSectionList(level, "Lights");
         level = ChunkHeightAndBiomeFix.fixChunkSectionList(level, "LiquidsToBeTicked");
         level = ChunkHeightAndBiomeFix.fixChunkSectionList(level, "PostProcessing");
         level = ChunkHeightAndBiomeFix.fixChunkSectionList(level, "ToBeTicked");

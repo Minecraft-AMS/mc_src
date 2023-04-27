@@ -319,27 +319,32 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         return string + "\u00a7r";
     }
 
-    private CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> getRegion(ChunkPos centerChunk, final int margin, IntFunction<ChunkStatus> distanceToStatus) {
+    private CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> getRegion(ChunkHolder centerChunk, final int margin, IntFunction<ChunkStatus> distanceToStatus) {
+        if (margin == 0) {
+            ChunkStatus chunkStatus = distanceToStatus.apply(0);
+            return centerChunk.getChunkAt(chunkStatus, this).thenApply(chunk -> chunk.mapLeft(List::of));
+        }
         ArrayList<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> list = new ArrayList<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>>();
         ArrayList<ChunkHolder> list2 = new ArrayList<ChunkHolder>();
-        final int i = centerChunk.x;
-        final int j = centerChunk.z;
+        ChunkPos chunkPos = centerChunk.getPos();
+        final int i = chunkPos.x;
+        final int j = chunkPos.z;
         for (int k = -margin; k <= margin; ++k) {
             for (int l = -margin; l <= margin; ++l) {
                 int m = Math.max(Math.abs(l), Math.abs(k));
-                final ChunkPos chunkPos = new ChunkPos(i + l, j + k);
-                long n = chunkPos.toLong();
+                final ChunkPos chunkPos2 = new ChunkPos(i + l, j + k);
+                long n = chunkPos2.toLong();
                 ChunkHolder chunkHolder = this.getCurrentChunkHolder(n);
                 if (chunkHolder == null) {
                     return CompletableFuture.completedFuture(Either.right((Object)new ChunkHolder.Unloaded(){
 
                         public String toString() {
-                            return "Unloaded " + chunkPos;
+                            return "Unloaded " + chunkPos2;
                         }
                     }));
                 }
-                ChunkStatus chunkStatus = distanceToStatus.apply(m);
-                CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = chunkHolder.getChunkAt(chunkStatus, this);
+                ChunkStatus chunkStatus2 = distanceToStatus.apply(m);
+                CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = chunkHolder.getChunkAt(chunkStatus2, this);
                 list2.add(chunkHolder);
                 list.add(completableFuture);
             }
@@ -368,7 +373,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
             return Either.left((Object)list);
         });
         for (ChunkHolder chunkHolder2 : list2) {
-            chunkHolder2.combineSavingFuture("getChunkRangeFuture " + centerChunk + " " + margin, (CompletableFuture<?>)completableFuture3);
+            chunkHolder2.combineSavingFuture("getChunkRangeFuture " + chunkPos + " " + margin, (CompletableFuture<?>)completableFuture3);
         }
         return completableFuture3;
     }
@@ -393,8 +398,8 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         return new CrashException(crashReport);
     }
 
-    public CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>> makeChunkEntitiesTickable(ChunkPos pos) {
-        return this.getRegion(pos, 2, distance -> ChunkStatus.FULL).thenApplyAsync(either -> either.mapLeft(chunks -> (WorldChunk)chunks.get(chunks.size() / 2)), (Executor)this.mainThreadExecutor);
+    public CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>> makeChunkEntitiesTickable(ChunkHolder chunk) {
+        return this.getRegion(chunk, 2, distance -> ChunkStatus.FULL).thenApplyAsync(either -> either.mapLeft(chunks -> (WorldChunk)chunks.get(chunks.size() / 2)), (Executor)this.mainThreadExecutor);
     }
 
     @Nullable
@@ -546,7 +551,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         if (requiredStatus == ChunkStatus.LIGHT) {
             this.ticketManager.addTicketWithLevel(ChunkTicketType.LIGHT, chunkPos, 33 + ChunkStatus.getDistanceFromFull(ChunkStatus.LIGHT), chunkPos);
         }
-        if ((optional = holder.getChunkAt(requiredStatus.getPrevious(), this).getNow(ChunkHolder.UNLOADED_CHUNK).left()).isPresent() && ((Chunk)optional.get()).getStatus().isAtLeast(requiredStatus)) {
+        if (!requiredStatus.shouldAlwaysUpgrade() && (optional = holder.getChunkAt(requiredStatus.getPrevious(), this).getNow(ChunkHolder.UNLOADED_CHUNK).left()).isPresent() && ((Chunk)optional.get()).getStatus().isAtLeast(requiredStatus)) {
             CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = requiredStatus.runLoadTask(this.world, this.structureTemplateManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (Chunk)optional.get());
             this.worldGenerationProgressListener.setChunkStatus(chunkPos, requiredStatus);
             return completableFuture;
@@ -610,12 +615,13 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
 
     private CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> upgradeChunk(ChunkHolder holder, ChunkStatus requiredStatus) {
         ChunkPos chunkPos = holder.getPos();
-        CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> completableFuture = this.getRegion(chunkPos, requiredStatus.getTaskMargin(), distance -> this.getRequiredStatusForGeneration(requiredStatus, distance));
+        CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> completableFuture = this.getRegion(holder, requiredStatus.getTaskMargin(), distance -> this.getRequiredStatusForGeneration(requiredStatus, distance));
         this.world.getProfiler().visit(() -> "chunkGenerate " + requiredStatus.getId());
         Executor executor = task -> this.worldGenExecutor.send(ChunkTaskPrioritySystem.createMessage(holder, task));
         return completableFuture.thenComposeAsync(either -> (CompletionStage)either.map(chunks -> {
             try {
-                CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = requiredStatus.runGenerationTask(executor, this.world, this.chunkGenerator, this.structureTemplateManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (List<Chunk>)chunks, false);
+                Chunk chunk2 = (Chunk)chunks.get(chunks.size() / 2);
+                CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = chunk2.getStatus().isAtLeast(requiredStatus) ? requiredStatus.runLoadTask(this.world, this.structureTemplateManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), chunk2) : requiredStatus.runGenerationTask(executor, this.world, this.chunkGenerator, this.structureTemplateManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (List<Chunk>)chunks);
                 this.worldGenerationProgressListener.setChunkStatus(chunkPos, requiredStatus);
                 return completableFuture;
             }
@@ -681,23 +687,22 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         }, task -> this.mainExecutor.send(ChunkTaskPrioritySystem.createMessage(task, chunkHolder.getPos().toLong(), chunkHolder::getLevel)));
     }
 
-    public CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>> makeChunkTickable(ChunkHolder holder) {
-        ChunkPos chunkPos = holder.getPos();
-        CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> completableFuture = this.getRegion(chunkPos, 1, i -> ChunkStatus.FULL);
-        CompletionStage completableFuture2 = ((CompletableFuture)completableFuture.thenApplyAsync(either -> either.mapLeft(list -> (WorldChunk)list.get(list.size() / 2)), task -> this.mainExecutor.send(ChunkTaskPrioritySystem.createMessage(holder, task)))).thenApplyAsync(either -> either.ifLeft(chunk -> {
+    public CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>> makeChunkTickable(ChunkHolder chunkHolder) {
+        CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> completableFuture = this.getRegion(chunkHolder, 1, i -> ChunkStatus.FULL);
+        CompletionStage completableFuture2 = ((CompletableFuture)completableFuture.thenApplyAsync(either -> either.mapLeft(list -> (WorldChunk)list.get(list.size() / 2)), task -> this.mainExecutor.send(ChunkTaskPrioritySystem.createMessage(chunkHolder, task)))).thenApplyAsync(either -> either.ifLeft(chunk -> {
             chunk.runPostProcessing();
             this.world.disableTickSchedulers((WorldChunk)chunk);
         }), (Executor)this.mainThreadExecutor);
         ((CompletableFuture)completableFuture2).thenAcceptAsync(either -> either.ifLeft(chunk -> {
             this.totalChunksLoadedCount.getAndIncrement();
             MutableObject mutableObject = new MutableObject();
-            this.getPlayersWatchingChunk(chunkPos, false).forEach(player -> this.sendChunkDataPackets((ServerPlayerEntity)player, (MutableObject<ChunkDataS2CPacket>)mutableObject, (WorldChunk)chunk));
-        }), task -> this.mainExecutor.send(ChunkTaskPrioritySystem.createMessage(holder, task)));
+            this.getPlayersWatchingChunk(chunkHolder.getPos(), false).forEach(player -> this.sendChunkDataPackets((ServerPlayerEntity)player, (MutableObject<ChunkDataS2CPacket>)mutableObject, (WorldChunk)chunk));
+        }), task -> this.mainExecutor.send(ChunkTaskPrioritySystem.createMessage(chunkHolder, task)));
         return completableFuture2;
     }
 
     public CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>> makeChunkAccessible(ChunkHolder holder) {
-        return this.getRegion(holder.getPos(), 1, ChunkStatus::byDistanceFromFull).thenApplyAsync(either -> either.mapLeft(chunks -> {
+        return this.getRegion(holder, 1, ChunkStatus::byDistanceFromFull).thenApplyAsync(either -> either.mapLeft(chunks -> {
             WorldChunk worldChunk = (WorldChunk)chunks.get(chunks.size() / 2);
             return worldChunk;
         }), task -> this.mainExecutor.send(ChunkTaskPrioritySystem.createMessage(holder, task)));
@@ -801,7 +806,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
 
     protected void sendWatchPackets(ServerPlayerEntity player, ChunkPos pos, MutableObject<ChunkDataS2CPacket> packet, boolean oldWithinViewDistance, boolean newWithinViewDistance) {
         ChunkHolder chunkHolder;
-        if (player.world != this.world) {
+        if (player.getWorld() != this.world) {
             return;
         }
         if (newWithinViewDistance && !oldWithinViewDistance && (chunkHolder = this.getChunkHolder(pos.toLong())) != null) {
@@ -1117,7 +1122,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
 
     private void sendChunkDataPackets(ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk) {
         if (cachedDataPacket.getValue() == null) {
-            cachedDataPacket.setValue((Object)new ChunkDataS2CPacket(chunk, this.lightingProvider, null, null, true));
+            cachedDataPacket.setValue((Object)new ChunkDataS2CPacket(chunk, this.lightingProvider, null, null));
         }
         player.sendChunkPacket(chunk.getPos(), (Packet)cachedDataPacket.getValue());
         DebugInfoSender.sendChunkWatchingChange(this.world, chunk.getPos());

@@ -12,7 +12,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.trim.ArmorTrimPattern;
 import net.minecraft.registry.RegistryKey;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -62,7 +61,7 @@ extends Item {
     private final List<Identifier> emptyAdditionsSlotTextures;
 
     public SmithingTemplateItem(Text appliesToText, Text ingredientsText, Text titleText, Text baseSlotDescriptionText, Text additionsSlotDescriptionText, List<Identifier> emptyBaseSlotTextures, List<Identifier> emptyAdditionsSlotTextures) {
-        super(new Item.Settings().requires(FeatureFlags.UPDATE_1_20));
+        super(new Item.Settings());
         this.appliesToText = appliesToText;
         this.ingredientsText = ingredientsText;
         this.titleText = titleText;

@@ -18,11 +18,11 @@ import java.util.function.IntSupplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Overlay;
 import net.minecraft.client.resource.metadata.TextureResourceMetadata;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.ResourceTexture;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.resource.DefaultResourcePack;
 import net.minecraft.resource.InputSupplier;
 import net.minecraft.resource.ResourceManager;
@@ -72,7 +72,7 @@ extends Overlay {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         float h;
         int k;
         float g;
@@ -86,17 +86,17 @@ extends Overlay {
         float f2 = g = this.reloadStartTime > -1L ? (float)(l - this.reloadStartTime) / 500.0f : -1.0f;
         if (f >= 1.0f) {
             if (this.client.currentScreen != null) {
-                this.client.currentScreen.render(matrices, 0, 0, delta);
+                this.client.currentScreen.render(context, 0, 0, delta);
             }
             k = MathHelper.ceil((1.0f - MathHelper.clamp(f - 1.0f, 0.0f, 1.0f)) * 255.0f);
-            SplashOverlay.fill(matrices, 0, 0, i, j, SplashOverlay.withAlpha(BRAND_ARGB.getAsInt(), k));
+            context.fill(0, 0, i, j, SplashOverlay.withAlpha(BRAND_ARGB.getAsInt(), k));
             h = 1.0f - MathHelper.clamp(f - 1.0f, 0.0f, 1.0f);
         } else if (this.reloading) {
             if (this.client.currentScreen != null && g < 1.0f) {
-                this.client.currentScreen.render(matrices, mouseX, mouseY, delta);
+                this.client.currentScreen.render(context, mouseX, mouseY, delta);
             }
             k = MathHelper.ceil(MathHelper.clamp((double)g, 0.15, 1.0) * 255.0);
-            SplashOverlay.fill(matrices, 0, 0, i, j, SplashOverlay.withAlpha(BRAND_ARGB.getAsInt(), k));
+            context.fill(0, 0, i, j, SplashOverlay.withAlpha(BRAND_ARGB.getAsInt(), k));
             h = MathHelper.clamp(g, 0.0f, 1.0f);
         } else {
             k = BRAND_ARGB.getAsInt();
@@ -113,20 +113,19 @@ extends Overlay {
         int q = (int)(d * 0.5);
         double e = d * 4.0;
         int r = (int)(e * 0.5);
-        RenderSystem.setShaderTexture(0, LOGO);
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(770, 1);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, h);
-        SplashOverlay.drawTexture(matrices, k - r, p - q, r, (int)d, -0.0625f, 0.0f, 120, 60, 120, 120);
-        SplashOverlay.drawTexture(matrices, k, p - q, r, (int)d, 0.0625f, 60.0f, 120, 60, 120, 120);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, h);
+        context.drawTexture(LOGO, k - r, p - q, r, (int)d, -0.0625f, 0.0f, 120, 60, 120, 120);
+        context.drawTexture(LOGO, k, p - q, r, (int)d, 0.0625f, 60.0f, 120, 60, 120, 120);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
         int s = (int)((double)this.client.getWindow().getScaledHeight() * 0.8325);
         float t = this.reload.getProgress();
         this.progress = MathHelper.clamp(this.progress * 0.95f + t * 0.050000012f, 0.0f, 1.0f);
         if (f < 1.0f) {
-            this.renderProgressBar(matrices, i / 2 - r, s - 5, i / 2 + r, s + 5, 1.0f - MathHelper.clamp(f, 0.0f, 1.0f));
+            this.renderProgressBar(context, i / 2 - r, s - 5, i / 2 + r, s + 5, 1.0f - MathHelper.clamp(f, 0.0f, 1.0f));
         }
         if (f >= 2.0f) {
             this.client.setOverlay(null);
@@ -146,15 +145,15 @@ extends Overlay {
         }
     }
 
-    private void renderProgressBar(MatrixStack matrices, int minX, int minY, int maxX, int maxY, float opacity) {
+    private void renderProgressBar(DrawContext drawContext, int minX, int minY, int maxX, int maxY, float opacity) {
         int i = MathHelper.ceil((float)(maxX - minX - 2) * this.progress);
         int j = Math.round(opacity * 255.0f);
         int k = ColorHelper.Argb.getArgb(j, 255, 255, 255);
-        SplashOverlay.fill(matrices, minX + 2, minY + 2, minX + i, maxY - 2, k);
-        SplashOverlay.fill(matrices, minX + 1, minY, maxX - 1, minY + 1, k);
-        SplashOverlay.fill(matrices, minX + 1, maxY, maxX - 1, maxY - 1, k);
-        SplashOverlay.fill(matrices, minX, minY, minX + 1, maxY, k);
-        SplashOverlay.fill(matrices, maxX, minY, maxX - 1, maxY, k);
+        drawContext.fill(minX + 2, minY + 2, minX + i, maxY - 2, k);
+        drawContext.fill(minX + 1, minY, maxX - 1, minY + 1, k);
+        drawContext.fill(minX + 1, maxY, maxX - 1, maxY - 1, k);
+        drawContext.fill(minX, minY, minX + 1, maxY, k);
+        drawContext.fill(maxX, minY, maxX - 1, maxY, k);
     }
 
     @Override

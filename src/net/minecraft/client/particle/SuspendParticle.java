@@ -62,6 +62,29 @@ extends SpriteBillboardParticle {
     }
 
     @Environment(value=EnvType.CLIENT)
+    public static class EggCrackFactory
+    implements ParticleFactory<DefaultParticleType> {
+        private final SpriteProvider spriteProvider;
+
+        public EggCrackFactory(SpriteProvider spriteProvider) {
+            this.spriteProvider = spriteProvider;
+        }
+
+        @Override
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            SuspendParticle suspendParticle = new SuspendParticle(clientWorld, d, e, f, g, h, i);
+            suspendParticle.setSprite(this.spriteProvider);
+            suspendParticle.setColor(1.0f, 1.0f, 1.0f);
+            return suspendParticle;
+        }
+
+        @Override
+        public /* synthetic */ Particle createParticle(ParticleEffect particleEffect, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            return this.createParticle((DefaultParticleType)particleEffect, clientWorld, d, e, f, g, h, i);
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
     public static class DolphinFactory
     implements ParticleFactory<DefaultParticleType> {
         private final SpriteProvider spriteProvider;

@@ -135,8 +135,6 @@ extends ProjectileEntity {
     public void tick() {
         Vec3d vec3d2;
         VoxelShape voxelShape;
-        BlockPos blockPos;
-        BlockState blockState;
         super.tick();
         boolean bl = this.isNoClip();
         Vec3d vec3d = this.getVelocity();
@@ -147,7 +145,9 @@ extends ProjectileEntity {
             this.prevYaw = this.getYaw();
             this.prevPitch = this.getPitch();
         }
-        if (!((blockState = this.world.getBlockState(blockPos = this.getBlockPos())).isAir() || bl || (voxelShape = blockState.getCollisionShape(this.world, blockPos)).isEmpty())) {
+        BlockPos blockPos = this.getBlockPos();
+        BlockState blockState = this.getWorld().getBlockState(blockPos);
+        if (!(blockState.isAir() || bl || (voxelShape = blockState.getCollisionShape(this.getWorld(), blockPos)).isEmpty())) {
             vec3d2 = this.getPos();
             for (Box box : voxelShape.getBoundingBoxes()) {
                 if (!box.offset(blockPos).contains(vec3d2)) continue;
@@ -164,7 +164,7 @@ extends ProjectileEntity {
         if (this.inGround && !bl) {
             if (this.inBlockState != blockState && this.shouldFall()) {
                 this.fall();
-            } else if (!this.world.isClient) {
+            } else if (!this.getWorld().isClient) {
                 this.age();
             }
             ++this.inGroundTime;
@@ -172,7 +172,8 @@ extends ProjectileEntity {
         }
         this.inGroundTime = 0;
         Vec3d vec3d3 = this.getPos();
-        HitResult hitResult = this.world.raycast(new RaycastContext(vec3d3, vec3d2 = vec3d3.add(vec3d), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
+        vec3d2 = vec3d3.add(vec3d);
+        HitResult hitResult = this.getWorld().raycast(new RaycastContext(vec3d3, vec3d2, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
         if (hitResult.getType() != HitResult.Type.MISS) {
             vec3d2 = hitResult.getPos();
         }
@@ -202,7 +203,7 @@ extends ProjectileEntity {
         double g = vec3d.z;
         if (this.isCritical()) {
             for (int i = 0; i < 4; ++i) {
-                this.world.addParticle(ParticleTypes.CRIT, this.getX() + e * (double)i / 4.0, this.getY() + f * (double)i / 4.0, this.getZ() + g * (double)i / 4.0, -e, -f + 0.2, -g);
+                this.getWorld().addParticle(ParticleTypes.CRIT, this.getX() + e * (double)i / 4.0, this.getY() + f * (double)i / 4.0, this.getZ() + g * (double)i / 4.0, -e, -f + 0.2, -g);
             }
         }
         double h = this.getX() + e;
@@ -222,7 +223,7 @@ extends ProjectileEntity {
         if (this.isTouchingWater()) {
             for (int o = 0; o < 4; ++o) {
                 float p = 0.25f;
-                this.world.addParticle(ParticleTypes.BUBBLE, h - e * 0.25, j - f * 0.25, k - g * 0.25, e, f, g);
+                this.getWorld().addParticle(ParticleTypes.BUBBLE, h - e * 0.25, j - f * 0.25, k - g * 0.25, e, f, g);
             }
             m = this.getDragInWater();
         }
@@ -236,7 +237,7 @@ extends ProjectileEntity {
     }
 
     private boolean shouldFall() {
-        return this.inGround && this.world.isSpaceEmpty(new Box(this.getPos(), this.getPos()).expand(0.06));
+        return this.inGround && this.getWorld().isSpaceEmpty(new Box(this.getPos(), this.getPos()).expand(0.06));
     }
 
     private void fall() {
@@ -315,7 +316,7 @@ extends ProjectileEntity {
             }
             if (entity instanceof LivingEntity) {
                 LivingEntity livingEntity = (LivingEntity)entity;
-                if (!this.world.isClient && this.getPierceLevel() <= 0) {
+                if (!this.getWorld().isClient && this.getPierceLevel() <= 0) {
                     livingEntity.setStuckArrowCount(livingEntity.getStuckArrowCount() + 1);
                 }
                 if (this.punch > 0) {
@@ -325,7 +326,7 @@ extends ProjectileEntity {
                         livingEntity.addVelocity(vec3d.x, 0.1, vec3d.z);
                     }
                 }
-                if (!this.world.isClient && entity2 instanceof LivingEntity) {
+                if (!this.getWorld().isClient && entity2 instanceof LivingEntity) {
                     EnchantmentHelper.onUserDamaged(livingEntity, entity2);
                     EnchantmentHelper.onTargetDamaged((LivingEntity)entity2, livingEntity);
                 }
@@ -336,7 +337,7 @@ extends ProjectileEntity {
                 if (!entity.isAlive() && this.piercingKilledEntities != null) {
                     this.piercingKilledEntities.add(livingEntity);
                 }
-                if (!this.world.isClient && entity2 instanceof ServerPlayerEntity) {
+                if (!this.getWorld().isClient && entity2 instanceof ServerPlayerEntity) {
                     ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity2;
                     if (this.piercingKilledEntities != null && this.isShotFromCrossbow()) {
                         Criteria.KILLED_BY_CROSSBOW.trigger(serverPlayerEntity, this.piercingKilledEntities);
@@ -354,7 +355,7 @@ extends ProjectileEntity {
             this.setVelocity(this.getVelocity().multiply(-0.1));
             this.setYaw(this.getYaw() + 180.0f);
             this.prevYaw += 180.0f;
-            if (!this.world.isClient && this.getVelocity().lengthSquared() < 1.0E-7) {
+            if (!this.getWorld().isClient && this.getVelocity().lengthSquared() < 1.0E-7) {
                 if (this.pickupType == PickupPermission.ALLOWED) {
                     this.dropStack(this.asItemStack(), 0.1f);
                 }
@@ -365,7 +366,7 @@ extends ProjectileEntity {
 
     @Override
     protected void onBlockHit(BlockHitResult blockHitResult) {
-        this.inBlockState = this.world.getBlockState(blockHitResult.getBlockPos());
+        this.inBlockState = this.getWorld().getBlockState(blockHitResult.getBlockPos());
         super.onBlockHit(blockHitResult);
         Vec3d vec3d = blockHitResult.getPos().subtract(this.getX(), this.getY(), this.getZ());
         this.setVelocity(vec3d);
@@ -394,7 +395,7 @@ extends ProjectileEntity {
 
     @Nullable
     protected EntityHitResult getEntityCollision(Vec3d currentPosition, Vec3d nextPosition) {
-        return ProjectileUtil.getEntityCollision(this.world, this, currentPosition, nextPosition, this.getBoundingBox().stretch(this.getVelocity()).expand(1.0), this::canHit);
+        return ProjectileUtil.getEntityCollision(this.getWorld(), this, currentPosition, nextPosition, this.getBoundingBox().stretch(this.getVelocity()).expand(1.0), this::canHit);
     }
 
     @Override
@@ -424,7 +425,7 @@ extends ProjectileEntity {
         super.readCustomDataFromNbt(nbt);
         this.life = nbt.getShort("life");
         if (nbt.contains("inBlockState", 10)) {
-            this.inBlockState = NbtHelper.toBlockState(this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("inBlockState"));
+            this.inBlockState = NbtHelper.toBlockState(this.getWorld().createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("inBlockState"));
         }
         this.shake = nbt.getByte("shake") & 0xFF;
         this.inGround = nbt.getBoolean("inGround");
@@ -450,7 +451,7 @@ extends ProjectileEntity {
 
     @Override
     public void onPlayerCollision(PlayerEntity player) {
-        if (this.world.isClient || !this.inGround && !this.isNoClip() || this.shake > 0) {
+        if (this.getWorld().isClient || !this.inGround && !this.isNoClip() || this.shake > 0) {
             return;
         }
         if (this.tryPickup(player)) {
@@ -538,7 +539,7 @@ extends ProjectileEntity {
     public void applyEnchantmentEffects(LivingEntity entity, float damageModifier) {
         int i = EnchantmentHelper.getEquipmentLevel(Enchantments.POWER, entity);
         int j = EnchantmentHelper.getEquipmentLevel(Enchantments.PUNCH, entity);
-        this.setDamage((double)(damageModifier * 2.0f) + this.random.nextTriangular((double)this.world.getDifficulty().getId() * 0.11, 0.57425));
+        this.setDamage((double)(damageModifier * 2.0f) + this.random.nextTriangular((double)this.getWorld().getDifficulty().getId() * 0.11, 0.57425));
         if (i > 0) {
             this.setDamage(this.getDamage() + (double)i * 0.5 + 0.5);
         }
@@ -560,7 +561,7 @@ extends ProjectileEntity {
     }
 
     public boolean isNoClip() {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             return this.noClip;
         }
         return (this.dataTracker.get(PROJECTILE_FLAGS) & 2) != 0;

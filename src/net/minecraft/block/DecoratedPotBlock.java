@@ -6,25 +6,39 @@
  */
 package net.minecraft.block;
 
+import java.util.List;
+import java.util.stream.Stream;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.DecoratedPotBlockEntity;
+import net.minecraft.client.item.TooltipContext;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.loot.context.LootContext;
+import net.minecraft.loot.context.LootContextParameters;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.util.ItemScatterer;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
@@ -34,14 +48,17 @@ import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class DecoratedPotBlock
-extends BlockWithEntity {
+extends BlockWithEntity
+implements Waterloggable {
+    public static final Identifier SHERDS_NBT_KEY = new Identifier("sherds");
     private static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 16.0, 15.0);
     private static final DirectionProperty FACING = Properties.HORIZONTAL_FACING;
+    private static final BooleanProperty CRACKED = Properties.CRACKED;
     private static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
 
     public DecoratedPotBlock(AbstractBlock.Settings settings) {
         super(settings);
-        this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(WATERLOGGED, false));
+        this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(WATERLOGGED, false)).with(CRACKED, false));
     }
 
     @Override
@@ -55,7 +72,7 @@ extends BlockWithEntity {
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         FluidState fluidState = ctx.getWorld().getFluidState(ctx.getBlockPos());
-        return (BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing())).with(WATERLOGGED, fluidState.getFluid() == Fluids.WATER);
+        return (BlockState)((BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getHorizontalPlayerFacing())).with(WATERLOGGED, fluidState.getFluid() == Fluids.WATER)).with(CRACKED, false);
     }
 
     @Override
@@ -70,7 +87,7 @@ extends BlockWithEntity {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(FACING, WATERLOGGED);
+        builder.add(FACING, WATERLOGGED, CRACKED);
     }
 
     @Override
@@ -80,24 +97,24 @@ extends BlockWithEntity {
     }
 
     @Override
-    public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-        BlockEntity blockEntity;
-        if (!world.isClient && (blockEntity = world.getBlockEntity(pos)) instanceof DecoratedPotBlockEntity) {
+    public List<ItemStack> getDroppedStacks(BlockState state, LootContext.Builder builder) {
+        BlockEntity blockEntity = builder.getNullable(LootContextParameters.BLOCK_ENTITY);
+        if (blockEntity instanceof DecoratedPotBlockEntity) {
             DecoratedPotBlockEntity decoratedPotBlockEntity = (DecoratedPotBlockEntity)blockEntity;
-            decoratedPotBlockEntity.onBreak(world, pos, player.getMainHandStack(), player);
+            builder.putDrop(SHERDS_NBT_KEY, (context, consumer) -> decoratedPotBlockEntity.getSherds().stream().map(Item::getDefaultStack).forEach(consumer));
         }
-        super.onBreak(world, pos, state, player);
+        return super.getDroppedStacks(state, builder);
     }
 
     @Override
-    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        DecoratedPotBlockEntity decoratedPotBlockEntity;
-        BlockEntity blockEntity;
-        if (!world.isClient && (blockEntity = world.getBlockEntity(pos)) instanceof DecoratedPotBlockEntity && !(decoratedPotBlockEntity = (DecoratedPotBlockEntity)blockEntity).shouldDropNothing()) {
-            ItemScatterer.spawn(world, (double)pos.getX(), (double)pos.getY(), (double)pos.getZ(), decoratedPotBlockEntity.asStack());
-            world.playSound(null, pos, SoundEvents.BLOCK_DECORATED_POT_BREAK, SoundCategory.PLAYERS, 1.0f, 1.0f);
+    public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+        ItemStack itemStack = player.getMainHandStack();
+        BlockState blockState = state;
+        if (itemStack.isIn(ItemTags.BREAKS_DECORATED_POTS) && !EnchantmentHelper.hasSilkTouch(itemStack)) {
+            blockState = (BlockState)state.with(CRACKED, true);
+            world.setBlockState(pos, blockState, 4);
         }
-        super.onStateReplaced(state, world, pos, newState, moved);
+        super.onBreak(world, pos, blockState, player);
     }
 
     @Override
@@ -106,6 +123,25 @@ extends BlockWithEntity {
             return Fluids.WATER.getStill(false);
         }
         return super.getFluidState(state);
+    }
+
+    @Override
+    public BlockSoundGroup getSoundGroup(BlockState state) {
+        if (state.get(CRACKED).booleanValue()) {
+            return BlockSoundGroup.DECORATED_POT_SHATTER;
+        }
+        return BlockSoundGroup.DECORATED_POT;
+    }
+
+    @Override
+    public void appendTooltip(ItemStack stack, @Nullable BlockView world, List<Text> tooltip, TooltipContext options) {
+        super.appendTooltip(stack, world, tooltip, options);
+        DecoratedPotBlockEntity.Sherds sherds = DecoratedPotBlockEntity.Sherds.fromNbt(BlockItem.getBlockEntityNbt(stack));
+        if (sherds == DecoratedPotBlockEntity.Sherds.DEFAULT) {
+            return;
+        }
+        tooltip.add(ScreenTexts.EMPTY);
+        Stream.of(sherds.front(), sherds.left(), sherds.right(), sherds.back()).forEach(sherd -> tooltip.add(new ItemStack((ItemConvertible)sherd, 1).getName().copyContentOnly().formatted(Formatting.GRAY)));
     }
 }
 

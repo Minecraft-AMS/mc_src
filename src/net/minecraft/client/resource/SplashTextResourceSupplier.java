@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.SplashTextRenderer;
 import net.minecraft.client.util.Session;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.SinglePreparationResourceReloader;
@@ -78,25 +79,25 @@ extends SinglePreparationResourceReloader<List<String>> {
     }
 
     @Nullable
-    public String get() {
+    public SplashTextRenderer get() {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
         if (calendar.get(2) + 1 == 12 && calendar.get(5) == 24) {
-            return "Merry X-mas!";
+            return SplashTextRenderer.MERRY_X_MAS_;
         }
         if (calendar.get(2) + 1 == 1 && calendar.get(5) == 1) {
-            return "Happy new year!";
+            return SplashTextRenderer.HAPPY_NEW_YEAR_;
         }
         if (calendar.get(2) + 1 == 10 && calendar.get(5) == 31) {
-            return "OOoooOOOoooo! Spooky!";
+            return SplashTextRenderer.OOOOO_O_O_OOOOO__SPOOKY_;
         }
         if (this.splashTexts.isEmpty()) {
             return null;
         }
         if (this.session != null && RANDOM.nextInt(this.splashTexts.size()) == 42) {
-            return this.session.getUsername().toUpperCase(Locale.ROOT) + " IS YOU";
+            return new SplashTextRenderer(this.session.getUsername().toUpperCase(Locale.ROOT) + " IS YOU");
         }
-        return this.splashTexts.get(RANDOM.nextInt(this.splashTexts.size()));
+        return new SplashTextRenderer(this.splashTexts.get(RANDOM.nextInt(this.splashTexts.size())));
     }
 
     @Override

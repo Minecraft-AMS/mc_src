@@ -29,7 +29,7 @@ extends Goal {
 
     public WolfBegGoal(WolfEntity wolf, float begDistance) {
         this.wolf = wolf;
-        this.world = wolf.world;
+        this.world = wolf.getWorld();
         this.begDistance = begDistance;
         this.validPlayerPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(begDistance);
         this.setControls(EnumSet.of(Goal.Control.LOOK));

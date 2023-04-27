@@ -10,11 +10,10 @@
  */
 package net.minecraft.client.realms.gui.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -33,7 +32,6 @@ import net.minecraft.client.realms.task.LongRunningTask;
 import net.minecraft.client.realms.task.ResettingNormalWorldTask;
 import net.minecraft.client.realms.task.ResettingWorldTemplateTask;
 import net.minecraft.client.realms.task.SwitchSlotTask;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -145,23 +143,21 @@ extends RealmsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        RealmsResetWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, 7, 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 7, 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
     }
 
-    void drawFrame(MatrixStack matrices, int x, int y, Text text, Identifier texture, boolean hovered, boolean mouseOver) {
-        RenderSystem.setShaderTexture(0, texture);
+    void drawFrame(DrawContext context, int x, int y, Text text, Identifier texture, boolean hovered, boolean mouseOver) {
         if (hovered) {
-            RenderSystem.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
+            context.setShaderColor(0.56f, 0.56f, 0.56f, 1.0f);
         }
-        DrawableHelper.drawTexture(matrices, x + 2, y + 14, 0.0f, 0.0f, 56, 56, 56, 56);
-        RenderSystem.setShaderTexture(0, SLOT_FRAME_TEXTURE);
-        DrawableHelper.drawTexture(matrices, x, y + 12, 0.0f, 0.0f, 60, 60, 60, 60);
+        context.drawTexture(texture, x + 2, y + 14, 0.0f, 0.0f, 56, 56, 56, 56);
+        context.drawTexture(SLOT_FRAME_TEXTURE, x, y + 12, 0.0f, 0.0f, 60, 60, 60, 60);
         int i = hovered ? 0xA0A0A0 : 0xFFFFFF;
-        RealmsResetWorldScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, text, x + 30, y, i);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.drawCenteredTextWithShadow(this.textRenderer, text, x + 30, y, i);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     private void executeLongRunningTask(LongRunningTask task) {
@@ -205,8 +201,8 @@ extends RealmsScreen {
         }
 
         @Override
-        public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RealmsResetWorldScreen.this.drawFrame(matrices, this.getX(), this.getY(), this.getMessage(), this.image, this.isSelected(), this.isMouseOver(mouseX, mouseY));
+        public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+            RealmsResetWorldScreen.this.drawFrame(context, this.getX(), this.getY(), this.getMessage(), this.image, this.isSelected(), this.isMouseOver(mouseX, mouseY));
         }
     }
 }

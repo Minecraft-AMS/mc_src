@@ -20,6 +20,7 @@ import net.minecraft.loot.function.LimitCountLootFunction;
 import net.minecraft.loot.function.LootFunction;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootingEnchantLootFunction;
+import net.minecraft.loot.function.ReferenceLootFunction;
 import net.minecraft.loot.function.SetAttributesLootFunction;
 import net.minecraft.loot.function.SetBannerPatternFunction;
 import net.minecraft.loot.function.SetContentsLootFunction;
@@ -66,6 +67,7 @@ public class LootFunctionTypes {
     public static final LootFunctionType SET_BANNER_PATTERN = LootFunctionTypes.register("set_banner_pattern", new SetBannerPatternFunction.Serializer());
     public static final LootFunctionType SET_POTION = LootFunctionTypes.register("set_potion", new SetPotionLootFunction.Serializer());
     public static final LootFunctionType SET_INSTRUMENT = LootFunctionTypes.register("set_instrument", new SetInstrumentLootFunction.Serializer());
+    public static final LootFunctionType REFERENCE = LootFunctionTypes.register("reference", new ReferenceLootFunction.Serializer());
 
     private static LootFunctionType register(String id, JsonSerializer<? extends LootFunction> jsonSerializer) {
         return Registry.register(Registries.LOOT_FUNCTION_TYPE, new Identifier(id), new LootFunctionType(jsonSerializer));

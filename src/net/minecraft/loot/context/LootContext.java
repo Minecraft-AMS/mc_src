@@ -24,14 +24,16 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.LootDataLookup;
+import net.minecraft.loot.LootDataType;
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextType;
+import net.minecraft.loot.function.LootFunction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -42,19 +44,16 @@ public class LootContext {
     private final Random random;
     private final float luck;
     private final ServerWorld world;
-    private final Function<Identifier, LootTable> tableGetter;
-    private final Set<LootTable> activeTables = Sets.newLinkedHashSet();
-    private final Function<Identifier, LootCondition> conditionGetter;
-    private final Set<LootCondition> conditions = Sets.newLinkedHashSet();
+    private final LootDataLookup dataLookup;
+    private final Set<Entry<?>> activeEntries = Sets.newLinkedHashSet();
     private final Map<LootContextParameter<?>, Object> parameters;
     private final Map<Identifier, Dropper> drops;
 
-    LootContext(Random random, float luck, ServerWorld world, Function<Identifier, LootTable> tableGetter, Function<Identifier, LootCondition> conditionGetter, Map<LootContextParameter<?>, Object> parameters, Map<Identifier, Dropper> drops) {
+    LootContext(Random random, float luck, ServerWorld world, LootDataLookup dataLookup, Map<LootContextParameter<?>, Object> parameters, Map<Identifier, Dropper> drops) {
         this.random = random;
         this.luck = luck;
         this.world = world;
-        this.tableGetter = tableGetter;
-        this.conditionGetter = conditionGetter;
+        this.dataLookup = dataLookup;
         this.parameters = ImmutableMap.copyOf(parameters);
         this.drops = ImmutableMap.copyOf(drops);
     }
@@ -83,29 +82,20 @@ public class LootContext {
         return (T)this.parameters.get(parameter);
     }
 
-    public boolean markActive(LootTable table) {
-        return this.activeTables.add(table);
+    public boolean isActive(Entry<?> entry) {
+        return this.activeEntries.contains(entry);
     }
 
-    public void markInactive(LootTable table) {
-        this.activeTables.remove(table);
+    public boolean markActive(Entry<?> entry) {
+        return this.activeEntries.add(entry);
     }
 
-    public boolean addCondition(LootCondition condition) {
-        return this.conditions.add(condition);
+    public void markInactive(Entry<?> entry) {
+        this.activeEntries.remove(entry);
     }
 
-    public void removeCondition(LootCondition condition) {
-        this.conditions.remove(condition);
-    }
-
-    public LootTable getTable(Identifier id) {
-        return this.tableGetter.apply(id);
-    }
-
-    @Nullable
-    public LootCondition getCondition(Identifier id) {
-        return this.conditionGetter.apply(id);
+    public LootDataLookup getDataLookup() {
+        return this.dataLookup;
     }
 
     public Random getRandom() {
@@ -120,9 +110,24 @@ public class LootContext {
         return this.world;
     }
 
+    public static Entry<LootTable> table(LootTable table) {
+        return new Entry<LootTable>(LootDataType.LOOT_TABLES, table);
+    }
+
+    public static Entry<LootCondition> predicate(LootCondition predicate) {
+        return new Entry<LootCondition>(LootDataType.PREDICATES, predicate);
+    }
+
+    public static Entry<LootFunction> itemModifier(LootFunction itemModifier) {
+        return new Entry<LootFunction>(LootDataType.ITEM_MODIFIERS, itemModifier);
+    }
+
     @FunctionalInterface
     public static interface Dropper {
         public void add(LootContext var1, Consumer<ItemStack> var2);
+    }
+
+    public record Entry<T>(LootDataType<T> type, T value) {
     }
 
     public static final class EntityTarget
@@ -192,6 +197,7 @@ public class LootContext {
         private final ServerWorld world;
         private final Map<LootContextParameter<?>, Object> parameters = Maps.newIdentityHashMap();
         private final Map<Identifier, Dropper> drops = Maps.newHashMap();
+        @Nullable
         private Random random;
         private float luck;
 
@@ -274,7 +280,7 @@ public class LootContext {
                 random = Random.create();
             }
             MinecraftServer minecraftServer = this.world.getServer();
-            return new LootContext(random, this.luck, this.world, minecraftServer.getLootManager()::getTable, minecraftServer.getPredicateManager()::get, this.parameters, this.drops);
+            return new LootContext(random, this.luck, this.world, minecraftServer.getLootManager(), this.parameters, this.drops);
         }
     }
 }

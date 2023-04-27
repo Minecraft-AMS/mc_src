@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.VertexSorter;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import java.io.ByteArrayInputStream;
@@ -47,9 +48,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.PostEffectProcessor;
 import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.gl.ShaderStage;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameOverlayRenderer;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferBuilderStorage;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.CameraSubmersionType;
@@ -57,7 +58,6 @@ import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.MapRenderer;
 import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
@@ -852,7 +852,7 @@ implements AutoCloseable {
     }
 
     public void loadProjectionMatrix(Matrix4f projectionMatrix) {
-        RenderSystem.setProjectionMatrix(projectionMatrix);
+        RenderSystem.setProjectionMatrix(projectionMatrix, VertexSorter.BY_DISTANCE);
     }
 
     public Matrix4f getBasicProjectionMatrix(double fov) {
@@ -906,33 +906,33 @@ implements AutoCloseable {
         Window window = this.client.getWindow();
         RenderSystem.clear(256, MinecraftClient.IS_SYSTEM_MAC);
         Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, (float)((double)window.getFramebufferWidth() / window.getScaleFactor()), (float)((double)window.getFramebufferHeight() / window.getScaleFactor()), 0.0f, 1000.0f, 3000.0f);
-        RenderSystem.setProjectionMatrix(matrix4f);
+        RenderSystem.setProjectionMatrix(matrix4f, VertexSorter.BY_Z);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
         matrixStack.loadIdentity();
         matrixStack.translate(0.0f, 0.0f, -2000.0f);
         RenderSystem.applyModelViewMatrix();
         DiffuseLighting.enableGuiDepthLighting();
-        MatrixStack matrixStack2 = new MatrixStack();
+        DrawContext drawContext = new DrawContext(this.client, this.buffers.getEntityVertexConsumers());
         if (tick && this.client.world != null) {
             this.client.getProfiler().swap("gui");
             if (this.client.player != null) {
                 float f = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength);
                 float g = this.client.options.getDistortionEffectScale().getValue().floatValue();
                 if (f > 0.0f && this.client.player.hasStatusEffect(StatusEffects.NAUSEA) && g < 1.0f) {
-                    this.renderNausea(f * (1.0f - g));
+                    this.renderNausea(drawContext, f * (1.0f - g));
                 }
             }
             if (!this.client.options.hudHidden || this.client.currentScreen != null) {
                 this.renderFloatingItem(this.client.getWindow().getScaledWidth(), this.client.getWindow().getScaledHeight(), tickDelta);
-                this.client.inGameHud.render(matrixStack2, tickDelta);
+                this.client.inGameHud.render(drawContext, tickDelta);
                 RenderSystem.clear(256, MinecraftClient.IS_SYSTEM_MAC);
             }
             this.client.getProfiler().pop();
         }
         if (this.client.getOverlay() != null) {
             try {
-                this.client.getOverlay().render(matrixStack2, i, j, this.client.getLastFrameDuration());
+                this.client.getOverlay().render(drawContext, i, j, this.client.getLastFrameDuration());
             }
             catch (Throwable throwable) {
                 CrashReport crashReport = CrashReport.create(throwable, "Rendering overlay");
@@ -943,7 +943,7 @@ implements AutoCloseable {
         }
         if (this.client.currentScreen != null) {
             try {
-                this.client.currentScreen.renderWithTooltip(matrixStack2, i, j, this.client.getLastFrameDuration());
+                this.client.currentScreen.renderWithTooltip(drawContext, i, j, this.client.getLastFrameDuration());
             }
             catch (Throwable throwable) {
                 CrashReport crashReport = CrashReport.create(throwable, "Rendering screen");
@@ -966,8 +966,9 @@ implements AutoCloseable {
             }
         }
         this.client.getProfiler().push("toasts");
-        this.client.getToastManager().draw(matrixStack2);
+        this.client.getToastManager().draw(drawContext);
         this.client.getProfiler().pop();
+        drawContext.draw();
         matrixStack.pop();
         RenderSystem.applyModelViewMatrix();
     }
@@ -1143,37 +1144,29 @@ implements AutoCloseable {
         RenderSystem.disableDepthTest();
     }
 
-    private void renderNausea(float distortionStrength) {
+    private void renderNausea(DrawContext context, float distortionStrength) {
         int i = this.client.getWindow().getScaledWidth();
         int j = this.client.getWindow().getScaledHeight();
-        double d = MathHelper.lerp((double)distortionStrength, 2.0, 1.0);
-        float f = 0.2f * distortionStrength;
-        float g = 0.4f * distortionStrength;
-        float h = 0.2f * distortionStrength;
-        double e = (double)i * d;
-        double k = (double)j * d;
-        double l = ((double)i - e) / 2.0;
-        double m = ((double)j - k) / 2.0;
+        context.getMatrices().push();
+        float f = MathHelper.lerp(distortionStrength, 2.0f, 1.0f);
+        context.getMatrices().translate((float)i / 2.0f, (float)j / 2.0f, 0.0f);
+        context.getMatrices().scale(f, f, f);
+        context.getMatrices().translate((float)(-i) / 2.0f, (float)(-j) / 2.0f, 0.0f);
+        float g = 0.2f * distortionStrength;
+        float h = 0.4f * distortionStrength;
+        float k = 0.2f * distortionStrength;
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE);
-        RenderSystem.setShaderColor(f, g, h, 1.0f);
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderTexture(0, NAUSEA_OVERLAY);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(l, m + k, -90.0).texture(0.0f, 1.0f).next();
-        bufferBuilder.vertex(l + e, m + k, -90.0).texture(1.0f, 1.0f).next();
-        bufferBuilder.vertex(l + e, m, -90.0).texture(1.0f, 0.0f).next();
-        bufferBuilder.vertex(l, m, -90.0).texture(0.0f, 0.0f).next();
-        tessellator.draw();
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        context.setShaderColor(g, h, k, 1.0f);
+        context.drawTexture(NAUSEA_OVERLAY, 0, 0, -90, 0.0f, 0.0f, i, j, i, j);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
+        context.getMatrices().pop();
     }
 
     public MinecraftClient getClient() {

@@ -169,7 +169,7 @@ implements RangedAttackMob {
     }
 
     public void updateAttackType() {
-        if (this.world == null || this.world.isClient) {
+        if (this.getWorld() == null || this.getWorld().isClient) {
             return;
         }
         this.goalSelector.remove(this.meleeAttackGoal);
@@ -177,7 +177,7 @@ implements RangedAttackMob {
         ItemStack itemStack = this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW));
         if (itemStack.isOf(Items.BOW)) {
             int i = 20;
-            if (this.world.getDifficulty() != Difficulty.HARD) {
+            if (this.getWorld().getDifficulty() != Difficulty.HARD) {
                 i = 40;
             }
             this.bowAttackGoal.setAttackInterval(i);
@@ -195,9 +195,9 @@ implements RangedAttackMob {
         double e = target.getBodyY(0.3333333333333333) - persistentProjectileEntity.getY();
         double f = target.getZ() - this.getZ();
         double g = Math.sqrt(d * d + f * f);
-        persistentProjectileEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
+        persistentProjectileEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.getWorld().getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-        this.world.spawnEntity(persistentProjectileEntity);
+        this.getWorld().spawnEntity(persistentProjectileEntity);
     }
 
     protected PersistentProjectileEntity createArrowProjectile(ItemStack arrow, float damageModifier) {
@@ -218,7 +218,7 @@ implements RangedAttackMob {
     @Override
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
         super.equipStack(slot, stack);
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             this.updateAttackType();
         }
     }

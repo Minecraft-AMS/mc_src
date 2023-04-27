@@ -65,7 +65,7 @@ extends PersistentProjectileEntity {
         byte i = this.dataTracker.get(LOYALTY);
         if (i > 0 && (this.dealtDamage || this.isNoClip()) && entity != null) {
             if (!this.isOwnerAlive()) {
-                if (!this.world.isClient && this.pickupType == PersistentProjectileEntity.PickupPermission.ALLOWED) {
+                if (!this.getWorld().isClient && this.pickupType == PersistentProjectileEntity.PickupPermission.ALLOWED) {
                     this.dropStack(this.asItemStack(), 0.1f);
                 }
                 this.discard();
@@ -73,7 +73,7 @@ extends PersistentProjectileEntity {
                 this.setNoClip(true);
                 Vec3d vec3d = entity.getEyePos().subtract(this.getPos());
                 this.setPos(this.getX(), this.getY() + vec3d.y * 0.015 * (double)i, this.getZ());
-                if (this.world.isClient) {
+                if (this.getWorld().isClient) {
                     this.lastRenderY = this.getY();
                 }
                 double d = 0.05 * (double)i;
@@ -115,8 +115,6 @@ extends PersistentProjectileEntity {
 
     @Override
     protected void onEntityHit(EntityHitResult entityHitResult) {
-        LightningEntity lightningEntity;
-        BlockPos blockPos;
         Entity entity = entityHitResult.getEntity();
         float f = 8.0f;
         if (entity instanceof LivingEntity) {
@@ -142,12 +140,16 @@ extends PersistentProjectileEntity {
         }
         this.setVelocity(this.getVelocity().multiply(-0.01, -0.1, -0.01));
         float g = 1.0f;
-        if (this.world instanceof ServerWorld && this.world.isThundering() && this.hasChanneling() && this.world.isSkyVisible(blockPos = entity.getBlockPos()) && (lightningEntity = EntityType.LIGHTNING_BOLT.create(this.world)) != null) {
-            lightningEntity.refreshPositionAfterTeleport(Vec3d.ofBottomCenter(blockPos));
-            lightningEntity.setChanneler(entity2 instanceof ServerPlayerEntity ? (ServerPlayerEntity)entity2 : null);
-            this.world.spawnEntity(lightningEntity);
-            soundEvent = SoundEvents.ITEM_TRIDENT_THUNDER;
-            g = 5.0f;
+        if (this.getWorld() instanceof ServerWorld && this.getWorld().isThundering() && this.hasChanneling()) {
+            LightningEntity lightningEntity;
+            BlockPos blockPos = entity.getBlockPos();
+            if (this.getWorld().isSkyVisible(blockPos) && (lightningEntity = EntityType.LIGHTNING_BOLT.create(this.getWorld())) != null) {
+                lightningEntity.refreshPositionAfterTeleport(Vec3d.ofBottomCenter(blockPos));
+                lightningEntity.setChanneler(entity2 instanceof ServerPlayerEntity ? (ServerPlayerEntity)entity2 : null);
+                this.getWorld().spawnEntity(lightningEntity);
+                soundEvent = SoundEvents.ITEM_TRIDENT_THUNDER;
+                g = 5.0f;
+            }
         }
         this.playSound(soundEvent, g, 1.0f);
     }

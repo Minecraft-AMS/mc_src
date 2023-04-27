@@ -3,10 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.mojang.serialization.Dynamic
+ *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  */
 package net.minecraft.entity.passive;
 
 import com.mojang.serialization.Dynamic;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -18,7 +20,6 @@ import java.util.stream.Stream;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.AnimationState;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
@@ -26,6 +27,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
+import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -40,6 +42,11 @@ import net.minecraft.entity.passive.SnifferBrain;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.loot.LootTable;
+import net.minecraft.loot.LootTables;
+import net.minecraft.loot.context.LootContext;
+import net.minecraft.loot.context.LootContextParameters;
+import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.BlockTags;
@@ -53,9 +60,11 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class SnifferEntity
 extends AnimalEntity {
@@ -63,18 +72,15 @@ extends AnimalEntity {
     private static final int field_42657 = 6000;
     private static final int field_42658 = 30;
     private static final int field_42659 = 120;
-    private static final int field_42660 = 10;
     private static final int field_42661 = 48000;
     private static final TrackedData<State> STATE = DataTracker.registerData(SnifferEntity.class, TrackedDataHandlerRegistry.SNIFFER_STATE);
     private static final TrackedData<Integer> FINISH_DIG_TIME = DataTracker.registerData(SnifferEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    public final AnimationState walkingAnimationState = new AnimationState();
-    public final AnimationState panickingAnimationState = new AnimationState();
     public final AnimationState feelingHappyAnimationState = new AnimationState();
     public final AnimationState scentingAnimationState = new AnimationState();
     public final AnimationState sniffingAnimationState = new AnimationState();
-    public final AnimationState searchingAnimationState = new AnimationState();
     public final AnimationState diggingAnimationState = new AnimationState();
     public final AnimationState risingAnimationState = new AnimationState();
+    public final AnimationState babyGrowthAnimationState = new AnimationState();
 
     public static DefaultAttributeContainer.Builder createSnifferAttributes() {
         return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.1f).add(EntityAttributes.GENERIC_MAX_HEALTH, 14.0);
@@ -85,7 +91,9 @@ extends AnimalEntity {
         this.dataTracker.startTracking(STATE, State.IDLING);
         this.dataTracker.startTracking(FINISH_DIG_TIME, 0);
         this.getNavigation().setCanSwim(true);
-        this.setPathfindingPenalty(PathNodeType.WATER, -2.0f);
+        this.setPathfindingPenalty(PathNodeType.WATER, -1.0f);
+        this.setPathfindingPenalty(PathNodeType.DANGER_POWDER_SNOW, -1.0f);
+        this.setPathfindingPenalty(PathNodeType.DAMAGE_CAUTIOUS, -1.0f);
     }
 
     @Override
@@ -93,21 +101,33 @@ extends AnimalEntity {
         return this.getDimensions((EntityPose)pose).height * 0.6f;
     }
 
-    private boolean isMoving() {
-        boolean bl = this.onGround || this.isInsideWaterOrBubbleColumn();
-        return bl && this.getVelocity().horizontalLengthSquared() > 1.0E-6;
+    @Override
+    public void onStartPathfinding() {
+        super.onStartPathfinding();
+        if (this.isOnFire() || this.isTouchingWater()) {
+            this.setPathfindingPenalty(PathNodeType.WATER, 0.0f);
+        }
     }
 
-    private boolean isMovingInWater() {
-        return this.isMoving() && this.isTouchingWater() && !this.isSubmergedInWater() && this.getVelocity().horizontalLengthSquared() > 9.999999999999999E-6;
-    }
-
-    private boolean isMovingOutsideWater() {
-        return this.isMoving() && !this.isSubmergedInWater() && !this.isTouchingWater();
+    @Override
+    public void onFinishPathfinding() {
+        this.setPathfindingPenalty(PathNodeType.WATER, -1.0f);
     }
 
     public boolean isPanicking() {
         return this.brain.getOptionalRegisteredMemory(MemoryModuleType.IS_PANICKING).isPresent();
+    }
+
+    public boolean isSearching() {
+        return this.getState() == State.SEARCHING;
+    }
+
+    public boolean isTempted() {
+        return this.brain.getOptionalRegisteredMemory(MemoryModuleType.IS_TEMPTED).orElse(false);
+    }
+
+    public boolean canTryToDig() {
+        return !this.isTempted() && !this.isPanicking() && !this.isTouchingWater() && !this.isInLove() && this.isOnGround() && !this.hasVehicle();
     }
 
     public boolean isDiggingOrSearching() {
@@ -115,8 +135,12 @@ extends AnimalEntity {
     }
 
     private BlockPos getDigPos() {
-        Vec3d vec3d = this.getPos().add(this.getRotationVecClient().multiply(2.25));
-        return BlockPos.ofFloored(vec3d.getX(), this.getY(), vec3d.getZ());
+        Vec3d vec3d = this.getDigLocation();
+        return BlockPos.ofFloored(vec3d.getX(), this.getY() + (double)0.2f, vec3d.getZ());
+    }
+
+    private Vec3d getDigLocation() {
+        return this.getPos().add(this.getRotationVecClient().multiply(2.25));
     }
 
     private State getState() {
@@ -142,10 +166,6 @@ extends AnimalEntity {
                     this.sniffingAnimationState.startIfNotRunning(this.age);
                     break;
                 }
-                case SEARCHING: {
-                    this.searchingAnimationState.startIfNotRunning(this.age);
-                    break;
-                }
                 case DIGGING: {
                     this.diggingAnimationState.startIfNotRunning(this.age);
                     break;
@@ -163,7 +183,6 @@ extends AnimalEntity {
     }
 
     private void stopAnimations() {
-        this.searchingAnimationState.stop();
         this.diggingAnimationState.stop();
         this.sniffingAnimationState.stop();
         this.risingAnimationState.stop();
@@ -178,8 +197,7 @@ extends AnimalEntity {
                 break;
             }
             case SCENTING: {
-                this.playSound(SoundEvents.ENTITY_SNIFFER_SCENTING, 1.0f, 1.0f);
-                this.setState(State.SCENTING);
+                this.setState(State.SCENTING).playScentingSound();
                 break;
             }
             case SNIFFING: {
@@ -208,9 +226,14 @@ extends AnimalEntity {
         return this;
     }
 
+    private SnifferEntity playScentingSound() {
+        this.playSound(SoundEvents.ENTITY_SNIFFER_SCENTING, 1.0f, this.isBaby() ? 1.3f : 1.0f);
+        return this;
+    }
+
     private SnifferEntity setDigging() {
         this.dataTracker.set(FINISH_DIG_TIME, this.age + 120);
-        this.world.sendEntityStatus(this, (byte)63);
+        this.getWorld().sendEntityStatus(this, (byte)63);
         return this;
     }
 
@@ -222,38 +245,31 @@ extends AnimalEntity {
     }
 
     Optional<BlockPos> findSniffingTargetPos() {
-        return IntStream.range(0, 5).mapToObj(i -> FuzzyTargeting.find(this, 10 + 2 * i, 3)).filter(Objects::nonNull).map(BlockPos::ofFloored).map(BlockPos::down).filter(this::isDiggable).findFirst();
-    }
-
-    @Override
-    protected boolean canStartRiding(Entity entity) {
-        return false;
+        return IntStream.range(0, 5).mapToObj(i -> FuzzyTargeting.find(this, 10 + 2 * i, 3)).filter(Objects::nonNull).map(BlockPos::ofFloored).filter(pos -> this.getWorld().getWorldBorder().contains((BlockPos)pos)).map(BlockPos::down).filter(this::isDiggable).findFirst();
     }
 
     boolean canDig() {
-        return !this.isPanicking() && !this.isBaby() && !this.isTouchingWater() && this.isDiggable(this.getDigPos().down());
+        return !this.isPanicking() && !this.isTempted() && !this.isBaby() && !this.isTouchingWater() && this.isOnGround() && !this.hasVehicle() && this.isDiggable(this.getDigPos().down());
     }
 
-    /*
-     * Enabled force condition propagation
-     * Lifted jumps to return sites
-     */
     private boolean isDiggable(BlockPos pos) {
-        if (!this.world.getBlockState(pos).isIn(BlockTags.SNIFFER_DIGGABLE_BLOCK)) return false;
-        if (!this.world.getBlockState(pos.up()).isAir()) return false;
-        if (!this.getExploredPositions().noneMatch(pos::equals)) return false;
-        return true;
+        return this.getWorld().getBlockState(pos).isIn(BlockTags.SNIFFER_DIGGABLE_BLOCK) && this.getExploredPositions().noneMatch(globalPos -> GlobalPos.create(this.getWorld().getRegistryKey(), pos).equals(globalPos)) && Optional.ofNullable(this.getNavigation().findPathTo(pos, 1)).map(Path::reachesTarget).orElse(false) != false;
     }
 
     private void dropSeeds() {
-        if (this.world.isClient() || this.dataTracker.get(FINISH_DIG_TIME) != this.age) {
+        if (this.getWorld().isClient() || this.dataTracker.get(FINISH_DIG_TIME) != this.age) {
             return;
         }
-        ItemStack itemStack = new ItemStack(Items.TORCHFLOWER_SEEDS);
+        ServerWorld serverWorld = (ServerWorld)this.getWorld();
+        LootTable lootTable = serverWorld.getServer().getLootManager().getLootTable(LootTables.SNIFFER_DIGGING_GAMEPLAY);
+        LootContext.Builder builder = new LootContext.Builder(serverWorld).parameter(LootContextParameters.ORIGIN, this.getDigLocation()).parameter(LootContextParameters.THIS_ENTITY, this).random(this.random);
+        ObjectArrayList<ItemStack> list = lootTable.generateLoot(builder.build(LootContextTypes.GIFT));
         BlockPos blockPos = this.getDigPos();
-        ItemEntity itemEntity = new ItemEntity(this.world, blockPos.getX(), blockPos.getY(), blockPos.getZ(), itemStack);
-        itemEntity.setToDefaultPickupDelay();
-        this.world.spawnEntity(itemEntity);
+        for (ItemStack itemStack : list) {
+            ItemEntity itemEntity = new ItemEntity(serverWorld, blockPos.getX(), blockPos.getY(), blockPos.getZ(), itemStack);
+            itemEntity.setToDefaultPickupDelay();
+            serverWorld.spawnEntity(itemEntity);
+        }
         this.playSound(SoundEvents.ENTITY_SNIFFER_DROP_SEED, 1.0f, 1.0f);
     }
 
@@ -265,25 +281,28 @@ extends AnimalEntity {
             BlockPos blockPos = this.getDigPos();
             if (blockState.getRenderType() != BlockRenderType.INVISIBLE) {
                 for (int i = 0; i < 30; ++i) {
-                    Vec3d vec3d = Vec3d.ofCenter(blockPos);
-                    this.world.addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), vec3d.x, vec3d.y, vec3d.z, 0.0, 0.0, 0.0);
+                    Vec3d vec3d = Vec3d.ofCenter(blockPos).add(0.0, -0.65f, 0.0);
+                    this.getWorld().addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), vec3d.x, vec3d.y, vec3d.z, 0.0, 0.0, 0.0);
                 }
                 if (this.age % 10 == 0) {
-                    this.world.playSound(this.getX(), this.getY(), this.getZ(), blockState.getSoundGroup().getHitSound(), this.getSoundCategory(), 0.5f, 0.5f, false);
+                    this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), blockState.getSoundGroup().getHitSound(), this.getSoundCategory(), 0.5f, 0.5f, false);
                 }
             }
+        }
+        if (this.age % 10 == 0) {
+            this.getWorld().emitGameEvent(GameEvent.ENTITY_SHAKE, this.getDigPos(), GameEvent.Emitter.of(this));
         }
         return this;
     }
 
     private SnifferEntity addExploredPosition(BlockPos pos) {
         List list = this.getExploredPositions().limit(20L).collect(Collectors.toList());
-        list.add(0, pos);
+        list.add(0, GlobalPos.create(this.getWorld().getRegistryKey(), pos));
         this.getBrain().remember(MemoryModuleType.SNIFFER_EXPLORED_POSITIONS, list);
         return this;
     }
 
-    private Stream<BlockPos> getExploredPositions() {
+    private Stream<GlobalPos> getExploredPositions() {
         return this.getBrain().getOptionalRegisteredMemory(MemoryModuleType.SNIFFER_EXPLORED_POSITIONS).stream().flatMap(Collection::stream);
     }
 
@@ -298,21 +317,23 @@ extends AnimalEntity {
     }
 
     @Override
+    public void breed(ServerWorld world, AnimalEntity other) {
+        ItemStack itemStack = new ItemStack(Items.SNIFFER_EGG);
+        ItemEntity itemEntity = new ItemEntity(world, this.getPos().getX(), this.getPos().getY(), this.getPos().getZ(), itemStack);
+        itemEntity.setToDefaultPickupDelay();
+        this.breed(world, other, null);
+        this.playSound(SoundEvents.BLOCK_SNIFFER_EGG_PLOP, 1.0f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 0.5f);
+        world.spawnEntity(itemEntity);
+    }
+
+    @Override
+    public void onDeath(DamageSource damageSource) {
+        this.startState(State.IDLING);
+        super.onDeath(damageSource);
+    }
+
+    @Override
     public void tick() {
-        boolean bl = this.isTouchingWater() && !this.isSubmergedInWater();
-        this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(bl ? (double)0.2f : (double)0.1f);
-        if (this.isMovingOutsideWater() || this.isMovingInWater()) {
-            if (this.isPanicking()) {
-                this.walkingAnimationState.stop();
-                this.panickingAnimationState.startIfNotRunning(this.age);
-            } else {
-                this.panickingAnimationState.stop();
-                this.walkingAnimationState.startIfNotRunning(this.age);
-            }
-        } else {
-            this.panickingAnimationState.stop();
-            this.walkingAnimationState.stop();
-        }
         switch (this.getState()) {
             case DIGGING: {
                 this.spawnDiggingParticles(this.diggingAnimationState).dropSeeds();
@@ -322,22 +343,34 @@ extends AnimalEntity {
                 this.playSearchingSound();
             }
         }
+        this.babyGrowthAnimationState.setRunning(this.isBaby(), this.age);
         super.tick();
     }
 
     @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
+        boolean bl = this.isBreedingItem(itemStack);
         ActionResult actionResult = super.interactMob(player, hand);
-        if (actionResult.isAccepted() && this.isBreedingItem(itemStack)) {
-            this.world.playSoundFromEntity(null, this, this.getEatSound(itemStack), SoundCategory.NEUTRAL, 1.0f, MathHelper.nextBetween(this.world.random, 0.8f, 1.2f));
+        if (actionResult.isAccepted() && bl) {
+            this.getWorld().playSoundFromEntity(null, this, this.getEatSound(itemStack), SoundCategory.NEUTRAL, 1.0f, MathHelper.nextBetween(this.getWorld().random, 0.8f, 1.2f));
         }
         return actionResult;
     }
 
+    @Override
+    public double getMountedHeightOffset() {
+        return 1.8;
+    }
+
+    @Override
+    public float getNameLabelHeight() {
+        return super.getNameLabelHeight() + 0.3f;
+    }
+
     private void playSearchingSound() {
-        if (this.world.isClient() && this.age % 20 == 0) {
-            this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_SNIFFER_SEARCHING, this.getSoundCategory(), 1.0f, 1.0f, false);
+        if (this.getWorld().isClient() && this.age % 20 == 0) {
+            this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_SNIFFER_SEARCHING, this.getSoundCategory(), 1.0f, 1.0f, false);
         }
     }
 
@@ -416,11 +449,11 @@ extends AnimalEntity {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("snifferBrain");
-        this.getBrain().tick((ServerWorld)this.world, this);
-        this.world.getProfiler().swap("snifferActivityUpdate");
+        this.getWorld().getProfiler().push("snifferBrain");
+        this.getBrain().tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().swap("snifferActivityUpdate");
         SnifferBrain.updateActivities(this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
         super.mobTick();
     }
 

@@ -74,7 +74,7 @@ public class TargetPredicate {
             return false;
         }
         if (baseEntity == null) {
-            if (this.attackable && (!targetEntity.canTakeDamage() || targetEntity.world.getDifficulty() == Difficulty.PEACEFUL)) {
+            if (this.attackable && (!targetEntity.canTakeDamage() || targetEntity.getWorld().getDifficulty() == Difficulty.PEACEFUL)) {
                 return false;
             }
         } else {

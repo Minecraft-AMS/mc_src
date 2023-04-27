@@ -10,10 +10,10 @@ package net.minecraft.client.gui.screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.MultilineText;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
@@ -40,11 +40,11 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        OutOfMemoryScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.title, this.width / 2, this.height / 4 - 60 + 20, 0xFFFFFF);
-        this.message.drawWithShadow(matrices, this.width / 2 - 145, this.height / 4, 9, 0xA0A0A0);
-        super.render(matrices, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, this.height / 4 - 60 + 20, 0xFFFFFF);
+        this.message.drawWithShadow(context, this.width / 2 - 145, this.height / 4, 9, 0xA0A0A0);
+        super.render(context, mouseX, mouseY, delta);
     }
 }
 

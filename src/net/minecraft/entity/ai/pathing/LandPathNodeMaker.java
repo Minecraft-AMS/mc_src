@@ -23,7 +23,6 @@ import net.minecraft.block.CampfireBlock;
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.LeavesBlock;
-import net.minecraft.block.Material;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.PathNodeMaker;
@@ -48,19 +47,18 @@ public class LandPathNodeMaker
 extends PathNodeMaker {
     public static final double Y_OFFSET = 0.5;
     private static final double MIN_STEP_HEIGHT = 1.125;
-    protected float waterPathNodeTypeWeight;
     private final Long2ObjectMap<PathNodeType> nodeTypes = new Long2ObjectOpenHashMap();
     private final Object2BooleanMap<Box> collidedBoxes = new Object2BooleanOpenHashMap();
 
     @Override
     public void init(ChunkCache cachedWorld, MobEntity entity) {
         super.init(cachedWorld, entity);
-        this.waterPathNodeTypeWeight = entity.getPathfindingPenalty(PathNodeType.WATER);
+        entity.onStartPathfinding();
     }
 
     @Override
     public void clear() {
-        this.entity.setPathfindingPenalty(PathNodeType.WATER, this.waterPathNodeTypeWeight);
+        this.entity.onFinishPathfinding();
         this.nodeTypes.clear();
         this.collidedBoxes.clear();
         super.clear();
@@ -86,7 +84,7 @@ extends PathNodeMaker {
             i = MathHelper.floor(this.entity.getY() + 0.5);
         } else {
             blockPos = this.entity.getBlockPos();
-            while ((this.cachedWorld.getBlockState(blockPos).isAir() || this.cachedWorld.getBlockState(blockPos).canPathfindThrough(this.cachedWorld, blockPos, NavigationType.LAND)) && blockPos.getY() > this.entity.world.getBottomY()) {
+            while ((this.cachedWorld.getBlockState(blockPos).isAir() || this.cachedWorld.getBlockState(blockPos).canPathfindThrough(this.cachedWorld, blockPos, NavigationType.LAND)) && blockPos.getY() > this.entity.getWorld().getBottomY()) {
                 blockPos = blockPos.down();
             }
             i = blockPos.up().getY();
@@ -247,7 +245,7 @@ extends PathNodeMaker {
             if (this.getNodeType(this.entity, x, y - 1, z) != PathNodeType.WATER) {
                 return pathNode;
             }
-            while (y > this.entity.world.getBottomY()) {
+            while (y > this.entity.getWorld().getBottomY()) {
                 if ((pathNodeType = this.getNodeType(this.entity, x, --y, z)) == PathNodeType.WATER) {
                     pathNode = this.getNodeWith(x, y, z, pathNodeType, this.entity.getPathfindingPenalty(pathNodeType));
                     continue;
@@ -259,7 +257,7 @@ extends PathNodeMaker {
             int i = 0;
             int j = y;
             while (pathNodeType == PathNodeType.OPEN) {
-                if (--y < this.entity.world.getBottomY()) {
+                if (--y < this.entity.getWorld().getBottomY()) {
                     return this.getBlockedNode(x, j, z);
                 }
                 if (i++ >= this.entity.getSafeFallDistance()) {
@@ -397,6 +395,9 @@ extends PathNodeMaker {
             if (pathNodeType2 == PathNodeType.POWDER_SNOW) {
                 pathNodeType = PathNodeType.DANGER_POWDER_SNOW;
             }
+            if (pathNodeType2 == PathNodeType.DAMAGE_CAUTIOUS) {
+                pathNodeType = PathNodeType.DAMAGE_CAUTIOUS;
+            }
         }
         if (pathNodeType == PathNodeType.WALKABLE) {
             pathNodeType = LandPathNodeMaker.getNodeTypeFromNeighbors(world, pos.set(i, j, k), pathNodeType);
@@ -420,8 +421,11 @@ extends PathNodeMaker {
                     if (LandPathNodeMaker.inflictsFireDamage(blockState)) {
                         return PathNodeType.DANGER_FIRE;
                     }
-                    if (!world.getFluidState(pos).isIn(FluidTags.WATER)) continue;
-                    return PathNodeType.WATER_BORDER;
+                    if (world.getFluidState(pos).isIn(FluidTags.WATER)) {
+                        return PathNodeType.WATER_BORDER;
+                    }
+                    if (!blockState.isOf(Blocks.WITHER_ROSE) && !blockState.isOf(Blocks.POINTED_DRIPSTONE)) continue;
+                    return PathNodeType.DAMAGE_CAUTIOUS;
                 }
             }
         }
@@ -431,7 +435,6 @@ extends PathNodeMaker {
     protected static PathNodeType getCommonNodeType(BlockView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
         Block block = blockState.getBlock();
-        Material material = blockState.getMaterial();
         if (blockState.isAir()) {
             return PathNodeType.OPEN;
         }
@@ -450,6 +453,9 @@ extends PathNodeMaker {
         if (blockState.isOf(Blocks.COCOA)) {
             return PathNodeType.COCOA;
         }
+        if (blockState.isOf(Blocks.WITHER_ROSE) || blockState.isOf(Blocks.POINTED_DRIPSTONE)) {
+            return PathNodeType.DAMAGE_CAUTIOUS;
+        }
         FluidState fluidState = world.getFluidState(pos);
         if (fluidState.isIn(FluidTags.LAVA)) {
             return PathNodeType.LAVA;
@@ -457,14 +463,12 @@ extends PathNodeMaker {
         if (LandPathNodeMaker.inflictsFireDamage(blockState)) {
             return PathNodeType.DAMAGE_FIRE;
         }
-        if (DoorBlock.isWoodenDoor(blockState) && !blockState.get(DoorBlock.OPEN).booleanValue()) {
-            return PathNodeType.DOOR_WOOD_CLOSED;
-        }
-        if (block instanceof DoorBlock && material == Material.METAL && !blockState.get(DoorBlock.OPEN).booleanValue()) {
-            return PathNodeType.DOOR_IRON_CLOSED;
-        }
-        if (block instanceof DoorBlock && blockState.get(DoorBlock.OPEN).booleanValue()) {
-            return PathNodeType.DOOR_OPEN;
+        if (block instanceof DoorBlock) {
+            DoorBlock doorBlock = (DoorBlock)block;
+            if (blockState.get(DoorBlock.OPEN).booleanValue()) {
+                return PathNodeType.DOOR_OPEN;
+            }
+            return doorBlock.getBlockSetType().canOpenByHand() ? PathNodeType.DOOR_WOOD_CLOSED : PathNodeType.DOOR_IRON_CLOSED;
         }
         if (block instanceof AbstractRailBlock) {
             return PathNodeType.RAIL;

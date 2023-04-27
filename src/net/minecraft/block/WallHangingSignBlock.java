@@ -21,13 +21,15 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.SideShapeType;
 import net.minecraft.block.WoodType;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.HangingSignBlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.item.BlockItem;
+import net.minecraft.item.HangingSignItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.tag.BlockTags;
@@ -64,15 +66,21 @@ extends AbstractSignBlock {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        ItemStack itemStack;
+        SignBlockEntity signBlockEntity;
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        if (blockEntity instanceof SignBlockEntity) {
-            SignBlockEntity signBlockEntity = (SignBlockEntity)blockEntity;
-            ItemStack itemStack = player.getStackInHand(hand);
-            if (!signBlockEntity.shouldRunCommand(player) && itemStack.getItem() instanceof BlockItem) {
-                return ActionResult.PASS;
-            }
+        if (blockEntity instanceof SignBlockEntity && this.shouldTryAttaching(state, player, hit, signBlockEntity = (SignBlockEntity)blockEntity, itemStack = player.getStackInHand(hand))) {
+            return ActionResult.PASS;
         }
         return super.onUse(state, world, pos, player, hand, hit);
+    }
+
+    private boolean shouldTryAttaching(BlockState state, PlayerEntity player, BlockHitResult hitResult, SignBlockEntity sign, ItemStack stack) {
+        return !sign.canRunCommandClickEvent(sign.isPlayerFacingFront(player), player) && stack.getItem() instanceof HangingSignItem && !this.isHitOnFacingAxis(hitResult, state);
+    }
+
+    private boolean isHitOnFacingAxis(BlockHitResult hitResult, BlockState state) {
+        return hitResult.getSide().getAxis() == state.get(FACING).getAxis();
     }
 
     @Override
@@ -139,6 +147,11 @@ extends AbstractSignBlock {
     }
 
     @Override
+    public float getRotationDegrees(BlockState state) {
+        return state.get(FACING).asRotation();
+    }
+
+    @Override
     public BlockState rotate(BlockState state, BlockRotation rotation) {
         return (BlockState)state.with(FACING, rotation.rotate(state.get(FACING)));
     }
@@ -161,6 +174,12 @@ extends AbstractSignBlock {
     @Override
     public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
         return false;
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return WallHangingSignBlock.checkType(type, BlockEntityType.HANGING_SIGN, SignBlockEntity::tick);
     }
 }
 

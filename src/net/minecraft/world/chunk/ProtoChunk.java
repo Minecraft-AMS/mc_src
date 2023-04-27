@@ -4,19 +4,16 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
- *  it.unimi.dsi.fastutil.shorts.ShortList
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
-import it.unimi.dsi.fastutil.shorts.ShortList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -41,6 +38,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
+import net.minecraft.world.chunk.light.ChunkLightProvider;
 import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.carver.CarvingMask;
@@ -57,7 +55,6 @@ extends Chunk {
     private volatile LightingProvider lightingProvider;
     private volatile ChunkStatus status = ChunkStatus.EMPTY;
     private final List<NbtCompound> entities = Lists.newArrayList();
-    private final List<BlockPos> lightSources = Lists.newArrayList();
     private final Map<GenerationStep.Carver, CarvingMask> carvingMasks = new Object2ObjectArrayMap();
     @Nullable
     private BelowZeroRetrogen belowZeroRetrogen;
@@ -116,27 +113,6 @@ extends Chunk {
     }
 
     @Override
-    public Stream<BlockPos> getLightSourcesStream() {
-        return this.lightSources.stream();
-    }
-
-    public ShortList[] getLightSourcesBySection() {
-        ShortList[] shortLists = new ShortList[this.countVerticalSections()];
-        for (BlockPos blockPos : this.lightSources) {
-            Chunk.getList(shortLists, this.getSectionIndex(blockPos.getY())).add(ProtoChunk.getPackedSectionRelative(blockPos));
-        }
-        return shortLists;
-    }
-
-    public void addLightSource(short chunkSliceRel, int sectionY) {
-        this.addLightSource(ProtoChunk.joinBlockPos(chunkSliceRel, this.sectionIndexToCoord(sectionY), this.pos));
-    }
-
-    public void addLightSource(BlockPos pos) {
-        this.lightSources.add(pos.toImmutable());
-    }
-
-    @Override
     @Nullable
     public BlockState setBlockState(BlockPos pos, BlockState state, boolean moved) {
         int i = pos.getX();
@@ -146,16 +122,24 @@ extends Chunk {
             return Blocks.VOID_AIR.getDefaultState();
         }
         int l = this.getSectionIndex(j);
-        if (this.sectionArray[l].isEmpty() && state.isOf(Blocks.AIR)) {
+        ChunkSection chunkSection = this.getSection(l);
+        boolean bl = chunkSection.isEmpty();
+        if (bl && state.isOf(Blocks.AIR)) {
             return state;
         }
-        if (state.getLuminance() > 0) {
-            this.lightSources.add(new BlockPos((i & 0xF) + this.getPos().getStartX(), j, (k & 0xF) + this.getPos().getStartZ()));
-        }
-        ChunkSection chunkSection = this.getSection(l);
-        BlockState blockState = chunkSection.setBlockState(i & 0xF, j & 0xF, k & 0xF, state);
-        if (this.status.isAtLeast(ChunkStatus.FEATURES) && state != blockState && (state.getOpacity(this, pos) != blockState.getOpacity(this, pos) || state.getLuminance() != blockState.getLuminance() || state.hasSidedTransparency() || blockState.hasSidedTransparency())) {
-            this.lightingProvider.checkBlock(pos);
+        int m = ChunkSectionPos.getLocalCoord(i);
+        int n = ChunkSectionPos.getLocalCoord(j);
+        int o = ChunkSectionPos.getLocalCoord(k);
+        BlockState blockState = chunkSection.setBlockState(m, n, o, state);
+        if (this.status.isAtLeast(ChunkStatus.INITIALIZE_LIGHT)) {
+            boolean bl2 = chunkSection.isEmpty();
+            if (bl2 != bl) {
+                this.lightingProvider.setSectionStatus(pos, bl2);
+            }
+            if (ChunkLightProvider.needsLightUpdate(this, pos, blockState, state)) {
+                this.field_44708.method_51536(this, m, j, o);
+                this.lightingProvider.checkBlock(pos);
+            }
         }
         EnumSet<Heightmap.Type> enumSet = this.getStatus().getHeightmapTypes();
         EnumSet<Heightmap.Type> enumSet2 = null;
@@ -171,7 +155,7 @@ extends Chunk {
             Heightmap.populateHeightmaps(this, enumSet2);
         }
         for (Heightmap.Type type : enumSet) {
-            ((Heightmap)this.heightmaps.get(type)).trackUpdate(i & 0xF, j, k & 0xF, state);
+            ((Heightmap)this.heightmaps.get(type)).trackUpdate(m, j, o, state);
         }
         return blockState;
     }
@@ -237,7 +221,7 @@ extends Chunk {
 
     @Override
     public RegistryEntry<Biome> getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
-        if (this.getStatus().isAtLeast(ChunkStatus.BIOMES) || this.belowZeroRetrogen != null && this.belowZeroRetrogen.getTargetStatus().isAtLeast(ChunkStatus.BIOMES)) {
+        if (this.method_51526().isAtLeast(ChunkStatus.BIOMES)) {
             return super.getBiomeForNoiseGen(biomeX, biomeY, biomeZ);
         }
         throw new IllegalStateException("Asking for biomes before we have biomes");

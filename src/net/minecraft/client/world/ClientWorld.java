@@ -153,7 +153,7 @@ extends World {
         if (blockState != state) {
             this.setBlockState(pos, state, 19);
             ClientPlayerEntity playerEntity = this.client.player;
-            if (this == playerEntity.world && playerEntity.collidesWithStateAtPos(pos, state)) {
+            if (this == playerEntity.getWorld() && playerEntity.collidesWithStateAtPos(pos, state)) {
                 playerEntity.updatePosition(playerPos.x, playerPos.y, playerPos.z);
             }
         }
@@ -537,13 +537,6 @@ extends World {
 
     public void scheduleBlockRenders(int x, int y, int z) {
         this.worldRenderer.scheduleBlockRenders(x, y, z);
-    }
-
-    public void markChunkRenderability(int chunkX, int chunkZ) {
-        WorldChunk worldChunk = this.chunkManager.getWorldChunk(chunkX, chunkZ, false);
-        if (worldChunk != null) {
-            worldChunk.setShouldRenderOnUpdate(true);
-        }
     }
 
     @Override

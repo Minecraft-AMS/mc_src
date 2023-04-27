@@ -68,27 +68,27 @@ implements Ownable {
         }
         this.move(MovementType.SELF, this.getVelocity());
         this.setVelocity(this.getVelocity().multiply(0.98));
-        if (this.onGround) {
+        if (this.isOnGround()) {
             this.setVelocity(this.getVelocity().multiply(0.7, -0.5, 0.7));
         }
         int i = this.getFuse() - 1;
         this.setFuse(i);
         if (i <= 0) {
             this.discard();
-            if (!this.world.isClient) {
+            if (!this.getWorld().isClient) {
                 this.explode();
             }
         } else {
             this.updateWaterState();
-            if (this.world.isClient) {
-                this.world.addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
+            if (this.getWorld().isClient) {
+                this.getWorld().addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
             }
         }
     }
 
     private void explode() {
         float f = 4.0f;
-        this.world.createExplosion(this, this.getX(), this.getBodyY(0.0625), this.getZ(), 4.0f, World.ExplosionSourceType.TNT);
+        this.getWorld().createExplosion(this, this.getX(), this.getBodyY(0.0625), this.getZ(), 4.0f, World.ExplosionSourceType.TNT);
     }
 
     @Override

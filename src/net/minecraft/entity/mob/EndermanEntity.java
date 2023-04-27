@@ -178,14 +178,14 @@ implements Angerable {
         if (this.age >= this.lastAngrySoundAge + 400) {
             this.lastAngrySoundAge = this.age;
             if (!this.isSilent()) {
-                this.world.playSound(this.getX(), this.getEyeY(), this.getZ(), SoundEvents.ENTITY_ENDERMAN_STARE, this.getSoundCategory(), 2.5f, 1.0f, false);
+                this.getWorld().playSound(this.getX(), this.getEyeY(), this.getZ(), SoundEvents.ENTITY_ENDERMAN_STARE, this.getSoundCategory(), 2.5f, 1.0f, false);
             }
         }
     }
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        if (ANGRY.equals(data) && this.isProvoked() && this.world.isClient) {
+        if (ANGRY.equals(data) && this.isProvoked() && this.getWorld().isClient) {
             this.playAngrySound();
         }
         super.onTrackedDataSet(data);
@@ -205,11 +205,11 @@ implements Angerable {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         BlockState blockState = null;
-        if (nbt.contains("carriedBlockState", 10) && (blockState = NbtHelper.toBlockState(this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("carriedBlockState"))).isAir()) {
+        if (nbt.contains("carriedBlockState", 10) && (blockState = NbtHelper.toBlockState(this.getWorld().createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("carriedBlockState"))).isAir()) {
             blockState = null;
         }
         this.setCarriedBlock(blockState);
-        this.readAngerFromNbt(this.world, nbt);
+        this.readAngerFromNbt(this.getWorld(), nbt);
     }
 
     boolean isPlayerStaring(PlayerEntity player) {
@@ -234,14 +234,14 @@ implements Angerable {
 
     @Override
     public void tickMovement() {
-        if (this.world.isClient) {
+        if (this.getWorld().isClient) {
             for (int i = 0; i < 2; ++i) {
-                this.world.addParticle(ParticleTypes.PORTAL, this.getParticleX(0.5), this.getRandomBodyY() - 0.25, this.getParticleZ(0.5), (this.random.nextDouble() - 0.5) * 2.0, -this.random.nextDouble(), (this.random.nextDouble() - 0.5) * 2.0);
+                this.getWorld().addParticle(ParticleTypes.PORTAL, this.getParticleX(0.5), this.getRandomBodyY() - 0.25, this.getParticleZ(0.5), (this.random.nextDouble() - 0.5) * 2.0, -this.random.nextDouble(), (this.random.nextDouble() - 0.5) * 2.0);
             }
         }
         this.jumping = false;
-        if (!this.world.isClient) {
-            this.tickAngerLogic((ServerWorld)this.world, true);
+        if (!this.getWorld().isClient) {
+            this.tickAngerLogic((ServerWorld)this.getWorld(), true);
         }
         super.tickMovement();
     }
@@ -254,7 +254,7 @@ implements Angerable {
     @Override
     protected void mobTick() {
         float f;
-        if (this.world.isDay() && this.age >= this.ageWhenTargetSet + 600 && (f = this.getBrightnessAtEyes()) > 0.5f && this.world.isSkyVisible(this.getBlockPos()) && this.random.nextFloat() * 30.0f < (f - 0.4f) * 2.0f) {
+        if (this.getWorld().isDay() && this.age >= this.ageWhenTargetSet + 600 && (f = this.getBrightnessAtEyes()) > 0.5f && this.getWorld().isSkyVisible(this.getBlockPos()) && this.random.nextFloat() * 30.0f < (f - 0.4f) * 2.0f) {
             this.setTarget(null);
             this.teleportRandomly();
         }
@@ -262,7 +262,7 @@ implements Angerable {
     }
 
     protected boolean teleportRandomly() {
-        if (this.world.isClient() || !this.isAlive()) {
+        if (this.getWorld().isClient() || !this.isAlive()) {
             return false;
         }
         double d = this.getX() + (this.random.nextDouble() - 0.5) * 64.0;
@@ -283,11 +283,11 @@ implements Angerable {
 
     private boolean teleportTo(double x, double y, double z) {
         BlockPos.Mutable mutable = new BlockPos.Mutable(x, y, z);
-        while (mutable.getY() > this.world.getBottomY() && !this.world.getBlockState(mutable).getMaterial().blocksMovement()) {
+        while (mutable.getY() > this.getWorld().getBottomY() && !this.getWorld().getBlockState(mutable).blocksMovement()) {
             mutable.move(Direction.DOWN);
         }
-        BlockState blockState = this.world.getBlockState(mutable);
-        boolean bl = blockState.getMaterial().blocksMovement();
+        BlockState blockState = this.getWorld().getBlockState(mutable);
+        boolean bl = blockState.blocksMovement();
         boolean bl2 = blockState.getFluidState().isIn(FluidTags.WATER);
         if (!bl || bl2) {
             return false;
@@ -295,9 +295,9 @@ implements Angerable {
         Vec3d vec3d = this.getPos();
         boolean bl3 = this.teleport(x, y, z, true);
         if (bl3) {
-            this.world.emitGameEvent(GameEvent.TELEPORT, vec3d, GameEvent.Emitter.of(this));
+            this.getWorld().emitGameEvent(GameEvent.TELEPORT, vec3d, GameEvent.Emitter.of(this));
             if (!this.isSilent()) {
-                this.world.playSound(null, this.prevX, this.prevY, this.prevZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT, this.getSoundCategory(), 1.0f, 1.0f);
+                this.getWorld().playSound(null, this.prevX, this.prevY, this.prevZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT, this.getSoundCategory(), 1.0f, 1.0f);
                 this.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
             }
         }
@@ -326,7 +326,7 @@ implements Angerable {
         if (blockState != null) {
             ItemStack itemStack = new ItemStack(Items.DIAMOND_AXE);
             itemStack.addEnchantment(Enchantments.SILK_TOUCH, 1);
-            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).random(this.world.getRandom()).parameter(LootContextParameters.ORIGIN, this.getPos()).parameter(LootContextParameters.TOOL, itemStack).optionalParameter(LootContextParameters.THIS_ENTITY, this);
+            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.getWorld()).random(this.getWorld().getRandom()).parameter(LootContextParameters.ORIGIN, this.getPos()).parameter(LootContextParameters.TOOL, itemStack).optionalParameter(LootContextParameters.THIS_ENTITY, this);
             List<ItemStack> list = blockState.getDroppedStacks(builder);
             for (ItemStack itemStack2 : list) {
                 this.dropStack(itemStack2);
@@ -358,7 +358,7 @@ implements Angerable {
             return bl2;
         }
         boolean bl2 = super.damage(source, amount);
-        if (!this.world.isClient() && !(source.getAttacker() instanceof LivingEntity) && this.random.nextInt(10) != 0) {
+        if (!this.getWorld().isClient() && !(source.getAttacker() instanceof LivingEntity) && this.random.nextInt(10) != 0) {
             this.teleportRandomly();
         }
         return bl2;
@@ -441,7 +441,7 @@ implements Angerable {
             if (this.enderman.getCarriedBlock() == null) {
                 return false;
             }
-            if (!this.enderman.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (!this.enderman.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return false;
             }
             return this.enderman.getRandom().nextInt(PlaceBlockGoal.toGoalTicks(2000)) == 0;
@@ -450,7 +450,7 @@ implements Angerable {
         @Override
         public void tick() {
             Random random = this.enderman.getRandom();
-            World world = this.enderman.world;
+            World world = this.enderman.getWorld();
             int i = MathHelper.floor(this.enderman.getX() - 1.0 + random.nextDouble() * 2.0);
             int j = MathHelper.floor(this.enderman.getY() + random.nextDouble() * 2.0);
             int k = MathHelper.floor(this.enderman.getZ() - 1.0 + random.nextDouble() * 2.0);
@@ -462,7 +462,7 @@ implements Angerable {
             if (blockState3 == null) {
                 return;
             }
-            if (this.canPlaceOn(world, blockPos, blockState3 = Block.postProcessState(blockState3, this.enderman.world, blockPos), blockState, blockState2, blockPos2)) {
+            if (this.canPlaceOn(world, blockPos, blockState3 = Block.postProcessState(blockState3, this.enderman.getWorld(), blockPos), blockState, blockState2, blockPos2)) {
                 world.setBlockState(blockPos, blockState3, 3);
                 world.emitGameEvent(GameEvent.BLOCK_PLACE, blockPos, GameEvent.Emitter.of(this.enderman, blockState3));
                 this.enderman.setCarriedBlock(null);
@@ -487,7 +487,7 @@ implements Angerable {
             if (this.enderman.getCarriedBlock() != null) {
                 return false;
             }
-            if (!this.enderman.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            if (!this.enderman.getWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return false;
             }
             return this.enderman.getRandom().nextInt(PickUpBlockGoal.toGoalTicks(20)) == 0;
@@ -496,7 +496,7 @@ implements Angerable {
         @Override
         public void tick() {
             Random random = this.enderman.getRandom();
-            World world = this.enderman.world;
+            World world = this.enderman.getWorld();
             int i = MathHelper.floor(this.enderman.getX() - 2.0 + random.nextDouble() * 4.0);
             int j = MathHelper.floor(this.enderman.getY() + random.nextDouble() * 3.0);
             int k = MathHelper.floor(this.enderman.getZ() - 2.0 + random.nextDouble() * 4.0);
@@ -534,7 +534,7 @@ implements Angerable {
 
         @Override
         public boolean canStart() {
-            this.targetPlayer = this.enderman.world.getClosestPlayer(this.staringPlayerPredicate, this.enderman);
+            this.targetPlayer = this.enderman.getWorld().getClosestPlayer(this.staringPlayerPredicate, this.enderman);
             return this.targetPlayer != null;
         }
 

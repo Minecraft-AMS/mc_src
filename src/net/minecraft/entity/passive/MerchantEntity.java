@@ -151,7 +151,7 @@ Merchant {
 
     @Override
     public void onSellingItem(ItemStack stack) {
-        if (!this.world.isClient && this.ambientSoundChance > -this.getMinAmbientSoundDelay() + 20) {
+        if (!this.getWorld().isClient && this.ambientSoundChance > -this.getMinAmbientSoundDelay() + 20) {
             this.ambientSoundChance = -this.getMinAmbientSoundDelay();
             this.playSound(this.getTradingSound(!stack.isEmpty()), this.getSoundVolume(), this.getSoundPitch());
         }
@@ -211,7 +211,7 @@ Merchant {
             double d = this.random.nextGaussian() * 0.02;
             double e = this.random.nextGaussian() * 0.02;
             double f = this.random.nextGaussian() * 0.02;
-            this.world.addParticle(parameters, this.getParticleX(1.0), this.getRandomBodyY() + 1.0, this.getParticleZ(1.0), d, e, f);
+            this.getWorld().addParticle(parameters, this.getParticleX(1.0), this.getRandomBodyY() + 1.0, this.getParticleZ(1.0), d, e, f);
         }
     }
 
@@ -264,7 +264,7 @@ Merchant {
 
     @Override
     public boolean isClient() {
-        return this.world.isClient;
+        return this.getWorld().isClient;
     }
 }
 

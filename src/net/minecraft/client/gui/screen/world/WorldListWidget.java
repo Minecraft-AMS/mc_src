@@ -40,7 +40,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.BackupPromptScreen;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.FatalErrorScreen;
@@ -58,7 +58,6 @@ import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.toast.SystemToast;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.GeneratorOptionsHolder;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.sound.SoundEvents;
@@ -122,12 +121,12 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         List<LevelSummary> list = this.tryGet();
         if (list != this.levels) {
             this.show(list);
         }
-        super.render(matrices, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
     }
 
     private void show(@Nullable List<LevelSummary> levels) {
@@ -243,14 +242,14 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             int i = (this.client.currentScreen.width - this.client.textRenderer.getWidth(LOADING_LIST_TEXT)) / 2;
             int j = y + (entryHeight - this.client.textRenderer.fontHeight) / 2;
-            this.client.textRenderer.draw(matrices, LOADING_LIST_TEXT, (float)i, (float)j, 0xFFFFFF);
+            context.drawText(this.client.textRenderer, LOADING_LIST_TEXT, i, j, 0xFFFFFF, false);
             String string = LoadingDisplay.get(Util.getMeasuringTimeMs());
             int k = (this.client.currentScreen.width - this.client.textRenderer.getWidth(string)) / 2;
             int l = j + this.client.textRenderer.fontHeight;
-            this.client.textRenderer.draw(matrices, string, (float)k, (float)l, 0x808080);
+            context.drawText(this.client.textRenderer, string, k, l, 0x808080, false);
         }
 
         @Override
@@ -307,52 +306,51 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         }
 
         @Override
-        public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             Object string = this.level.getDisplayName();
             String string2 = this.level.getName() + " (" + DATE_FORMAT.format(new Date(this.level.getLastPlayed())) + ")";
             if (StringUtils.isEmpty((CharSequence)string)) {
                 string = I18n.translate("selectWorld.world", new Object[0]) + " " + (index + 1);
             }
             Text text = this.level.getDetails();
-            this.client.textRenderer.draw(matrices, (String)string, (float)(x + 32 + 3), (float)(y + 1), 0xFFFFFF);
-            this.client.textRenderer.draw(matrices, string2, (float)(x + 32 + 3), (float)(y + this.client.textRenderer.fontHeight + 3), 0x808080);
-            this.client.textRenderer.draw(matrices, text, (float)(x + 32 + 3), (float)(y + this.client.textRenderer.fontHeight + this.client.textRenderer.fontHeight + 3), 0x808080);
-            RenderSystem.setShaderTexture(0, this.icon != null ? this.iconLocation : UNKNOWN_SERVER_LOCATION);
+            context.drawText(this.client.textRenderer, (String)string, x + 32 + 3, y + 1, 0xFFFFFF, false);
+            context.drawText(this.client.textRenderer, string2, x + 32 + 3, y + this.client.textRenderer.fontHeight + 3, 0x808080, false);
+            context.drawText(this.client.textRenderer, text, x + 32 + 3, y + this.client.textRenderer.fontHeight + this.client.textRenderer.fontHeight + 3, 0x808080, false);
+            Identifier identifier = this.icon != null ? this.iconLocation : UNKNOWN_SERVER_LOCATION;
             RenderSystem.enableBlend();
-            DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
+            context.drawTexture(identifier, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
             RenderSystem.disableBlend();
             if (this.client.options.getTouchscreen().getValue().booleanValue() || hovered) {
                 int j;
-                RenderSystem.setShaderTexture(0, WORLD_SELECTION_LOCATION);
-                DrawableHelper.fill(matrices, x, y, x + 32, y + 32, -1601138544);
+                context.fill(x, y, x + 32, y + 32, -1601138544);
                 int i = mouseX - x;
                 boolean bl = i < 32;
                 int n = j = bl ? 32 : 0;
                 if (this.level.isLocked()) {
-                    DrawableHelper.drawTexture(matrices, x, y, 96.0f, j, 32, 32, 256, 256);
+                    context.drawTexture(WORLD_SELECTION_LOCATION, x, y, 96.0f, j, 32, 32, 256, 256);
                     if (bl) {
                         this.screen.setTooltip(this.client.textRenderer.wrapLines(LOCKED_TEXT, 175));
                     }
                 } else if (this.level.requiresConversion()) {
-                    DrawableHelper.drawTexture(matrices, x, y, 96.0f, j, 32, 32, 256, 256);
+                    context.drawTexture(WORLD_SELECTION_LOCATION, x, y, 96.0f, j, 32, 32, 256, 256);
                     if (bl) {
                         this.screen.setTooltip(this.client.textRenderer.wrapLines(CONVERSION_TOOLTIP, 175));
                     }
                 } else if (this.level.isDifferentVersion()) {
-                    DrawableHelper.drawTexture(matrices, x, y, 32.0f, j, 32, 32, 256, 256);
+                    context.drawTexture(WORLD_SELECTION_LOCATION, x, y, 32.0f, j, 32, 32, 256, 256);
                     if (this.level.isFutureLevel()) {
-                        DrawableHelper.drawTexture(matrices, x, y, 96.0f, j, 32, 32, 256, 256);
+                        context.drawTexture(WORLD_SELECTION_LOCATION, x, y, 96.0f, j, 32, 32, 256, 256);
                         if (bl) {
                             this.screen.setTooltip((List<OrderedText>)ImmutableList.of((Object)FROM_NEWER_VERSION_FIRST_LINE.asOrderedText(), (Object)FROM_NEWER_VERSION_SECOND_LINE.asOrderedText()));
                         }
                     } else if (!SharedConstants.getGameVersion().isStable()) {
-                        DrawableHelper.drawTexture(matrices, x, y, 64.0f, j, 32, 32, 256, 256);
+                        context.drawTexture(WORLD_SELECTION_LOCATION, x, y, 64.0f, j, 32, 32, 256, 256);
                         if (bl) {
                             this.screen.setTooltip((List<OrderedText>)ImmutableList.of((Object)SNAPSHOT_FIRST_LINE.asOrderedText(), (Object)SNAPSHOT_SECOND_LINE.asOrderedText()));
                         }
                     }
                 } else {
-                    DrawableHelper.drawTexture(matrices, x, y, 0.0f, j, 32, 32, 256, 256);
+                    context.drawTexture(WORLD_SELECTION_LOCATION, x, y, 0.0f, j, 32, 32, 256, 256);
                 }
             }
         }

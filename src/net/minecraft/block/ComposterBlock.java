@@ -106,6 +106,7 @@ implements InventoryProvider {
         ComposterBlock.registerCompostableItem(0.3f, Items.HANGING_ROOTS);
         ComposterBlock.registerCompostableItem(0.3f, Items.MANGROVE_ROOTS);
         ComposterBlock.registerCompostableItem(0.3f, Items.TORCHFLOWER_SEEDS);
+        ComposterBlock.registerCompostableItem(0.3f, Items.PITCHER_POD);
         ComposterBlock.registerCompostableItem(0.5f, Items.DRIED_KELP_BLOCK);
         ComposterBlock.registerCompostableItem(0.5f, Items.TALL_GRASS);
         ComposterBlock.registerCompostableItem(0.5f, Items.FLOWERING_AZALEA_LEAVES);
@@ -170,6 +171,7 @@ implements InventoryProvider {
         ComposterBlock.registerCompostableItem(0.85f, Items.BAKED_POTATO);
         ComposterBlock.registerCompostableItem(0.85f, Items.COOKIE);
         ComposterBlock.registerCompostableItem(0.85f, Items.TORCHFLOWER);
+        ComposterBlock.registerCompostableItem(0.85f, Items.PITCHER_PLANT);
         ComposterBlock.registerCompostableItem(1.0f, Items.CAKE);
         ComposterBlock.registerCompostableItem(1.0f, Items.PUMPKIN_PIE);
     }

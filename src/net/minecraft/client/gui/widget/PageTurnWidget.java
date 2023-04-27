@@ -7,14 +7,13 @@
  */
 package net.minecraft.client.gui.widget;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.BookScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.sound.SoundEvents;
 
@@ -31,8 +30,7 @@ extends ButtonWidget {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        RenderSystem.setShaderTexture(0, BookScreen.BOOK_TEXTURE);
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         int i = 0;
         int j = 192;
         if (this.isSelected()) {
@@ -41,7 +39,7 @@ extends ButtonWidget {
         if (!this.isNextPageButton) {
             j += 13;
         }
-        PageTurnWidget.drawTexture(matrices, this.getX(), this.getY(), i, j, 23, 13);
+        context.drawTexture(BookScreen.BOOK_TEXTURE, this.getX(), this.getY(), i, j, 23, 13);
     }
 
     @Override

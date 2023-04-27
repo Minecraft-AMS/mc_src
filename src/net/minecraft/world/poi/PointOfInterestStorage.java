@@ -184,16 +184,15 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
         this.pointOfInterestDistanceTracker.update(pos, this.pointOfInterestDistanceTracker.getInitialLevel(pos), false);
     }
 
-    public void initForPalette(ChunkPos chunkPos, ChunkSection chunkSection) {
-        ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunkPos, ChunkSectionPos.getSectionCoord(chunkSection.getYOffset()));
-        Util.ifPresentOrElse(this.get(chunkSectionPos.asLong()), poiSet -> poiSet.updatePointsOfInterest(populator -> {
+    public void initForPalette(ChunkSectionPos sectionPos, ChunkSection chunkSection) {
+        Util.ifPresentOrElse(this.get(sectionPos.asLong()), poiSet -> poiSet.updatePointsOfInterest(populator -> {
             if (PointOfInterestStorage.shouldScan(chunkSection)) {
-                this.scanAndPopulate(chunkSection, chunkSectionPos, (BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>>)populator);
+                this.scanAndPopulate(chunkSection, sectionPos, (BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>>)populator);
             }
         }), () -> {
             if (PointOfInterestStorage.shouldScan(chunkSection)) {
-                PointOfInterestSet pointOfInterestSet = (PointOfInterestSet)this.getOrCreate(chunkSectionPos.asLong());
-                this.scanAndPopulate(chunkSection, chunkSectionPos, pointOfInterestSet::add);
+                PointOfInterestSet pointOfInterestSet = (PointOfInterestSet)this.getOrCreate(sectionPos.asLong());
+                this.scanAndPopulate(chunkSection, sectionPos, pointOfInterestSet::add);
             }
         });
     }

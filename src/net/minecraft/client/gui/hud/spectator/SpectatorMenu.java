@@ -11,19 +11,17 @@ package net.minecraft.client.gui.hud.spectator;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.SpectatorHud;
 import net.minecraft.client.gui.hud.spectator.RootSpectatorCommandGroup;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCloseCallback;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommandGroup;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuState;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 
@@ -49,7 +47,7 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
+        public void renderIcon(DrawContext context, float brightness, int alpha) {
         }
 
         @Override
@@ -148,9 +146,8 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
-            RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
-            DrawableHelper.drawTexture(matrices, 0, 0, 128.0f, 0.0f, 16, 16, 256, 256);
+        public void renderIcon(DrawContext context, float brightness, int alpha) {
+            context.drawTexture(SpectatorHud.SPECTATOR_TEXTURE, 0, 0, 128.0f, 0.0f, 16, 16, 256, 256);
         }
 
         @Override
@@ -181,12 +178,11 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(MatrixStack matrices, float brightness, int alpha) {
-            RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
+        public void renderIcon(DrawContext context, float brightness, int alpha) {
             if (this.direction < 0) {
-                DrawableHelper.drawTexture(matrices, 0, 0, 144.0f, 0.0f, 16, 16, 256, 256);
+                context.drawTexture(SpectatorHud.SPECTATOR_TEXTURE, 0, 0, 144.0f, 0.0f, 16, 16, 256, 256);
             } else {
-                DrawableHelper.drawTexture(matrices, 0, 0, 160.0f, 0.0f, 16, 16, 256, 256);
+                context.drawTexture(SpectatorHud.SPECTATOR_TEXTURE, 0, 0, 160.0f, 0.0f, 16, 16, 256, 256);
             }
         }
 

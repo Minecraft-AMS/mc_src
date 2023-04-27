@@ -46,14 +46,14 @@ public abstract class EntityRenderer<T extends Entity> {
     }
 
     protected int getSkyLight(T entity, BlockPos pos) {
-        return ((Entity)entity).world.getLightLevel(LightType.SKY, pos);
+        return ((Entity)entity).getWorld().getLightLevel(LightType.SKY, pos);
     }
 
     protected int getBlockLight(T entity, BlockPos pos) {
         if (((Entity)entity).isOnFire()) {
             return 15;
         }
-        return ((Entity)entity).world.getLightLevel(LightType.BLOCK, pos);
+        return ((Entity)entity).getWorld().getLightLevel(LightType.BLOCK, pos);
     }
 
     public boolean shouldRender(T entity, Frustum frustum, double x, double y, double z) {
@@ -97,7 +97,7 @@ public abstract class EntityRenderer<T extends Entity> {
             return;
         }
         boolean bl = !((Entity)entity).isSneaky();
-        float f = ((Entity)entity).getHeight() + 0.5f;
+        float f = ((Entity)entity).getNameLabelHeight();
         int i = "deadmau5".equals(text.getString()) ? -10 : 0;
         matrices.push();
         matrices.translate(0.0f, f, 0.0f);

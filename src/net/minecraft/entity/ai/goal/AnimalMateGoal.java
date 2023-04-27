@@ -32,7 +32,7 @@ extends Goal {
 
     public AnimalMateGoal(AnimalEntity animal, double speed, Class<? extends AnimalEntity> entityClass) {
         this.animal = animal;
-        this.world = animal.world;
+        this.world = animal.getWorld();
         this.entityClass = entityClass;
         this.speed = speed;
         this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));

@@ -72,6 +72,7 @@ Saddleable {
     private static final float field_40146 = 0.1f;
     private static final float field_40147 = 1.4285f;
     private static final float field_40148 = 22.2222f;
+    private static final int field_43388 = 5;
     private static final int field_40149 = 40;
     private static final int field_40133 = 52;
     private static final int field_40134 = 80;
@@ -160,33 +161,36 @@ Saddleable {
 
     @Override
     protected void mobTick() {
-        this.world.getProfiler().push("camelBrain");
+        this.getWorld().getProfiler().push("camelBrain");
         Brain<?> brain = this.getBrain();
-        brain.tick((ServerWorld)this.world, this);
-        this.world.getProfiler().pop();
-        this.world.getProfiler().push("camelActivityUpdate");
+        brain.tick((ServerWorld)this.getWorld(), this);
+        this.getWorld().getProfiler().pop();
+        this.getWorld().getProfiler().push("camelActivityUpdate");
         CamelBrain.updateActivities(this);
-        this.world.getProfiler().pop();
+        this.getWorld().getProfiler().pop();
         super.mobTick();
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (this.isDashing() && this.dashCooldown < 55 && (this.onGround || this.isTouchingWater())) {
+        if (this.isDashing() && this.dashCooldown < 50 && (this.isOnGround() || this.isTouchingWater() || this.hasVehicle())) {
             this.setDashing(false);
         }
         if (this.dashCooldown > 0) {
             --this.dashCooldown;
             if (this.dashCooldown == 0) {
-                this.world.playSound(null, this.getBlockPos(), SoundEvents.ENTITY_CAMEL_DASH_READY, SoundCategory.NEUTRAL, 1.0f, 1.0f);
+                this.getWorld().playSound(null, this.getBlockPos(), SoundEvents.ENTITY_CAMEL_DASH_READY, SoundCategory.NEUTRAL, 1.0f, 1.0f);
             }
         }
-        if (this.world.isClient()) {
+        if (this.getWorld().isClient()) {
             this.updateAnimations();
         }
         if (this.isStationary()) {
             this.clampHeadYaw(this, 30.0f);
+        }
+        if (this.isSitting() && this.isTouchingWater()) {
+            this.setStanding();
         }
     }
 
@@ -231,9 +235,9 @@ Saddleable {
     }
 
     @Override
-    protected void tickControlled(LivingEntity controllingPassenger, Vec3d movementInput) {
-        super.tickControlled(controllingPassenger, movementInput);
-        if (controllingPassenger.forwardSpeed > 0.0f && this.isSitting() && !this.isChangingPose()) {
+    protected void tickControlled(PlayerEntity controllingPlayer, Vec3d movementInput) {
+        super.tickControlled(controllingPlayer, movementInput);
+        if (controllingPlayer.forwardSpeed > 0.0f && this.isSitting() && !this.isChangingPose()) {
             this.startStanding();
         }
     }
@@ -243,8 +247,8 @@ Saddleable {
     }
 
     @Override
-    protected float getSaddledSpeed(LivingEntity controllingPassenger) {
-        float f = controllingPassenger.isSprinting() && this.getJumpCooldown() == 0 ? 0.1f : 0.0f;
+    protected float getSaddledSpeed(PlayerEntity controllingPlayer) {
+        float f = controllingPlayer.isSprinting() && this.getJumpCooldown() == 0 ? 0.1f : 0.0f;
         return (float)this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) + f;
     }
 
@@ -257,11 +261,11 @@ Saddleable {
     }
 
     @Override
-    protected Vec3d getControlledMovementInput(LivingEntity controllingPassenger, Vec3d movementInput) {
+    protected Vec3d getControlledMovementInput(PlayerEntity controllingPlayer, Vec3d movementInput) {
         if (this.isStationary()) {
             return Vec3d.ZERO;
         }
-        return super.getControlledMovementInput(controllingPassenger, movementInput);
+        return super.getControlledMovementInput(controllingPlayer, movementInput);
     }
 
     @Override
@@ -350,9 +354,9 @@ Saddleable {
     @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (player.shouldCancelInteraction()) {
+        if (player.shouldCancelInteraction() && !this.isBaby()) {
             this.openInventory(player);
-            return ActionResult.success(this.world.isClient);
+            return ActionResult.success(this.getWorld().isClient);
         }
         ActionResult actionResult = itemStack.useOnEntity(player, this, hand);
         if (actionResult.isAccepted()) {
@@ -364,7 +368,7 @@ Saddleable {
         if (this.getPassengerList().size() < 2 && !this.isBaby()) {
             this.putPlayerOnBack(player);
         }
-        return ActionResult.success(this.world.isClient);
+        return ActionResult.success(this.getWorld().isClient);
     }
 
     @Override
@@ -391,15 +395,15 @@ Saddleable {
             this.lovePlayer(player);
         }
         if (bl3 = this.isBaby()) {
-            this.world.addParticle(ParticleTypes.HAPPY_VILLAGER, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), 0.0, 0.0, 0.0);
-            if (!this.world.isClient) {
+            this.getWorld().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), 0.0, 0.0, 0.0);
+            if (!this.getWorld().isClient) {
                 this.growUp(10);
             }
         }
         if (bl || bl2 || bl3) {
             SoundEvent soundEvent;
             if (!this.isSilent() && (soundEvent = this.getEatSound()) != null) {
-                this.world.playSound(null, this.getX(), this.getY(), this.getZ(), soundEvent, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+                this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), soundEvent, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
             }
             return true;
         }
@@ -582,7 +586,7 @@ Saddleable {
         }
         this.playSound(SoundEvents.ENTITY_CAMEL_SIT, 1.0f, 1.0f);
         this.setPose(EntityPose.SITTING);
-        this.setLastPoseTick(-this.world.getTime());
+        this.setLastPoseTick(-this.getWorld().getTime());
     }
 
     public void startStanding() {
@@ -591,12 +595,12 @@ Saddleable {
         }
         this.playSound(SoundEvents.ENTITY_CAMEL_STAND, 1.0f, 1.0f);
         this.setPose(EntityPose.STANDING);
-        this.setLastPoseTick(this.world.getTime());
+        this.setLastPoseTick(this.getWorld().getTime());
     }
 
     public void setStanding() {
         this.setPose(EntityPose.STANDING);
-        this.initLastPoseTick(this.world.getTime());
+        this.initLastPoseTick(this.getWorld().getTime());
     }
 
     @VisibleForTesting
@@ -609,7 +613,7 @@ Saddleable {
     }
 
     public long getLastPoseTickDelta() {
-        return this.world.getTime() - Math.abs(this.dataTracker.get(LAST_POSE_TICK));
+        return this.getWorld().getTime() - Math.abs(this.dataTracker.get(LAST_POSE_TICK));
     }
 
     @Override
@@ -637,7 +641,7 @@ Saddleable {
 
     @Override
     public void openInventory(PlayerEntity player) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             player.openHorseInventory(this, this.items);
         }
     }

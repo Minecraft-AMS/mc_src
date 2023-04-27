@@ -7,20 +7,18 @@
 package net.minecraft.block;
 
 import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.AttachedStemBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.CropBlock;
 import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.PistonExtensionBlock;
 import net.minecraft.block.ShapeContext;
-import net.minecraft.block.StemBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
@@ -60,7 +58,7 @@ extends Block {
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.up());
-        return !blockState.getMaterial().isSolid() || blockState.getBlock() instanceof FenceGateBlock || blockState.getBlock() instanceof PistonExtensionBlock;
+        return !blockState.isSolid() || blockState.getBlock() instanceof FenceGateBlock || blockState.getBlock() instanceof PistonExtensionBlock;
     }
 
     @Override
@@ -117,8 +115,7 @@ extends Block {
     }
 
     private static boolean hasCrop(BlockView world, BlockPos pos) {
-        Block block = world.getBlockState(pos.up()).getBlock();
-        return block instanceof CropBlock || block instanceof StemBlock || block instanceof AttachedStemBlock;
+        return world.getBlockState(pos.up()).isIn(BlockTags.MAINTAINS_FARMLAND);
     }
 
     private static boolean isWaterNearby(WorldView world, BlockPos pos) {

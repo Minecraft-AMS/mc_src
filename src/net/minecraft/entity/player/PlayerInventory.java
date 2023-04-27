@@ -218,7 +218,7 @@ Nameable {
         for (DefaultedList<ItemStack> defaultedList : this.combinedInventory) {
             for (int i = 0; i < defaultedList.size(); ++i) {
                 if (defaultedList.get(i).isEmpty()) continue;
-                defaultedList.get(i).inventoryTick(this.player.world, this.player, i, this.selectedSlot == i);
+                defaultedList.get(i).inventoryTick(this.player.getWorld(), this.player, i, this.selectedSlot == i);
             }
         }
     }
@@ -252,9 +252,8 @@ Nameable {
                 slot = this.getEmptySlot();
             }
             if (slot >= 0) {
-                this.main.set(slot, stack.copy());
+                this.main.set(slot, stack.copyAndEmpty());
                 this.main.get(slot).setBobbingAnimationTime(5);
-                stack.setCount(0);
                 return true;
             }
             if (this.player.getAbilities().creativeMode) {

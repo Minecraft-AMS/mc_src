@@ -55,6 +55,7 @@ import net.minecraft.client.particle.BlockMarkerParticle;
 import net.minecraft.client.particle.BubbleColumnUpParticle;
 import net.minecraft.client.particle.BubblePopParticle;
 import net.minecraft.client.particle.CampfireSmokeParticle;
+import net.minecraft.client.particle.CherryLeavesParticle;
 import net.minecraft.client.particle.CloudParticle;
 import net.minecraft.client.particle.CrackParticle;
 import net.minecraft.client.particle.CurrentDownParticle;
@@ -253,9 +254,7 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.SMALL_FLAME, FlameParticle.SmallFactory::new);
         this.registerBlockLeakFactory(ParticleTypes.DRIPPING_DRIPSTONE_WATER, BlockLeakParticle::createDrippingDripstoneWater);
         this.registerBlockLeakFactory(ParticleTypes.FALLING_DRIPSTONE_WATER, BlockLeakParticle::createFallingDripstoneWater);
-        this.registerBlockLeakFactory(ParticleTypes.DRIPPING_CHERRY_LEAVES, BlockLeakParticle::createDrippingCherryLeaves);
-        this.registerBlockLeakFactory(ParticleTypes.FALLING_CHERRY_LEAVES, BlockLeakParticle::createFallingCherryLeaves);
-        this.registerBlockLeakFactory(ParticleTypes.LANDING_CHERRY_LEAVES, BlockLeakParticle::createLandingCherryLeaves);
+        this.registerFactory(ParticleTypes.CHERRY_LEAVES, (SpriteProvider spriteProvider) -> (parameters, world, x, y, z, velocityX, velocityY, velocityZ) -> new CherryLeavesParticle(world, x, y, z, spriteProvider));
         this.registerBlockLeakFactory(ParticleTypes.DRIPPING_DRIPSTONE_LAVA, BlockLeakParticle::createDrippingDripstoneLava);
         this.registerBlockLeakFactory(ParticleTypes.FALLING_DRIPSTONE_LAVA, BlockLeakParticle::createFallingDripstoneLava);
         this.registerFactory(ParticleTypes.VIBRATION, VibrationParticle.Factory::new);
@@ -266,6 +265,7 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.ELECTRIC_SPARK, GlowParticle.ElectricSparkFactory::new);
         this.registerFactory(ParticleTypes.SCRAPE, GlowParticle.ScrapeFactory::new);
         this.registerFactory(ParticleTypes.SHRIEK, ShriekParticle.Factory::new);
+        this.registerFactory(ParticleTypes.EGG_CRACK, SuspendParticle.EggCrackFactory::new);
     }
 
     private <T extends ParticleEffect> void registerFactory(ParticleType<T> type, ParticleFactory<T> factory) {

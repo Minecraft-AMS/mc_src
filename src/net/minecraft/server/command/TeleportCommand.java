@@ -61,7 +61,7 @@ public class TeleportCommand {
 
     private static int execute(ServerCommandSource source, Collection<? extends Entity> targets, Entity destination) throws CommandSyntaxException {
         for (Entity entity : targets) {
-            TeleportCommand.teleport(source, entity, (ServerWorld)destination.world, destination.getX(), destination.getY(), destination.getZ(), EnumSet.noneOf(PositionFlag.class), destination.getYaw(), destination.getPitch(), null);
+            TeleportCommand.teleport(source, entity, (ServerWorld)destination.getWorld(), destination.getX(), destination.getY(), destination.getZ(), EnumSet.noneOf(PositionFlag.class), destination.getYaw(), destination.getPitch(), null);
         }
         if (targets.size() == 1) {
             source.sendFeedback(Text.translatable("commands.teleport.success.entity.single", targets.iterator().next().getDisplayName(), destination.getDisplayName()), true);

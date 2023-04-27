@@ -10,8 +10,8 @@ public class WorldEvents {
     public static final int EYE_OF_ENDER_LAUNCHES = 1003;
     public static final int FIREWORK_ROCKET_SHOOTS = 1004;
     public static final int FIRE_EXTINGUISHED = 1009;
-    public static final int field_42760 = 1010;
-    public static final int field_42761 = 1011;
+    public static final int JUKEBOX_STARTS_PLAYING = 1010;
+    public static final int JUKEBOX_STOPS_PLAYING = 1011;
     public static final int GHAST_WARNS = 1015;
     public static final int GHAST_SHOOTS = 1016;
     public static final int ENDER_DRAGON_SHOOTS = 1017;
@@ -68,6 +68,7 @@ public class WorldEvents {
     public static final int BLOCK_SCRAPED = 3005;
     public static final int SCULK_CHARGE = 3006;
     public static final int SCULK_SHRIEKS = 3007;
-    public static final int field_42759 = 3008;
+    public static final int BLOCK_FINISHED_BRUSHING = 3008;
+    public static final int SNIFFER_EGG_CRACKS = 3009;
 }
 

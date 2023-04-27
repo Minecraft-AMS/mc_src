@@ -17,6 +17,7 @@ import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Predicate;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
@@ -31,7 +32,7 @@ import org.slf4j.Logger;
 public class Heightmap {
     private static final Logger LOGGER = LogUtils.getLogger();
     static final Predicate<BlockState> NOT_AIR = state -> !state.isAir();
-    static final Predicate<BlockState> SUFFOCATES = state -> state.getMaterial().blocksMovement();
+    static final Predicate<BlockState> SUFFOCATES = AbstractBlock.AbstractBlockState::blocksMovement;
     private final PaletteStorage storage;
     private final Predicate<BlockState> blockPredicate;
     private final Chunk chunk;
@@ -136,8 +137,8 @@ public class Heightmap {
         public static final /* enum */ Type WORLD_SURFACE = new Type("WORLD_SURFACE", Purpose.CLIENT, NOT_AIR);
         public static final /* enum */ Type OCEAN_FLOOR_WG = new Type("OCEAN_FLOOR_WG", Purpose.WORLDGEN, SUFFOCATES);
         public static final /* enum */ Type OCEAN_FLOOR = new Type("OCEAN_FLOOR", Purpose.LIVE_WORLD, SUFFOCATES);
-        public static final /* enum */ Type MOTION_BLOCKING = new Type("MOTION_BLOCKING", Purpose.CLIENT, state -> state.getMaterial().blocksMovement() || !state.getFluidState().isEmpty());
-        public static final /* enum */ Type MOTION_BLOCKING_NO_LEAVES = new Type("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, state -> (state.getMaterial().blocksMovement() || !state.getFluidState().isEmpty()) && !(state.getBlock() instanceof LeavesBlock));
+        public static final /* enum */ Type MOTION_BLOCKING = new Type("MOTION_BLOCKING", Purpose.CLIENT, state -> state.blocksMovement() || !state.getFluidState().isEmpty());
+        public static final /* enum */ Type MOTION_BLOCKING_NO_LEAVES = new Type("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, state -> (state.blocksMovement() || !state.getFluidState().isEmpty()) && !(state.getBlock() instanceof LeavesBlock));
         public static final Codec<Type> CODEC;
         private final String name;
         private final Purpose purpose;

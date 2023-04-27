@@ -3,12 +3,7 @@
  */
 package net.minecraft.block.enums;
 
-import java.util.Optional;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.Material;
 import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.StringIdentifiable;
@@ -75,83 +70,8 @@ implements StringIdentifiable {
         return this.type == Type.CUSTOM;
     }
 
-    public boolean shouldRequireAirAbove() {
-        return this.type == Type.BASE_BLOCK;
-    }
-
-    public static Optional<Instrument> fromAboveState(BlockState state) {
-        if (state.isOf(Blocks.ZOMBIE_HEAD)) {
-            return Optional.of(ZOMBIE);
-        }
-        if (state.isOf(Blocks.SKELETON_SKULL)) {
-            return Optional.of(SKELETON);
-        }
-        if (state.isOf(Blocks.CREEPER_HEAD)) {
-            return Optional.of(CREEPER);
-        }
-        if (state.isOf(Blocks.DRAGON_HEAD)) {
-            return Optional.of(DRAGON);
-        }
-        if (state.isOf(Blocks.WITHER_SKELETON_SKULL)) {
-            return Optional.of(WITHER_SKELETON);
-        }
-        if (state.isOf(Blocks.PIGLIN_HEAD)) {
-            return Optional.of(PIGLIN);
-        }
-        if (state.isOf(Blocks.PLAYER_HEAD)) {
-            return Optional.of(CUSTOM_HEAD);
-        }
-        return Optional.empty();
-    }
-
-    public static Instrument fromBelowState(BlockState state) {
-        if (state.isOf(Blocks.CLAY)) {
-            return FLUTE;
-        }
-        if (state.isOf(Blocks.GOLD_BLOCK)) {
-            return BELL;
-        }
-        if (state.isIn(BlockTags.WOOL)) {
-            return GUITAR;
-        }
-        if (state.isOf(Blocks.PACKED_ICE)) {
-            return CHIME;
-        }
-        if (state.isOf(Blocks.BONE_BLOCK)) {
-            return XYLOPHONE;
-        }
-        if (state.isOf(Blocks.IRON_BLOCK)) {
-            return IRON_XYLOPHONE;
-        }
-        if (state.isOf(Blocks.SOUL_SAND)) {
-            return COW_BELL;
-        }
-        if (state.isOf(Blocks.PUMPKIN)) {
-            return DIDGERIDOO;
-        }
-        if (state.isOf(Blocks.EMERALD_BLOCK)) {
-            return BIT;
-        }
-        if (state.isOf(Blocks.HAY_BLOCK)) {
-            return BANJO;
-        }
-        if (state.isOf(Blocks.GLOWSTONE)) {
-            return PLING;
-        }
-        Material material = state.getMaterial();
-        if (material == Material.STONE) {
-            return BASEDRUM;
-        }
-        if (material == Material.AGGREGATE) {
-            return SNARE;
-        }
-        if (material == Material.GLASS) {
-            return HAT;
-        }
-        if (material == Material.WOOD || material == Material.NETHER_WOOD) {
-            return BASS;
-        }
-        return HARP;
+    public boolean isNotBaseBlock() {
+        return this.type != Type.BASE_BLOCK;
     }
 
     private static /* synthetic */ Instrument[] method_36730() {

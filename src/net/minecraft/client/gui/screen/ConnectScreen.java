@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.QuickPlay;
+import net.minecraft.client.QuickPlayLogger;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.DisconnectedScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -27,7 +30,6 @@ import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.report.ReporterEnvironment;
 import net.minecraft.client.util.NarratorManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkState;
 import net.minecraft.network.packet.c2s.handshake.HandshakeC2SPacket;
@@ -52,17 +54,20 @@ extends Screen {
     final Screen parent;
     private Text status = Text.translatable("connect.connecting");
     private long lastNarrationTime = -1L;
+    final Text failureErrorMessage;
 
-    private ConnectScreen(Screen parent) {
+    private ConnectScreen(Screen parent, Text failureErrorMessage) {
         super(NarratorManager.EMPTY);
         this.parent = parent;
+        this.failureErrorMessage = failureErrorMessage;
     }
 
-    public static void connect(Screen screen, MinecraftClient client, ServerAddress address, ServerInfo info) {
-        ConnectScreen connectScreen = new ConnectScreen(screen);
+    public static void connect(Screen screen, MinecraftClient client, ServerAddress address, ServerInfo info, boolean quickPlay) {
+        ConnectScreen connectScreen = new ConnectScreen(screen, quickPlay ? QuickPlay.ERROR_TITLE : ScreenTexts.CONNECT_FAILED);
         client.disconnect();
         client.loadBlockList();
         client.ensureAbuseReportContext(ReporterEnvironment.ofThirdPartyServer(info != null ? info.address : address.getAddress()));
+        client.getQuickPlayLogger().setWorld(QuickPlayLogger.WorldType.MULTIPLAYER, info.address, info.name);
         client.setScreen(connectScreen);
         connectScreen.connect(client, address, info);
     }
@@ -83,7 +88,7 @@ extends Screen {
                         return;
                     }
                     if (!optional.isPresent()) {
-                        client.execute(() -> client.setScreen(new DisconnectedScreen(ConnectScreen.this.parent, ScreenTexts.CONNECT_FAILED, BLOCKED_HOST_TEXT)));
+                        client.execute(() -> client.setScreen(new DisconnectedScreen(ConnectScreen.this.parent, ConnectScreen.this.failureErrorMessage, BLOCKED_HOST_TEXT)));
                         return;
                     }
                     inetSocketAddress = optional.get();
@@ -101,7 +106,7 @@ extends Screen {
                     Exception exception3 = throwable instanceof Exception ? (exception2 = (Exception)throwable) : exception;
                     LOGGER.error("Couldn't connect to server", (Throwable)exception);
                     String string = inetSocketAddress == null ? exception3.getMessage() : exception3.getMessage().replaceAll(inetSocketAddress.getHostName() + ":" + inetSocketAddress.getPort(), "").replaceAll(inetSocketAddress.toString(), "");
-                    client.execute(() -> client.setScreen(new DisconnectedScreen(ConnectScreen.this.parent, ScreenTexts.CONNECT_FAILED, Text.translatable("disconnect.genericReason", string))));
+                    client.execute(() -> client.setScreen(new DisconnectedScreen(ConnectScreen.this.parent, ConnectScreen.this.failureErrorMessage, Text.translatable("disconnect.genericReason", string))));
                 }
             }
         };
@@ -141,15 +146,15 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
         long l = Util.getMeasuringTimeMs();
         if (l - this.lastNarrationTime > 2000L) {
             this.lastNarrationTime = l;
             this.client.getNarratorManager().narrate(Text.translatable("narrator.joining"));
         }
-        ConnectScreen.drawCenteredTextWithShadow(matrices, this.textRenderer, this.status, this.width / 2, this.height / 2 - 50, 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, this.status, this.width / 2, this.height / 2 - 50, 0xFFFFFF);
+        super.render(context, mouseX, mouseY, delta);
     }
 }
 

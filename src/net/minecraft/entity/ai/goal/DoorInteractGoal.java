@@ -33,7 +33,7 @@ extends Goal {
         if (!this.doorValid) {
             return false;
         }
-        BlockState blockState = this.mob.world.getBlockState(this.doorPos);
+        BlockState blockState = this.mob.getWorld().getBlockState(this.doorPos);
         if (!(blockState.getBlock() instanceof DoorBlock)) {
             this.doorValid = false;
             return false;
@@ -43,8 +43,8 @@ extends Goal {
 
     protected void setDoorOpen(boolean open) {
         BlockState blockState;
-        if (this.doorValid && (blockState = this.mob.world.getBlockState(this.doorPos)).getBlock() instanceof DoorBlock) {
-            ((DoorBlock)blockState.getBlock()).setOpen(this.mob, this.mob.world, blockState, this.doorPos, open);
+        if (this.doorValid && (blockState = this.mob.getWorld().getBlockState(this.doorPos)).getBlock() instanceof DoorBlock) {
+            ((DoorBlock)blockState.getBlock()).setOpen(this.mob, this.mob.getWorld(), blockState, this.doorPos, open);
         }
     }
 
@@ -65,12 +65,12 @@ extends Goal {
             PathNode pathNode = path.getNode(i);
             this.doorPos = new BlockPos(pathNode.x, pathNode.y + 1, pathNode.z);
             if (this.mob.squaredDistanceTo(this.doorPos.getX(), this.mob.getY(), this.doorPos.getZ()) > 2.25) continue;
-            this.doorValid = DoorBlock.isWoodenDoor(this.mob.world, this.doorPos);
+            this.doorValid = DoorBlock.canOpenByHand(this.mob.getWorld(), this.doorPos);
             if (!this.doorValid) continue;
             return true;
         }
         this.doorPos = this.mob.getBlockPos().up();
-        this.doorValid = DoorBlock.isWoodenDoor(this.mob.world, this.doorPos);
+        this.doorValid = DoorBlock.canOpenByHand(this.mob.getWorld(), this.doorPos);
         return this.doorValid;
     }
 

@@ -9,10 +9,10 @@ package net.minecraft.client.gui.widget;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
@@ -97,27 +97,27 @@ Element {
     }
 
     @Override
-    public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
         if (!this.visible) {
             return;
         }
-        this.drawBox(matrices);
-        ScrollableWidget.enableScissor(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1);
-        matrices.push();
-        matrices.translate(0.0, -this.scrollY, 0.0);
-        this.renderContents(matrices, mouseX, mouseY, delta);
-        matrices.pop();
-        ScrollableWidget.disableScissor();
-        this.renderOverlay(matrices);
+        this.drawBox(context);
+        context.enableScissor(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0, -this.scrollY, 0.0);
+        this.renderContents(context, mouseX, mouseY, delta);
+        context.getMatrices().pop();
+        context.disableScissor();
+        this.renderOverlay(context);
     }
 
     private int getScrollbarThumbHeight() {
         return MathHelper.clamp((int)((float)(this.height * this.height) / (float)this.getContentsHeightWithPadding()), 32, this.height);
     }
 
-    protected void renderOverlay(MatrixStack matrices) {
+    protected void renderOverlay(DrawContext context) {
         if (this.overflows()) {
-            this.drawScrollbar(matrices);
+            this.drawScrollbar(context);
         }
     }
 
@@ -145,20 +145,20 @@ Element {
         return this.getContentsHeight() + 4;
     }
 
-    private void drawBox(MatrixStack matrices) {
+    private void drawBox(DrawContext context) {
         int i = this.isFocused() ? -1 : -6250336;
-        ScrollableWidget.fill(matrices, this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, i);
-        ScrollableWidget.fill(matrices, this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1, -16777216);
+        context.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, i);
+        context.fill(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1, -16777216);
     }
 
-    private void drawScrollbar(MatrixStack matrices) {
+    private void drawScrollbar(DrawContext context) {
         int i = this.getScrollbarThumbHeight();
         int j = this.getX() + this.width;
         int k = this.getX() + this.width + 8;
         int l = Math.max(this.getY(), (int)this.scrollY * (this.height - i) / this.getMaxScrollY() + this.getY());
         int m = l + i;
-        ScrollableWidget.fill(matrices, j, l, k, m, -8355712);
-        ScrollableWidget.fill(matrices, j, l, k - 1, m - 1, -4144960);
+        context.fill(j, l, k, m, -8355712);
+        context.fill(j, l, k - 1, m - 1, -4144960);
     }
 
     protected boolean isVisible(int top, int bottom) {
@@ -175,6 +175,6 @@ Element {
 
     protected abstract double getDeltaYPerScroll();
 
-    protected abstract void renderContents(MatrixStack var1, int var2, int var3, float var4);
+    protected abstract void renderContents(DrawContext var1, int var2, int var3, float var4);
 }
 

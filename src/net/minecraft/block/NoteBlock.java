@@ -19,7 +19,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stats;
@@ -51,16 +50,14 @@ extends Block {
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(INSTRUMENT, Instrument.HARP)).with(NOTE, 0)).with(POWERED, false));
     }
 
-    private static boolean areMobHeadSoundsEnabled(WorldAccess world) {
-        return world.getEnabledFeatures().contains(FeatureFlags.UPDATE_1_20);
-    }
-
     private BlockState getStateWithInstrument(WorldAccess world, BlockPos pos, BlockState state) {
-        if (NoteBlock.areMobHeadSoundsEnabled(world)) {
-            BlockState blockState = world.getBlockState(pos.up());
-            return (BlockState)state.with(INSTRUMENT, Instrument.fromAboveState(blockState).orElseGet(() -> Instrument.fromBelowState(world.getBlockState(pos.down()))));
+        Instrument instrument = world.getBlockState(pos.up()).getInstrument();
+        if (instrument.isNotBaseBlock()) {
+            return (BlockState)state.with(INSTRUMENT, instrument);
         }
-        return (BlockState)state.with(INSTRUMENT, Instrument.fromBelowState(world.getBlockState(pos.down())));
+        Instrument instrument2 = world.getBlockState(pos.down()).getInstrument();
+        Instrument instrument3 = instrument2.isNotBaseBlock() ? Instrument.HARP : instrument2;
+        return (BlockState)state.with(INSTRUMENT, instrument3);
     }
 
     @Override
@@ -71,7 +68,7 @@ extends Block {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         boolean bl;
-        boolean bl2 = NoteBlock.areMobHeadSoundsEnabled(world) ? direction.getAxis() == Direction.Axis.Y : (bl = direction == Direction.DOWN);
+        boolean bl2 = bl = direction.getAxis() == Direction.Axis.Y;
         if (bl) {
             return this.getStateWithInstrument(world, pos, state);
         }
@@ -90,7 +87,7 @@ extends Block {
     }
 
     private void playNote(@Nullable Entity entity, BlockState state, World world, BlockPos pos) {
-        if (!state.get(INSTRUMENT).shouldRequireAirAbove() || world.getBlockState(pos.up()).isAir()) {
+        if (state.get(INSTRUMENT).isNotBaseBlock() || world.getBlockState(pos.up()).isAir()) {
             world.addSyncedBlockEvent(pos, this, 0, 0);
             world.emitGameEvent(entity, GameEvent.NOTE_BLOCK_PLAY, pos);
         }
@@ -98,8 +95,8 @@ extends Block {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        ItemStack itemStack;
-        if (NoteBlock.areMobHeadSoundsEnabled(world) && (itemStack = player.getStackInHand(hand)).isIn(ItemTags.NOTEBLOCK_TOP_INSTRUMENTS) && hit.getSide() == Direction.UP) {
+        ItemStack itemStack = player.getStackInHand(hand);
+        if (itemStack.isIn(ItemTags.NOTEBLOCK_TOP_INSTRUMENTS) && hit.getSide() == Direction.UP) {
             return ActionResult.PASS;
         }
         if (world.isClient) {
@@ -121,6 +118,10 @@ extends Block {
         player.incrementStat(Stats.PLAY_NOTEBLOCK);
     }
 
+    public static float getNotePitch(int note) {
+        return (float)Math.pow(2.0, (double)(note - 12) / 12.0);
+    }
+
     @Override
     public boolean onSyncedBlockEvent(BlockState state, World world, BlockPos pos, int type, int data) {
         RegistryEntry<SoundEvent> registryEntry;
@@ -128,7 +129,7 @@ extends Block {
         Instrument instrument = state.get(INSTRUMENT);
         if (instrument.shouldSpawnNoteParticles()) {
             int i = state.get(NOTE);
-            f = (float)Math.pow(2.0, (double)(i - 12) / 12.0);
+            f = NoteBlock.getNotePitch(i);
             world.addParticle(ParticleTypes.NOTE, (double)pos.getX() + 0.5, (double)pos.getY() + 1.2, (double)pos.getZ() + 0.5, (double)i / 24.0, 0.0, 0.0);
         } else {
             f = 1.0f;

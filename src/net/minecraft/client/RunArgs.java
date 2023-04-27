@@ -5,6 +5,7 @@
  *  com.mojang.authlib.properties.PropertyMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client;
@@ -18,6 +19,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.WindowSettings;
 import net.minecraft.client.resource.ResourceIndex;
 import net.minecraft.client.util.Session;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -26,14 +28,14 @@ public class RunArgs {
     public final WindowSettings windowSettings;
     public final Directories directories;
     public final Game game;
-    public final AutoConnect autoConnect;
+    public final QuickPlay quickPlay;
 
-    public RunArgs(Network network, WindowSettings windowSettings, Directories dirs, Game game, AutoConnect autoConnect) {
+    public RunArgs(Network network, WindowSettings windowSettings, Directories dirs, Game game, QuickPlay quickPlay) {
         this.network = network;
         this.windowSettings = windowSettings;
         this.directories = dirs;
         this.game = game;
-        this.autoConnect = autoConnect;
+        this.quickPlay = quickPlay;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -89,14 +91,9 @@ public class RunArgs {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class AutoConnect {
-        @Nullable
-        public final String serverAddress;
-        public final int serverPort;
-
-        public AutoConnect(@Nullable String serverAddress, int serverPort) {
-            this.serverAddress = serverAddress;
-            this.serverPort = serverPort;
+    public record QuickPlay(@Nullable String path, @Nullable String singleplayer, @Nullable String multiplayer, @Nullable String realms) {
+        public boolean isEnabled() {
+            return !StringUtils.isBlank((CharSequence)this.singleplayer) || !StringUtils.isBlank((CharSequence)this.multiplayer) || !StringUtils.isBlank((CharSequence)this.realms);
         }
     }
 }

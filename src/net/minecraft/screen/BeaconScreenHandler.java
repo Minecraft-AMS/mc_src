@@ -76,7 +76,7 @@ extends ScreenHandler {
     @Override
     public void onClosed(PlayerEntity player) {
         super.onClosed(player);
-        if (player.world.isClient) {
+        if (player.getWorld().isClient) {
             return;
         }
         ItemStack itemStack = this.paymentSlot.takeStack(this.paymentSlot.getMaxItemCount());

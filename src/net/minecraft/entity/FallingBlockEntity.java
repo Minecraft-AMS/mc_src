@@ -131,37 +131,37 @@ extends Entity {
             this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
         }
         this.move(MovementType.SELF, this.getVelocity());
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             BlockHitResult blockHitResult;
             BlockPos blockPos = this.getBlockPos();
             boolean bl = this.block.getBlock() instanceof ConcretePowderBlock;
-            boolean bl2 = bl && this.world.getFluidState(blockPos).isIn(FluidTags.WATER);
+            boolean bl2 = bl && this.getWorld().getFluidState(blockPos).isIn(FluidTags.WATER);
             double d = this.getVelocity().lengthSquared();
-            if (bl && d > 1.0 && (blockHitResult = this.world.raycast(new RaycastContext(new Vec3d(this.prevX, this.prevY, this.prevZ), this.getPos(), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.SOURCE_ONLY, this))).getType() != HitResult.Type.MISS && this.world.getFluidState(blockHitResult.getBlockPos()).isIn(FluidTags.WATER)) {
+            if (bl && d > 1.0 && (blockHitResult = this.getWorld().raycast(new RaycastContext(new Vec3d(this.prevX, this.prevY, this.prevZ), this.getPos(), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.SOURCE_ONLY, this))).getType() != HitResult.Type.MISS && this.getWorld().getFluidState(blockHitResult.getBlockPos()).isIn(FluidTags.WATER)) {
                 blockPos = blockHitResult.getBlockPos();
                 bl2 = true;
             }
-            if (this.onGround || bl2) {
-                BlockState blockState = this.world.getBlockState(blockPos);
+            if (this.isOnGround() || bl2) {
+                BlockState blockState = this.getWorld().getBlockState(blockPos);
                 this.setVelocity(this.getVelocity().multiply(0.7, -0.5, 0.7));
                 if (!blockState.isOf(Blocks.MOVING_PISTON)) {
                     if (!this.destroyedOnLanding) {
                         boolean bl5;
-                        boolean bl3 = blockState.canReplace(new AutomaticItemPlacementContext(this.world, blockPos, Direction.DOWN, ItemStack.EMPTY, Direction.UP));
-                        boolean bl4 = FallingBlock.canFallThrough(this.world.getBlockState(blockPos.down())) && (!bl || !bl2);
-                        boolean bl6 = bl5 = this.block.canPlaceAt(this.world, blockPos) && !bl4;
+                        boolean bl3 = blockState.canReplace(new AutomaticItemPlacementContext(this.getWorld(), blockPos, Direction.DOWN, ItemStack.EMPTY, Direction.UP));
+                        boolean bl4 = FallingBlock.canFallThrough(this.getWorld().getBlockState(blockPos.down())) && (!bl || !bl2);
+                        boolean bl6 = bl5 = this.block.canPlaceAt(this.getWorld(), blockPos) && !bl4;
                         if (bl3 && bl5) {
-                            if (this.block.contains(Properties.WATERLOGGED) && this.world.getFluidState(blockPos).getFluid() == Fluids.WATER) {
+                            if (this.block.contains(Properties.WATERLOGGED) && this.getWorld().getFluidState(blockPos).getFluid() == Fluids.WATER) {
                                 this.block = (BlockState)this.block.with(Properties.WATERLOGGED, true);
                             }
-                            if (this.world.setBlockState(blockPos, this.block, 3)) {
+                            if (this.getWorld().setBlockState(blockPos, this.block, 3)) {
                                 BlockEntity blockEntity;
-                                ((ServerWorld)this.world).getChunkManager().threadedAnvilChunkStorage.sendToOtherNearbyPlayers(this, new BlockUpdateS2CPacket(blockPos, this.world.getBlockState(blockPos)));
+                                ((ServerWorld)this.getWorld()).getChunkManager().threadedAnvilChunkStorage.sendToOtherNearbyPlayers(this, new BlockUpdateS2CPacket(blockPos, this.getWorld().getBlockState(blockPos)));
                                 this.discard();
                                 if (block instanceof LandingBlock) {
-                                    ((LandingBlock)((Object)block)).onLanding(this.world, blockPos, this.block, blockState, this);
+                                    ((LandingBlock)((Object)block)).onLanding(this.getWorld(), blockPos, this.block, blockState, this);
                                 }
-                                if (this.blockEntityData != null && this.block.hasBlockEntity() && (blockEntity = this.world.getBlockEntity(blockPos)) != null) {
+                                if (this.blockEntityData != null && this.block.hasBlockEntity() && (blockEntity = this.getWorld().getBlockEntity(blockPos)) != null) {
                                     NbtCompound nbtCompound = blockEntity.createNbt();
                                     for (String string : this.blockEntityData.getKeys()) {
                                         nbtCompound.put(string, this.blockEntityData.get(string).copy());
@@ -174,14 +174,14 @@ extends Entity {
                                     }
                                     blockEntity.markDirty();
                                 }
-                            } else if (this.dropItem && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+                            } else if (this.dropItem && this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                                 this.discard();
                                 this.onDestroyedOnLanding(block, blockPos);
                                 this.dropItem(block);
                             }
                         } else {
                             this.discard();
-                            if (this.dropItem && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+                            if (this.dropItem && this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                                 this.onDestroyedOnLanding(block, blockPos);
                                 this.dropItem(block);
                             }
@@ -191,8 +191,8 @@ extends Entity {
                         this.onDestroyedOnLanding(block, blockPos);
                     }
                 }
-            } else if (!(this.world.isClient || (this.timeFalling <= 100 || blockPos.getY() > this.world.getBottomY() && blockPos.getY() <= this.world.getTopY()) && this.timeFalling <= 600)) {
-                if (this.dropItem && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+            } else if (!(this.getWorld().isClient || (this.timeFalling <= 100 || blockPos.getY() > this.getWorld().getBottomY() && blockPos.getY() <= this.getWorld().getTopY()) && this.timeFalling <= 600)) {
+                if (this.dropItem && this.getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                     this.dropItem(block);
                 }
                 this.discard();
@@ -203,7 +203,7 @@ extends Entity {
 
     public void onDestroyedOnLanding(Block block, BlockPos pos) {
         if (block instanceof LandingBlock) {
-            ((LandingBlock)((Object)block)).onDestroyedOnLanding(this.world, pos, this);
+            ((LandingBlock)((Object)block)).onDestroyedOnLanding(this.getWorld(), pos, this);
         }
     }
 
@@ -218,8 +218,9 @@ extends Entity {
         if (i < 0) {
             return false;
         }
-        if (this.block.getBlock() instanceof LandingBlock) {
-            LandingBlock landingBlock = (LandingBlock)((Object)this.block.getBlock());
+        Block block = this.block.getBlock();
+        if (block instanceof LandingBlock) {
+            LandingBlock landingBlock = (LandingBlock)((Object)block);
             predicate = landingBlock.getEntityPredicate();
             damageSource2 = landingBlock.getDamageSource(this);
         } else {
@@ -227,7 +228,7 @@ extends Entity {
             damageSource2 = this.getDamageSources().fallingBlock(this);
         }
         float f = Math.min(MathHelper.floor((float)i * this.fallHurtAmount), this.fallHurtMax);
-        this.world.getOtherEntities(this, this.getBoundingBox(), predicate).forEach(entity -> entity.damage(damageSource2, f));
+        this.getWorld().getOtherEntities(this, this.getBoundingBox(), predicate).forEach(entity -> entity.damage(damageSource2, f));
         boolean bl = this.block.isIn(BlockTags.ANVIL);
         if (bl && f > 0.0f && this.random.nextFloat() < 0.05f + (float)i * 0.05f) {
             BlockState blockState = AnvilBlock.getLandingState(this.block);
@@ -251,11 +252,12 @@ extends Entity {
         if (this.blockEntityData != null) {
             nbt.put("TileEntityData", this.blockEntityData);
         }
+        nbt.putBoolean("CancelDrop", this.destroyedOnLanding);
     }
 
     @Override
     protected void readCustomDataFromNbt(NbtCompound nbt) {
-        this.block = NbtHelper.toBlockState(this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("BlockState"));
+        this.block = NbtHelper.toBlockState(this.getWorld().createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("BlockState"));
         this.timeFalling = nbt.getInt("Time");
         if (nbt.contains("HurtEntities", 99)) {
             this.hurtEntities = nbt.getBoolean("HurtEntities");
@@ -270,6 +272,7 @@ extends Entity {
         if (nbt.contains("TileEntityData", 10)) {
             this.blockEntityData = nbt.getCompound("TileEntityData");
         }
+        this.destroyedOnLanding = nbt.getBoolean("CancelDrop");
         if (this.block.isAir()) {
             this.block = Blocks.SAND.getDefaultState();
         }

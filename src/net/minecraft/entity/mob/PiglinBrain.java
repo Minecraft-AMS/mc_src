@@ -341,8 +341,8 @@ public class PiglinBrain {
     }
 
     private static List<ItemStack> getBarteredItem(PiglinEntity piglin) {
-        LootTable lootTable = piglin.world.getServer().getLootManager().getTable(LootTables.PIGLIN_BARTERING_GAMEPLAY);
-        ObjectArrayList<ItemStack> list = lootTable.generateLoot(new LootContext.Builder((ServerWorld)piglin.world).parameter(LootContextParameters.THIS_ENTITY, piglin).random(piglin.world.random).build(LootContextTypes.BARTER));
+        LootTable lootTable = piglin.getWorld().getServer().getLootManager().getLootTable(LootTables.PIGLIN_BARTERING_GAMEPLAY);
+        ObjectArrayList<ItemStack> list = lootTable.generateLoot(new LootContext.Builder((ServerWorld)piglin.getWorld()).parameter(LootContextParameters.THIS_ENTITY, piglin).random(piglin.getWorld().random).build(LootContextTypes.BARTER));
         return list;
     }
 
@@ -350,7 +350,7 @@ public class PiglinBrain {
         if (target.getType() != EntityType.HOGLIN) {
             return false;
         }
-        return Random.create(piglin.world.getTime()).nextFloat() < 0.1f;
+        return Random.create(piglin.getWorld().getTime()).nextFloat() < 0.1f;
     }
 
     protected static boolean canGather(PiglinEntity piglin, ItemStack stack) {
@@ -429,9 +429,9 @@ public class PiglinBrain {
     }
 
     public static void onGuardedBlockInteracted(PlayerEntity player, boolean blockOpen) {
-        List<PiglinEntity> list = player.world.getNonSpectatingEntities(PiglinEntity.class, player.getBoundingBox().expand(16.0));
+        List<PiglinEntity> list = player.getWorld().getNonSpectatingEntities(PiglinEntity.class, player.getBoundingBox().expand(16.0));
         list.stream().filter(PiglinBrain::hasIdleActivity).filter(piglin -> !blockOpen || LookTargetUtil.isVisibleInMemory(piglin, player)).forEach(piglin -> {
-            if (piglin.world.getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
+            if (piglin.getWorld().getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
                 PiglinBrain.becomeAngryWithPlayer(piglin, player);
             } else {
                 PiglinBrain.becomeAngryWith(piglin, player);
@@ -499,7 +499,7 @@ public class PiglinBrain {
         if (LookTargetUtil.isNewTargetTooFar(piglin, target, 4.0)) {
             return;
         }
-        if (target.getType() == EntityType.PLAYER && piglin.world.getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
+        if (target.getType() == EntityType.PLAYER && piglin.getWorld().getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
             PiglinBrain.becomeAngryWithPlayer(piglin, target);
             PiglinBrain.angerNearbyPiglins(piglin);
         } else {
@@ -570,7 +570,7 @@ public class PiglinBrain {
 
     private static Task<LivingEntity> makeRememberRideableHoglinTask() {
         LookAtMobWithIntervalTask.Interval interval = new LookAtMobWithIntervalTask.Interval(MEMORY_TRANSFER_TASK_DURATION);
-        return MemoryTransferTask.create(entity -> entity.isBaby() && interval.shouldRun(entity.world.random), MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN, MemoryModuleType.RIDE_TARGET, RIDE_TARGET_MEMORY_DURATION);
+        return MemoryTransferTask.create(entity -> entity.isBaby() && interval.shouldRun(entity.getWorld().random), MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN, MemoryModuleType.RIDE_TARGET, RIDE_TARGET_MEMORY_DURATION);
     }
 
     protected static void angerAtCloserTargets(AbstractPiglinEntity piglin, LivingEntity target) {
@@ -595,7 +595,7 @@ public class PiglinBrain {
         if (target.getType() == EntityType.HOGLIN && piglin.canHunt()) {
             PiglinBrain.rememberHunting(piglin);
         }
-        if (target.getType() == EntityType.PLAYER && piglin.world.getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
+        if (target.getType() == EntityType.PLAYER && piglin.getWorld().getGameRules().getBoolean(GameRules.UNIVERSAL_ANGER)) {
             piglin.getBrain().remember(MemoryModuleType.UNIVERSAL_ANGER, true, 600L);
         }
     }
@@ -678,12 +678,12 @@ public class PiglinBrain {
         piglin.getBrain().forget(MemoryModuleType.ANGRY_AT);
         piglin.getBrain().forget(MemoryModuleType.ATTACK_TARGET);
         piglin.getBrain().forget(MemoryModuleType.WALK_TARGET);
-        piglin.getBrain().remember(MemoryModuleType.AVOID_TARGET, target, AVOID_MEMORY_DURATION.get(piglin.world.random));
+        piglin.getBrain().remember(MemoryModuleType.AVOID_TARGET, target, AVOID_MEMORY_DURATION.get(piglin.getWorld().random));
         PiglinBrain.rememberHunting(piglin);
     }
 
     protected static void rememberHunting(AbstractPiglinEntity piglin) {
-        piglin.getBrain().remember(MemoryModuleType.HUNTED_RECENTLY, true, HUNT_MEMORY_DURATION.get(piglin.world.random));
+        piglin.getBrain().remember(MemoryModuleType.HUNTED_RECENTLY, true, HUNT_MEMORY_DURATION.get(piglin.getWorld().random));
     }
 
     private static void setEatenRecently(PiglinEntity piglin) {

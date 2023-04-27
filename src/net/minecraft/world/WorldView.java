@@ -18,12 +18,12 @@ import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
 import net.minecraft.world.Heightmap;
+import net.minecraft.world.RedstoneView;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.ColorResolver;
 import net.minecraft.world.biome.source.BiomeAccess;
@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 public interface WorldView
 extends BlockRenderView,
 CollisionView,
+RedstoneView,
 BiomeAccess.Storage {
     @Nullable
     public Chunk getChunk(int var1, int var2, ChunkStatus var3, boolean var4);
@@ -118,7 +119,7 @@ BiomeAccess.Storage {
         blockPos = blockPos.down();
         while (blockPos.getY() > pos.getY()) {
             BlockState blockState = this.getBlockState(blockPos);
-            if (blockState.getOpacity(this, blockPos) > 0 && !blockState.getMaterial().isLiquid()) {
+            if (blockState.getOpacity(this, blockPos) > 0 && !blockState.isLiquid()) {
                 return false;
             }
             blockPos = blockPos.down();
@@ -135,10 +136,6 @@ BiomeAccess.Storage {
         float f = (float)this.getLightLevel(pos) / 15.0f;
         float g = f / (4.0f - 3.0f * f);
         return MathHelper.lerp(this.getDimension().ambientLight(), g, 1.0f);
-    }
-
-    default public int getStrongRedstonePower(BlockPos pos, Direction direction) {
-        return this.getBlockState(pos).getStrongRedstonePower(this, pos, direction);
     }
 
     default public Chunk getChunk(BlockPos pos) {

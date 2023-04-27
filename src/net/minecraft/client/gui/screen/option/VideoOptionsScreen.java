@@ -16,6 +16,7 @@ import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.DialogScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.option.GameOptionsScreen;
@@ -28,7 +29,6 @@ import net.minecraft.client.resource.VideoWarningManager;
 import net.minecraft.client.util.Monitor;
 import net.minecraft.client.util.VideoMode;
 import net.minecraft.client.util.Window;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -146,8 +146,25 @@ extends GameOptionsScreen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.render(matrices, this.list, mouseX, mouseY, delta);
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (Screen.hasControlDown()) {
+            SimpleOption<Integer> simpleOption = this.gameOptions.getGuiScale();
+            int i = simpleOption.getValue() + (int)Math.signum(amount);
+            if (i != 0) {
+                simpleOption.setValue(i);
+                if (simpleOption.getValue() == i) {
+                    this.client.onResolutionChanged();
+                    return true;
+                }
+            }
+            return false;
+        }
+        return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.render(context, this.list, mouseX, mouseY, delta);
     }
 }
 

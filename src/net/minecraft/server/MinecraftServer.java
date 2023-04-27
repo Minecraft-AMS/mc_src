@@ -80,8 +80,6 @@ import net.minecraft.command.DataCommandStorage;
 import net.minecraft.entity.boss.BossBarManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.loot.LootManager;
-import net.minecraft.loot.condition.LootConditionManager;
-import net.minecraft.loot.function.LootFunctionManager;
 import net.minecraft.network.encryption.NetworkEncryptionException;
 import net.minecraft.network.encryption.NetworkEncryptionUtils;
 import net.minecraft.network.encryption.SignatureVerifier;
@@ -461,7 +459,6 @@ AutoCloseable {
         BlockPos blockPos = serverWorld.getSpawnPos();
         worldGenerationProgressListener.start(new ChunkPos(blockPos));
         ServerChunkManager serverChunkManager = serverWorld.getChunkManager();
-        serverChunkManager.getLightingProvider().setTaskBatchSize(500);
         this.timeReference = Util.getMeasuringTimeMs();
         serverChunkManager.addTicket(ChunkTicketType.START, new ChunkPos(blockPos), 11, Unit.INSTANCE);
         while (serverChunkManager.getTotalChunksLoadedCount() != 441) {
@@ -483,7 +480,6 @@ AutoCloseable {
         this.timeReference = Util.getMeasuringTimeMs() + 10L;
         this.runTasksTillTickEnd();
         worldGenerationProgressListener.stop();
-        serverChunkManager.getLightingProvider().setTaskBatchSize(5);
         this.updateMobSpawnOptions();
     }
 
@@ -1170,6 +1166,7 @@ AutoCloseable {
         return this.apiServices.sessionService();
     }
 
+    @Nullable
     public SignatureVerifier getServicesSignatureVerifier() {
         return this.apiServices.serviceSignatureVerifier();
     }
@@ -1375,14 +1372,6 @@ AutoCloseable {
 
     public LootManager getLootManager() {
         return this.resourceManagerHolder.dataPackContents.getLootManager();
-    }
-
-    public LootConditionManager getPredicateManager() {
-        return this.resourceManagerHolder.dataPackContents.getLootConditionManager();
-    }
-
-    public LootFunctionManager getItemModifierManager() {
-        return this.resourceManagerHolder.dataPackContents.getLootFunctionManager();
     }
 
     public GameRules getGameRules() {

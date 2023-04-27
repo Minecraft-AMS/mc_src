@@ -9,6 +9,7 @@
  *  org.joml.Matrix3f
  *  org.joml.Matrix4f
  *  org.joml.Quaternionf
+ *  org.joml.Vector3f
  */
 package net.minecraft.client.render.entity;
 
@@ -64,15 +65,19 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 @Environment(value=EnvType.CLIENT)
 public class EntityRenderDispatcher
 implements SynchronousResourceReloader {
     private static final RenderLayer SHADOW_LAYER = RenderLayer.getEntityShadow(new Identifier("textures/misc/shadow.png"));
+    private static final float field_43377 = 32.0f;
+    private static final float field_43378 = 0.5f;
     private Map<EntityType<?>, EntityRenderer<?>> renderers = ImmutableMap.of();
     private Map<String, EntityRenderer<? extends PlayerEntity>> modelRenderers = ImmutableMap.of();
     public final TextureManager textureManager;
@@ -160,7 +165,7 @@ implements SynchronousResourceReloader {
             }
             matrices.translate(-vec3d.getX(), -vec3d.getY(), -vec3d.getZ());
             if (this.gameOptions.getEntityShadows().getValue().booleanValue() && this.renderShadows && entityRenderer.shadowRadius > 0.0f && !entity.isInvisible() && (h = (float)((1.0 - (g = this.getSquaredDistanceToCamera(entity.getX(), entity.getY(), entity.getZ())) / 256.0) * (double)entityRenderer.shadowOpacity)) > 0.0f) {
-                EntityRenderDispatcher.renderShadow(matrices, vertexConsumers, entity, h, tickDelta, this.world, entityRenderer.shadowRadius);
+                EntityRenderDispatcher.renderShadow(matrices, vertexConsumers, entity, h, tickDelta, this.world, Math.min(entityRenderer.shadowRadius, 32.0f));
             }
             if (this.renderHitboxes && !entity.isInvisible() && !MinecraftClient.getInstance().hasReducedDebugInfo()) {
                 EntityRenderDispatcher.renderHitbox(matrices, vertexConsumers.getBuffer(RenderLayer.getLines()), entity, tickDelta);
@@ -261,34 +266,44 @@ implements SynchronousResourceReloader {
         double d = MathHelper.lerp((double)tickDelta, entity.lastRenderX, entity.getX());
         double e = MathHelper.lerp((double)tickDelta, entity.lastRenderY, entity.getY());
         double g = MathHelper.lerp((double)tickDelta, entity.lastRenderZ, entity.getZ());
+        float h = Math.min(opacity / 0.5f, f);
         int i = MathHelper.floor(d - (double)f);
         int j = MathHelper.floor(d + (double)f);
-        int k = MathHelper.floor(e - (double)f);
+        int k = MathHelper.floor(e - (double)h);
         int l = MathHelper.floor(e);
         int m = MathHelper.floor(g - (double)f);
         int n = MathHelper.floor(g + (double)f);
         MatrixStack.Entry entry = matrices.peek();
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(SHADOW_LAYER);
-        for (BlockPos blockPos : BlockPos.iterate(new BlockPos(i, k, m), new BlockPos(j, l, n))) {
-            EntityRenderDispatcher.renderShadowPart(entry, vertexConsumer, world, blockPos, d, e, g, f, opacity);
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        for (int o = m; o <= n; ++o) {
+            for (int p = i; p <= j; ++p) {
+                mutable.set(p, 0, o);
+                Chunk chunk = world.getChunk(mutable);
+                for (int q = k; q <= l; ++q) {
+                    mutable.setY(q);
+                    float r = opacity - (float)(e - (double)mutable.getY()) * 0.5f;
+                    EntityRenderDispatcher.renderShadowPart(entry, vertexConsumer, chunk, world, mutable, d, e, g, f, r);
+                }
+            }
         }
     }
 
-    private static void renderShadowPart(MatrixStack.Entry entry, VertexConsumer vertices, WorldView world, BlockPos pos, double x, double y, double z, float radius, float opacity) {
+    private static void renderShadowPart(MatrixStack.Entry entry, VertexConsumer vertices, Chunk chunk, WorldView world, BlockPos pos, double x, double y, double z, float radius, float opacity) {
         BlockPos blockPos = pos.down();
-        BlockState blockState = world.getBlockState(blockPos);
+        BlockState blockState = chunk.getBlockState(blockPos);
         if (blockState.getRenderType() == BlockRenderType.INVISIBLE || world.getLightLevel(pos) <= 3) {
             return;
         }
-        if (!blockState.isFullCube(world, blockPos)) {
+        if (!blockState.isFullCube(chunk, blockPos)) {
             return;
         }
-        VoxelShape voxelShape = blockState.getOutlineShape(world, pos.down());
+        VoxelShape voxelShape = blockState.getOutlineShape(chunk, blockPos);
         if (voxelShape.isEmpty()) {
             return;
         }
         float f = LightmapTextureManager.getBrightness(world.getDimension(), world.getLightLevel(pos));
-        float g = (float)(((double)opacity - (y - (double)pos.getY()) / 2.0) * 0.5 * (double)f);
+        float g = opacity * 0.5f * f;
         if (g >= 0.0f) {
             if (g > 1.0f) {
                 g = 1.0f;
@@ -316,7 +331,8 @@ implements SynchronousResourceReloader {
     }
 
     private static void drawShadowVertex(MatrixStack.Entry entry, VertexConsumer vertices, float alpha, float x, float y, float z, float u, float v) {
-        vertices.vertex(entry.getPositionMatrix(), x, y, z).color(1.0f, 1.0f, 1.0f, alpha).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(0xF000F0).normal(entry.getNormalMatrix(), 0.0f, 1.0f, 0.0f).next();
+        Vector3f vector3f = entry.getPositionMatrix().transformPosition(x, y, z, new Vector3f());
+        vertices.vertex(vector3f.x(), vector3f.y(), vector3f.z(), 1.0f, 1.0f, 1.0f, alpha, u, v, OverlayTexture.DEFAULT_UV, 0xF000F0, 0.0f, 1.0f, 0.0f);
     }
 
     public void setWorld(@Nullable World world) {

@@ -11,14 +11,13 @@
 package net.minecraft.client.gui.screen.world;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.Object2BooleanLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.world.WorldScreenOptionGrid;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -28,7 +27,6 @@ import net.minecraft.client.gui.widget.MultilineTextWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.client.gui.widget.ThreePartsLayoutWidget;
 import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.resource.ResourcePackSource;
@@ -104,14 +102,13 @@ extends Screen {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
-        RenderSystem.setShaderColor(0.125f, 0.125f, 0.125f, 1.0f);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+        context.setShaderColor(0.125f, 0.125f, 0.125f, 1.0f);
         int i = 32;
-        ExperimentsScreen.drawTexture(matrices, 0, this.experimentToggleList.getHeaderHeight(), 0.0f, 0.0f, this.width, this.height - this.experimentToggleList.getHeaderHeight() - this.experimentToggleList.getFooterHeight(), 32, 32);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        super.render(matrices, mouseX, mouseY, delta);
+        context.drawTexture(OPTIONS_BACKGROUND_TEXTURE, 0, this.experimentToggleList.getHeaderHeight(), 0.0f, 0.0f, this.width, this.height - this.experimentToggleList.getHeaderHeight() - this.experimentToggleList.getFooterHeight(), 32, 32);
+        context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        super.render(context, mouseX, mouseY, delta);
     }
 }
 

@@ -174,7 +174,7 @@ implements CommandOutput {
         if (player.getEntityWorld().isClient) {
             player.openCommandBlockMinecartScreen(this);
         }
-        return ActionResult.success(player.world.isClient);
+        return ActionResult.success(player.getWorld().isClient);
     }
 
     public abstract Vec3d getPos();

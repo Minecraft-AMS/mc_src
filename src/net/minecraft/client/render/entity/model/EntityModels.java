@@ -99,7 +99,7 @@ import net.minecraft.client.render.entity.model.SkullEntityModel;
 import net.minecraft.client.render.entity.model.SlimeEntityModel;
 import net.minecraft.client.render.entity.model.SmallPufferfishEntityModel;
 import net.minecraft.client.render.entity.model.SmallTropicalFishEntityModel;
-import net.minecraft.client.render.entity.model.SnifferModel;
+import net.minecraft.client.render.entity.model.SnifferEntityModel;
 import net.minecraft.client.render.entity.model.SnowGolemEntityModel;
 import net.minecraft.client.render.entity.model.SpiderEntityModel;
 import net.minecraft.client.render.entity.model.SquidEntityModel;
@@ -261,7 +261,7 @@ public class EntityModels {
         builder.put((Object)EntityModelLayers.SKELETON_SKULL, (Object)texturedModelData6);
         builder.put((Object)EntityModelLayers.SLIME, (Object)SlimeEntityModel.getInnerTexturedModelData());
         builder.put((Object)EntityModelLayers.SLIME_OUTER, (Object)SlimeEntityModel.getOuterTexturedModelData());
-        builder.put((Object)EntityModelLayers.SNIFFER, (Object)SnifferModel.getTexturedModelData());
+        builder.put((Object)EntityModelLayers.SNIFFER, (Object)SnifferEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.SNOW_GOLEM, (Object)SnowGolemEntityModel.getTexturedModelData());
         builder.put((Object)EntityModelLayers.SPAWNER_MINECART, (Object)texturedModelData5);
         builder.put((Object)EntityModelLayers.SPIDER, (Object)texturedModelData19);

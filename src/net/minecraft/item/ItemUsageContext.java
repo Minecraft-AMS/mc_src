@@ -25,7 +25,7 @@ public class ItemUsageContext {
     private final ItemStack stack;
 
     public ItemUsageContext(PlayerEntity player, Hand hand, BlockHitResult hit) {
-        this(player.world, player, hand, player.getStackInHand(hand), hit);
+        this(player.getWorld(), player, hand, player.getStackInHand(hand), hit);
     }
 
     public ItemUsageContext(World world, @Nullable PlayerEntity player, Hand hand, ItemStack stack, BlockHitResult hit) {

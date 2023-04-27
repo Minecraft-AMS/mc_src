@@ -41,7 +41,7 @@ implements DebugRenderer.Renderer {
         if (d - this.lastUpdateTime > 1.0E8) {
             this.lastUpdateTime = d;
             Entity entity = this.client.gameRenderer.getCamera().getFocusedEntity();
-            this.collisions = ImmutableList.copyOf(entity.world.getCollisions(entity, entity.getBoundingBox().expand(6.0)));
+            this.collisions = ImmutableList.copyOf(entity.getWorld().getCollisions(entity, entity.getBoundingBox().expand(6.0)));
         }
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getLines());
         for (VoxelShape voxelShape : this.collisions) {

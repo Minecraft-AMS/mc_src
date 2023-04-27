@@ -5,6 +5,7 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
+ *  com.mojang.datafixers.util.Either
  *  it.unimi.dsi.fastutil.ints.Int2FloatMap
  *  it.unimi.dsi.fastutil.ints.Int2FloatMaps
  *  it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap
@@ -21,6 +22,7 @@ package net.minecraft.client.font;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.mojang.datafixers.util.Either;
 import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatMaps;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
@@ -28,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
@@ -74,10 +77,11 @@ implements Font {
             float f = JsonHelper.asFloat((JsonElement)entry.getValue(), "advance");
             int2FloatMap.put(is[0], f);
         }
-        return arg_0 -> SpaceFont.method_41717((Int2FloatMap)int2FloatMap, arg_0);
+        FontLoader.Loadable loadable = arg_0 -> SpaceFont.method_41717((Int2FloatMap)int2FloatMap, arg_0);
+        return () -> Either.left((Object)loadable);
     }
 
-    private static /* synthetic */ Font method_41717(Int2FloatMap manager, ResourceManager resourceManager) {
+    private static /* synthetic */ Font method_41717(Int2FloatMap manager, ResourceManager resourceManager) throws IOException {
         return new SpaceFont(manager);
     }
 }

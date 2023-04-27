@@ -9,12 +9,14 @@
 package net.minecraft.client.font;
 
 import com.mojang.blaze3d.platform.TextureUtil;
+import java.nio.file.Path;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.font.TextRenderLayerSet;
 import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.DynamicTexture;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
@@ -22,23 +24,18 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class GlyphAtlasTexture
-extends AbstractTexture {
+extends AbstractTexture
+implements DynamicTexture {
     private static final int SLOT_LENGTH = 256;
-    private final Identifier id;
-    private final RenderLayer textLayer;
-    private final RenderLayer seeThroughTextLayer;
-    private final RenderLayer polygonOffsetTextLayer;
+    private final TextRenderLayerSet textRenderLayers;
     private final boolean hasColor;
     private final Slot rootSlot;
 
-    public GlyphAtlasTexture(Identifier id, boolean hasColor) {
-        this.id = id;
+    public GlyphAtlasTexture(TextRenderLayerSet textRenderLayers, boolean hasColor) {
         this.hasColor = hasColor;
         this.rootSlot = new Slot(0, 0, 256, 256);
         TextureUtil.prepareImage(hasColor ? NativeImage.InternalFormat.RGBA : NativeImage.InternalFormat.RED, this.getGlId(), 256, 256);
-        this.textLayer = hasColor ? RenderLayer.getText(id) : RenderLayer.getTextIntensity(id);
-        this.seeThroughTextLayer = hasColor ? RenderLayer.getTextSeeThrough(id) : RenderLayer.getTextIntensitySeeThrough(id);
-        this.polygonOffsetTextLayer = hasColor ? RenderLayer.getTextPolygonOffset(id) : RenderLayer.getTextIntensityPolygonOffset(id);
+        this.textRenderLayers = textRenderLayers;
     }
 
     @Override
@@ -62,13 +59,15 @@ extends AbstractTexture {
             float f = 256.0f;
             float g = 256.0f;
             float h = 0.01f;
-            return new GlyphRenderer(this.textLayer, this.seeThroughTextLayer, this.polygonOffsetTextLayer, ((float)slot.x + 0.01f) / 256.0f, ((float)slot.x - 0.01f + (float)glyph.getWidth()) / 256.0f, ((float)slot.y + 0.01f) / 256.0f, ((float)slot.y - 0.01f + (float)glyph.getHeight()) / 256.0f, glyph.getXMin(), glyph.getXMax(), glyph.getYMin(), glyph.getYMax());
+            return new GlyphRenderer(this.textRenderLayers, ((float)slot.x + 0.01f) / 256.0f, ((float)slot.x - 0.01f + (float)glyph.getWidth()) / 256.0f, ((float)slot.y + 0.01f) / 256.0f, ((float)slot.y - 0.01f + (float)glyph.getHeight()) / 256.0f, glyph.getXMin(), glyph.getXMax(), glyph.getYMin(), glyph.getYMax());
         }
         return null;
     }
 
-    public Identifier getId() {
-        return this.id;
+    @Override
+    public void save(Identifier id, Path path) {
+        String string = id.toUnderscoreSeparatedString();
+        TextureUtil.writeAsPNG(path, string, this.getGlId(), 0, 256, 256, i -> (i & 0xFF000000) == 0 ? -16777216 : i);
     }
 
     @Environment(value=EnvType.CLIENT)

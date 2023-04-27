@@ -70,7 +70,7 @@ extends GuardianEntity {
         super.mobTick();
         if ((this.age + this.getId()) % 1200 == 0) {
             StatusEffectInstance statusEffectInstance = new StatusEffectInstance(StatusEffects.MINING_FATIGUE, 6000, 2);
-            List<ServerPlayerEntity> list = StatusEffectUtil.addEffectToPlayersWithinDistance((ServerWorld)this.world, this, this.getPos(), 50.0, statusEffectInstance, 1200);
+            List<ServerPlayerEntity> list = StatusEffectUtil.addEffectToPlayersWithinDistance((ServerWorld)this.getWorld(), this, this.getPos(), 50.0, statusEffectInstance, 1200);
             list.forEach(serverPlayerEntity -> serverPlayerEntity.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.ELDER_GUARDIAN_EFFECT, this.isSilent() ? 0.0f : 1.0f)));
         }
         if (!this.hasPositionTarget()) {

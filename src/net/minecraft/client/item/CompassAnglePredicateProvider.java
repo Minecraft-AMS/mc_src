@@ -82,14 +82,14 @@ implements ClampedModelPredicateProvider {
 
     @Nullable
     private ClientWorld getClientWorld(Entity entity, @Nullable ClientWorld world) {
-        if (world == null && entity.world instanceof ClientWorld) {
-            return (ClientWorld)entity.world;
+        if (world == null && entity.getWorld() instanceof ClientWorld) {
+            return (ClientWorld)entity.getWorld();
         }
         return world;
     }
 
     private boolean canPointTo(Entity entity, @Nullable GlobalPos pos) {
-        return pos != null && pos.getDimension() == entity.world.getRegistryKey() && !(pos.getPos().getSquaredDistance(entity.getPos()) < (double)1.0E-5f);
+        return pos != null && pos.getDimension() == entity.getWorld().getRegistryKey() && !(pos.getPos().getSquaredDistance(entity.getPos()) < (double)1.0E-5f);
     }
 
     private double getAngleTo(Entity entity, BlockPos pos) {

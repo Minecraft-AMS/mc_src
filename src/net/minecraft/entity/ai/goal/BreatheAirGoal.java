@@ -49,7 +49,7 @@ extends Goal {
         Iterable<BlockPos> iterable = BlockPos.iterate(MathHelper.floor(this.mob.getX() - 1.0), this.mob.getBlockY(), MathHelper.floor(this.mob.getZ() - 1.0), MathHelper.floor(this.mob.getX() + 1.0), MathHelper.floor(this.mob.getY() + 8.0), MathHelper.floor(this.mob.getZ() + 1.0));
         Vec3i blockPos = null;
         for (BlockPos blockPos2 : iterable) {
-            if (!this.isAirPos(this.mob.world, blockPos2)) continue;
+            if (!this.isAirPos(this.mob.getWorld(), blockPos2)) continue;
             blockPos = blockPos2;
             break;
         }
